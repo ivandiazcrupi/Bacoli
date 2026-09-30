@@ -12,13 +12,16 @@ export function GrillaPrecios({ lista, productos, precios }: { lista: Lista; pro
   const [estado, enviar, cargando] = useActionState(guardarPrecios.bind(null, lista.id), undefined);
   return (
     <form key={lista.id + JSON.stringify(estado ?? null)} action={enviar} className="space-y-5">
-      <ul className="grid gap-x-10 gap-y-1 md:grid-cols-2">
+      <ul>
         {productos.map((p) => (
           <li key={p.id} className="border-b border-stone-100">
             <label className="flex items-center justify-between gap-4 py-3">
-              <span className="min-w-0">
-                <span className="block truncate font-medium">{p.nombre}</span>
-                <span className="block text-xs text-stone-500">{p.sku ?? "Sin código"}</span>
+              <span className="flex min-w-0 items-center gap-3">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-100 text-xs font-bold text-amber-800">{p.orden}</span>
+                <span className="min-w-0">
+                  <span className="block truncate font-medium">{p.nombre}</span>
+                  <span className="block text-xs text-stone-500">{p.sku ?? "Sin código"}</span>
+                </span>
               </span>
               <span className="relative shrink-0">
                 <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" aria-hidden="true">$</span>
