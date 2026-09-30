@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { NOMBRE_ROL, puedeGestionarUsuarios } from "@/lib/roles";
 import { exigirUsuario } from "@/lib/session";
 import { cambiarActivo } from "./actions";
+import { CambiarClave } from "./CambiarClave";
 import { FormularioUsuario } from "./FormularioUsuario";
 
 export default async function Usuarios() {
@@ -28,14 +29,17 @@ export default async function Usuarios() {
                   {!u.activo && " · desactivado"}
                 </p>
               </div>
-              {u.id !== actual.id && (
-                <form action={cambiarActivo}>
-                  <input type="hidden" name="id" value={u.id} />
-                  <button className="rounded-lg border border-stone-300 px-3 py-2 text-sm">
-                    {u.activo ? "Desactivar" : "Activar"}
-                  </button>
-                </form>
-              )}
+              <div className="flex flex-wrap items-start justify-end gap-2">
+                <CambiarClave id={u.id} />
+                {u.id !== actual.id && (
+                  <form action={cambiarActivo}>
+                    <input type="hidden" name="id" value={u.id} />
+                    <button className="rounded-lg border border-stone-300 px-3 py-2 text-sm">
+                      {u.activo ? "Desactivar" : "Activar"}
+                    </button>
+                  </form>
+                )}
+              </div>
             </li>
           ))}
         </ul>

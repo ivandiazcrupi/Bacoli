@@ -57,3 +57,15 @@ export async function cambiarActivo(formData: FormData) {
   await db.usuario.update({ where: { id }, data: { activo: !usuario.activo } });
   revalidatePath("/usuarios");
 }
+
+// Solo un dueño. La contraseña vieja no se puede ver (se guarda cifrada): se pone una nueva y se la ve al escribirla.
+export async function restablecerClave(id: string, _: EstadoForm, formData: FormData): Promise<EstadoForm> {
+  const actual = await exigirUsuario();
+  if (!puedeGestionarUsuarios(actual.rol)) return { error: "No tenés permiso para cambiar contraseñas." };
+  const nueva = String(formData.get("nueva") ?? "");
+  if (nueva.length < MIN_CLAVE) return { error: `Tiene que tener al menos ${MIN_CLAVE} caracteres.` };
+  const usuario = await db.usuario.findUnique({ where: { id } });
+  if (!usuario) return { error: "No se encontró el usuario." };
+  await db.usuario.update({ where: { id }, data: { passwordHash: await bcrypt.hash(nueva, 12) } });
+  return { ok: `Listo: ${usuario.nombre} ahora entra con la contraseña nueva.` };
+}
