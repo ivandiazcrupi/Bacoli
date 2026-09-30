@@ -106,7 +106,7 @@ y ~1000 minoristas.
   vista previa, propuesta de zona por barrio (corregible; no deja importar con barrios sin zona), confirmación,
   y no duplica clientes ya cargados (mismo nombre). Lógica en `src/lib/importar-clientes.ts`.
 - [x] Módulo 2 (parte C): búsqueda por varias palabras. Marcas se probó y se **quitó** (ver reglas): reemplazado por listas.
-- [x] Módulo 2 (parte D): Precios = **una lista a la vez** (desplegable de lista; a la izquierda nombre y código, a la derecha
+- [x] Módulo 2 (parte D): Precios = **una lista a la vez** (pastillas de lista arriba —Mayorista, Distribuidor, VACALIN— y "+ Nueva lista"; tarjeta ancha con los precios en 2 columnas; abajo **Productos** como desplegable de color con el contador, cada producto con "Editar" y "+ Agregar producto"; rediseño pedido por el dueño: más espacio, minimalista, con vida; a la izquierda nombre y código, a la derecha
   el precio con $), productos con SKU, EAN, descripción, unidad y orden; crear lista nueva puede copiar los precios de otra;
   listas VACALIN y Distribuidor; Importar es un botón en Clientes.
 - [x] Módulo 3: **Pedidos = una sola página** (`/pedidos`, `PaginaPedidos.tsx`), horizontal como su Sheet. **Arriba, "Sin asignar"**:

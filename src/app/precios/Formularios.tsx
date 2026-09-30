@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useActionState } from "react";
 import { Campo, Mensajes, estiloBoton, estiloBotonChico, estiloCampo, estiloDato } from "@/components/campos";
 import { crearLista, crearProducto, guardarPrecios, guardarProducto, type EstadoPrecios } from "./actions";
@@ -8,30 +7,14 @@ import { crearLista, crearProducto, guardarPrecios, guardarProducto, type Estado
 type Lista = { id: string; nombre: string };
 type Producto = { id: string; nombre: string; sku: string | null; unidad: string; orden: number };
 
-export function SelectorLista({ listas, actual }: { listas: Lista[]; actual: string }) {
-  const router = useRouter();
-  return (
-    <label className="block text-sm font-medium text-stone-600">
-      Lista de precios
-      <select
-        value={actual}
-        onChange={(e) => router.push(`/precios?lista=${e.target.value}`)}
-        className="mt-1 w-full rounded-lg border border-stone-300 bg-white px-3 py-3 text-base font-semibold text-stone-900"
-      >
-        {listas.map((l) => <option key={l.id} value={l.id}>{l.nombre}</option>)}
-      </select>
-    </label>
-  );
-}
-
 // Una sola lista a la vez: a la izquierda nombre y código, a la derecha el precio.
 export function GrillaPrecios({ lista, productos, precios }: { lista: Lista; productos: Producto[]; precios: Record<string, string> }) {
   const [estado, enviar, cargando] = useActionState(guardarPrecios.bind(null, lista.id), undefined);
   return (
-    <form key={lista.id + JSON.stringify(estado ?? null)} action={enviar} className="space-y-4">
-      <ul className="divide-y divide-stone-200 border-y border-stone-200">
+    <form key={lista.id + JSON.stringify(estado ?? null)} action={enviar} className="space-y-5">
+      <ul className="grid gap-x-10 gap-y-1 md:grid-cols-2">
         {productos.map((p) => (
-          <li key={p.id}>
+          <li key={p.id} className="border-b border-stone-100">
             <label className="flex items-center justify-between gap-4 py-3">
               <span className="min-w-0">
                 <span className="block truncate font-medium">{p.nombre}</span>
@@ -44,16 +27,16 @@ export function GrillaPrecios({ lista, productos, precios }: { lista: Lista; pro
                   aria-label={`Precio de ${p.nombre} en la lista ${lista.nombre}`}
                   inputMode="decimal"
                   defaultValue={estado?.valores?.[`p_${p.id}`] ?? precios[p.id] ?? ""}
-                  className="w-36 rounded-md border border-stone-200 bg-white py-3 pl-7 pr-3 text-right text-base tabular-nums"
+                  className="w-32 rounded-lg sm:w-40 border border-stone-200 bg-stone-50 py-3 pl-7 pr-3 text-right text-lg font-semibold tabular-nums focus:border-amber-600 focus:bg-white focus:outline-none"
                 />
               </span>
             </label>
           </li>
         ))}
       </ul>
-      <p className="text-xs text-stone-500">Precios sin IVA, por la unidad de venta de cada producto. Vacío = sin precio.</p>
+      <p className="text-xs text-stone-500">Dejá vacío si ese producto no tiene precio en esta lista.</p>
       <Mensajes estado={estado} />
-      <button disabled={cargando} className={estiloBoton}>{cargando ? "Guardando…" : `Guardar precios de ${lista.nombre}`}</button>
+      <div className="flex justify-end"><button disabled={cargando} className="rounded-lg bg-amber-700 px-6 py-3 font-semibold text-white hover:bg-amber-800 disabled:opacity-60">{cargando ? "Guardando…" : `Guardar precios de ${lista.nombre}`}</button></div>
     </form>
   );
 }
@@ -62,7 +45,7 @@ export function EditarProducto({ producto }: { producto: Producto & { ean: strin
   const [estado, enviar, cargando] = useActionState(guardarProducto.bind(null, producto.id), undefined as EstadoPrecios);
   const v = (c: string, inicial: string) => estado?.valores?.[c] ?? inicial;
   return (
-    <form key={JSON.stringify(estado ?? null)} action={enviar} className="space-y-3">
+    <form key={JSON.stringify(estado ?? null)} action={enviar} className="space-y-3 rounded-xl bg-stone-50 p-4">
       <Campo etiqueta="Nombre"><input name="nombre" autoCapitalize="characters" defaultValue={v("nombre", producto.nombre)} required className={estiloDato} /></Campo>
       <div className="grid grid-cols-3 gap-3">
         <Campo etiqueta="Código (SKU)"><input name="sku" autoCapitalize="characters" defaultValue={v("sku", producto.sku ?? "")} className={estiloDato} /></Campo>
