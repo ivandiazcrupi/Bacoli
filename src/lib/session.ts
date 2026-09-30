@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { jwtVerify, SignJWT } from "jose";
 import type { Rol } from "@prisma/client";
+import { esPersonalDeOficina } from "./roles";
 
 const COOKIE = "bacoli_sesion";
 const DURACION_HORAS = 12;
@@ -54,5 +55,12 @@ export async function exigirUsuario() {
   if (!sesion) redirect("/login");
   const usuario = await db.usuario.findUnique({ where: { id: sesion.usuarioId } });
   if (!usuario || !usuario.activo) redirect("/login");
+  return usuario;
+}
+
+/** Igual que exigirUsuario, pero los repartidores vuelven al inicio (no ven clientes ni precios). */
+export async function exigirOficina() {
+  const usuario = await exigirUsuario();
+  if (!esPersonalDeOficina(usuario.rol)) redirect("/");
   return usuario;
 }

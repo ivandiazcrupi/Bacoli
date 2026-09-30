@@ -56,15 +56,25 @@ y ~1000 minoristas.
 
 ## Estado del proyecto
 - [x] Módulo 1: base, login, roles, usuarios (alta, activar/desactivar).
-- [ ] Módulo 2: Clientes (sucursales, listas de precios, zonas, límites) + migración de la planilla.
+- [x] Módulo 2 (parte A): Clientes (con sucursales, zonas, límites, comisión), Precios (listas × productos, por
+  paquete sin IVA) y Mi cuenta (cambio de contraseña). Datos base (zonas Norte/Oeste/Sur/CABA, listas, productos)
+  se crean solos en `prisma/seed.ts` si faltan.
+- [ ] Módulo 2 (parte B): importar la planilla de clientes (CSV) con vista previa y confirmación.
 - [ ] Módulo 3: Pedidos.
 - [ ] Módulo 4: Cuenta corriente.
 - [ ] Módulo 5: Hoja de ruta + vista del repartidor.
 - [ ] Publicación en Railway (guiar al dueño paso a paso; él crea el proyecto y carga las claves).
 - [ ] Más adelante: facturación ARCA, reportes, migración de planillas, Empretienda, sugerencia de ruta.
 
+## Convenciones de código
+- Formularios: server actions + `useActionState`; al fallar devuelven `valores` y el `<form>` usa `key` para
+  conservar lo cargado (React vacía los desplegables si no). Ver `src/app/clientes/ClienteForm.tsx`.
+- Montos: `src/lib/numeros.ts` (`leerMonto` entiende "3.500,50"; `cuitValido` chequea el dígito verificador).
+- Páginas de oficina usan `exigirOficina()`; el repartidor vuelve al inicio.
+
 ## Pendientes conocidos
 - Login: bloqueo de 15 min tras 5 fallos por email (en memoria; revisar si se usa más de una instancia).
-- Cambio/recuperación de contraseña (hoy la crea el dueño al dar de alta).
+- Recuperación de contraseña olvidada (hoy: el dueño usa SEED_ADMIN_RESET en Railway; no hay reset para otros usuarios).
+- El formulario de Usuarios pierde lo cargado si da error (aplicar el mismo `key` que en Clientes).
 - `npm audit` marca 3 alertas en una herramienta interna de Prisma (solo desarrollo, no en producción).
 - Registro de cambios (auditoría) todavía no existe.

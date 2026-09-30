@@ -15,12 +15,107 @@ enum Rol {
 }
 
 model Usuario {
-  id           String   @id @default(cuid())
-  nombre       String
-  email        String   @unique
-  passwordHash String
-  rol          Rol
-  activo       Boolean  @default(true)
-  creadoEn     DateTime @default(now())
+  id            String   @id @default(cuid())
+  nombre        String
+  email         String   @unique
+  passwordHash  String
+  rol           Rol
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now())
   actualizadoEn DateTime @updatedAt
+}
+
+enum TipoCliente {
+  MINORISTA
+  MAYORISTA
+  DISTRIBUIDOR
+}
+
+enum CondicionPago {
+  CONTADO
+  DIAS_7
+  DIAS_15
+  DIAS_30
+  DIAS_45
+}
+
+enum ImputacionPago {
+  SALDO
+  PEDIDO
+}
+
+model Zona {
+  id     String         @id @default(cuid())
+  nombre String         @unique
+  orden  Int            @default(0)
+  puntos PuntoEntrega[]
+}
+
+model Producto {
+  id      String   @id @default(cuid())
+  nombre  String   @unique
+  activo  Boolean  @default(true)
+  precios Precio[]
+}
+
+model ListaPrecios {
+  id       String    @id @default(cuid())
+  nombre   String    @unique
+  precios  Precio[]
+  clientes Cliente[]
+}
+
+// Precio en pesos por PAQUETE, sin IVA.
+model Precio {
+  listaId    String
+  productoId String
+  precio     Decimal      @db.Decimal(12, 2)
+  lista      ListaPrecios @relation(fields: [listaId], references: [id], onDelete: Cascade)
+  producto   Producto     @relation(fields: [productoId], references: [id], onDelete: Cascade)
+
+  @@id([listaId, productoId])
+}
+
+model Cliente {
+  id                String         @id @default(cuid())
+  nombre            String
+  tipo              TipoCliente
+  razonSocial       String?
+  cuit              String?
+  facturado         Boolean        @default(false) // true = con factura (IVA); false = con remito
+  condicionPago     CondicionPago  @default(CONTADO)
+  listaPreciosId    String?
+  descuentoPct      Decimal        @default(0) @db.Decimal(5, 2)
+  imputacionPago    ImputacionPago @default(SALDO)
+  sinLimite         Boolean        @default(false)
+  maxPedidosImpagos Int?
+  maxMonto          Decimal?       @db.Decimal(14, 2)
+  comisionista      String?
+  comisionPct       Decimal?       @db.Decimal(5, 2)
+  activo            Boolean        @default(true)
+  creadoEn          DateTime       @default(now())
+  actualizadoEn     DateTime       @updatedAt
+
+  listaPrecios ListaPrecios?  @relation(fields: [listaPreciosId], references: [id])
+  puntos       PuntoEntrega[]
+
+  @@index([nombre])
+}
+
+model PuntoEntrega {
+  id         String  @id @default(cuid())
+  clienteId  String
+  alias      String?
+  direccion  String
+  barrio     String
+  zonaId     String
+  telefono   String?
+  comentario String?
+  activo     Boolean @default(true)
+
+  cliente Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  zona    Zona    @relation(fields: [zonaId], references: [id])
+
+  @@index([clienteId])
+  @@index([barrio])
 }

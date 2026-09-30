@@ -4,7 +4,21 @@ import { PrismaClient } from "@prisma/client";
 // Crea el primer dueño a partir de variables de entorno. No pisa usuarios existentes.
 const db = new PrismaClient();
 
+// Datos base: se crean solo si faltan, sin pisar lo que ya se cambió a mano.
+async function datosBase() {
+  for (const [orden, nombre] of ["Norte", "Oeste", "Sur", "CABA"].entries()) {
+    await db.zona.upsert({ where: { nombre }, update: {}, create: { nombre, orden } });
+  }
+  if ((await db.listaPrecios.count()) === 0) {
+    await db.listaPrecios.createMany({ data: [{ nombre: "Minorista" }, { nombre: "Mayorista" }, { nombre: "Distribuidor" }] });
+  }
+  if ((await db.producto.count()) === 0) {
+    await db.producto.createMany({ data: [{ nombre: "Prepizza tomate" }, { nombre: "Prepizza cebolla" }] });
+  }
+}
+
 async function main() {
+  await datosBase();
   const nombre = process.env.SEED_ADMIN_NOMBRE;
   const email = process.env.SEED_ADMIN_EMAIL?.trim().toLowerCase();
   const password = process.env.SEED_ADMIN_PASSWORD;
