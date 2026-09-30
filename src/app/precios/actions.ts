@@ -56,16 +56,15 @@ export async function crearProducto(_: EstadoPrecios, formData: FormData): Promi
   await exigirOficina();
   const nombre = mayuscula(String(formData.get("nombre") ?? ""));
   if (nombre.length < 2) return { error: "Falta el nombre del producto.", valores: valoresDe(formData) };
-  // Va al final de los productos numerados (1 al 7 hoy); los agregados a mano siguen contando desde ahí.
-  const ordenes = await db.producto.findMany({ where: { orden: { lt: 100 } }, select: { orden: true } });
-  const siguiente = Math.max(0, ...ordenes.map((o) => o.orden)) + 1;
+  // Va al final de los productos.
+  const ultimo = await db.producto.aggregate({ _max: { orden: true } });
   try {
     await db.producto.create({
       data: {
         nombre,
         sku: vacio(formData.get("sku"))?.toUpperCase() ?? null,
         unidad: formData.get("unidad") === "unidad" ? "unidad" : "paquete",
-        orden: siguiente,
+        orden: (ultimo._max.orden ?? 0) + 1,
       },
     });
   } catch (e) {
@@ -110,7 +109,9 @@ export async function crearLista(_: EstadoPrecios, formData: FormData): Promise<
   if (await db.listaPrecios.findFirst({ where: { nombre: { equals: nombre, mode: "insensitive" } } })) return { error: "Ya existe una lista con ese nombre.", valores: valoresDe(formData) };
 
   const copiarDe = vacio(formData.get("copiarDe"));
-  const nueva = await db.listaPrecios.create({ data: { nombre } });
+  // Va al final de las listas (después de Mayorista, Distribuidor y las que ya había).
+  const ultima = await db.listaPrecios.aggregate({ _max: { orden: true } });
+  const nueva = await db.listaPrecios.create({ data: { nombre, orden: (ultima._max.orden ?? 0) + 1 } });
   if (copiarDe) {
     const origen = await db.precio.findMany({ where: { listaId: copiarDe } });
     if (origen.length) await db.precio.createMany({ data: origen.map((p) => ({ listaId: nueva.id, productoId: p.productoId, precio: p.precio })) });

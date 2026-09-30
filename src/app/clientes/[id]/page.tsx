@@ -24,7 +24,7 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
   if (!cliente) notFound();
 
   const [listas, zonas, barrios, productos] = await Promise.all([
-    db.listaPrecios.findMany({ where: { OR: [{ activa: true }, { id: cliente.listaPreciosId ?? "" }] }, orderBy: { nombre: "asc" } }),
+    db.listaPrecios.findMany({ where: { OR: [{ activa: true }, { id: cliente.listaPreciosId ?? "" }] }, orderBy: [{ orden: "asc" }, { nombre: "asc" }] }),
     db.zona.findMany({ orderBy: { orden: "asc" } }),
     db.puntoEntrega.findMany({ distinct: ["barrio"], select: { barrio: true }, orderBy: { barrio: "asc" } }),
     db.producto.findMany({ where: { activo: true }, orderBy: [{ orden: "asc" }, { nombre: "asc" }] }),

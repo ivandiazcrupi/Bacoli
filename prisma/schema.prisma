@@ -68,6 +68,7 @@ model ListaPrecios {
   id       String    @id @default(cuid())
   nombre   String    @unique
   activa   Boolean   @default(true)
+  orden    Int       @default(0) // posición en los desplegables: Mayorista, Distribuidor y luego las demás
   precios  Precio[]
   clientes Cliente[]
 }

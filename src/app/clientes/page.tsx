@@ -40,7 +40,7 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
     db.cliente.findMany({ where, orderBy: { nombre: "asc" }, take: LIMITE, include: { puntos: { include: { zona: true } }, _count: { select: { preciosEspeciales: true } } } }),
     db.cliente.count({ where }),
     db.zona.findMany({ orderBy: { orden: "asc" } }),
-    db.listaPrecios.findMany({ where: { activa: true }, orderBy: { nombre: "asc" } }),
+    db.listaPrecios.findMany({ where: { activa: true }, orderBy: [{ orden: "asc" }, { nombre: "asc" }] }),
   ]);
 
   return (

@@ -10,7 +10,7 @@ export default async function Precios({ searchParams }: { searchParams: Promise<
   const usuario = await exigirOficina();
   const { lista: pedida } = await searchParams;
   const [listas, productos] = await Promise.all([
-    db.listaPrecios.findMany({ where: { activa: true }, orderBy: { nombre: "asc" } }),
+    db.listaPrecios.findMany({ where: { activa: true }, orderBy: [{ orden: "asc" }, { nombre: "asc" }] }),
     db.producto.findMany({ where: { activo: true }, orderBy: [{ orden: "asc" }, { nombre: "asc" }] }),
   ]);
   const lista = listas.find((l) => l.id === pedida) ?? listas.find((l) => l.nombre.toUpperCase() === "MAYORISTA") ?? listas[0];

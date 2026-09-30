@@ -37,6 +37,8 @@ Si hay duda, preguntar. Probar siempre antes de subir.
 - **Tipos de cliente:** minorista y mayorista. **Distribuidor NO es un tipo de cliente: es una lista de precios** (el
   producto es el mismo, cambia el precio). Los precios minoristas viven en la tienda online (Empretienda): no se cargan
   acá; la lista Minorista está oculta (`activa = false`). "Clientes de Migue" = mayorista con comisionista Migue 8%.
+- **Orden:** las listas van Mayorista, Distribuidor y luego las demás (campo `orden`); una lista o un producto nuevo
+  siempre va **al final**.
 - **El precio se define por LISTA** (pocas: Mayorista, Distribuidor, VACALIN…), no por cliente. Cada cliente elige una
   lista en su ficha. Así crecer a miles de clientes no multiplica los precios (productos × listas). El **precio propio**
   de un cliente es solo una excepción para precios que no comparte con nadie; hay filtro "Con precio propio" en Clientes.

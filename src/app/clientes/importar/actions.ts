@@ -74,7 +74,7 @@ export async function importar(_: EstadoImport, formData: FormData): Promise<Est
   const faltan = r.analisis.barrios.filter((b) => !r.zonaPorBarrio[b.barrio]);
   if (faltan.length) return { ...r, error: `Falta elegir la zona de: ${faltan.map((b) => b.titulo).join(", ")}.` };
 
-  const [zonas, listas] = await Promise.all([db.zona.findMany(), db.listaPrecios.findMany({ where: { activa: true } })]);
+  const [zonas, listas] = await Promise.all([db.zona.findMany(), db.listaPrecios.findMany({ where: { activa: true }, orderBy: [{ orden: "asc" }, { nombre: "asc" }] })]);
   const zonaId = new Map(zonas.map((z) => [z.nombre, z.id]));
   // Cada cliente usa la lista de su nombre de marca (ej. VACALIN) si existe; si no, Mayorista.
   const listaId = (nombre: string) =>

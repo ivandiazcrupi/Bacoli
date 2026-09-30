@@ -7,7 +7,7 @@ import { CLIENTE_VACIO, ClienteForm } from "../ClienteForm";
 export default async function NuevoCliente() {
   const usuario = await exigirOficina();
   const [listas, zonas, barrios] = await Promise.all([
-    db.listaPrecios.findMany({ where: { activa: true }, orderBy: { nombre: "asc" } }),
+    db.listaPrecios.findMany({ where: { activa: true }, orderBy: [{ orden: "asc" }, { nombre: "asc" }] }),
     db.zona.findMany({ orderBy: { orden: "asc" } }),
     db.puntoEntrega.findMany({ distinct: ["barrio"], select: { barrio: true }, orderBy: { barrio: "asc" } }),
   ]);
