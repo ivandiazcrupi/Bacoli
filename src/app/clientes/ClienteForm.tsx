@@ -110,7 +110,7 @@ export function ClienteForm({ accion, inicial, listas, zonas, barrios = [], text
 
       {zonas && (
         <Bloque titulo="Primera sucursal" ayuda="Después se pueden agregar más.">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Campo etiqueta="Barrio *">
               <input name="barrio" autoCapitalize="characters" list="barrios" defaultValue={estado?.valores?.barrio ?? ""} required className={estiloDato} />
             </Campo>
@@ -120,12 +120,9 @@ export function ClienteForm({ accion, inicial, listas, zonas, barrios = [], text
             </Campo>
             <Campo etiqueta="Zona de reparto *">
               <select name="zonaId" defaultValue={estado?.valores?.zonaId ?? ""} required className={estiloCampo}>
-                <option value="" disabled>Elegí la zona</option>
+                <option value="" disabled hidden>Elegí la zona</option>
                 {zonas.map((z) => <option key={z.id} value={z.id}>{z.nombre}</option>)}
               </select>
-            </Campo>
-            <Campo etiqueta="Nombre">
-              <input name="alias" autoCapitalize="characters" placeholder="Opcional. Ej: Retiro" defaultValue={estado?.valores?.alias ?? ""} className={estiloDato} />
             </Campo>
             <Campo etiqueta="Teléfono">
               <input name="telefono" inputMode="tel" defaultValue={estado?.valores?.telefono ?? ""} className={estiloCampo} />

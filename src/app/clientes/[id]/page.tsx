@@ -100,7 +100,7 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
         )}
 
         <section className="space-y-2">
-          <h2 className="text-lg font-semibold">Sucursales ({cliente.puntos.length})</h2>
+          <h2 className="pb-2 pt-4 text-center text-3xl font-bold tracking-tight">Sucursales <span className="text-amber-700">({cliente.puntos.length})</span></h2>
           <ListaBarrios barrios={listaBarrios} />
           <EncabezadoSucursales />
           {cliente.puntos.map((p) => (

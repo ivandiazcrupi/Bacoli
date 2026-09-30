@@ -68,7 +68,9 @@ export async function guardarSucursal(clienteId: string, sucursalId: string | nu
   if (!d.success) return { error: d.error.issues[0].message, valores };
 
   if (sucursalId) {
-    await db.puntoEntrega.update({ where: { id: sucursalId, clienteId }, data: sucursalEnMayuscula(d.data) });
+    // El formulario ya no tiene "nombre": si no viene, se conserva el que tenía cargado.
+    const { alias, ...resto } = sucursalEnMayuscula(d.data);
+    await db.puntoEntrega.update({ where: { id: sucursalId, clienteId }, data: formData.has("alias") ? { ...resto, alias } : resto });
   } else {
     await db.puntoEntrega.create({ data: { ...sucursalEnMayuscula(d.data), clienteId } });
   }

@@ -31,7 +31,7 @@ export function FormularioUsuario() {
       <label className="block text-sm font-medium">
         Rol
         <select name="rol" required defaultValue="" className={campo}>
-          <option value="" disabled>Elegí un rol</option>
+          <option value="" disabled hidden>Elegí un rol</option>
           {Object.entries(NOMBRE_ROL).map(([valor, texto]) => (
             <option key={valor} value={valor}>{texto}</option>
           ))}
