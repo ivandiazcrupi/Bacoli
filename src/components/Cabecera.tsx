@@ -13,7 +13,7 @@ export function Cabecera({ usuario }: { usuario: Usuario }) {
   const acciones = oficina && (
     <>
       <Link href="/pedidos/nuevo" className={`${botonCargar} bg-amber-700 text-white hover:bg-amber-800`}>Cargar pedido</Link>
-      <Link href="/clientes/nuevo" className={`${botonCargar} border border-stone-300 bg-white hover:bg-stone-50`}>Cargar cliente</Link>
+      <Link href="/clientes/nuevo" className={`${botonCargar} bg-amber-700 text-white hover:bg-amber-800`}>Cargar cliente</Link>
     </>
   );
   return (

@@ -174,7 +174,7 @@ y ~1000 minoristas.
 
 ## Pantalla de inicio y anchos (pedido del dueño)
 - **Inicio** (`src/app/page.tsx`): un saludo al azar según la hora de Argentina ("Buenos días, equipo. ¿Cómo va?"…) y abajo dos
-  botones grandes, **Cargar pedido** y **Cargar cliente** (estilo pantalla de bienvenida de Claude); sin números ni resumen (el dueño los sacó). El repartidor solo ve el saludo.
+  botones grandes del mismo color, en MAYÚSCULA: **CARGAR PEDIDO** y **CARGAR CLIENTE** (estilo pantalla de bienvenida de Claude); sin números ni resumen (el dueño los sacó). El repartidor solo ve el saludo.
 - El sistema debe **aprovechar el ancho de la PC**: listas en columnas (Clientes: 1/2/3 según ancho), contenedores `max-w-6xl` o más,
   cabecera y hojas hasta `max-w-[1900px]`. No volver a centrar todo en una columna angosta.
 
@@ -187,7 +187,7 @@ y ~1000 minoristas.
 ## Navegación (regla para no llenar el menú)
 - **Cabecera** (`src/components/Cabecera.tsx`, decisión del dueño): marca **BACOLI GESTIÓN** a la izquierda; menú **centrado y en
   MAYÚSCULA** ordenado por importancia: **PEDIDOS y CLIENTES** grandes y en negrita, y después, más chicos y grises, PRECIOS, USUARIOS,
-  EMPRESA y MI CUENTA; a la derecha los botones **CARGAR PEDIDO** y **CARGAR CLIENTE** (y Salir). En el celular: los botones de carga
+  EMPRESA y MI CUENTA; a la derecha los botones **CARGAR PEDIDO** y **CARGAR CLIENTE** (los dos del mismo color naranja; y Salir). En el celular: los botones de carga
   arriba y el menú en una fila que se desliza. Esto es una excepción a "el sistema va en minúscula": el menú va en mayúscula.
 - Menú principal corto (máx. ~5 entradas): Pedidos, Clientes, Precios, y a futuro Ruta, Cuentas. Usuarios y Mi cuenta son de
   administración.
