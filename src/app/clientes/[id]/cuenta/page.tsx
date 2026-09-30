@@ -34,7 +34,7 @@ export default async function CuentaCorriente({ params }: { params: Promise<{ id
   return (
     <>
       <Cabecera usuario={usuario} />
-      <main className="mx-auto max-w-3xl space-y-6 px-4 py-6">
+      <main className="mx-auto max-w-6xl space-y-6 px-4 py-6">
         <div>
           <Link href={`/clientes/${id}`} className="text-sm text-stone-600">← {cliente.nombre}</Link>
           <h1 className="text-2xl font-bold">Cuenta corriente</h1>

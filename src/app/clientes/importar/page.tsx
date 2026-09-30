@@ -11,7 +11,7 @@ export default async function ImportarClientes() {
   return (
     <>
       <Cabecera usuario={usuario} />
-      <main className="mx-auto max-w-3xl space-y-4 px-4 py-6">
+      <main className="mx-auto max-w-6xl space-y-4 px-4 py-6">
         <Link href="/clientes" className="text-sm text-stone-600">← Clientes</Link>
         <h1 className="text-2xl font-bold">Importar clientes desde la planilla</h1>
         <p className="text-sm text-stone-600">

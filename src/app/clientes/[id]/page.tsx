@@ -68,7 +68,7 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
   return (
     <>
       <Cabecera usuario={usuario} />
-      <main className="mx-auto max-w-3xl space-y-6 px-4 py-6">
+      <main className="mx-auto max-w-6xl space-y-6 px-4 py-6">
         <div className="flex items-start justify-between gap-3">
           <div>
             <Link href="/clientes" className="text-sm text-stone-600">← Clientes</Link>

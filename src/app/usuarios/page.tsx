@@ -15,7 +15,7 @@ export default async function Usuarios() {
   return (
     <>
       <Cabecera usuario={actual} />
-      <main className="mx-auto max-w-3xl space-y-6 px-4 py-6">
+      <main className="mx-auto max-w-6xl space-y-6 px-4 py-6">
         <h1 className="text-2xl font-bold">Usuarios</h1>
         <ul className="divide-y divide-stone-200 rounded-lg border border-stone-200 bg-white">
           {usuarios.map((u) => (

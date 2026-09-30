@@ -172,6 +172,13 @@ y ~1000 minoristas.
   principal es una fila que se desliza de costado (`Cabecera`).
 - Pie de las pantallas: **"Desarrollado por IVÁN DÍAZ CRUPI"**. La versión publicada (commit de Railway) se ve en la pantalla **Empresa**.
 
+## Pantalla de inicio y anchos (pedido del dueño)
+- **Inicio** (`src/app/page.tsx`): un saludo al azar según la hora de Argentina ("Buenos días, equipo. ¿Cómo va?"…) y abajo dos
+  botones grandes, **Cargar pedido** y **Cargar cliente** (estilo pantalla de bienvenida de Claude); el resumen (hoy / sin asignar /
+  vencidos) queda como una línea chica. El repartidor solo ve el saludo.
+- El sistema debe **aprovechar el ancho de la PC**: listas en columnas (Clientes: 1/2/3 según ancho), contenedores `max-w-6xl` o más,
+  cabecera y hojas hasta `max-w-[1900px]`. No volver a centrar todo en una columna angosta.
+
 ## Convenciones de código
 - Formularios: server actions + `useActionState`; al fallar devuelven `valores` y el `<form>` usa `key` para
   conservar lo cargado (React vacía los desplegables si no). Ver `src/app/clientes/ClienteForm.tsx`.
@@ -191,3 +198,13 @@ y ~1000 minoristas.
 - El formulario de Usuarios pierde lo cargado si da error (aplicar el mismo `key` que en Clientes).
 - `npm audit` marca 3 alertas en una herramienta interna de Prisma (solo desarrollo, no en producción).
 - Registro de cambios (auditoría) todavía no existe.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

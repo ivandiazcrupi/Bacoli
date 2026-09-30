@@ -15,7 +15,7 @@ export default async function NuevoCliente() {
   return (
     <>
       <Cabecera usuario={usuario} />
-      <main className="mx-auto max-w-3xl space-y-4 px-4 py-6">
+      <main className="mx-auto max-w-6xl space-y-4 px-4 py-6">
         <h1 className="text-2xl font-bold">Nuevo cliente</h1>
         <ClienteForm accion={crearCliente} inicial={CLIENTE_VACIO} listas={listas} zonas={zonas} barrios={barrios.map((b) => b.barrio)} textoBoton="Crear cliente" />
       </main>

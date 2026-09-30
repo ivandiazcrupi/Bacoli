@@ -21,7 +21,7 @@ export default async function Precios({ searchParams }: { searchParams: Promise<
   return (
     <>
       <Cabecera usuario={usuario} />
-      <main className="mx-auto max-w-xl space-y-10 px-4 py-6">
+      <main className="mx-auto max-w-4xl space-y-10 px-4 py-6">
         <section className="space-y-4">
           <h1 className="text-2xl font-bold">Precios</h1>
           {lista ? (

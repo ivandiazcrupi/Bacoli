@@ -46,7 +46,7 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
   return (
     <>
       <Cabecera usuario={usuario} />
-      <main className="mx-auto max-w-3xl space-y-4 px-4 py-6">
+      <main className="mx-auto max-w-6xl space-y-4 px-4 py-6">
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-2xl font-bold">Clientes</h1>
           <div className="flex items-center gap-2">
@@ -55,8 +55,8 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
           </div>
         </div>
 
-        <form className="grid grid-cols-2 gap-2">
-          <input name="q" defaultValue={q} placeholder="Buscar cliente, sucursal o barrio" className={`${estiloCampo} col-span-2 mt-0`} />
+        <form className="grid grid-cols-2 gap-2 md:grid-cols-6">
+          <input name="q" defaultValue={q} placeholder="Buscar cliente, sucursal o barrio" className={`${estiloCampo} col-span-2 md:col-span-6 mt-0`} />
           <select name="tipo" defaultValue={tipo} className={`${estiloCampo} mt-0`}>
             <option value="">Todos los tipos</option>
             {Object.entries(TIPO_CLIENTE).filter(([k]) => k !== "DISTRIBUIDOR").map(([k, t]) => <option key={k} value={k}>{t}</option>)}
@@ -78,7 +78,7 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
             <option value="inactivos">Desactivados</option>
             <option value="todos">Todos</option>
           </select>
-          <button className="col-span-2 rounded-lg border border-stone-300 bg-white px-3 py-3 font-medium">Filtrar</button>
+          <button className="col-span-2 md:col-span-6 rounded-lg border border-stone-300 bg-white px-3 py-3 font-medium">Filtrar</button>
         </form>
 
         <p className="text-sm text-stone-600">
@@ -88,11 +88,11 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
         {clientes.length === 0 ? (
           <p className="rounded-lg border border-dashed border-stone-300 p-4 text-stone-600">No hay clientes con esos filtros.</p>
         ) : (
-          <ul className="divide-y divide-stone-200 rounded-lg border border-stone-200 bg-white">
+          <ul className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
             {clientes.map((c) => {
               const zonasCliente = [...new Set(c.puntos.map((p) => p.zona.nombre))].join(", ");
               return (
-                <li key={c.id}>
+                <li key={c.id} className="rounded-lg border border-stone-200 bg-white">
                   <Link href={`/clientes/${c.id}`} className={`block p-4 ${c.activo ? "" : "opacity-60"}`}>
                     <p className="font-medium">{c.nombre}</p>
                     <p className="text-sm text-stone-600">
