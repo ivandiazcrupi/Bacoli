@@ -173,6 +173,19 @@ export async function moverPedido(pedidoId: string, destino: string, ordenIds: s
   return { ok: true };
 }
 
+/** Asigna un pedido sin día a un día, al final de la lista del reparto. Sirve para el botón del día y para arrastrar. */
+export async function asignarADia(pedidoId: string, fecha: string): Promise<{ ok: boolean; error?: string }> {
+  await exigirOficina();
+  if (!esFechaValida(fecha)) return { ok: false, error: "Fecha inválida." };
+  const pedido = await db.pedido.findUnique({ where: { id: pedidoId } });
+  if (!pedido || pedido.estado === "CANCELADO") return { ok: false, error: "No se puede asignar ese pedido." };
+  if (pedido.estado === "ENTREGADO") return { ok: false, error: "Un pedido entregado no se puede mover." };
+  if (await db.diaCerrado.findUnique({ where: { fecha: aFecha(fecha) } })) return { ok: false, error: "Ese día está cerrado. Un dueño puede reabrirlo." };
+  const ultimo = await db.pedido.aggregate({ where: { fechaEntrega: aFecha(fecha) }, _max: { ordenDia: true } });
+  await db.pedido.update({ where: { id: pedidoId }, data: { fechaEntrega: aFecha(fecha), ordenDia: (ultimo._max.ordenDia ?? -1) + 1 } });
+  return { ok: true };
+}
+
 const refrescar = (id: string) => {
   revalidatePath("/pedidos");
   revalidatePath(`/pedidos/${id}`);

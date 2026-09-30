@@ -109,15 +109,18 @@ y ~1000 minoristas.
 - [x] Módulo 2 (parte D): Precios = **una lista a la vez** (desplegable de lista; a la izquierda nombre y código, a la derecha
   el precio con $), productos con SKU, EAN, descripción, unidad y orden; crear lista nueva puede copiar los precios de otra;
   listas VACALIN y Distribuidor; Importar es un botón en Clientes.
-- [x] Módulo 3: Pedidos + **tablero semanal** (`/pedidos`). Un pedido se carga SIN fecha (buscar cliente/sucursal escribiendo,
-  tocar cantidades; precio del cliente automático y editable; remito o factura) y cae en la columna **"Sin asignar"**
-  (la "hoja Pedidos" de sus planillas). Se **arrastra a su día** (Lun a Sáb; domingo solo si hay algo) como sus hojas por día;
-  también se puede tocar el día debajo del pedido (celular). **El número (1, 2, 3…) es la posición dentro de la hoja del día**
-  (el orden del reparto); no hay número global de pedido visible. Detalle del pedido: entregar total o parcial, no entregado,
-  reabrir, cancelar, editar. Límites de deuda: se avisa y solo un dueño autoriza (`autorizadoPorId`). Sin "repetir último pedido".
-  Lógica: `src/app/pedidos/`, tablero con `@dnd-kit` (`Tablero.tsx`).
+- [x] Módulo 3: **Pedidos = una sola página** (`/pedidos`, `PaginaPedidos.tsx`), horizontal como su Sheet. **Arriba, "Sin asignar"**:
+  una fila por pedido cargado sin día (barrio, cliente, dirección, teléfono, pedido con nombres, monto, factura/remito), con
+  los botones **Lun Mar Mié…** para asignarlo de un toque (`asignarADia`) o **arrastrando** la fila hasta el día. **Abajo, los días
+  de la semana** (Lun a Sáb; domingo solo si hay algo), cerrados por defecto: **al tocar "Martes" se abre debajo su hoja** (la hoja
+  del día de abajo). El día no se abre solo al asignar (así los días no se mueven). Semana ← →. Un pedido se carga SIN fecha
+  (buscar cliente/sucursal escribiendo, tocar cantidades; precio del cliente automático y editable; remito o factura).
+  **El número (1, 2, 3…) es la posición dentro de la hoja del día** (el orden del reparto); no hay número global de pedido
+  visible. Detalle del pedido: entregar total o parcial, no entregado, reabrir, cancelar, editar. Límites de deuda: se avisa y
+  solo un dueño autoriza (`autorizadoPorId`). Sin "repetir último pedido". (Antes era un tablero de tarjetas en columnas; el
+  dueño pidió esta hoja.) Lógica: `src/app/pedidos/`; arrastre con `@dnd-kit` (`pointerWithin`).
 - [x] Módulo 3 (parte B): **hoja del día** (`/pedidos/dia/AAAA-MM-DD`), pensada para la PC y horizontal como su hoja de
-  Google Sheets. Al tocar el nombre de un día en el tablero se abre. Una fila por pedido con: N° (posición del reparto; se
+  Google Sheets. Se abre al tocar el día en la página de Pedidos (o directo en su dirección). Una fila por pedido con: N° (posición del reparto; se
   reordena arrastrando el número), barrio, cliente (+sucursal), dirección (**se muestra "Como Título"**, se guarda en mayúscula;
   `titulo()`), teléfono, **pedido con el NOMBRE de cada producto y su cantidad (nunca solo el código: el repartidor se confunde)**,
   monto, FACTURA/REMITO, N° de factura (se carga a mano; más adelante ARCA), **Entrega** (casillero ✓ verde / ✗ rojo; la fila
@@ -165,8 +168,8 @@ y ~1000 minoristas.
 - La **hoja del día** tiene dos presentaciones del mismo dato: **tabla horizontal** en pantallas grandes (`lg:`), y **tarjetas
   grandes** en el celular (`FilaTarjeta`: dirección → Google Maps, teléfono → llama / WhatsApp, ✓/✗ y cobro con botones de 48 px).
   Esas tarjetas son la base de la futura vista del repartidor.
-- El **tablero semanal** en el celular: columnas que se deslizan, y una fila de días con la cantidad de pedidos que salta a cada
-  columna. El menú principal es una fila que se desliza de costado (`Cabecera`).
+- En el celular, "Sin asignar" son tarjetas con los botones de día grandes, y los días son una lista desplegable. El menú
+  principal es una fila que se desliza de costado (`Cabecera`).
 - Pie de las pantallas: **"Desarrollado por IVÁN DÍAZ CRUPI"**. La versión publicada (commit de Railway) se ve en la pantalla **Empresa**.
 
 ## Convenciones de código
