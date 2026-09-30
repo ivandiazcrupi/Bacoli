@@ -158,15 +158,16 @@ y ~1000 minoristas.
   libres, CUIT/teléfono, ni el nombre de las personas usuarias del sistema.
 - Al agregar un formulario nuevo con datos de este tipo: usar `estiloDato` + `autoCapitalize="characters"` y `mayus()` en la acción.
 
-## Celular y PC (regla de diseño)
-- **Todo se usa desde el celular y desde la PC.** Cada pantalla se prueba a 390 px de ancho, sin scroll horizontal de la página
-  (solo dentro de un tablero/tabla que lo necesite). No entregar una pantalla que "solo se ve bien en la PC".
+## PC primero, celular para consultar (decisión del dueño)
+- **Se diseña y se pule primero para la PC.** El celular sirve sobre todo para **ver**, **cambiar algo rápido** (marcar entregado,
+  cobrar) y **comunicarse con un cliente** (botones **Llamar** y **WhatsApp**, `enlaceWhatsApp` en `src/lib/telefonos.ts`). No
+  invertir en un celular complejo para el resto de las pantallas; solo que no se rompa (sin scroll horizontal de la página a 390 px).
 - La **hoja del día** tiene dos presentaciones del mismo dato: **tabla horizontal** en pantallas grandes (`lg:`), y **tarjetas
-  grandes** en el celular (`FilaTarjeta`: dirección → Google Maps, teléfono → llama, ✓/✗ y cobro con botones de 48 px). Esas
-  tarjetas son la base de la futura vista del repartidor.
+  grandes** en el celular (`FilaTarjeta`: dirección → Google Maps, teléfono → llama / WhatsApp, ✓/✗ y cobro con botones de 48 px).
+  Esas tarjetas son la base de la futura vista del repartidor.
 - El **tablero semanal** en el celular: columnas que se deslizan, y una fila de días con la cantidad de pedidos que salta a cada
   columna. El menú principal es una fila que se desliza de costado (`Cabecera`).
-- Al pie de cada pantalla se muestra la **versión** (commit de Railway) para comprobar qué está publicado.
+- Pie de las pantallas: **"Desarrollado por IVÁN DÍAZ CRUPI"**. La versión publicada (commit de Railway) se ve en la pantalla **Empresa**.
 
 ## Convenciones de código
 - Formularios: server actions + `useActionState`; al fallar devuelven `valores` y el `<form>` usa `key` para

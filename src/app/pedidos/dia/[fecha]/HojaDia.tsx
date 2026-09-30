@@ -7,6 +7,7 @@ import { DndContext, MouseSensor, TouchSensor, closestCenter, useSensor, useSens
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { formatoPesos } from "@/lib/numeros";
+import { enlaceWhatsApp } from "@/lib/telefonos";
 import { BotonRemito } from "../../BotonRemito";
 import { moverPedido } from "../../actions";
 import { emitirRemitosDia } from "../../remito/actions";
@@ -68,7 +69,16 @@ function FilaHoja({ f, n, bloqueada, acc }: { f: Fila; n: number; bloqueada: boo
       <div role="cell" className="pt-1.5 font-medium">{f.barrio}</div>
       <div role="cell" className="pt-1.5 font-semibold leading-snug">{f.cliente}</div>
       <div role="cell" className="pt-1.5 leading-snug"><a href={mapa(f)} target="_blank" rel="noreferrer" className="hover:underline">{f.direccion}</a></div>
-      <div role="cell" className="pt-1.5 tabular-nums">{f.telefono || <span className="text-stone-400">—</span>}</div>
+      <div role="cell" className="pt-1.5 tabular-nums">
+        {f.telefono ? (
+          <>
+            <span className="block">{f.telefono}</span>
+            {enlaceWhatsApp(f.telefono) && <a href={enlaceWhatsApp(f.telefono)!} target="_blank" rel="noreferrer" className="text-xs font-medium text-green-800 underline">WhatsApp</a>}
+          </>
+        ) : (
+          <span className="text-stone-400">—</span>
+        )}
+      </div>
       <div role="cell" className="space-y-0.5 pt-1.5">
         {f.items.map((i, k) => (
           <p key={k} className="flex gap-2 leading-snug"><span className="min-w-6 shrink-0 text-right font-semibold tabular-nums">{i.cantidad}</span><span>{i.nombre}</span></p>
@@ -157,7 +167,12 @@ function FilaTarjeta({ f, n, bloqueada, acc }: { f: Fila; n: number; bloqueada: 
 
       <div className="space-y-1">
         <a href={mapa(f)} target="_blank" rel="noreferrer" className="block text-base font-medium underline">{f.direccion}</a>
-        {f.telefono && <a href={`tel:${digitos(f.telefono)}`} className="inline-block text-base font-medium underline">Llamar · {f.telefono}</a>}
+        {f.telefono && (
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <a href={`tel:${digitos(f.telefono)}`} className="inline-flex h-11 items-center rounded-lg border border-stone-300 bg-white px-3 text-base font-medium">Llamar · {f.telefono}</a>
+            {enlaceWhatsApp(f.telefono) && <a href={enlaceWhatsApp(f.telefono)!} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center rounded-lg border border-green-700 bg-white px-3 text-base font-medium text-green-800">WhatsApp</a>}
+          </div>
+        )}
       </div>
 
       <ul className="space-y-0.5 rounded-lg bg-white/70 p-2 text-base">

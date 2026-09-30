@@ -8,6 +8,7 @@ export default async function Empresa() {
   const usuario = await exigirUsuario();
   if (usuario.rol !== "DUENO") redirect("/");
   const [empresa, contador] = await Promise.all([db.empresa.findUnique({ where: { id: "principal" } }), db.numerador.findUnique({ where: { id: "REMITO" } })]);
+  const version = process.env.RAILWAY_GIT_COMMIT_SHA?.slice(0, 7) ?? "local";
   return (
     <>
       <Cabecera usuario={usuario} />
@@ -24,6 +25,7 @@ export default async function Empresa() {
             inicioActividades: empresa?.inicioActividades ?? "", puntoVenta: empresa?.puntoVenta ?? "",
           }}
         />
+        <p className="text-xs text-stone-500">Versión del sistema: {version}. Sirve para comprobar que lo último ya está publicado.</p>
       </main>
     </>
   );
