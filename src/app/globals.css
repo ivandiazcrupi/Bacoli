@@ -1,3 +1,19 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Todo el sistema va en MAYÚSCULA, salvo los textos de acompañamiento (chicos, grises, mensajes). */
+body { text-transform: uppercase; }
+input:not([type="email"]):not([type="password"]):not([type="file"]):not([type="checkbox"]),
+textarea,
+select,
+button { text-transform: uppercase; }
+::placeholder { text-transform: none; }
+
+/* Acompañamiento: ayudas, detalles, contadores y mensajes se leen en minúscula normal. */
+.text-xs:not(.uppercase),
+.text-stone-500:not(.uppercase),
+.text-stone-600,
+.text-red-700,
+.text-green-700,
+.normal-case { text-transform: none; }

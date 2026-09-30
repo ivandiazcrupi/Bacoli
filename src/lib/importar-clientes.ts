@@ -1,3 +1,4 @@
+import { mayus } from "./mayusculas";
 import { cuitValido } from "./numeros";
 
 // ---------- Lectura del CSV ----------
@@ -169,7 +170,7 @@ export function analizar(filasCsv: Record<string, string>[], opciones: Opciones)
   const filas: Fila[] = [];
 
   for (const f of filasCsv) {
-    const nombre = limpiar(f["nombre"] ?? "");
+    const nombre = mayus(f["nombre"] ?? "");
     if (!nombre) {
       avisos.push(`Fila sin nombre (dirección "${f["direccion"] ?? ""}"): no se importó.`);
       continue;
@@ -182,11 +183,11 @@ export function analizar(filasCsv: Record<string, string>[], opciones: Opciones)
     }
 
     // Dirección: se quitan las notas entre paréntesis (horarios, avisos).
-    let direccion = limpiar((f["direccion"] ?? "").replace(/\([^)]*\)/g, ""));
+    let direccion = mayus((f["direccion"] ?? "").replace(/\([^)]*\)/g, ""));
     if ((f["direccion"] ?? "").includes("(")) avisos.push(`${nombre}: se quitó una nota de la dirección ("${f["direccion"]}").`);
     if (!direccion || /^MAYOR\.?$/i.test(direccion)) {
       avisos.push(`${nombre}: sin dirección válida ("${f["direccion"] ?? ""}"). Se carga como "Sin dirección".`);
-      direccion = "Sin dirección";
+      direccion = "SIN DIRECCIÓN";
     }
 
     const cuitTexto = f["cuit"] ?? "";
@@ -196,7 +197,7 @@ export function analizar(filasCsv: Record<string, string>[], opciones: Opciones)
       else avisos.push(`${nombre}: el CUIT "${cuitTexto}" no es válido y no se importó.`);
     }
 
-    const razonCruda = limpiar(f["razon social"] ?? "");
+    const razonCruda = mayus(f["razon social"] ?? "");
     const razon = razonCruda && !/ENVIO/i.test(norm(razonCruda)) && !/^[\d\s()+-]+$/.test(razonCruda) ? razonCruda : null;
 
     const estadoTexto = norm(f["estado"] ?? "");
@@ -258,7 +259,7 @@ export function analizar(filasCsv: Record<string, string>[], opciones: Opciones)
       let alias: string | null = null;
       if (g.marca) {
         const resto = limpiar(f.nombre.replace(new RegExp(`^${g.marca.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*-?\\s*`, "i"), ""));
-        alias = resto ? tituloBarrio(norm(resto)) : null;
+        alias = resto ? mayus(resto) : null;
       }
       return { alias, direccion: f.direccion, barrio: f.barrio, telefono: f.telefono, activo: f.estado === "ACTIVO" };
     });

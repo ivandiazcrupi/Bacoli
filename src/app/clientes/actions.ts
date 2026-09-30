@@ -3,13 +3,20 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
+import { mayus } from "@/lib/mayusculas";
 import { leerMonto } from "@/lib/numeros";
 import { exigirOficina } from "@/lib/session";
 import { esquemaCliente, esquemaSucursal, valoresDe, type EstadoForm } from "./validacion";
 
+type DatosSucursal = ReturnType<typeof esquemaSucursal.parse>;
+const sucursalEnMayuscula = (d: DatosSucursal) => ({ ...d, alias: mayus(d.alias), direccion: mayus(d.direccion), barrio: mayus(d.barrio) });
+
 function datosCliente(d: ReturnType<typeof esquemaCliente.parse>) {
   return {
     ...d,
+    nombre: mayus(d.nombre),
+    razonSocial: mayus(d.razonSocial),
+    comisionista: mayus(d.comisionista),
     cuit: d.cuit ? d.cuit.replace(/\D/g, "") : null,
     // Si "sin límite", no se guardan los topes.
     maxPedidosImpagos: d.sinLimite ? null : d.maxPedidosImpagos,
@@ -26,7 +33,7 @@ export async function crearCliente(_: EstadoForm, formData: FormData): Promise<E
   if (!sucursal.success) return { error: sucursal.error.issues[0].message, valores };
 
   const creado = await db.cliente.create({
-    data: { ...datosCliente(cliente.data), puntos: { create: sucursal.data } },
+    data: { ...datosCliente(cliente.data), puntos: { create: sucursalEnMayuscula(sucursal.data) } },
   });
   revalidatePath("/clientes");
   redirect(`/clientes/${creado.id}`);
@@ -61,9 +68,9 @@ export async function guardarSucursal(clienteId: string, sucursalId: string | nu
   if (!d.success) return { error: d.error.issues[0].message, valores };
 
   if (sucursalId) {
-    await db.puntoEntrega.update({ where: { id: sucursalId, clienteId }, data: d.data });
+    await db.puntoEntrega.update({ where: { id: sucursalId, clienteId }, data: sucursalEnMayuscula(d.data) });
   } else {
-    await db.puntoEntrega.create({ data: { ...d.data, clienteId } });
+    await db.puntoEntrega.create({ data: { ...sucursalEnMayuscula(d.data), clienteId } });
   }
   revalidatePath(`/clientes/${clienteId}`);
   return { ok: sucursalId ? "Sucursal guardada." : "Sucursal agregada." };

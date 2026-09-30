@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
+import { mayus } from "@/lib/mayusculas";
 import { leerMonto } from "@/lib/numeros";
 import { exigirOficina } from "@/lib/session";
 import { valoresDe } from "../clientes/validacion";
@@ -15,7 +16,7 @@ const vacio = (v: FormDataEntryValue | null) => {
   return t ? t : null;
 };
 /** Los nombres de producto van siempre en mayúscula. */
-const mayuscula = (t: string) => t.replace(/\s+/g, " ").trim().toLocaleUpperCase("es");
+const mayuscula = (t: string) => mayus(t);
 
 // Precios de UNA lista. Los campos se llaman "p_<productoId>". Vacío = sin precio cargado.
 export async function guardarPrecios(listaId: string, _: EstadoPrecios, formData: FormData): Promise<EstadoPrecios> {
@@ -90,7 +91,7 @@ export async function guardarProducto(productoId: string, _: EstadoPrecios, form
         orden,
         sku: vacio(formData.get("sku"))?.toUpperCase() ?? null,
         ean,
-        descripcion: vacio(formData.get("descripcion")),
+        descripcion: mayus(vacio(formData.get("descripcion"))),
         unidad: formData.get("unidad") === "unidad" ? "unidad" : "paquete",
       },
     });
@@ -104,7 +105,7 @@ export async function guardarProducto(productoId: string, _: EstadoPrecios, form
 // Crea la lista, opcionalmente copiando los precios de otra, y la deja abierta para editar.
 export async function crearLista(_: EstadoPrecios, formData: FormData): Promise<EstadoPrecios> {
   await exigirOficina();
-  const nombre = String(formData.get("nombre") ?? "").replace(/\s+/g, " ").trim();
+  const nombre = mayus(String(formData.get("nombre") ?? ""));
   if (nombre.length < 2) return { error: "Falta el nombre de la lista.", valores: valoresDe(formData) };
   if (await db.listaPrecios.findFirst({ where: { nombre: { equals: nombre, mode: "insensitive" } } })) return { error: "Ya existe una lista con ese nombre.", valores: valoresDe(formData) };
 

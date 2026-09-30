@@ -13,7 +13,7 @@ export default async function Precios({ searchParams }: { searchParams: Promise<
     db.listaPrecios.findMany({ where: { activa: true }, orderBy: { nombre: "asc" } }),
     db.producto.findMany({ where: { activo: true }, orderBy: [{ orden: "asc" }, { nombre: "asc" }] }),
   ]);
-  const lista = listas.find((l) => l.id === pedida) ?? listas.find((l) => l.nombre === "Mayorista") ?? listas[0];
+  const lista = listas.find((l) => l.id === pedida) ?? listas.find((l) => l.nombre.toUpperCase() === "MAYORISTA") ?? listas[0];
   const precios = lista ? await db.precio.findMany({ where: { listaId: lista.id } }) : [];
   const mapa: Record<string, string> = {};
   for (const p of precios) mapa[p.productoId] = formato(Number(p.precio));

@@ -78,7 +78,7 @@ export async function importar(_: EstadoImport, formData: FormData): Promise<Est
   const zonaId = new Map(zonas.map((z) => [z.nombre, z.id]));
   // Cada cliente usa la lista de su nombre de marca (ej. VACALIN) si existe; si no, Mayorista.
   const listaId = (nombre: string) =>
-    (listas.find((l) => l.nombre.toLowerCase() === nombre.toLowerCase()) ?? listas.find((l) => l.nombre === "Mayorista"))?.id ?? null;
+    (listas.find((l) => l.nombre.toLowerCase() === nombre.toLowerCase()) ?? listas.find((l) => l.nombre.toUpperCase() === "MAYORISTA"))?.id ?? null;
   const yaExisten = new Set(r.existentes.map((n) => n.toLowerCase()));
 
   const nuevos = r.analisis.clientes.filter((c) => !yaExisten.has(c.nombre.toLowerCase()));
@@ -100,7 +100,7 @@ export async function importar(_: EstadoImport, formData: FormData): Promise<Est
             create: c.sucursales.map((s) => ({
               alias: s.alias,
               direccion: s.direccion,
-              barrio: r.analisis.barrios.find((b) => b.barrio === s.barrio)?.titulo ?? s.barrio,
+              barrio: s.barrio,
               zonaId: zonaId.get(r.zonaPorBarrio[s.barrio])!,
               telefono: s.telefono,
               activo: s.activo,

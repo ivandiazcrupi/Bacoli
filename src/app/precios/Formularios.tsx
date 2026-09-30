@@ -16,7 +16,7 @@ export function SelectorLista({ listas, actual }: { listas: Lista[]; actual: str
       <select
         value={actual}
         onChange={(e) => router.push(`/precios?lista=${e.target.value}`)}
-        className="mt-1 w-full rounded-lg border border-stone-300 bg-white px-3 py-3 text-base font-semibold normal-case tracking-normal text-stone-900"
+        className="mt-1 w-full rounded-lg border border-stone-300 bg-white px-3 py-3 text-base font-semibold text-stone-900"
       >
         {listas.map((l) => <option key={l.id} value={l.id}>{l.nombre}</option>)}
       </select>

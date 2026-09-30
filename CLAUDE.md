@@ -106,6 +106,14 @@ y ~1000 minoristas.
 - [ ] Publicación en Railway (guiar al dueño paso a paso; él crea el proyecto y carga las claves).
 - [ ] Más adelante: facturación ARCA, reportes, migración de planillas, Empretienda, sugerencia de ruta.
 
+## Mayúsculas (acordado con el dueño)
+- **Todo el sistema va en MAYÚSCULA** (títulos, botones, etiquetas, datos), salvo los **textos de acompañamiento** (ayudas,
+  detalles, contadores y mensajes), que van en minúscula normal. Se logra con CSS global (`src/app/globals.css`): el texto
+  gris (`text-stone-500/600`), `text-xs` y los mensajes rojo/verde quedan sin mayúscula; para exceptuar algo, usar `normal-case`.
+- **Datos guardados en mayúscula** (se fuerza al guardar con `mayus()` de `src/lib/mayusculas.ts`): nombre, razón social y
+  comisionista del cliente; alias, dirección y barrio de la sucursal; nombre y descripción del producto; nombre de la lista.
+  No se fuerzan: email (minúscula), contraseñas, comentarios libres ni nombres de zona/usuario. Al importar se aplica igual.
+
 ## Convenciones de código
 - Formularios: server actions + `useActionState`; al fallar devuelven `valores` y el `<form>` usa `key` para
   conservar lo cargado (React vacía los desplegables si no). Ver `src/app/clientes/ClienteForm.tsx`.
