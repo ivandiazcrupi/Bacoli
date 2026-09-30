@@ -74,7 +74,7 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
 }
 
 // Columnas (PC): barrio, nombre, dirección, teléfono, accesos.
-const COLUMNAS = "lg:grid-cols-[1.3fr_1.7fr_2fr_1.2fr_17rem]";
+const COLUMNAS = "lg:grid-cols-[1.3fr_1.7fr_2fr_1.2fr_23rem]";
 const acceso = "rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium uppercase hover:border-verde-700 hover:text-verde-800";
 
 type Cliente = Prisma.ClienteGetPayload<{ include: { puntos: { include: { zona: true } } } }>;
@@ -88,49 +88,43 @@ function Telefono({ tel }: { tel: string | null }) {
     : <a href={`tel:${tel.replace(/[^\d+]/g, "")}`} className="hover:text-verde-800 hover:underline">{tel}</a>;
 }
 
-// Cada cliente es un cuadrante. Sus sucursales van todas a la vista, una debajo de otra, con el mismo espacio:
-// el nombre y los accesos se comparten y cada sucursal tiene su barrio, dirección y teléfono.
+// Cada cliente es un cuadrante. Sus sucursales van todas a la vista, una debajo de otra y TODAS con la misma información
+// (barrio, nombre, dirección, teléfono y accesos), así cada línea se entiende sola.
 function FilaCliente({ c }: { c: Cliente }) {
-  const puntos = c.puntos;
-  const n = Math.max(puntos.length, 1);
   const dato = "font-semibold";
+  const puntos: (Cliente["puntos"][number] | null)[] = c.puntos.length ? c.puntos : [null];
+
+  const accesos = (
+    <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+      <Link href={`/clientes/${c.id}`} className={acceso}>Editar</Link>
+      <Link href={`/clientes/${c.id}/cuenta`} className={acceso}>Cuenta corriente</Link>
+      <Link href={`/clientes/${c.id}/pedidos`} className={acceso}>Pedidos</Link>
+    </div>
+  );
 
   return (
-    <div className={`rounded-xl border border-stone-200 bg-white ${c.activo ? "" : "opacity-60"}`}>
-      {/* PC: una grilla; el nombre y los accesos ocupan todas las filas de las sucursales */}
-      <div className={`hidden items-center gap-x-4 gap-y-2 px-5 py-4 lg:grid ${COLUMNAS}`}>
-        <div className="flex items-center self-stretch" style={{ gridColumn: 2, gridRow: `1 / span ${n}` }}>
-          <Link href={`/clientes/${c.id}`} className={`${dato} hover:text-verde-800 hover:underline`}>{c.nombre}</Link>
-        </div>
-        <div className="flex flex-wrap items-center justify-end gap-2 self-stretch" style={{ gridColumn: 5, gridRow: `1 / span ${n}` }}>
-          <Link href={`/clientes/${c.id}/cuenta`} className={acceso}>Cuenta corriente</Link>
-          <Link href={`/clientes/${c.id}/pedidos`} className={acceso}>Pedidos</Link>
-        </div>
-        {puntos.length === 0 && <span className="text-stone-400" style={{ gridColumn: 1, gridRow: 1 }}>Sin sucursal</span>}
-        {puntos.map((p, i) => (
-          <div key={p.id} className="contents">
-            <span className={`${dato} ${p.activo ? "" : "opacity-60"}`} style={{ gridColumn: 1, gridRow: i + 1 }}>{p.barrio}</span>
-            <span className={`text-sm ${p.activo ? "" : "opacity-60"}`} style={{ gridColumn: 3, gridRow: i + 1 }}>{titulo(p.direccion)}</span>
-            <span className="text-sm" style={{ gridColumn: 4, gridRow: i + 1 }}><Telefono tel={p.telefono} /></span>
+    <div className={`divide-y divide-stone-100 rounded-xl border border-stone-200 bg-white ${c.activo ? "" : "opacity-60"}`}>
+      {puntos.map((p, i) => (
+        <div key={p?.id ?? "sin"}>
+          {/* PC: barrio, nombre, dirección, teléfono y accesos en una fila */}
+          <div className={`hidden items-center gap-x-4 px-5 py-3 lg:grid ${COLUMNAS} ${p && !p.activo ? "opacity-60" : ""}`}>
+            <span className={dato}>{p ? p.barrio : <span className="font-normal text-stone-400">Sin sucursal</span>}</span>
+            <Link href={`/clientes/${c.id}`} className={`${dato} hover:text-verde-800 hover:underline`}>{c.nombre}</Link>
+            <span className="text-sm">{p ? titulo(p.direccion) : ""}</span>
+            <span className="text-sm"><Telefono tel={p?.telefono ?? null} /></span>
+            {accesos}
           </div>
-        ))}
-      </div>
 
-      {/* Celular: el nombre arriba, las sucursales debajo y los accesos al final */}
-      <div className="space-y-3 p-4 lg:hidden">
-        <Link href={`/clientes/${c.id}`} className={`block text-base ${dato}`}>{c.nombre}</Link>
-        {puntos.map((p) => (
-          <div key={p.id} className={`border-l-2 border-crema-300 pl-3 ${p.activo ? "" : "opacity-60"}`}>
-            <p className={dato}>{p.barrio}</p>
-            <p className="text-sm">{titulo(p.direccion)}</p>
-            <p className="text-sm"><Telefono tel={p.telefono} /></p>
+          {/* Celular: la misma información apilada */}
+          <div className={`space-y-1 p-4 lg:hidden ${p && !p.activo ? "opacity-60" : ""}`}>
+            <p className={`text-base ${dato}`}>{p ? p.barrio : "Sin sucursal"}</p>
+            <Link href={`/clientes/${c.id}`} className={`block ${dato}`}>{c.nombre}</Link>
+            {p && <p className="text-sm">{titulo(p.direccion)}</p>}
+            {p && <p className="text-sm"><Telefono tel={p.telefono} /></p>}
+            <div className="pt-1">{accesos}</div>
           </div>
-        ))}
-        <div className="flex flex-wrap gap-2">
-          <Link href={`/clientes/${c.id}/cuenta`} className={acceso}>Cuenta corriente</Link>
-          <Link href={`/clientes/${c.id}/pedidos`} className={acceso}>Pedidos</Link>
         </div>
-      </div>
+      ))}
     </div>
   );
 }
