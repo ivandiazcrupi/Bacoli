@@ -46,9 +46,9 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
     <>
       <Cabecera usuario={usuario} />
       <main className="mx-auto max-w-[1400px] space-y-4 px-4 py-6 sm:px-8">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-bold">Clientes</h1>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Link href="/clientes/importar" className="rounded-lg border border-stone-300 bg-white px-3 py-3 text-sm font-medium">Importar</Link>
             <Link href="/clientes/nuevo" className="whitespace-nowrap rounded-lg bg-verde-700 px-4 py-3 text-sm font-bold uppercase tracking-wide text-white hover:bg-verde-800 sm:px-10">+ Cargar cliente</Link>
           </div>
@@ -62,8 +62,8 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
           <p className="rounded-lg border border-dashed border-stone-300 p-4 text-stone-600">No hay clientes con esos filtros.</p>
         ) : (
           <div className="space-y-2">
-            <div className={`hidden gap-3 px-4 text-xs font-semibold uppercase tracking-wide text-stone-500 lg:grid ${COLUMNAS}`}>
-              <span>Zona</span><span>Nombre</span><span>Dirección</span><span>Teléfono</span><span>Accesos</span>
+            <div className={`hidden gap-x-4 px-5 text-xs font-semibold uppercase tracking-wide text-stone-500 lg:grid ${COLUMNAS}`}>
+              <span>Barrio</span><span>Nombre</span><span>Dirección</span><span>Teléfono</span><span />
             </div>
             {clientes.map((c) => <FilaCliente key={c.id} c={c} />)}
           </div>
@@ -73,69 +73,64 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
   );
 }
 
-// Columnas (PC): zona, nombre, dirección, teléfono, accesos.
-const COLUMNAS = "lg:grid-cols-[9rem_2fr_2.2fr_1.4fr_15.5rem]";
-const acceso = "rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium hover:border-verde-700 hover:text-verde-800";
+// Columnas (PC): barrio, nombre, dirección, teléfono, accesos.
+const COLUMNAS = "lg:grid-cols-[1.3fr_1.7fr_2fr_1.2fr_17rem]";
+const acceso = "rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium uppercase hover:border-verde-700 hover:text-verde-800";
 
 type Cliente = Prisma.ClienteGetPayload<{ include: { puntos: { include: { zona: true } } } }>;
 
+// El teléfono es un enlace: al tocarlo abre WhatsApp para escribirle (si el número no sirve para WhatsApp, llama).
 function Telefono({ tel }: { tel: string | null }) {
   if (!tel) return <span className="text-stone-400">—</span>;
   const wa = enlaceWhatsApp(tel);
-  return (
-    <span className="flex flex-wrap items-center gap-x-2">
-      <a href={`tel:${tel.replace(/[^\d+]/g, "")}`} className="hover:underline">{tel}</a>
-      {wa && <a href={wa} target="_blank" rel="noreferrer" className="text-xs font-medium text-verde-800 underline">WhatsApp</a>}
-    </span>
-  );
+  return wa
+    ? <a href={wa} target="_blank" rel="noreferrer" className="hover:text-verde-800 hover:underline">{tel}</a>
+    : <a href={`tel:${tel.replace(/[^\d+]/g, "")}`} className="hover:text-verde-800 hover:underline">{tel}</a>;
 }
 
+// Cada cliente es un cuadrante. Sus sucursales van todas a la vista, una debajo de otra, con el mismo espacio:
+// el nombre y los accesos se comparten y cada sucursal tiene su barrio, dirección y teléfono.
 function FilaCliente({ c }: { c: Cliente }) {
-  const varias = c.puntos.length > 1;
-  const zonas = [...new Map(c.puntos.map((p) => [p.zona.id, p.zona])).values()].sort((a, b) => a.orden - b.orden);
-  const unica = c.puntos[0];
+  const puntos = c.puntos;
+  const n = Math.max(puntos.length, 1);
+  const dato = "font-semibold";
 
-  const fila = (
-    <div className={`grid items-center gap-x-3 gap-y-1 p-4 ${COLUMNAS} ${c.activo ? "" : "opacity-60"}`}>
-      <div className="flex flex-wrap gap-1">
-        {zonas.map((z) => <span key={z.id} className="rounded-full bg-crema-200 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-verde-900">{z.nombre}</span>)}
-        {zonas.length === 0 && <span className="text-stone-400">—</span>}
+  return (
+    <div className={`rounded-xl border border-stone-200 bg-white ${c.activo ? "" : "opacity-60"}`}>
+      {/* PC: una grilla; el nombre y los accesos ocupan todas las filas de las sucursales */}
+      <div className={`hidden items-center gap-x-4 gap-y-2 px-5 py-4 lg:grid ${COLUMNAS}`}>
+        <div className="flex items-center self-stretch" style={{ gridColumn: 2, gridRow: `1 / span ${n}` }}>
+          <Link href={`/clientes/${c.id}`} className={`${dato} hover:text-verde-800 hover:underline`}>{c.nombre}</Link>
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-2 self-stretch" style={{ gridColumn: 5, gridRow: `1 / span ${n}` }}>
+          <Link href={`/clientes/${c.id}/cuenta`} className={acceso}>Cuenta corriente</Link>
+          <Link href={`/clientes/${c.id}/pedidos`} className={acceso}>Pedidos</Link>
+        </div>
+        {puntos.length === 0 && <span className="text-stone-400" style={{ gridColumn: 1, gridRow: 1 }}>Sin sucursal</span>}
+        {puntos.map((p, i) => (
+          <div key={p.id} className="contents">
+            <span className={`${dato} ${p.activo ? "" : "opacity-60"}`} style={{ gridColumn: 1, gridRow: i + 1 }}>{p.barrio}</span>
+            <span className={`text-sm ${p.activo ? "" : "opacity-60"}`} style={{ gridColumn: 3, gridRow: i + 1 }}>{titulo(p.direccion)}</span>
+            <span className="text-sm" style={{ gridColumn: 4, gridRow: i + 1 }}><Telefono tel={p.telefono} /></span>
+          </div>
+        ))}
       </div>
-      <Link href={`/clientes/${c.id}`} className="font-semibold hover:text-verde-800 hover:underline">{c.nombre}</Link>
-      <div className="text-sm">
-        {varias ? (
-          <span className="inline-flex items-center gap-1 font-medium text-verde-800">
-            {c.puntos.length} sucursales <span aria-hidden className="text-xs transition group-open:rotate-180">▾</span>
-          </span>
-        ) : unica ? (
-          <span>{titulo(unica.direccion)} <span className="text-stone-500">· {unica.barrio}</span></span>
-        ) : <span className="text-stone-400">Sin sucursal</span>}
-      </div>
-      <div className="text-sm">{varias ? <span className="text-stone-400">Ver sucursales</span> : <Telefono tel={unica?.telefono ?? null} />}</div>
-      <div className="flex flex-wrap gap-2">
-        <Link href={`/clientes/${c.id}/cuenta`} className={acceso}>Cuenta corriente</Link>
-        <Link href={`/clientes/${c.id}/pedidos`} className={acceso}>Pedidos</Link>
+
+      {/* Celular: el nombre arriba, las sucursales debajo y los accesos al final */}
+      <div className="space-y-3 p-4 lg:hidden">
+        <Link href={`/clientes/${c.id}`} className={`block text-base ${dato}`}>{c.nombre}</Link>
+        {puntos.map((p) => (
+          <div key={p.id} className={`border-l-2 border-crema-300 pl-3 ${p.activo ? "" : "opacity-60"}`}>
+            <p className={dato}>{p.barrio}</p>
+            <p className="text-sm">{titulo(p.direccion)}</p>
+            <p className="text-sm"><Telefono tel={p.telefono} /></p>
+          </div>
+        ))}
+        <div className="flex flex-wrap gap-2">
+          <Link href={`/clientes/${c.id}/cuenta`} className={acceso}>Cuenta corriente</Link>
+          <Link href={`/clientes/${c.id}/pedidos`} className={acceso}>Pedidos</Link>
+        </div>
       </div>
     </div>
-  );
-
-  if (!varias) return <div className="rounded-xl border border-stone-200 bg-white">{fila}</div>;
-
-  // Con varias sucursales, tocar la fila las despliega: zona, barrio, dirección y teléfono de cada una.
-  return (
-    <details className="group rounded-xl border border-stone-200 bg-white open:border-verde-700">
-      <summary className="cursor-pointer list-none">{fila}</summary>
-      <ul className="divide-y divide-stone-100 border-t border-stone-100 bg-crema-50/60">
-        {c.puntos.map((p) => (
-          <li key={p.id} className={`grid items-center gap-x-3 gap-y-1 px-4 py-2 text-sm ${COLUMNAS} ${p.activo ? "" : "opacity-60"}`}>
-            <span className="text-xs font-semibold uppercase tracking-wide text-stone-500">{p.zona.nombre}</span>
-            <span className="font-medium">{p.barrio}</span>
-            <span>{titulo(p.direccion)}</span>
-            <Telefono tel={p.telefono} />
-            <span />
-          </li>
-        ))}
-      </ul>
-    </details>
   );
 }
