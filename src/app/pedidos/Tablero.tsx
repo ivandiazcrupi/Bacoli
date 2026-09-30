@@ -88,6 +88,7 @@ function ColumnaVisual({ c, ids, tarjetas, columnas, alAsignar }: { c: Columna; 
   const esBandeja = c.clave === BANDEJA;
   return (
     <section
+      id={`col-${c.clave}`}
       aria-label={c.titulo}
       className={`flex w-[82vw] max-w-[300px] shrink-0 snap-start flex-col rounded-xl border p-2 sm:w-auto sm:min-w-[210px] sm:max-w-none sm:flex-1 ${esBandeja ? "border-amber-600 bg-amber-50" : c.hoy ? "border-stone-800 bg-white" : "border-stone-200 bg-stone-100"} ${isOver ? "ring-2 ring-amber-600" : ""}`}
     >
@@ -195,8 +196,21 @@ export function Tablero({ columnas, inicial, tarjetas }: { columnas: Columna[]; 
   return (
     <div className="space-y-3">
       {error && <p className="rounded-lg border border-red-600 bg-red-50 p-3 text-sm text-red-700" role="alert">{error}</p>}
+      <nav className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:hidden" aria-label="Ir a un día">
+        {columnas.map((c) => (
+          <button
+            key={c.clave}
+            type="button"
+            onClick={() => document.getElementById(`col-${c.clave}`)?.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" })}
+            className={`flex shrink-0 flex-col items-center rounded-lg border px-3 py-2 text-sm font-medium ${c.hoy ? "border-stone-800 bg-white" : "border-stone-300 bg-white"}`}
+          >
+            <span>{c.clave === BANDEJA ? "Sin asignar" : c.corta}</span>
+            <span className="text-xs tabular-nums text-stone-500">{(cols[c.clave] ?? []).length}</span>
+          </button>
+        ))}
+      </nav>
       <DndContext sensors={sensores} collisionDetection={closestCorners} onDragStart={alEmpezar} onDragOver={alPasarPor} onDragEnd={alSoltar} onDragCancel={() => { setActivo(null); setCols(foto.current); }}>
-        <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-4">
+        <div className="-mx-4 flex snap-x items-start gap-3 overflow-x-auto px-4 pb-4">
           {columnas.map((c) => (
             <ColumnaVisual key={c.clave} c={c} ids={cols[c.clave] ?? []} tarjetas={tarjetas} columnas={dias} alAsignar={asignar} />
           ))}

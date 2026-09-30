@@ -67,7 +67,7 @@ function FilaHoja({ f, n, bloqueada, acc }: { f: Fila; n: number; bloqueada: boo
       </div>
       <div role="cell" className="pt-1.5 font-medium">{f.barrio}</div>
       <div role="cell" className="pt-1.5 font-semibold leading-snug">{f.cliente}</div>
-      <div role="cell" className="pt-1.5 leading-snug">{f.direccion}</div>
+      <div role="cell" className="pt-1.5 leading-snug"><a href={mapa(f)} target="_blank" rel="noreferrer" className="hover:underline">{f.direccion}</a></div>
       <div role="cell" className="pt-1.5 tabular-nums">{f.telefono || <span className="text-stone-400">—</span>}</div>
       <div role="cell" className="space-y-0.5 pt-1.5">
         {f.items.map((i, k) => (
@@ -132,6 +132,87 @@ function FilaHoja({ f, n, bloqueada, acc }: { f: Fila; n: number; bloqueada: boo
         </Link>
       </div>
     </div>
+  );
+}
+
+
+const digitos = (t: string) => t.replace(/[^\d+]/g, "");
+const mapa = (f: Fila) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${f.direccion}, ${f.barrio}`)}`;
+
+// El mismo pedido, en el celular: una tarjeta con botones grandes (dirección a Google Maps, teléfono que llama).
+function FilaTarjeta({ f, n, bloqueada, acc }: { f: Fila; n: number; bloqueada: boolean; acc: Acciones }) {
+  const [eligiendo, setEligiendo] = useState(false);
+  const fondo = f.estado === "ENTREGADO" ? "border-green-600 bg-green-50" : f.estado === "NO_ENTREGADO" ? "border-red-600 bg-red-50" : "border-stone-200 bg-white";
+  const grande = "h-12 rounded-lg border px-3 text-base font-semibold disabled:opacity-40";
+  return (
+    <article className={`space-y-3 rounded-xl border p-3 ${fondo}`}>
+      <header className="flex items-start gap-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-stone-800 text-sm font-semibold text-white">{n}</span>
+        <div className="min-w-0 flex-1">
+          <h3 className="text-lg font-bold leading-snug">{f.cliente}</h3>
+          <p className="text-sm text-stone-600">{f.barrio}</p>
+        </div>
+        <span className={`shrink-0 rounded px-2 py-0.5 text-xs font-semibold ${f.conFactura ? "bg-stone-800 text-white" : "bg-stone-200 text-stone-700"}`}>{f.conFactura ? "FACTURA" : "REMITO"}</span>
+      </header>
+
+      <div className="space-y-1">
+        <a href={mapa(f)} target="_blank" rel="noreferrer" className="block text-base font-medium underline">{f.direccion}</a>
+        {f.telefono && <a href={`tel:${digitos(f.telefono)}`} className="inline-block text-base font-medium underline">Llamar · {f.telefono}</a>}
+      </div>
+
+      <ul className="space-y-0.5 rounded-lg bg-white/70 p-2 text-base">
+        {f.items.map((i, k) => (
+          <li key={k} className="flex gap-3"><span className="w-8 shrink-0 text-right font-bold tabular-nums">{i.cantidad}</span><span>{i.nombre}</span></li>
+        ))}
+      </ul>
+      <p className="flex items-baseline justify-between text-lg font-bold"><span className="text-sm font-medium text-stone-600">Monto</span><span className="tabular-nums">{formatoPesos(f.monto)}</span></p>
+
+      <div className="grid grid-cols-2 gap-2">
+        <button type="button" disabled={bloqueada} aria-pressed={f.estado === "ENTREGADO"} onClick={() => acc.entrega(f, f.estado === "ENTREGADO" ? "PENDIENTE" : "ENTREGADO")} className={`${grande} ${f.estado === "ENTREGADO" ? "border-green-700 bg-green-700 text-white" : "border-green-700 bg-white text-green-800"}`}>✓ Entregado</button>
+        <button type="button" disabled={bloqueada} aria-pressed={f.estado === "NO_ENTREGADO"} onClick={() => acc.entrega(f, f.estado === "NO_ENTREGADO" ? "PENDIENTE" : "NO_ENTREGADO")} className={`${grande} ${f.estado === "NO_ENTREGADO" ? "border-red-700 bg-red-700 text-white" : "border-red-700 bg-white text-red-800"}`}>✗ No entregado</button>
+      </div>
+      {f.estado !== "NO_ENTREGADO" && <Link href={`/pedidos/${f.id}`} className="block text-sm text-stone-600 underline">Entrega parcial</Link>}
+
+      {f.estado === "ENTREGADO" && (
+        <div className="space-y-2">
+          {f.cobro === "COBRADO" ? (
+            <div className="flex items-center justify-between rounded-lg bg-green-100 px-3 py-3 font-semibold text-green-800"><span>Cobrado · {textoMedio(f.medioCobro)}</span>{!bloqueada && <button type="button" onClick={() => acc.deshacer(f)} aria-label="Deshacer el cobro" className="px-2 text-xl">✕</button>}</div>
+          ) : f.cobro === "CUENTA_CORRIENTE" ? (
+            <div className="flex items-center justify-between rounded-lg bg-amber-100 px-3 py-3 font-semibold text-amber-900"><span>Cuenta corriente</span>{!bloqueada && <button type="button" onClick={() => acc.deshacer(f)} aria-label="Deshacer" className="px-2 text-xl">✕</button>}</div>
+          ) : eligiendo ? (
+            <div className="grid grid-cols-2 gap-2">
+              {MEDIOS.map((m) => <button key={m.valor} type="button" onClick={() => { setEligiendo(false); acc.cobrar(f, m.valor); }} className="h-12 rounded-lg border border-green-700 bg-white font-semibold text-green-800">{m.texto}</button>)}
+              <button type="button" onClick={() => setEligiendo(false)} className="h-12 rounded-lg border border-stone-300 bg-white text-stone-600">Cancelar</button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" disabled={bloqueada} onClick={() => setEligiendo(true)} className={`${grande} border-green-700 bg-white text-green-800`}>Cobrado</button>
+              <button type="button" disabled={bloqueada} onClick={() => acc.cuentaCorriente(f)} className={`${grande} border-amber-700 bg-white text-amber-900`}>Cuenta corriente</button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {f.conFactura && (
+        <label className="block text-sm font-medium">
+          N° de factura
+          <input
+            defaultValue={f.numeroFactura}
+            disabled={bloqueada}
+            inputMode="numeric"
+            onBlur={(e) => e.target.value.trim() !== f.numeroFactura && acc.factura(f, e.target.value)}
+            className={`mt-1 h-12 w-full rounded-lg border bg-white px-3 text-base tabular-nums ${f.estado === "ENTREGADO" && !f.numeroFactura ? "border-amber-600 ring-1 ring-amber-600" : "border-stone-300"}`}
+          />
+        </label>
+      )}
+
+      <div className="grid grid-cols-2 gap-2">
+        <BotonRemito pedidoId={f.id} numero={f.remito} clase={`h-12 w-full rounded-lg border px-3 text-base font-semibold ${f.remito ? "border-stone-800 bg-white text-stone-900" : f.estado === "ENTREGADO" && !f.conFactura ? "border-amber-600 bg-amber-50 text-amber-900 ring-1 ring-amber-600" : "border-stone-300 bg-white text-stone-700"}`} />
+        <Link href={`/clientes/${f.clienteId}/cuenta`} className="flex h-12 items-center justify-center gap-2 rounded-lg border border-stone-300 bg-white px-3 text-base font-semibold">
+          Cuenta corriente{f.tieneDeuda && <span className="h-2.5 w-2.5 rounded-full bg-amber-600" aria-label="Tiene deuda" />}
+        </Link>
+      </div>
+    </article>
   );
 }
 
@@ -220,7 +301,7 @@ export function HojaDia({ fecha, filasIniciales, cerrado, esDueno }: { fecha: st
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-stone-200 bg-white p-3 text-sm">
+      <div className="flex flex-col gap-3 rounded-lg border border-stone-200 bg-white p-3 text-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <p className="text-stone-700">
           {filas.length} {filas.length === 1 ? "pedido" : "pedidos"} · <span className="font-semibold text-green-700">{verdes} {verdes === 1 ? "entregado" : "entregados"}</span> · <span className="font-semibold text-red-700">{rojos} {rojos === 1 ? "no entregado" : "no entregados"}</span>
           {!cerrado && !completo && filas.length > 0 && (
@@ -231,15 +312,15 @@ export function HojaDia({ fecha, filasIniciales, cerrado, esDueno }: { fecha: st
             ].filter(Boolean).join(", ")}</span>
           )}
         </p>
-        <div className="flex flex-wrap items-center gap-3">
-        {filas.length > 0 && <button type="button" onClick={imprimirTodos} className="rounded-lg border border-stone-300 bg-white px-3 py-2 font-medium">Imprimir todos los remitos</button>}
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+        {filas.length > 0 && <button type="button" onClick={imprimirTodos} className="rounded-lg border border-stone-300 bg-white px-3 py-3 font-medium sm:py-2">Imprimir todos los remitos</button>}
         {cerrado ? (
           <div className="flex items-center gap-3">
             <span className="rounded-md bg-stone-800 px-3 py-1.5 font-semibold text-white">Día cerrado</span>
             {esDueno && <button type="button" onClick={reabrir} className="rounded-lg border border-stone-300 bg-white px-3 py-2 font-medium">Reabrir día</button>}
           </div>
         ) : (
-          <button type="button" onClick={cerrar} disabled={!completo} className="rounded-lg bg-stone-800 px-4 py-2 font-semibold text-white disabled:opacity-40">Cerrar día</button>
+          <button type="button" onClick={cerrar} disabled={!completo} className="rounded-lg bg-stone-800 px-4 py-3 font-semibold text-white disabled:opacity-40 sm:py-2">Cerrar día</button>
         )}
         </div>
       </div>
@@ -248,7 +329,11 @@ export function HojaDia({ fecha, filasIniciales, cerrado, esDueno }: { fecha: st
       {filas.length === 0 ? (
         <p className="rounded-lg border border-dashed border-stone-300 p-6 text-center text-stone-600">Todavía no hay pedidos en este día. Asignalos desde la semana.</p>
       ) : (
-        <div className="overflow-x-auto pb-4">
+        <>
+        <div className="space-y-3 lg:hidden">
+          {filas.map((f, n) => <FilaTarjeta key={f.id} f={f} n={n + 1} bloqueada={cerrado} acc={acc} />)}
+        </div>
+        <div className="hidden overflow-x-auto pb-4 lg:block">
           <div role="table" className="min-w-[1870px] space-y-2">
             <div role="row" style={{ gridTemplateColumns: COLUMNAS }} className="grid gap-x-3 px-2 text-xs font-semibold text-stone-500">
               {ENCABEZADOS.map((h) => <div key={h} role="columnheader" className={h === "Monto" ? "text-right" : ""}>{h}</div>)}
@@ -260,6 +345,7 @@ export function HojaDia({ fecha, filasIniciales, cerrado, esDueno }: { fecha: st
             </DndContext>
           </div>
         </div>
+        </>
       )}
     </div>
   );
