@@ -6,3 +6,11 @@ export function mayus(texto: string | null | undefined) {
   const t = texto.replace(/\s+/g, " ").trim().toLocaleUpperCase("es");
   return t;
 }
+
+/** Para leer mejor: primera letra de cada palabra en mayúscula ("MAURICIO PELLEGRINI 774" → "Mauricio Pellegrini 774"). */
+export function titulo(texto: string | null | undefined) {
+  if (!texto) return "";
+  return texto
+    .toLocaleLowerCase("es")
+    .replace(/(^|[\s\-\/.(])(\p{L})/gu, (_, antes: string, letra: string) => antes + letra.toLocaleUpperCase("es"));
+}

@@ -204,7 +204,11 @@ export function analizar(filasCsv: Record<string, string>[], opciones: Opciones)
     const estado: Fila["estado"] = /BAJA/.test(estadoTexto) ? "BAJA" : /CONTACT|PERSONALM/.test(estadoTexto) ? "CONTACTAR" : "ACTIVO";
     if (estadoTexto && !/^(ACTIVO|BAJA|CONTACTAR)$/.test(estadoTexto)) avisos.push(`${nombre}: estado raro "${f["estado"]}" (se interpretó como ${estado.toLowerCase()}).`);
 
-    const tel = limpiar(f["telefono"] ?? "");
+    let tel = limpiar(f["telefono"] ?? "");
+    if (/\bhs?\b/i.test(tel)) {
+      avisos.push(`${nombre}: el teléfono "${tel}" parece un horario y no se importó.`);
+      tel = "";
+    }
     filas.push({
       nombre,
       tipo: /DIST/.test(tipoTexto) ? "DISTRIBUIDOR" : "MAYORISTA",

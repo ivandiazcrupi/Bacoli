@@ -156,6 +156,22 @@ enum TipoMovimiento {
   CARGO_PEDIDO
   AJUSTE_PEDIDO
   ANULACION_PEDIDO
+  PAGO
+  ANULACION_PAGO
+}
+
+enum MedioPago {
+  EFECTIVO
+  TRANSFERENCIA
+  CHEQUE
+  MERCADO_PAGO
+  OTRO
+}
+
+// Qué pasó con el cobro de un pedido entregado: se cobró en el momento, o queda en la cuenta corriente.
+enum EstadoCobro {
+  COBRADO
+  CUENTA_CORRIENTE
 }
 
 // Un pedido. Sin fechaEntrega = está en la bandeja "Sin asignar". El número que se ve es su posición en la hoja del día.
@@ -169,6 +185,10 @@ model Pedido {
   conFactura      Boolean      @default(false)
   ivaPct          Decimal      @default(0) @db.Decimal(5, 2)
   pagado          Boolean      @default(false)
+  numeroFactura   String?
+  cobro           EstadoCobro?
+  medioCobro      MedioPago?
+  montoCobrado    Decimal?     @db.Decimal(14, 2)
   nota            String?
   autorizadoPorId String?
   creadoPorId     String
@@ -209,6 +229,7 @@ model MovimientoCuenta {
   pedidoId  String?
   tipo      TipoMovimiento
   monto     Decimal        @db.Decimal(14, 2) // + suma deuda, - la baja
+  medio     MedioPago?
   nota      String?
   usuarioId String?
   fecha     DateTime       @default(now())
@@ -218,4 +239,11 @@ model MovimientoCuenta {
 
   @@index([clienteId, fecha])
   @@index([pedidoId])
+}
+
+// Día de reparto cerrado: todos sus pedidos tienen entrega y cobro marcados. Un día cerrado es de solo lectura.
+model DiaCerrado {
+  fecha      DateTime @id @db.Date
+  cerradoPor String
+  cerradoEn  DateTime @default(now())
 }

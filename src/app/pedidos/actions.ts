@@ -159,6 +159,8 @@ export async function moverPedido(pedidoId: string, destino: string, ordenIds: s
   const pedido = await db.pedido.findUnique({ where: { id: pedidoId } });
   if (!pedido || pedido.estado === "CANCELADO") return { ok: false, error: "No se puede mover ese pedido." };
   if (pedido.estado === "ENTREGADO") return { ok: false, error: "Un pedido entregado no se puede mover." };
+  const cerrados = await db.diaCerrado.findMany({ where: { fecha: { in: [pedido.fechaEntrega, destino === "bandeja" ? null : aFecha(destino)].filter((f): f is Date => !!f) } } });
+  if (cerrados.length) return { ok: false, error: "Ese día está cerrado. Un dueño puede reabrirlo." };
 
   await db.$transaction(async (tx) => {
     await tx.pedido.update({

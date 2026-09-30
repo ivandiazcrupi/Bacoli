@@ -24,7 +24,8 @@ export function importeVigente(items: Renglon[], ivaPct: number, estado: EstadoP
 export async function sincronizarCuentaPedido(tx: Prisma.TransactionClient, pedidoId: string, usuarioId: string | null) {
   const pedido = await tx.pedido.findUniqueOrThrow({ where: { id: pedidoId }, include: { items: true } });
   const vigente = importeVigente(pedido.items, Number(pedido.ivaPct), pedido.estado);
-  const previo = await tx.movimientoCuenta.aggregate({ where: { pedidoId }, _sum: { monto: true } });
+  // Solo cuentan los movimientos del pedido en sí; los cobros (PAGO) son aparte y no cambian lo que el pedido debe.
+  const previo = await tx.movimientoCuenta.aggregate({ where: { pedidoId, tipo: { in: ["CARGO_PEDIDO", "AJUSTE_PEDIDO", "ANULACION_PEDIDO"] } }, _sum: { monto: true } });
   const yaSumado = redondear2(Number(previo._sum.monto ?? 0));
   const diferencia = redondear2(vigente - yaSumado);
   if (Math.abs(diferencia) < 0.005) return;

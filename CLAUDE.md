@@ -112,7 +112,20 @@ y ~1000 minoristas.
   (el orden del reparto); no hay número global de pedido visible. Detalle del pedido: entregar total o parcial, no entregado,
   reabrir, cancelar, editar. Límites de deuda: se avisa y solo un dueño autoriza (`autorizadoPorId`). Sin "repetir último pedido".
   Lógica: `src/app/pedidos/`, tablero con `@dnd-kit` (`Tablero.tsx`).
-- [ ] Módulo 4: Cuenta corriente (pantallas de saldo/pagos/notas de crédito; el libro `MovimientoCuenta` ya existe y se llena solo).
+- [x] Módulo 3 (parte B): **hoja del día** (`/pedidos/dia/AAAA-MM-DD`), pensada para la PC y horizontal como su hoja de
+  Google Sheets. Al tocar el nombre de un día en el tablero se abre. Una fila por pedido con: N° (posición del reparto; se
+  reordena arrastrando el número), barrio, cliente (+sucursal), dirección (**se muestra "Como Título"**, se guarda en mayúscula;
+  `titulo()`), teléfono, **pedido con el NOMBRE de cada producto y su cantidad (nunca solo el código: el repartidor se confunde)**,
+  monto, FACTURA/REMITO, N° de factura (se carga a mano; más adelante ARCA), **Entrega** (casillero ✓ verde / ✗ rojo; la fila
+  se pinta; "entrega parcial" abre el pedido), **Cobro** (solo si está entregado: "Cobrado" + medio efectivo/transferencia/
+  cheque/Mercado Pago/otro, que registra un PAGO y baja la deuda; o "**Cuenta corriente**" — nunca abreviar como "CC") y un botón
+  "Abrir" a la cuenta corriente del cliente con una marca chica si tiene deuda (el **monto NO va en la hoja**). **Cerrar el día**
+  exige entrega marcada en todos y cobro marcado en los entregados; al cerrar, los rojos vuelven a "Sin asignar" con una nota;
+  un día cerrado es de solo lectura (no se mueven pedidos desde/hacia él); solo un dueño lo reabre (`DiaCerrado`).
+- [ ] Módulo 3 (parte C, pendiente): asignar cada día a los 3 vehículos/repartidores (**falta definir con el dueño si van tablas
+  separadas o una columna, y las zonas de cada vehículo**), semanas anteriores (solo lectura, con resumen y Excel), vista del
+  repartidor en el celular (tarjetas grandes), cobro parcial (hoy se cobra el total), cierre de semana automático.
+- [ ] Módulo 4: Cuenta corriente (ya existe la pantalla de lectura `/clientes/[id]/cuenta` con saldo total, "Entregado" y "Por entregar" y los movimientos con saldo corrido; falta registrar pagos sueltos, notas de crédito, devoluciones y descuentos).
 - [ ] Módulo 5: Hoja de ruta (asignar cada día a un vehículo/repartidor y ordenar el recorrido, sobre el tablero ya hecho) + vista del repartidor. Debe incluir: paradas de cobranza/muestra (sin pedido) y el cobro de
   envío (con opción "no se cobra envío" por cliente o parada).
 - [ ] Publicación en Railway (guiar al dueño paso a paso; él crea el proyecto y carga las claves).
@@ -124,6 +137,7 @@ y ~1000 minoristas.
   barrios, razón social. Se logra de tres maneras juntas: (1) el campo se ve en mayúscula al escribir (`estiloDato` /
   clase `dato` en `src/components/campos.tsx`); (2) el celular abre el teclado en mayúsculas (`autoCapitalize="characters"`);
   (3) se **fuerza al guardar** con `mayus()` de `src/lib/mayusculas.ts` (también al importar).
+- Excepción de lectura: en la hoja del día la **dirección** se muestra con la primera letra de cada palabra en mayúscula.
 - Campos de datos en mayúscula: nombre, razón social y comisionista del cliente; alias, dirección y barrio de la sucursal;
   nombre, SKU y descripción del producto; nombre de la lista. **No** se fuerzan: email (minúscula), contraseñas, comentarios
   libres, CUIT/teléfono, ni el nombre de las personas usuarias del sistema.

@@ -21,7 +21,7 @@ export type Tarjeta = {
   total: number;
   conFactura: boolean;
 };
-export type Columna = { clave: string; titulo: string; subtitulo?: string; hoy?: boolean; corta?: string };
+export type Columna = { clave: string; titulo: string; subtitulo?: string; hoy?: boolean; corta?: string; cerrado?: boolean };
 
 const BANDEJA = "bandeja";
 
@@ -93,8 +93,10 @@ function ColumnaVisual({ c, ids, tarjetas, columnas, alAsignar }: { c: Columna; 
     >
       <header className="flex items-baseline justify-between px-1 pb-2">
         <div>
-          <h2 className="text-base font-bold">{c.titulo}</h2>
-          {c.subtitulo && <p className="text-xs text-stone-500">{c.subtitulo}{c.hoy ? " · hoy" : ""}</p>}
+          <h2 className="text-base font-bold">
+            {esBandeja ? c.titulo : <Link href={`/pedidos/dia/${c.clave}`} className="hover:underline" title="Abrir la hoja de este día">{c.titulo} →</Link>}
+          </h2>
+          {c.subtitulo && <p className="text-xs text-stone-500">{c.subtitulo}{c.hoy ? " · hoy" : ""}{c.cerrado ? " · cerrado" : ""}</p>}
         </div>
         <span className="rounded-full bg-white px-2 py-0.5 text-sm font-semibold tabular-nums">{ids.length}</span>
       </header>

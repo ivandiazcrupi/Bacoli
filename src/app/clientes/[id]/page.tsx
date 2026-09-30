@@ -76,10 +76,13 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
             {cliente.listaPrecios && <p className="text-sm text-stone-600">Lista de precios: {cliente.listaPrecios.nombre}</p>}
             {!cliente.activo && <p className="text-sm text-red-700">Cliente desactivado</p>}
           </div>
+          <div className="flex flex-col items-end gap-2">
+          <Link href={`/clientes/${cliente.id}/cuenta`} className={estiloBotonChico}>Cuenta corriente</Link>
           <form action={cambiarActivoCliente}>
             <input type="hidden" name="id" value={cliente.id} />
             <button className={estiloBotonChico}>{cliente.activo ? "Desactivar" : "Activar"}</button>
           </form>
+          </div>
         </div>
 
         <section className="space-y-3">

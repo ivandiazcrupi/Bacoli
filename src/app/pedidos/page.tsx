@@ -22,11 +22,12 @@ export default async function Pedidos({ searchParams }: { searchParams: Promise<
   });
 
   // Lunes a sábado; el domingo solo aparece si hay algo asignado ese día.
+  const cerrados = new Set((await db.diaCerrado.findMany({ where: { fecha: { gte: aFecha(lunes), lte: aFecha(domingo) } } })).map((d) => deFecha(d.fecha)));
   const hayDomingo = pedidos.some((p) => p.fechaEntrega && deFecha(p.fechaEntrega) === domingo);
   const fechas = Array.from({ length: hayDomingo ? 7 : 6 }, (_, n) => sumarDias(lunes, n));
   const columnas: Columna[] = [
     { clave: "bandeja", titulo: "Sin asignar", subtitulo: "Pedidos sin día" },
-    ...fechas.map((f) => ({ clave: f, titulo: nombreDia(f), subtitulo: diaMes(f), hoy: f === hoy(), corta: nombreDia(f).slice(0, 3) })),
+    ...fechas.map((f) => ({ clave: f, titulo: nombreDia(f), subtitulo: diaMes(f), hoy: f === hoy(), corta: nombreDia(f).slice(0, 3), cerrado: cerrados.has(f) })),
   ];
 
   const tarjetas: Record<string, Tarjeta> = {};
