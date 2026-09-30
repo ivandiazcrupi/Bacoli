@@ -16,6 +16,7 @@ confirmación antes de borrar o publicar** cualquier cosa (incluido el despliegu
 - **Ninguna clave en el código**: todo por variables de entorno (ver `.env.example`).
 
 ## Comandos
+- Guía de publicación en Railway y recuperación: `docs/PUBLICAR.md`.
 - `npm run dev` · `npm run build` · `npm run typecheck`
 - `npm run db:migrate` (desarrollo) · `npm run db:deploy` (producción) · `npm run db:seed` (crea el primer dueño)
 - Local: necesita un PostgreSQL y un `.env` copiado de `.env.example`.

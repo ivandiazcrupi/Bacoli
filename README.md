@@ -1,6 +1,7 @@
 # BACOLI · Gestión
 
 Sistema web de gestión de BACOLI. Ver `CLAUDE.md` para qué es, cómo está armado y qué falta.
+Para publicar y recuperar el sistema en Railway: `docs/PUBLICAR.md`.
 
 ## Poner en marcha en una computadora
 1. `npm install`
