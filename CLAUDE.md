@@ -185,6 +185,10 @@ y ~1000 minoristas.
 - Páginas de oficina usan `exigirOficina()`; el repartidor vuelve al inicio.
 
 ## Navegación (regla para no llenar el menú)
+- **Cabecera** (`src/components/Cabecera.tsx`, decisión del dueño): marca **BACOLI GESTIÓN** a la izquierda; menú **centrado y en
+  MAYÚSCULA** ordenado por importancia: **PEDIDOS y CLIENTES** grandes y en negrita, y después, más chicos y grises, PRECIOS, USUARIOS,
+  EMPRESA y MI CUENTA; a la derecha los botones **CARGAR PEDIDO** y **CARGAR CLIENTE** (y Salir). En el celular: los botones de carga
+  arriba y el menú en una fila que se desliza. Esto es una excepción a "el sistema va en minúscula": el menú va en mayúscula.
 - Menú principal corto (máx. ~5 entradas): Pedidos, Clientes, Precios, y a futuro Ruta, Cuentas. Usuarios y Mi cuenta son de
   administración.
 - Lo que sea parte de una sección va como **pestañas o botones dentro de esa sección**, no como menú nuevo (ej.: Importar
