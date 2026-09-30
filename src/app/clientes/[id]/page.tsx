@@ -4,9 +4,10 @@ import { Cabecera } from "@/components/Cabecera";
 import { estiloBotonChico } from "@/components/campos";
 import { db } from "@/lib/db";
 import { exigirOficina } from "@/lib/session";
-import { actualizarCliente, cambiarActivoCliente, cambiarActivoSucursal } from "../actions";
+import { actualizarCliente, cambiarActivoCliente, cambiarActivoSucursal, guardarPreciosEspeciales } from "../actions";
+import { formatoPesos } from "@/lib/numeros";
 import { ClienteForm, type DatosCliente } from "../ClienteForm";
-import { PreciosEspeciales } from "../PreciosEspeciales";
+import { PreciosEspeciales, type FilaPrecio } from "../PreciosEspeciales";
 import { SucursalForm } from "../SucursalForm";
 
 export default async function FichaCliente({ params }: { params: Promise<{ id: string }> }) {
@@ -18,29 +19,37 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
       puntos: { include: { zona: true }, orderBy: { direccion: "asc" } },
       preciosEspeciales: true,
       listaPrecios: { include: { precios: true } },
+      marca: { include: { precios: true } },
     },
   });
   if (!cliente) notFound();
 
-  const [listas, zonas, barrios, productos] = await Promise.all([
+  const [listas, marcas, zonas, barrios, productos] = await Promise.all([
     db.listaPrecios.findMany({ orderBy: { nombre: "asc" } }),
+    db.marca.findMany({ orderBy: { nombre: "asc" } }),
     db.zona.findMany({ orderBy: { orden: "asc" } }),
     db.puntoEntrega.findMany({ distinct: ["barrio"], select: { barrio: true }, orderBy: { barrio: "asc" } }),
     db.producto.findMany({ where: { activo: true }, orderBy: { nombre: "asc" } }),
   ]);
-  const filasPrecios = productos.map((p) => ({
-    productoId: p.id,
-    nombre: p.nombre,
-    especial: (() => {
-      const e = cliente.preciosEspeciales.find((x) => x.productoId === p.id);
-      return e ? String(e.precio).replace(".", ",") : "";
-    })(),
-    precioLista: (() => {
-      const l = cliente.listaPrecios?.precios.find((x) => x.productoId === p.id);
-      return l ? Number(l.precio) : null;
-    })(),
-    descuentoPct: Number(cliente.descuentoPct),
-  }));
+  const filasPrecios: FilaPrecio[] = productos.map((p) => {
+    const propio = cliente.preciosEspeciales.find((x) => x.productoId === p.id);
+    const deMarca = cliente.marca?.precios.find((x) => x.productoId === p.id);
+    const deLista = cliente.listaPrecios?.precios.find((x) => x.productoId === p.id);
+    const descuento = Number(cliente.descuentoPct);
+    let textoVacio: string;
+    if (deMarca) textoVacio = `Sin precio propio: paga el de la marca ${cliente.marca!.nombre} (${formatoPesos(Number(deMarca.precio))}).`;
+    else if (deLista) {
+      const final = Number(deLista.precio) * (1 - descuento / 100);
+      textoVacio = `Sin precio propio: paga ${formatoPesos(final)} (lista ${cliente.listaPrecios!.nombre}${descuento ? ` con ${descuento}% de descuento` : ""}).`;
+    } else textoVacio = cliente.listaPrecios ? `Su lista (${cliente.listaPrecios.nombre}) no tiene precio para este producto.` : "Sin lista asignada.";
+    return {
+      productoId: p.id,
+      nombre: p.nombre,
+      especial: propio ? String(propio.precio).replace(".", ",") : "",
+      textoVacio,
+      textoLleno: deMarca ? "Precio propio: le gana al de la marca (final, sin descuento encima)." : "Paga el precio propio (final, sin descuento encima).",
+    };
+  });
   const listaBarrios = barrios.map((b) => b.barrio);
 
   const inicial: DatosCliente = {
@@ -51,6 +60,7 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
     facturado: cliente.facturado,
     condicionPago: cliente.condicionPago,
     listaPreciosId: cliente.listaPreciosId ?? "",
+    marcaId: cliente.marcaId ?? "",
     descuentoPct: Number(cliente.descuentoPct) ? String(cliente.descuentoPct).replace(".", ",") : "",
     imputacionPago: cliente.imputacionPago,
     sinLimite: cliente.sinLimite,
@@ -68,6 +78,7 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
           <div>
             <Link href="/clientes" className="text-sm text-stone-600">← Clientes</Link>
             <h1 className="text-2xl font-bold">{cliente.nombre}</h1>
+            {cliente.marca && <p className="text-sm text-stone-600">Marca: <Link href={`/marcas/${cliente.marca.id}`} className="underline">{cliente.marca.nombre}</Link></p>}
             {!cliente.activo && <p className="text-sm text-red-700">Cliente desactivado</p>}
           </div>
           <form action={cambiarActivoCliente}>
@@ -78,12 +89,12 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
 
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">Datos</h2>
-          <ClienteForm accion={actualizarCliente.bind(null, cliente.id)} inicial={inicial} listas={listas} textoBoton="Guardar cambios" />
+          <ClienteForm accion={actualizarCliente.bind(null, cliente.id)} inicial={inicial} listas={listas} marcas={marcas} textoBoton="Guardar cambios" />
         </section>
 
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">Precios especiales</h2>
-          <PreciosEspeciales clienteId={cliente.id} filas={filasPrecios} nombreLista={cliente.listaPrecios?.nombre ?? null} />
+          <PreciosEspeciales accion={guardarPreciosEspeciales.bind(null, cliente.id)} filas={filasPrecios} pie="Precio por paquete, sin IVA. Vale para todas las sucursales del cliente." />
         </section>
 
         <section className="space-y-3">

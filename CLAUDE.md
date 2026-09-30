@@ -41,10 +41,14 @@ confirmación antes de borrar o publicar** cualquier cosa (incluido el despliegu
   - Hay devoluciones, notas de crédito y descuentos. Cada cliente paga contra saldo total o contra pedido puntual.
 - **Límites por cliente:** máx. de pedidos impagos y máx. de monto en $. Al pasarse: avisar y pedir autorización
   de un dueño (no bloquear). Opción "cuenta sin límite" (ej. Carrefour).
-- **Precio de un cliente por producto** (`precioParaCliente`): si tiene precio especial, ese es el final (sin
-  descuento encima); si no, el de su lista menos el descuento general del cliente. Los precios especiales se
-  negocian uno por uno y se cargan a mano. **Un cambio de precio no toca pedidos ya hechos**: el pedido guardará
-  el precio que tenía (implementar así en el módulo de Pedidos).
+- **Marca → Cliente → Sucursal.** Marca (ej. VACALIN) agrupa clientes y guarda un **precio especial común**. Cliente = quien
+  tiene CUIT: lleva su **cuenta corriente, factura y límites** (cada franquicia paga por su cuenta). Sucursal = el local
+  (dirección, barrio, zona de reparto). Se vende a "VACALIN Olivos" = sucursal Olivos del cliente que corresponda; la
+  búsqueda entiende varias palabras ("vacalin olivos").
+- **Precio de un cliente por producto** (`precioParaCliente`), por orden: precio propio del cliente > precio de su marca >
+  precio de su lista menos el descuento general del cliente. Los precios propios y de marca son finales (sin descuento
+  encima), se cargan a mano y valen para todas las sucursales. **Un cambio de precio no toca pedidos ya hechos**: el
+  pedido guardará el precio que tenía (implementar así en el módulo de Pedidos).
 - Facturas cargadas a mano hoy (numeración 1 a 5000). Después: emitir con ARCA vía intermediario (Afip SDK /
   Tusfacturas), quedando "por revisar" hasta que Miguel confirme. Preparar campos: CUIT, condición IVA,
   punto de venta, CAE. Muchos clientes no tienen CUIT/razón social: campos opcionales.
@@ -54,7 +58,7 @@ confirmación antes de borrar o publicar** cualquier cosa (incluido el despliegu
 - Migración de planilla de clientes (columnas: Zona=barrio, Nombre, Cliente=tipo, Dirección, Teléfono, Razón Social,
   CUIT, Estado, Comentario, Día entrega, Volumen semanal, Facturación estimada). Reglas acordadas:
   - **No migrar** comentarios, volumen semanal, facturación estimada ni notas entre paréntesis en la dirección.
-  - Sucursales: se agrupan solo nombres **idénticos**, más las marcas VACALIN, PARMEGIANO, ABASTECEDOR y BAQUIANO.
+  - Sucursales: se agrupan solo nombres **idénticos**. Las marcas VACALIN, PARMEGIANO, ABASTECEDOR y BAQUIANO se crean como Marca.
     En las marcas, las **franquicias con otro CUIT son clientes aparte** (los locales con el mismo CUIT quedan juntos).
   - Tipo "Migue." = mayorista con comisionista Migue 8%. Estados Baja/Contactar = clientes desactivados.
   - Filas de tipo "Cobro"/"Muestra" NO son clientes: son **paradas de cobranza/muestra de la hoja de ruta**
@@ -78,6 +82,8 @@ y ~1000 minoristas.
 - [x] Módulo 2 (parte B): importación de la planilla de clientes (`/clientes/importar`, CSV con `;` o `,`):
   vista previa, propuesta de zona por barrio (corregible; no deja importar con barrios sin zona), confirmación,
   y no duplica clientes ya cargados (mismo nombre). Lógica en `src/lib/importar-clientes.ts`.
+- [x] Módulo 2 (parte C): Marcas (`/marcas`, precio de marca), campo Marca en el cliente, búsqueda por varias palabras,
+  la importación crea las marcas y las asigna.
 - [ ] Módulo 3: Pedidos.
 - [ ] Módulo 4: Cuenta corriente.
 - [ ] Módulo 5: Hoja de ruta + vista del repartidor. Debe incluir: paradas de cobranza/muestra (sin pedido) y el cobro de

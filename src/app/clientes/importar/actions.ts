@@ -79,6 +79,14 @@ export async function importar(_: EstadoImport, formData: FormData): Promise<Est
   const listaId = (nombre: string) => listas.find((l) => l.nombre.toLowerCase() === nombre.toLowerCase())?.id ?? null;
   const yaExisten = new Set(r.existentes.map((n) => n.toLowerCase()));
 
+  // Las marcas se crean si faltan (una por nombre) y se asignan a sus clientes.
+  const nombresMarcas = [...new Set(r.analisis.clientes.map((c) => c.marca).filter((m): m is string => !!m))];
+  for (const nombre of nombresMarcas) {
+    if (!(await db.marca.findFirst({ where: { nombre: { equals: nombre, mode: "insensitive" } } }))) await db.marca.create({ data: { nombre } });
+  }
+  const marcas = await db.marca.findMany();
+  const marcaId = (nombre: string | null) => (nombre ? marcas.find((m) => m.nombre.toLowerCase() === nombre.toLowerCase())?.id ?? null : null);
+
   const nuevos = r.analisis.clientes.filter((c) => !yaExisten.has(c.nombre.toLowerCase()));
   if (nuevos.length === 0) return { ...r, error: "No hay clientes nuevos para importar (todos ya existen)." };
 
@@ -91,6 +99,7 @@ export async function importar(_: EstadoImport, formData: FormData): Promise<Est
           razonSocial: c.razonSocial,
           cuit: c.cuit,
           activo: c.activo,
+          marcaId: marcaId(c.marca),
           comisionista: c.comisionista,
           comisionPct: c.comisionPct,
           listaPreciosId: listaId(c.tipo === "DISTRIBUIDOR" ? "Distribuidor" : "Mayorista"),

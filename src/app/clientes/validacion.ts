@@ -22,6 +22,7 @@ export const esquemaCliente = z
     facturado: z.preprocess((v) => v === "on", z.boolean()),
     condicionPago: z.enum(["CONTADO", "DIAS_7", "DIAS_15", "DIAS_30", "DIAS_45"]),
     listaPreciosId: textoOpcional,
+    marcaId: textoOpcional,
     descuentoPct: z.preprocess(
       (v) => (typeof v === "string" && v.trim() ? leerMonto(v) : 0),
       z.number("El descuento no es válido.").min(0).max(100, "El descuento no puede pasar de 100%."),

@@ -2,35 +2,32 @@
 
 import { useActionState } from "react";
 import { Mensajes, estiloBoton, estiloCampo } from "@/components/campos";
-import { formatoPesos } from "@/lib/numeros";
-import { guardarPreciosEspeciales } from "./actions";
+import type { EstadoForm } from "./validacion";
 
-type Fila = { productoId: string; nombre: string; especial: string; precioLista: number | null; descuentoPct: number };
+// Recuadros de precio por producto. Sirve para un cliente y para una marca: la acción ya viene con el destino aplicado.
+export type FilaPrecio = { productoId: string; nombre: string; especial: string; textoVacio: string; textoLleno: string };
 
-export function PreciosEspeciales({ clienteId, filas, nombreLista }: { clienteId: string; filas: Fila[]; nombreLista: string | null }) {
-  const [estado, enviar, cargando] = useActionState(guardarPreciosEspeciales.bind(null, clienteId), undefined);
+export function PreciosEspeciales({ accion, filas, pie }: { accion: (estado: EstadoForm, formData: FormData) => Promise<EstadoForm>; filas: FilaPrecio[]; pie: string }) {
+  const [estado, enviar, cargando] = useActionState(accion, undefined);
 
   return (
     <form key={JSON.stringify(estado ?? null)} action={enviar} className="space-y-3 rounded-lg border border-stone-200 bg-white p-4">
-      {filas.map((f) => {
-        const conDescuento = f.precioLista === null ? null : f.precioLista * (1 - f.descuentoPct / 100);
-        return (
-          <label key={f.productoId} className="block text-sm font-medium">
-            {f.nombre}
-            <input name={`pe_${f.productoId}`} defaultValue={estado?.valores?.[`pe_${f.productoId}`] ?? f.especial} inputMode="decimal" placeholder="Precio de su lista" className={estiloCampo} />
-            <span className="mt-1 block text-xs font-normal text-stone-500">
-              {f.especial
-                ? "Paga el precio especial (final, sin descuento encima)."
-                : conDescuento === null
-                  ? nombreLista ? `Su lista (${nombreLista}) no tiene precio para este producto.` : "Sin lista asignada."
-                  : `Vacío: paga ${formatoPesos(conDescuento)} (lista ${nombreLista}${f.descuentoPct ? ` con ${f.descuentoPct}% de descuento` : ""}).`}
-            </span>
-          </label>
-        );
-      })}
-      <p className="text-xs text-stone-500">Precio por paquete, sin IVA. Vale para todas las sucursales del cliente.</p>
+      {filas.map((f) => (
+        <label key={f.productoId} className="block text-sm font-medium">
+          {f.nombre}
+          <input
+            name={`pe_${f.productoId}`}
+            defaultValue={estado?.valores?.[`pe_${f.productoId}`] ?? f.especial}
+            inputMode="decimal"
+            placeholder="Sin precio propio"
+            className={estiloCampo}
+          />
+          <span className="mt-1 block text-xs font-normal text-stone-500">{f.especial ? f.textoLleno : f.textoVacio}</span>
+        </label>
+      ))}
+      <p className="text-xs text-stone-500">{pie}</p>
       <Mensajes estado={estado} />
-      <button disabled={cargando} className={estiloBoton}>{cargando ? "Guardando…" : "Guardar precios especiales"}</button>
+      <button disabled={cargando} className={estiloBoton}>{cargando ? "Guardando…" : "Guardar precios"}</button>
     </form>
   );
 }

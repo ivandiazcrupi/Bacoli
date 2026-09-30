@@ -10,6 +10,7 @@ export function Cabecera({ usuario }: { usuario: Usuario }) {
         <nav className="flex flex-wrap items-center gap-x-4 gap-y-1 whitespace-nowrap text-sm font-medium">
           <Link href="/" className="text-lg font-bold">BACOLI</Link>
           {esPersonalDeOficina(usuario.rol) && <Link href="/clientes">Clientes</Link>}
+          {esPersonalDeOficina(usuario.rol) && <Link href="/marcas">Marcas</Link>}
           {esPersonalDeOficina(usuario.rol) && <Link href="/precios">Precios</Link>}
           {puedeGestionarUsuarios(usuario.rol) && <Link href="/usuarios">Usuarios</Link>}
         </nav>

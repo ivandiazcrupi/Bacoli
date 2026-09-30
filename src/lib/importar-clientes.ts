@@ -132,6 +132,7 @@ export type SucursalImport = { alias: string | null; direccion: string; barrio: 
 export type ClienteImport = {
   nombre: string;
   tipo: "MAYORISTA" | "DISTRIBUIDOR";
+  marca: string | null;
   razonSocial: string | null;
   cuit: string | null;
   activo: boolean;
@@ -264,6 +265,7 @@ export function analizar(filasCsv: Record<string, string>[], opciones: Opciones)
     clientes.push({
       nombre,
       tipo: activasOSinBaja.some((f) => f.tipo === "DISTRIBUIDOR") ? "DISTRIBUIDOR" : "MAYORISTA",
+      marca: g.marca ?? null,
       razonSocial: razon,
       cuit: cuits[0] ?? null,
       activo: sucursales.some((s) => s.activo),

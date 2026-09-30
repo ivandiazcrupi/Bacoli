@@ -72,7 +72,7 @@ export function Importador({ zonas }: { zonas: string[] }) {
                   <p className="font-medium">{c.nombre}{!c.activo && <span className="font-normal text-stone-500"> · desactivado</span>}</p>
                   <p className="text-stone-600">
                     {c.tipo === "DISTRIBUIDOR" ? "Distribuidor" : "Mayorista"} · {c.sucursales.length} {c.sucursales.length === 1 ? "sucursal" : "sucursales"}
-                    {c.cuit && ` · CUIT ${c.cuit}`}{c.comisionista && ` · comisión ${c.comisionPct}% (${c.comisionista})`}
+                    {c.marca && ` · marca ${c.marca}`}{c.cuit && ` · CUIT ${c.cuit}`}{c.comisionista && ` · comisión ${c.comisionPct}% (${c.comisionista})`}
                   </p>
                 </li>
               ))}
