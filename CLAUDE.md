@@ -174,8 +174,7 @@ y ~1000 minoristas.
 
 ## Pantalla de inicio y anchos (pedido del dueño)
 - **Inicio** (`src/app/page.tsx`): un saludo al azar según la hora de Argentina ("Buenos días, equipo. ¿Cómo va?"…) y abajo dos
-  botones grandes, **Cargar pedido** y **Cargar cliente** (estilo pantalla de bienvenida de Claude); el resumen (hoy / sin asignar /
-  vencidos) queda como una línea chica. El repartidor solo ve el saludo.
+  botones grandes, **Cargar pedido** y **Cargar cliente** (estilo pantalla de bienvenida de Claude); sin números ni resumen (el dueño los sacó). El repartidor solo ve el saludo.
 - El sistema debe **aprovechar el ancho de la PC**: listas en columnas (Clientes: 1/2/3 según ancho), contenedores `max-w-6xl` o más,
   cabecera y hojas hasta `max-w-[1900px]`. No volver a centrar todo en una columna angosta.
 

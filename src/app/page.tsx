@@ -1,7 +1,5 @@
 import Link from "next/link";
 import { Cabecera } from "@/components/Cabecera";
-import { db } from "@/lib/db";
-import { aFecha, hoy } from "@/lib/fechas";
 import { esPersonalDeOficina } from "@/lib/roles";
 import { exigirUsuario } from "@/lib/session";
 
@@ -22,15 +20,6 @@ export default async function Inicio() {
   const usuario = await exigirUsuario();
   const oficina = esPersonalDeOficina(usuario.rol);
 
-  // Avisos para que ningún pedido quede colgado: sin día asignado, o con el día ya pasado y sin marcar entregado.
-  const [sinAsignar, vencidos, deHoy] = oficina
-    ? await Promise.all([
-        db.pedido.count({ where: { estado: "PENDIENTE", fechaEntrega: null } }),
-        db.pedido.count({ where: { estado: "PENDIENTE", fechaEntrega: { lt: aFecha(hoy()) } } }),
-        db.pedido.count({ where: { estado: { not: "CANCELADO" }, fechaEntrega: aFecha(hoy()) } }),
-      ])
-    : [0, 0, 0];
-
   return (
     <>
       <Cabecera usuario={usuario} />
@@ -46,12 +35,6 @@ export default async function Inicio() {
               <Link href="/clientes/nuevo" className="rounded-2xl border border-stone-300 bg-white px-6 py-5 text-center text-lg font-semibold shadow-sm hover:bg-stone-50">
                 Cargar cliente
               </Link>
-            </div>
-
-            <div className="flex flex-wrap justify-center gap-x-8 gap-y-2 text-sm text-stone-600" aria-label="Resumen">
-              <Link href="/pedidos" className="hover:underline"><b className="tabular-nums">{deHoy}</b> pedidos para hoy</Link>
-              <Link href="/pedidos" className={`hover:underline ${sinAsignar ? "font-semibold text-amber-700" : ""}`}><b className="tabular-nums">{sinAsignar}</b> sin asignar a un día</Link>
-              <Link href="/pedidos" className={`hover:underline ${vencidos ? "font-semibold text-red-700" : ""}`}><b className="tabular-nums">{vencidos}</b> vencidos sin marcar entregado</Link>
             </div>
           </>
         ) : (
