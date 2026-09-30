@@ -4,11 +4,11 @@ import { Cabecera } from "@/components/Cabecera";
 import { estiloBotonChico } from "@/components/campos";
 import { db } from "@/lib/db";
 import { exigirOficina } from "@/lib/session";
-import { actualizarCliente, cambiarActivoCliente, cambiarActivoSucursal, guardarPreciosEspeciales } from "../actions";
+import { actualizarCliente, cambiarActivoCliente, guardarPreciosEspeciales } from "../actions";
 import { formatoPesos } from "@/lib/numeros";
 import { ClienteForm, type DatosCliente } from "../ClienteForm";
 import { PreciosEspeciales, type FilaPrecio } from "../PreciosEspeciales";
-import { SucursalForm } from "../SucursalForm";
+import { EncabezadoSucursales, FilaSucursal, ListaBarrios } from "../SucursalForm";
 
 export default async function FichaCliente({ params }: { params: Promise<{ id: string }> }) {
   const usuario = await exigirOficina();
@@ -68,7 +68,7 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
   return (
     <>
       <Cabecera usuario={usuario} />
-      <main className="mx-auto max-w-5xl space-y-6 px-4 py-6">
+      <main className="mx-auto max-w-[1400px] space-y-6 sm:px-8 px-4 py-6">
         <div className="flex items-start justify-between gap-3">
           <div>
             <Link href="/clientes" className="text-sm text-stone-600">← Clientes</Link>
@@ -99,34 +99,20 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
         </section>
         )}
 
-        <section className="space-y-3">
+        <section className="space-y-2">
           <h2 className="text-lg font-semibold">Sucursales ({cliente.puntos.length})</h2>
+          <ListaBarrios barrios={listaBarrios} />
+          <EncabezadoSucursales />
           {cliente.puntos.map((p) => (
-            <details key={p.id} className={`rounded-lg border border-stone-200 bg-white p-4 ${p.activo ? "" : "opacity-60"}`}>
-              <summary className="cursor-pointer">
-                <span className="font-medium">{p.alias ? `${p.alias} · ` : ""}{p.direccion}</span>
-                <span className="block text-sm text-stone-600">{p.barrio} · {p.zona.nombre}{!p.activo && " · desactivada"}</span>
-              </summary>
-              <div className="mt-4 space-y-3">
-                <SucursalForm
-                  clienteId={cliente.id}
-                  zonas={zonas}
-                  barrios={listaBarrios}
-                  sucursal={{ id: p.id, alias: p.alias ?? "", direccion: p.direccion, barrio: p.barrio, zonaId: p.zonaId, telefono: p.telefono ?? "", comentario: p.comentario ?? "" }}
-                />
-                <form action={cambiarActivoSucursal}>
-                  <input type="hidden" name="id" value={p.id} />
-                  <button className={estiloBotonChico}>{p.activo ? "Desactivar sucursal" : "Activar sucursal"}</button>
-                </form>
-              </div>
-            </details>
+            <FilaSucursal
+              key={p.id}
+              clienteId={cliente.id}
+              zonas={zonas}
+              barrios={listaBarrios}
+              sucursal={{ id: p.id, alias: p.alias ?? "", direccion: p.direccion, barrio: p.barrio, zonaId: p.zonaId, telefono: p.telefono ?? "", comentario: p.comentario ?? "", activo: p.activo }}
+            />
           ))}
-          <details className="rounded-lg border border-dashed border-stone-300 p-4">
-            <summary className="cursor-pointer font-medium">+ Agregar sucursal</summary>
-            <div className="mt-4">
-              <SucursalForm clienteId={cliente.id} zonas={zonas} barrios={listaBarrios} />
-            </div>
-          </details>
+          <FilaSucursal clienteId={cliente.id} zonas={zonas} barrios={listaBarrios} />
         </section>
       </main>
     </>

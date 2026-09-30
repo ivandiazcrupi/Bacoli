@@ -85,6 +85,20 @@ export async function cambiarActivoSucursal(formData: FormData) {
   revalidatePath(`/clientes/${p.clienteId}`);
 }
 
+// Borrar una sucursal: solo si nunca tuvo pedidos (si no, se rompería el historial: ahí se desactiva) y si no es la única del cliente.
+export async function eliminarSucursal(_: EstadoForm, formData: FormData): Promise<EstadoForm> {
+  await exigirOficina();
+  const id = String(formData.get("id"));
+  const p = await db.puntoEntrega.findUnique({ where: { id }, include: { _count: { select: { pedidos: true } } } });
+  if (!p) return { error: "La sucursal ya no existe." };
+  if (p._count.pedidos > 0) return { error: `Esta sucursal tiene ${p._count.pedidos} ${p._count.pedidos === 1 ? "pedido" : "pedidos"} en el historial, por eso no se puede eliminar. Usá “Desactivar”: deja de aparecer para pedidos nuevos y no se pierde nada.` };
+  const otras = await db.puntoEntrega.count({ where: { clienteId: p.clienteId, NOT: { id } } });
+  if (otras === 0) return { error: "Es la única sucursal del cliente: un cliente necesita al menos una. Agregá la otra primero, o desactivá el cliente." };
+  await db.puntoEntrega.delete({ where: { id } });
+  revalidatePath(`/clientes/${p.clienteId}`);
+  return { ok: "Sucursal eliminada." };
+}
+
 // Campos "pe_<productoId>". Vacío = el cliente paga el precio de su lista.
 export async function guardarPreciosEspeciales(clienteId: string, _: EstadoForm, formData: FormData): Promise<EstadoForm> {
   await exigirOficina();
