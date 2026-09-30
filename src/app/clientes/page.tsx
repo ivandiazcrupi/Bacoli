@@ -1,8 +1,8 @@
 import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { Cabecera } from "@/components/Cabecera";
-import { estiloCampo } from "@/components/campos";
 import { db } from "@/lib/db";
+import { FiltrosClientes } from "./FiltrosClientes";
 import { exigirOficina } from "@/lib/session";
 
 const LIMITE = 100;
@@ -38,14 +38,6 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
     db.zona.findMany({ orderBy: { orden: "asc" } }),
   ]);
 
-  const pastilla = "rounded-full px-5 py-2 text-sm font-semibold uppercase tracking-wide transition";
-  // Enlaces de los filtros: cambian una sola cosa y conservan el resto (búsqueda, zona, estado).
-  const enlace = (cambio: Record<string, string>) => {
-    const v: Record<string, string> = { q, zona, estado, ...cambio };
-    const partes = Object.entries(v).filter(([k, x]) => x && !(k === "estado" && x === "activos"));
-    return `/clientes${partes.length ? `?${new URLSearchParams(partes)}` : ""}`;
-  };
-
   return (
     <>
       <Cabecera usuario={usuario} />
@@ -58,27 +50,7 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
           </div>
         </div>
 
-        <form className="flex gap-2">
-          <input name="q" defaultValue={q} placeholder="Buscar cliente, sucursal o barrio" className={`${estiloCampo} mt-0 flex-1`} />
-          {zona && <input type="hidden" name="zona" value={zona} />}
-          {estado !== "activos" && <input type="hidden" name="estado" value={estado} />}
-          <button className="rounded-lg border border-stone-300 bg-white px-6 py-3 font-medium">Buscar</button>
-        </form>
-
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap gap-2" aria-label="Zona">
-            {[{ id: "", nombre: "TODAS" }, ...zonas].map((z) => (
-              <Link key={z.id} href={enlace({ zona: z.id })} className={`${pastilla} ${z.id === zona ? "bg-amber-700 text-white shadow-sm" : "border border-stone-300 bg-white text-stone-600 hover:border-amber-600 hover:text-amber-800"}`}>
-                {z.nombre}
-              </Link>
-            ))}
-          </div>
-          <div className="flex gap-1 text-sm" aria-label="Estado">
-            {[["activos", "Activos"], ["inactivos", "Desactivados"], ["todos", "Todos"]].map(([k, t]) => (
-              <Link key={k} href={enlace({ estado: k })} className={`rounded-lg px-3 py-2 ${k === estado ? "bg-stone-800 font-semibold text-white" : "text-stone-600 hover:bg-stone-200"}`}>{t}</Link>
-            ))}
-          </div>
-        </div>
+        <FiltrosClientes q={q} zona={zona} estado={estado} zonas={zonas.map((z) => ({ id: z.id, nombre: z.nombre }))} />
 
         <p className="text-sm text-stone-600">
           {total} {total === 1 ? "cliente" : "clientes"}{total > LIMITE && ` · mostrando los primeros ${LIMITE}, usá el buscador`}

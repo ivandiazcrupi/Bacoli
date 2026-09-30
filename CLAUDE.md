@@ -199,7 +199,7 @@ y ~1000 minoristas.
   pedido **"Tienda online"**: datos de entrega escritos en el mismo pedido (nombre, dirección, barrio, teléfono, N° de pedido de Empretienda), sin
   cuenta corriente ni lista ni límites, y que aparezca en la hoja del día con Llamar/WhatsApp. Falta confirmar con el dueño si pagan antes o al
   recibir y si todos los reparte la empresa. Más adelante, importar esos pedidos solos desde Empretienda.
-- Clientes (pantalla): buscador + **zona en pastillas** (TODAS, CABA, ZONA SUR, ZONA NORTE, ZONA OESTE; un cliente aparece en una zona si alguna sucursal está ahí) + estado (**Activos** por defecto, siempre; Desactivados; Todos). Sin desplegables. El botón es "+ CARGAR CLIENTE".
+- Clientes (pantalla, `FiltrosClientes.tsx`): **buscador que filtra mientras se escribe** (sin Enter ni botón) y, debajo, dos **desplegables que se reparten el ancho del buscador**: zona (Todas las zonas, CABA, ZONA SUR, ZONA NORTE, ZONA OESTE; un cliente aparece en una zona si alguna sucursal está ahí) y estado (**Activos** por defecto, siempre; Desactivados; Todos). El botón es "+ CARGAR CLIENTE". Pendiente a futuro (lo pidió el dueño como importante): filtro "hace cuánto no piden" (ej. más de 30 días); también con deuda, con/sin factura y datos incompletos.
 
 ## Pendientes conocidos
 - La enumeración `TipoCliente` conserva el valor DISTRIBUIDOR (oculto en pantallas) para no alterar datos existentes.
