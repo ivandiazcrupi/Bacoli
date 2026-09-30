@@ -1,0 +1,50 @@
+import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
+import { Cabecera } from "@/components/Cabecera";
+import { db } from "@/lib/db";
+import { exigirOficina } from "@/lib/session";
+import { actualizarPedido } from "../../actions";
+import { productosParaCliente } from "../../datos";
+import { FormularioLineas, type LineaProducto } from "../../FormularioLineas";
+
+export default async function EditarPedido({ params }: { params: Promise<{ id: string }> }) {
+  const usuario = await exigirOficina();
+  const { id } = await params;
+  const pedido = await db.pedido.findUnique({ where: { id }, include: { items: true, cliente: true, punto: true } });
+  if (!pedido) notFound();
+  if (pedido.estado !== "PENDIENTE") redirect(`/pedidos/${id}`);
+
+  // Los renglones que ya estaban conservan su precio; los productos que no estaban usan el precio actual del cliente.
+  const actuales = await productosParaCliente(pedido.clienteId);
+  const lineas: LineaProducto[] = actuales.map((p) => {
+    const item = pedido.items.find((i) => i.productoId === p.id);
+    return { ...p, precio: item ? String(item.precioUnitario).replace(".", ",") : p.precio, cantidad: item?.cantidad ?? 0 };
+  });
+  for (const item of pedido.items) {
+    if (!lineas.some((l) => l.id === item.productoId)) {
+      lineas.push({ id: item.productoId, nombre: item.nombre, sku: item.sku, unidad: item.unidad, precio: String(item.precioUnitario).replace(".", ","), cantidad: item.cantidad });
+    }
+  }
+
+  return (
+    <>
+      <Cabecera usuario={usuario} />
+      <main className="mx-auto max-w-xl space-y-4 px-4 py-6">
+        <div>
+          <Link href={`/pedidos/${id}`} className="text-sm text-stone-600">← Volver al pedido</Link>
+          <h1 className="text-2xl font-bold">{pedido.cliente.nombre}</h1>
+          <p className="text-stone-600">{[pedido.punto.alias, pedido.punto.direccion].filter(Boolean).join(" · ")}</p>
+        </div>
+        <FormularioLineas
+          accion={actualizarPedido.bind(null, id)}
+          puntoId={pedido.puntoId}
+          productos={lineas}
+          conFacturaInicial={pedido.conFactura}
+          notaInicial={pedido.nota ?? ""}
+          esDueno={usuario.rol === "DUENO"}
+          textoBoton="Guardar cambios"
+        />
+      </main>
+    </>
+  );
+}

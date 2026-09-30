@@ -61,6 +61,7 @@ model Producto {
   orden       Int              @default(0) // posición en las listas (1, 2, 3…)
   activo      Boolean          @default(true)
   precios     Precio[]
+  pedidoItems PedidoItem[]
   especiales  PrecioEspecial[]
 }
 
@@ -104,9 +105,11 @@ model Cliente {
   creadoEn          DateTime       @default(now())
   actualizadoEn     DateTime       @updatedAt
 
-  listaPrecios      ListaPrecios?    @relation(fields: [listaPreciosId], references: [id])
+  listaPrecios      ListaPrecios?      @relation(fields: [listaPreciosId], references: [id])
   puntos            PuntoEntrega[]
   preciosEspeciales PrecioEspecial[]
+  pedidos           Pedido[]
+  movimientos       MovimientoCuenta[]
 
   @@index([nombre])
 }
@@ -122,8 +125,9 @@ model PuntoEntrega {
   comentario String?
   activo     Boolean @default(true)
 
-  cliente Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  zona    Zona    @relation(fields: [zonaId], references: [id])
+  pedidos Pedido[]
+  cliente Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  zona    Zona     @relation(fields: [zonaId], references: [id])
 
   @@index([clienteId])
   @@index([barrio])
@@ -139,4 +143,79 @@ model PrecioEspecial {
   producto   Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
 
   @@id([clienteId, productoId])
+}
+
+enum EstadoPedido {
+  PENDIENTE // cargado: sin día (bandeja) o con día asignado
+  ENTREGADO
+  NO_ENTREGADO
+  CANCELADO
+}
+
+enum TipoMovimiento {
+  CARGO_PEDIDO
+  AJUSTE_PEDIDO
+  ANULACION_PEDIDO
+}
+
+// Un pedido. Sin fechaEntrega = está en la bandeja "Sin asignar". El número que se ve es su posición en la hoja del día.
+model Pedido {
+  id              String       @id @default(cuid())
+  clienteId       String
+  puntoId         String
+  estado          EstadoPedido @default(PENDIENTE)
+  fechaEntrega    DateTime?    @db.Date
+  ordenDia        Int          @default(0)
+  conFactura      Boolean      @default(false)
+  ivaPct          Decimal      @default(0) @db.Decimal(5, 2)
+  pagado          Boolean      @default(false)
+  nota            String?
+  autorizadoPorId String?
+  creadoPorId     String
+  creadoEn        DateTime     @default(now())
+  actualizadoEn   DateTime     @updatedAt
+
+  cliente     Cliente            @relation(fields: [clienteId], references: [id])
+  punto       PuntoEntrega       @relation(fields: [puntoId], references: [id])
+  items       PedidoItem[]
+  movimientos MovimientoCuenta[]
+
+  @@index([fechaEntrega, ordenDia])
+  @@index([clienteId])
+  @@index([estado])
+}
+
+// Renglón del pedido. Guarda una copia del nombre y del precio: un cambio de precio no toca pedidos ya hechos.
+model PedidoItem {
+  id                String   @id @default(cuid())
+  pedidoId          String
+  productoId        String
+  nombre            String
+  sku               String?
+  unidad            String
+  cantidad          Int
+  cantidadEntregada Int?
+  precioUnitario    Decimal  @db.Decimal(12, 2) // sin IVA
+  pedido            Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  producto          Producto @relation(fields: [productoId], references: [id])
+
+  @@index([pedidoId])
+}
+
+// Libro de la cuenta corriente: el saldo es la suma de los montos. Nunca se edita, solo se agregan movimientos.
+model MovimientoCuenta {
+  id        String         @id @default(cuid())
+  clienteId String
+  pedidoId  String?
+  tipo      TipoMovimiento
+  monto     Decimal        @db.Decimal(14, 2) // + suma deuda, - la baja
+  nota      String?
+  usuarioId String?
+  fecha     DateTime       @default(now())
+
+  cliente Cliente @relation(fields: [clienteId], references: [id])
+  pedido  Pedido? @relation(fields: [pedidoId], references: [id])
+
+  @@index([clienteId, fecha])
+  @@index([pedidoId])
 }

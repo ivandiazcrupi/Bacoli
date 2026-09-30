@@ -9,6 +9,7 @@ export function Cabecera({ usuario }: { usuario: Usuario }) {
       <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
         <nav className="flex flex-wrap items-center gap-x-4 gap-y-1 whitespace-nowrap text-sm font-medium">
           <Link href="/" className="text-lg font-bold">BACOLI</Link>
+          {esPersonalDeOficina(usuario.rol) && <Link href="/pedidos">Pedidos</Link>}
           {esPersonalDeOficina(usuario.rol) && <Link href="/clientes">Clientes</Link>}
           {esPersonalDeOficina(usuario.rol) && <Link href="/precios">Precios</Link>}
           {puedeGestionarUsuarios(usuario.rol) && <Link href="/usuarios">Usuarios</Link>}

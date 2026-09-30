@@ -47,12 +47,16 @@ Si hay duda, preguntar. Probar siempre antes de subir.
   (norte, oeste, sur, CABA). La zona-barrio se carga con cada cliente.
 - Condiciones de pago: contado, 7, 15, 30, 45 días. Medios: efectivo, transferencia, cheque, etc.
 - Dos tipos de pedido: **con factura** (con IVA) y **con remito**. Se marca al cargar.
-- **Cuenta corriente = libro de movimientos**; el saldo se calcula sumando, nunca se edita a mano.
-  - Al cargar el pedido: "pendiente de entrega" (no toca el saldo real).
-  - Al entregar (repartidor desde su celular, o Miguel/Nicolás): sube el saldo por lo realmente entregado
-    (hay entregas parciales).
-  - Al marcar abonado (hoja de ruta o cuenta corriente): baja el saldo.
-  - Hay devoluciones, notas de crédito y descuentos. Cada cliente paga contra saldo total o contra pedido puntual.
+- **Cuenta corriente = libro de movimientos** (`MovimientoCuenta`); el saldo es la suma, los movimientos nunca se editan ni se
+  borran, solo se agregan. **El pedido cuenta en la cuenta corriente DESDE QUE SE CARGA** (decisión del dueño: para que ningún
+  pedido pueda quedar afuera por olvidar marcarlo como entregado). `sincronizarCuentaPedido` (`src/lib/cuenta.ts`) se llama al
+  crear, editar, entregar, marcar no entregado, reabrir o cancelar, y agrega UN movimiento con la diferencia:
+  - Pedido abierto = lo pedido (con IVA 10,5% si lleva factura). Entregado = lo realmente entregado (hay entregas parciales).
+    No entregado o cancelado = 0. Al reabrir vuelve a contar.
+  - La cuenta corriente (módulo 4) debe mostrar aparte **"Entregado"** y **"Por entregar"**.
+  - Módulo Ruta: cada pedido se marca verde (entregado) o rojo (no entregado) y **no se puede cerrar la semana** con pedidos
+    sin marcar. Hoy el Inicio avisa los "vencidos sin marcar entregado".
+  - Hay devoluciones, notas de crédito y descuentos (módulo 4). Cada cliente paga contra saldo total o contra pedido puntual.
 - **Límites por cliente:** máx. de pedidos impagos y máx. de monto en $. Al pasarse: avisar y pedir autorización
   de un dueño (no bloquear). Opción "cuenta sin límite" (ej. Carrefour).
 - **Cliente → Sucursal.** Cliente = quien tiene CUIT: lleva su **cuenta corriente, factura y límites** (cada franquicia de
@@ -101,9 +105,15 @@ y ~1000 minoristas.
 - [x] Módulo 2 (parte D): Precios = **una lista a la vez** (desplegable de lista; a la izquierda nombre y código, a la derecha
   el precio con $), productos con SKU, EAN, descripción, unidad y orden; crear lista nueva puede copiar los precios de otra;
   listas VACALIN y Distribuidor; Importar es un botón en Clientes.
-- [ ] Módulo 3: Pedidos.
-- [ ] Módulo 4: Cuenta corriente.
-- [ ] Módulo 5: Hoja de ruta + vista del repartidor. Debe incluir: paradas de cobranza/muestra (sin pedido) y el cobro de
+- [x] Módulo 3: Pedidos + **tablero semanal** (`/pedidos`). Un pedido se carga SIN fecha (buscar cliente/sucursal escribiendo,
+  tocar cantidades; precio del cliente automático y editable; remito o factura) y cae en la columna **"Sin asignar"**
+  (la "hoja Pedidos" de sus planillas). Se **arrastra a su día** (Lun a Sáb; domingo solo si hay algo) como sus hojas por día;
+  también se puede tocar el día debajo del pedido (celular). **El número (1, 2, 3…) es la posición dentro de la hoja del día**
+  (el orden del reparto); no hay número global de pedido visible. Detalle del pedido: entregar total o parcial, no entregado,
+  reabrir, cancelar, editar. Límites de deuda: se avisa y solo un dueño autoriza (`autorizadoPorId`). Sin "repetir último pedido".
+  Lógica: `src/app/pedidos/`, tablero con `@dnd-kit` (`Tablero.tsx`).
+- [ ] Módulo 4: Cuenta corriente (pantallas de saldo/pagos/notas de crédito; el libro `MovimientoCuenta` ya existe y se llena solo).
+- [ ] Módulo 5: Hoja de ruta (asignar cada día a un vehículo/repartidor y ordenar el recorrido, sobre el tablero ya hecho) + vista del repartidor. Debe incluir: paradas de cobranza/muestra (sin pedido) y el cobro de
   envío (con opción "no se cobra envío" por cliente o parada).
 - [ ] Publicación en Railway (guiar al dueño paso a paso; él crea el proyecto y carga las claves).
 - [ ] Más adelante: facturación ARCA, reportes, migración de planillas, Empretienda, sugerencia de ruta.
@@ -126,7 +136,7 @@ y ~1000 minoristas.
 - Páginas de oficina usan `exigirOficina()`; el repartidor vuelve al inicio.
 
 ## Navegación (regla para no llenar el menú)
-- Menú principal corto (máx. ~5 entradas): Clientes, Precios, y a futuro Pedidos, Ruta, Cuentas. Usuarios y Mi cuenta son de
+- Menú principal corto (máx. ~5 entradas): Pedidos, Clientes, Precios, y a futuro Ruta, Cuentas. Usuarios y Mi cuenta son de
   administración.
 - Lo que sea parte de una sección va como **pestañas o botones dentro de esa sección**, no como menú nuevo (ej.: Importar
   es un botón en Clientes).
