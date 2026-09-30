@@ -97,6 +97,12 @@ y ~1000 minoristas.
 - Montos: `src/lib/numeros.ts` (`leerMonto` entiende "3.500,50"; `cuitValido` chequea el dígito verificador).
 - Páginas de oficina usan `exigirOficina()`; el repartidor vuelve al inicio.
 
+## Navegación (regla para no llenar el menú)
+- Menú principal corto (máx. ~5 entradas): Clientes, Precios, y a futuro Pedidos, Ruta, Cuentas. Usuarios y Mi cuenta son de
+  administración.
+- Lo que sea parte de una sección va como **pestañas dentro de esa sección**, no como menú nuevo. Ej.: Clientes tiene las
+  pestañas Clientes | Marcas | Importar (`src/components/NavClientes.tsx`).
+
 ## Pendientes conocidos
 - Login: bloqueo de 15 min tras 5 fallos por email (en memoria; revisar si se usa más de una instancia).
 - Recuperación de contraseña olvidada (hoy: el dueño usa SEED_ADMIN_RESET en Railway; no hay reset para otros usuarios).

@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { Cabecera } from "@/components/Cabecera";
 import { estiloCampo } from "@/components/campos";
+import { NavClientes } from "@/components/NavClientes";
 import { db } from "@/lib/db";
 import { TIPO_CLIENTE } from "@/lib/etiquetas";
 import { exigirOficina } from "@/lib/session";
@@ -49,11 +50,9 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
       <main className="mx-auto max-w-3xl space-y-4 px-4 py-6">
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-2xl font-bold">Clientes</h1>
-          <div className="flex items-center gap-2">
-            <Link href="/clientes/importar" className="rounded-lg border border-stone-300 bg-white px-3 py-3 text-sm font-medium">Importar</Link>
-            <Link href="/clientes/nuevo" className="rounded-lg bg-amber-700 px-4 py-3 text-sm font-semibold text-white">+ Nuevo</Link>
-          </div>
+          <Link href="/clientes/nuevo" className="rounded-lg bg-amber-700 px-4 py-3 text-sm font-semibold text-white">+ Nuevo</Link>
         </div>
+        <NavClientes actual="clientes" />
 
         <form className="grid grid-cols-2 gap-2">
           <input name="q" defaultValue={q} placeholder="Buscar por nombre, marca, sucursal, CUIT, dirección o barrio" className={`${estiloCampo} col-span-2 mt-0`} />

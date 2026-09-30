@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Cabecera } from "@/components/Cabecera";
+import { NavClientes } from "@/components/NavClientes";
 import { PreciosEspeciales, type FilaPrecio } from "@/app/clientes/PreciosEspeciales";
 import { db } from "@/lib/db";
 import { formatoPesos } from "@/lib/numeros";
@@ -32,6 +33,7 @@ export default async function FichaMarca({ params }: { params: Promise<{ id: str
     <>
       <Cabecera usuario={usuario} />
       <main className="mx-auto max-w-3xl space-y-6 px-4 py-6">
+        <NavClientes actual="marcas" />
         <div>
           <Link href="/marcas" className="text-sm text-stone-600">← Marcas</Link>
           <h1 className="text-2xl font-bold">{marca.nombre}</h1>

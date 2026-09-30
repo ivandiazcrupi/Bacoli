@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Cabecera } from "@/components/Cabecera";
+import { NavClientes } from "@/components/NavClientes";
 import { db } from "@/lib/db";
 import { exigirOficina } from "@/lib/session";
 import { FormularioMarca } from "./FormularioMarca";
@@ -15,7 +16,8 @@ export default async function Marcas() {
     <>
       <Cabecera usuario={usuario} />
       <main className="mx-auto max-w-3xl space-y-4 px-4 py-6">
-        <h1 className="text-2xl font-bold">Marcas</h1>
+        <h1 className="text-2xl font-bold">Clientes</h1>
+        <NavClientes actual="marcas" />
         <p className="text-sm text-stone-600">
           Una marca agrupa clientes que comparten precio, por ejemplo las franquicias de VACALIN. Cada franquicia sigue siendo un cliente
           con su CUIT, su cuenta corriente y sus sucursales.
