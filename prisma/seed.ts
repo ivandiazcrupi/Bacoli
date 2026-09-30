@@ -9,7 +9,8 @@ async function main() {
   const email = process.env.SEED_ADMIN_EMAIL?.trim().toLowerCase();
   const password = process.env.SEED_ADMIN_PASSWORD;
   if (!nombre || !email || !password || password.length < 8) {
-    throw new Error("Completá SEED_ADMIN_NOMBRE, SEED_ADMIN_EMAIL y SEED_ADMIN_PASSWORD (mín. 8 caracteres).");
+    console.log("Sin datos SEED_ADMIN_*: no se crea ningún usuario inicial.");
+    return;
   }
   const existe = await db.usuario.findUnique({ where: { email } });
   if (existe) {

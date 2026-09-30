@@ -64,7 +64,7 @@ y ~1000 minoristas.
 - [ ] Más adelante: facturación ARCA, reportes, migración de planillas, Empretienda, sugerencia de ruta.
 
 ## Pendientes conocidos
-- Login sin límite de intentos fallidos (agregar antes de publicar).
+- Login: bloqueo de 15 min tras 5 fallos por email (en memoria; revisar si se usa más de una instancia).
 - Cambio/recuperación de contraseña (hoy la crea el dueño al dar de alta).
 - `npm audit` marca 3 alertas en una herramienta interna de Prisma (solo desarrollo, no en producción).
 - Registro de cambios (auditoría) todavía no existe.
