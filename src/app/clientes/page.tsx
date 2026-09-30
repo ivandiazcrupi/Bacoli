@@ -63,7 +63,7 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
         ) : (
           <div className="space-y-1.5">
             <div className={`hidden gap-x-4 px-4 text-xs font-semibold uppercase tracking-wide text-stone-500 lg:grid ${COLUMNAS}`}>
-              <span>Barrio</span><span>Nombre</span><span>Dirección</span><span>Teléfono</span><span />
+              <span>Barrio</span><span>Nombre</span><span>Dirección</span><span>Teléfono</span><span>Estado</span><span />
             </div>
             {clientes.map((c) => <FilaCliente key={c.id} c={c} />)}
           </div>
@@ -74,7 +74,7 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
 }
 
 // Columnas (PC): barrio, nombre, dirección, teléfono, accesos.
-const COLUMNAS = "lg:grid-cols-[1.2fr_1.6fr_2fr_1.1fr_19rem]";
+const COLUMNAS = "lg:grid-cols-[1.2fr_1.6fr_2fr_1.1fr_6.5rem_19rem]";
 const acceso = "rounded-md border border-stone-300 bg-white px-2.5 py-1 text-xs font-medium uppercase hover:border-verde-700 hover:text-verde-800";
 const accesoEditar = "rounded-md border border-verde-700 bg-white px-2.5 py-1 text-xs font-medium text-verde-800 hover:bg-verde-50";
 
@@ -91,6 +91,12 @@ function Telefono({ tel }: { tel: string | null }) {
 
 // Cada cliente es un cuadrante. Sus sucursales van todas a la vista, una debajo de otra y TODAS con la misma información
 // (barrio, nombre, dirección, teléfono y accesos), así cada línea se entiende sola.
+function Estado({ activa }: { activa: boolean }) {
+  return activa
+    ? <span className="rounded-full bg-verde-100 px-2 py-0.5 text-xs font-semibold text-verde-800">Activa</span>
+    : <span className="rounded-full bg-stone-200 px-2 py-0.5 text-xs font-semibold text-stone-600">Desactivada</span>;
+}
+
 function FilaCliente({ c }: { c: Cliente }) {
   const dato = "text-sm font-semibold";
   const puntos: (Cliente["puntos"][number] | null)[] = c.puntos.length ? c.puntos : [null];
@@ -111,17 +117,18 @@ function FilaCliente({ c }: { c: Cliente }) {
           <div className={`hidden items-center gap-x-4 px-4 py-2 lg:grid ${COLUMNAS} ${p && !p.activo ? "opacity-60" : ""}`}>
             <span className={dato}>{p ? p.barrio : <span className="font-normal text-stone-400">Sin sucursal</span>}</span>
             <Link href={`/clientes/${c.id}`} className={`${dato} hover:text-verde-800 hover:underline`}>{c.nombre}</Link>
-            <span className="text-sm leading-tight">{p ? titulo(p.direccion) : ""}{p?.comentario && <span className="block text-xs font-medium text-rojo-700">{p.comentario}</span>}</span>
+            <span className="text-sm leading-tight">{p ? titulo(p.direccion) : ""}{p?.comentario && <span className="block text-center text-xs font-medium text-rojo-700">{p.comentario}</span>}</span>
             <span className="text-sm"><Telefono tel={p?.telefono ?? null} /></span>
+            <span>{p ? <Estado activa={c.activo && p.activo} /> : null}</span>
             {accesos}
           </div>
 
           {/* Celular: la misma información apilada */}
           <div className={`space-y-1 p-4 lg:hidden ${p && !p.activo ? "opacity-60" : ""}`}>
-            <p className={dato}>{p ? p.barrio : "Sin sucursal"}</p>
+            <p className={`${dato} flex flex-wrap items-center gap-2`}>{p ? p.barrio : "Sin sucursal"}{p && <Estado activa={c.activo && p.activo} />}</p>
             <Link href={`/clientes/${c.id}`} className={`block ${dato}`}>{c.nombre}</Link>
             {p && <p className="text-sm">{titulo(p.direccion)}</p>}
-            {p?.comentario && <p className="text-xs font-medium text-rojo-700">{p.comentario}</p>}
+            {p?.comentario && <p className="text-center text-xs font-medium text-rojo-700">{p.comentario}</p>}
             {p && <p className="text-sm"><Telefono tel={p.telefono} /></p>}
             <div className="pt-1">{accesos}</div>
           </div>
