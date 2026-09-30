@@ -35,7 +35,7 @@ export function RemitoDoc({ empresa, r, conPrecios }: { empresa: Empresa | null;
           {fila("Inicio de actividades", empresa?.inicioActividades)}
           {fila("Tel.", empresa?.telefono)}
           {fila("", empresa?.email)}
-          {!empresa?.razonSocial && <p className="text-red-700 print:hidden">Faltan los datos de la empresa (menú Empresa).</p>}
+          {!empresa?.razonSocial && <p className="text-rojo-700 print:hidden">Faltan los datos de la empresa (menú Empresa).</p>}
         </div>
         <div className="text-right">
           <p className="text-3xl font-bold tracking-wide">REMITO</p>

@@ -32,13 +32,13 @@ export function FilaSucursal({ clienteId, sucursal, zonas, barrios }: { clienteI
 
   return (
     <div
-      className={`grid grid-cols-2 items-end gap-2 rounded-xl border p-4 lg:items-center ${COLUMNAS} ${sucursal ? "border-stone-200 bg-white" : "border-dashed border-amber-400 bg-amber-50/40"} ${activa ? "" : "opacity-60"}`}
+      className={`grid grid-cols-2 items-end gap-2 rounded-xl border p-4 lg:items-center ${COLUMNAS} ${sucursal ? "border-stone-200 bg-white" : "border-dashed border-crema-400 bg-crema-50/40"} ${activa ? "" : "opacity-60"}`}
     >
       <form key={JSON.stringify(estado ?? null)} action={enviar} className="contents">
         {sucursal && <input type="hidden" name="id" value={sucursal.id} />}
         <label className={celda}>
           <span className={etiquetaChica}>Barrio *</span>
-          <input name="barrio" aria-label="Barrio" placeholder={sucursal ? "" : "Barrio"} autoCapitalize="characters" list="barrios-sucursal" defaultValue={v("barrio")} required className={`${campo} dato`} />
+          <input name="barrio" aria-label="Barrio" placeholder={sucursal ? "" : "Barrio"} autoCapitalize="characters" defaultValue={v("barrio")} required className={`${campo} dato`} />
         </label>
         <label className={`${celda}`}>
           <span className={etiquetaChica}>Dirección *</span>
@@ -60,7 +60,7 @@ export function FilaSucursal({ clienteId, sucursal, zonas, barrios }: { clienteI
           <input name="comentario" aria-label="Comentario" placeholder={sucursal ? "" : "Ej: horario de entrega"} defaultValue={v("comentario")} className={campo} />
         </label>
         <div className="col-span-2 flex items-center gap-2 lg:col-span-1 lg:w-auto">
-          <button disabled={cargando} className="rounded-lg bg-amber-700 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-800 disabled:opacity-60">
+          <button disabled={cargando} className="rounded-lg bg-verde-700 px-4 py-2 text-sm font-semibold text-white hover:bg-verde-800 disabled:opacity-60">
             {cargando ? "…" : sucursal ? "Guardar" : "+ Agregar"}
           </button>
           {sucursal && (
@@ -73,7 +73,7 @@ export function FilaSucursal({ clienteId, sucursal, zonas, barrios }: { clienteI
               formAction={borrar}
               formNoValidate
               onClick={(e) => { if (!window.confirm(`¿Eliminar la sucursal ${sucursal.direccion}? No se puede deshacer.`)) e.preventDefault(); }}
-              className="rounded-lg border border-red-300 bg-white px-3 py-2 text-sm text-red-700 hover:bg-red-50"
+              className="rounded-lg border border-rojo-300 bg-white px-3 py-2 text-sm text-rojo-700 hover:bg-rojo-50"
             >
               Eliminar
             </button>
@@ -81,12 +81,9 @@ export function FilaSucursal({ clienteId, sucursal, zonas, barrios }: { clienteI
         </div>
       </form>
       {[estado, estadoBorrar].map((e, i) => (e?.error || e?.ok) && (
-        <p key={i} className={`col-span-full text-sm ${e.error ? "text-red-700" : "text-green-700"}`}>{e.error ?? e.ok}</p>
+        <p key={i} className={`col-span-full text-sm ${e.error ? "text-rojo-700" : "text-verde-700"}`}>{e.error ?? e.ok}</p>
       ))}
     </div>
   );
 }
 
-export function ListaBarrios({ barrios }: { barrios: string[] }) {
-  return <datalist id="barrios-sucursal">{barrios.map((b) => <option key={b} value={b} />)}</datalist>;
-}

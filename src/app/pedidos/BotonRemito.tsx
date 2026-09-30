@@ -28,7 +28,7 @@ export function BotonRemito({ pedidoId, numero, clase }: { pedidoId: string; num
   return (
     <span className="inline-flex flex-col gap-1">
       <button type="button" onClick={abrir} disabled={trabajando} className={clase}>{trabajando ? "…" : numero ?? "Remito"}</button>
-      {error && <span className="text-xs text-red-700" role="alert">{error}</span>}
+      {error && <span className="text-xs text-rojo-700" role="alert">{error}</span>}
     </span>
   );
 }

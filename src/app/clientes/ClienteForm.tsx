@@ -112,9 +112,8 @@ export function ClienteForm({ accion, inicial, listas, zonas, barrios = [], text
         <Bloque titulo="Primera sucursal" ayuda="Después se pueden agregar más.">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Campo etiqueta="Barrio *">
-              <input name="barrio" autoCapitalize="characters" list="barrios" defaultValue={estado?.valores?.barrio ?? ""} required className={estiloDato} />
+              <input name="barrio" autoCapitalize="characters" defaultValue={estado?.valores?.barrio ?? ""} required className={estiloDato} />
             </Campo>
-            <datalist id="barrios">{barrios.map((b) => <option key={b} value={b} />)}</datalist>
             <Campo etiqueta="Dirección *" ayuda="Ej: Malvinas Argentina 2842">
               <input name="direccion" autoCapitalize="words" defaultValue={estado?.valores?.direccion ?? ""} required className={estiloCampo} />
             </Campo>
@@ -133,7 +132,7 @@ export function ClienteForm({ accion, inicial, listas, zonas, barrios = [], text
 
       <Mensajes estado={estado} />
       <div className="flex justify-end">
-        <button disabled={cargando} className="w-full rounded-lg bg-amber-700 px-10 py-3 font-semibold text-white hover:bg-amber-800 disabled:opacity-60 sm:w-auto">{cargando ? "Guardando…" : textoBoton}</button>
+        <button disabled={cargando} className="w-full rounded-lg bg-verde-700 px-10 py-3 font-semibold text-white hover:bg-verde-800 disabled:opacity-60 sm:w-auto">{cargando ? "Guardando…" : textoBoton}</button>
       </div>
     </form>
   );
@@ -143,7 +142,7 @@ function Bloque({ titulo, ayuda, children }: { titulo: string; ayuda: string; ch
   return (
     <section className="grid gap-3 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm lg:grid-cols-[14rem_1fr] lg:gap-6">
       <div>
-        <h2 className="text-sm font-bold uppercase tracking-wide text-amber-800">{titulo}</h2>
+        <h2 className="text-sm font-bold uppercase tracking-wide text-verde-800">{titulo}</h2>
         <p className="mt-1 text-xs text-stone-500">{ayuda}</p>
       </div>
       {children}

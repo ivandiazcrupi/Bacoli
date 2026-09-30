@@ -36,13 +36,13 @@ export default async function Precios({ searchParams }: { searchParams: Promise<
               <Link
                 key={l.id}
                 href={`/precios?lista=${l.id}`}
-                className={`rounded-full px-5 py-2 text-sm font-semibold uppercase tracking-wide transition ${l.id === lista?.id ? "bg-amber-700 text-white shadow-sm" : "border border-stone-300 bg-white text-stone-600 hover:border-amber-600 hover:text-amber-800"}`}
+                className={`rounded-full px-5 py-2 text-sm font-semibold uppercase tracking-wide transition ${l.id === lista?.id ? "bg-verde-700 text-white shadow-sm" : "border border-stone-300 bg-white text-stone-600 hover:border-verde-600 hover:text-verde-800"}`}
               >
                 {l.nombre}
               </Link>
             ))}
             <details className="group sm:relative">
-              <summary className="cursor-pointer list-none rounded-full border border-dashed border-stone-400 px-5 py-2 text-sm font-medium text-stone-600 hover:border-amber-600 hover:text-amber-800">+ Nueva lista</summary>
+              <summary className="cursor-pointer list-none rounded-full border border-dashed border-stone-400 px-5 py-2 text-sm font-medium text-stone-600 hover:border-verde-600 hover:text-verde-800">+ Nueva lista</summary>
               <div className="absolute inset-x-4 z-10 mt-2 rounded-2xl sm:inset-x-auto sm:left-0 sm:w-80 border border-stone-200 bg-white p-4 shadow-lg">
                 <AgregarLista listas={listas} />
               </div>
@@ -62,36 +62,36 @@ export default async function Precios({ searchParams }: { searchParams: Promise<
           )}
         </section>
 
-        <details className="group overflow-hidden rounded-2xl border border-amber-200 bg-amber-50/60">
+        <details className="group overflow-hidden rounded-2xl border border-crema-300 bg-crema-50/60">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-6 py-4">
             <span>
-              <span className="block text-lg font-bold">Productos <span className="ml-1 rounded-full bg-amber-700 px-2.5 py-0.5 text-xs font-semibold text-white">{productos.length}</span></span>
+              <span className="block text-lg font-bold">Productos <span className="ml-1 rounded-full bg-verde-700 px-2.5 py-0.5 text-xs font-semibold text-white">{productos.length}</span></span>
               <span className="block text-sm text-stone-600">Ver, editar o agregar productos (nombre, código, unidad, EAN)</span>
             </span>
-            <span aria-hidden className="text-2xl text-amber-800 transition group-open:rotate-180">⌄</span>
+            <span aria-hidden className="text-2xl text-verde-800 transition group-open:rotate-180">⌄</span>
           </summary>
-          <div className="space-y-2 border-t border-amber-200 bg-white p-4 sm:p-6">
+          <div className="space-y-2 border-t border-crema-300 bg-white p-4 sm:p-6">
             <ul className="space-y-2">
               {productos.map((p) => (
                 <li key={p.id} className="rounded-xl border border-stone-200">
                   <details className="group/p">
                     <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
                       <span className="flex min-w-0 items-center gap-3">
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-100 text-xs font-bold text-amber-800">{p.orden}</span>
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-crema-200 text-xs font-bold text-verde-800">{p.orden}</span>
                         <span className="min-w-0">
                           <span className="block truncate font-semibold">{p.nombre}</span>
                           <span className="block text-xs text-stone-500">{p.sku ?? "Sin código"} · por {p.unidad}{p.ean ? ` · EAN ${p.ean}` : ""}</span>
                         </span>
                       </span>
-                      <span className="shrink-0 rounded-full border border-stone-300 px-3 py-1 text-xs font-medium text-stone-600 group-open/p:bg-amber-700 group-open/p:text-white">Editar</span>
+                      <span className="shrink-0 rounded-full border border-stone-300 px-3 py-1 text-xs font-medium text-stone-600 group-open/p:bg-verde-700 group-open/p:text-white">Editar</span>
                     </summary>
                     <div className="px-4 pb-4"><EditarProducto producto={p} /></div>
                   </details>
                 </li>
               ))}
-              <li className="rounded-xl border border-dashed border-amber-400">
+              <li className="rounded-xl border border-dashed border-crema-400">
                 <details>
-                  <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 font-semibold text-amber-800">
+                  <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 font-semibold text-verde-800">
                     <span className="text-xl leading-none">+</span> Agregar producto
                   </summary>
                   <div className="px-4 pb-4"><AgregarProducto /></div>

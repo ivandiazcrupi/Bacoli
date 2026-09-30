@@ -183,6 +183,13 @@ y ~1000 minoristas.
 - El sistema debe **aprovechar el ancho de la PC**: listas en columnas (Clientes: 1/2/3 según ancho), contenedores `max-w-6xl` o más,
   cabecera y hojas hasta `max-w-[1900px]`. No volver a centrar todo en una columna angosta.
 
+## Colores de la marca (pedido del dueño)
+- **Crema `#ede6c8`, verde `#026433`, rojo `#aa0e1d`** (`tailwind.config.ts`: escalas `crema`, `verde`, `rojo`; el 700 del verde y del rojo y el 200 de la crema son los exactos).
+  **Verde = marca y acciones** (botones principales, pastilla activa, menú, "entregado/cobrado"); **crema = fondos y detalles suaves** (fondo de página `crema-50`,
+  insignias, desplegable de Productos, "cuenta corriente"); **rojo = avisos y lo que borra** (Eliminar, errores, deuda, falta de N° de factura, "no entregado").
+  La marca en la cabecera es **BACOLI** en verde y **GESTIÓN** en rojo, con una línea verde debajo. No usar `amber-*`, `green-*` ni `red-*` de Tailwind: usar `verde-*`, `rojo-*`, `crema-*`.
+- **Barrio se escribe a mano** (sin desplegable de sugerencias).
+
 ## Desplegables (regla)
 - La opción inicial de un `<select>` ("Elegí la zona", "Elegí un rol"…) va con `disabled hidden`: se ve en el campo cerrado pero **no aparece en la lista desplegada** (antes aparecía como opción inclickeable).
 

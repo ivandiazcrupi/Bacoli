@@ -29,10 +29,10 @@ export default async function Inicio() {
         {oficina ? (
           <>
             <div className="grid w-full max-w-3xl gap-3 sm:grid-cols-2">
-              <Link href="/pedidos/nuevo" className="rounded-2xl bg-amber-700 px-6 py-5 text-center text-lg font-bold uppercase tracking-wide text-white shadow-sm hover:bg-amber-800">
+              <Link href="/pedidos/nuevo" className="rounded-2xl bg-verde-700 px-6 py-5 text-center text-lg font-bold uppercase tracking-wide text-white shadow-sm hover:bg-verde-800">
                 Cargar pedido
               </Link>
-              <Link href="/clientes/nuevo" className="rounded-2xl bg-amber-700 px-6 py-5 text-center text-lg font-bold uppercase tracking-wide text-white shadow-sm hover:bg-amber-800">
+              <Link href="/clientes/nuevo" className="rounded-2xl bg-verde-700 px-6 py-5 text-center text-lg font-bold uppercase tracking-wide text-white shadow-sm hover:bg-verde-800">
                 Cargar cliente
               </Link>
             </div>

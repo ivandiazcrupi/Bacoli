@@ -46,7 +46,7 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
           <h1 className="text-2xl font-bold">Clientes</h1>
           <div className="flex items-center gap-2">
             <Link href="/clientes/importar" className="rounded-lg border border-stone-300 bg-white px-3 py-3 text-sm font-medium">Importar</Link>
-            <Link href="/clientes/nuevo" className="rounded-lg bg-amber-700 px-10 py-3 text-sm font-bold uppercase tracking-wide text-white hover:bg-amber-800">+ Cargar cliente</Link>
+            <Link href="/clientes/nuevo" className="rounded-lg bg-verde-700 px-10 py-3 text-sm font-bold uppercase tracking-wide text-white hover:bg-verde-800">+ Cargar cliente</Link>
           </div>
         </div>
 

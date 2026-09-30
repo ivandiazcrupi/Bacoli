@@ -52,7 +52,7 @@ export default async function Pedidos({ searchParams }: { searchParams: Promise<
       <main className="mx-auto max-w-[1900px] space-y-5 px-4 py-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-bold">Pedidos</h1>
-          <Link href="/pedidos/nuevo" className="rounded-lg bg-amber-700 px-4 py-3 text-sm font-semibold text-white">+ Nuevo pedido</Link>
+          <Link href="/pedidos/nuevo" className="rounded-lg bg-verde-700 px-4 py-3 text-sm font-semibold text-white">+ Nuevo pedido</Link>
         </div>
         <nav className="flex flex-wrap items-center gap-2 text-sm" aria-label="Semana">
           <Link href={`/pedidos?semana=${sumarDias(lunes, -7)}`} className="rounded-lg border border-stone-300 bg-white px-3 py-2" aria-label="Semana anterior">←</Link>

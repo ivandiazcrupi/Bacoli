@@ -40,7 +40,7 @@ export function NuevoPedido({ esDueno }: { esDueno: boolean }) {
 
   return (
     <div className="space-y-4">
-      {mensaje && <p className="rounded-lg border border-green-600 bg-green-50 p-3 text-sm text-green-700" role="status">{mensaje}</p>}
+      {mensaje && <p className="rounded-lg border border-verde-600 bg-verde-50 p-3 text-sm text-verde-700" role="status">{mensaje}</p>}
 
       {!destino ? (
         <div className="space-y-3">
@@ -60,7 +60,7 @@ export function NuevoPedido({ esDueno }: { esDueno: boolean }) {
           <ul className="divide-y divide-stone-200 rounded-lg border border-stone-200 bg-white">
             {resultados.map((d) => (
               <li key={d.puntoId}>
-                <button type="button" onClick={() => elegir(d)} className="block w-full px-4 py-3 text-left active:bg-stone-100">
+                <button type="button" onClick={() => elegir(d)} className="block w-full px-4 py-3 text-left active:bg-crema-100">
                   <span className="block font-medium">{d.cliente}</span>
                   <span className="block text-sm text-stone-600">{[d.alias, d.direccion, d.barrio, d.zona].filter(Boolean).join(" · ")}</span>
                 </button>

@@ -13,7 +13,7 @@ import { BotonRemito } from "../BotonRemito";
 import { BotonConAviso, FormularioEntrega } from "./Acciones";
 
 const ETIQUETA = { PENDIENTE: "Pendiente", ENTREGADO: "Entregado", NO_ENTREGADO: "No entregado", CANCELADO: "Cancelado" } as const;
-const COLOR = { PENDIENTE: "text-stone-700", ENTREGADO: "text-green-700", NO_ENTREGADO: "text-red-700", CANCELADO: "text-stone-500" } as const;
+const COLOR = { PENDIENTE: "text-stone-700", ENTREGADO: "text-verde-700", NO_ENTREGADO: "text-rojo-700", CANCELADO: "text-stone-500" } as const;
 const formatoFecha = new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Argentina/Buenos_Aires" });
 
 export default async function DetallePedido({ params }: { params: Promise<{ id: string }> }) {
@@ -44,9 +44,9 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
             <span className="text-stone-600"> · {fecha ? `${nombreDia(fecha)} ${diaMes(fecha)}` : "Sin asignar"} · {pedido.conFactura ? "con factura" : "con remito"}</span>
           </p>
           <p className="text-sm text-stone-600">
-            {pedido.conFactura ? <>Factura: {pedido.numeroFactura ? <b>{pedido.numeroFactura}</b> : <span className="text-amber-800">sin número todavía</span>}</> : null}
+            {pedido.conFactura ? <>Factura: {pedido.numeroFactura ? <b>{pedido.numeroFactura}</b> : <span className="text-rojo-700">sin número todavía</span>}</> : null}
             {pedido.conFactura && pedido.remitoNumero ? " · " : ""}
-            {pedido.remitoNumero ? <>Remito: <b>{formatoRemito(pedido.remitoNumero)}</b></> : !pedido.conFactura ? <span className="text-amber-800">Remito sin emitir</span> : null}
+            {pedido.remitoNumero ? <>Remito: <b>{formatoRemito(pedido.remitoNumero)}</b></> : !pedido.conFactura ? <span className="text-rojo-700">Remito sin emitir</span> : null}
           </p>
         </div>
 
@@ -59,7 +59,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
                   <p className="text-xs text-stone-500">{i.sku ?? ""} · {formatoPesos(Number(i.precioUnitario))} por {i.unidad}</p>
                 </div>
                 <div className="text-right tabular-nums">
-                  <p>{i.cantidad}{pedido.estado === "ENTREGADO" && i.cantidadEntregada !== null && i.cantidadEntregada !== i.cantidad ? <span className="text-red-700"> → {i.cantidadEntregada}</span> : ""}</p>
+                  <p>{i.cantidad}{pedido.estado === "ENTREGADO" && i.cantidadEntregada !== null && i.cantidadEntregada !== i.cantidad ? <span className="text-rojo-700"> → {i.cantidadEntregada}</span> : ""}</p>
                   <p className="text-xs text-stone-500">{formatoPesos((pedido.estado === "ENTREGADO" ? (i.cantidadEntregada ?? i.cantidad) : i.cantidad) * Number(i.precioUnitario))}</p>
                 </div>
               </li>
@@ -85,7 +85,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
           {abierto && (
             <form action={marcarNoEntregado}>
               <input type="hidden" name="id" value={pedido.id} />
-              <BotonConAviso texto="No entregado" aviso="¿Marcar como NO entregado? El pedido deja de sumar a la cuenta del cliente." clase="w-full rounded-lg border border-red-600 bg-white px-3 py-3 font-medium text-red-700" />
+              <BotonConAviso texto="No entregado" aviso="¿Marcar como NO entregado? El pedido deja de sumar a la cuenta del cliente." clase="w-full rounded-lg border border-rojo-600 bg-white px-3 py-3 font-medium text-rojo-700" />
             </form>
           )}
           {!abierto && (
@@ -97,7 +97,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
           {pedido.estado !== "CANCELADO" && (
             <form action={cancelarPedido} className="col-span-2">
               <input type="hidden" name="id" value={pedido.id} />
-              <BotonConAviso texto="Cancelar pedido" aviso="¿Cancelar este pedido? Deja de sumar a la cuenta del cliente." clase="w-full rounded-lg px-3 py-3 text-sm font-medium text-red-700 underline" />
+              <BotonConAviso texto="Cancelar pedido" aviso="¿Cancelar este pedido? Deja de sumar a la cuenta del cliente." clase="w-full rounded-lg px-3 py-3 text-sm font-medium text-rojo-700 underline" />
             </form>
           )}
         </div>
@@ -109,7 +109,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
             {pedido.movimientos.map((m) => (
               <li key={m.id} className="flex items-center justify-between gap-3 p-3">
                 <span><span className="block">{m.nota}</span><span className="block text-xs text-stone-500">{formatoFecha.format(m.fecha)}</span></span>
-                <span className={`tabular-nums font-medium ${Number(m.monto) < 0 ? "text-green-700" : ""}`}>{Number(m.monto) > 0 ? "+" : ""}{formatoPesos(Number(m.monto))}</span>
+                <span className={`tabular-nums font-medium ${Number(m.monto) < 0 ? "text-verde-700" : ""}`}>{Number(m.monto) > 0 ? "+" : ""}{formatoPesos(Number(m.monto))}</span>
               </li>
             ))}
             {pedido.movimientos.length === 0 && <li className="p-3 text-stone-500">Sin movimientos.</li>}

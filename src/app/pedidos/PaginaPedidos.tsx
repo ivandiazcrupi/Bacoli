@@ -30,7 +30,7 @@ function BotonesDia({ dias, alAsignar, grande }: { dias: Dia[]; alAsignar: (fech
           onPointerDown={(e) => e.stopPropagation()}
           aria-label={`Asignar al ${d.titulo}`}
           title={d.cerrado ? "Ese día está cerrado" : `Asignar al ${d.titulo} ${d.subtitulo}`}
-          className={`rounded-md border px-2.5 font-medium disabled:opacity-40 ${grande ? "h-11 min-w-12 text-base" : "h-9 text-sm"} ${d.hoy ? "border-stone-800 bg-white" : "border-stone-300 bg-white"} hover:bg-amber-100`}
+          className={`rounded-md border px-2.5 font-medium disabled:opacity-40 ${grande ? "h-11 min-w-12 text-base" : "h-9 text-sm"} ${d.hoy ? "border-stone-800 bg-white" : "border-stone-300 bg-white"} hover:bg-crema-200`}
         >
           {d.corta}
         </button>
@@ -42,9 +42,9 @@ function BotonesDia({ dias, alAsignar, grande }: { dias: Dia[]; alAsignar: (fech
 function FilaSinAsignar({ f, dias, alAsignar }: { f: FilaBandeja; dias: Dia[]; alAsignar: (id: string, fecha: string) => void }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: f.id });
   return (
-    <div ref={setNodeRef} role="row" style={{ gridTemplateColumns: COLUMNAS, opacity: isDragging ? 0.35 : 1 }} className="grid items-start gap-x-3 rounded-lg border border-amber-600 bg-white px-2 py-2 text-sm">
+    <div ref={setNodeRef} role="row" style={{ gridTemplateColumns: COLUMNAS, opacity: isDragging ? 0.35 : 1 }} className="grid items-start gap-x-3 rounded-lg border border-verde-600 bg-white px-2 py-2 text-sm">
       <div role="cell">
-        <button type="button" aria-label={`Arrastrar el pedido de ${f.cliente}`} className="flex h-8 w-7 cursor-grab items-center justify-center rounded text-lg leading-none text-stone-400 hover:bg-stone-100 hover:text-stone-700" {...attributes} {...listeners}>⋮⋮</button>
+        <button type="button" aria-label={`Arrastrar el pedido de ${f.cliente}`} className="flex h-8 w-7 cursor-grab items-center justify-center rounded text-lg leading-none text-stone-400 hover:bg-crema-100 hover:text-stone-700" {...attributes} {...listeners}>⋮⋮</button>
       </div>
       <div role="cell" className="pt-1.5 font-medium">{f.barrio}</div>
       <div role="cell" className="pt-1.5 font-semibold leading-snug">{f.cliente}</div>
@@ -67,7 +67,7 @@ function FilaSinAsignar({ f, dias, alAsignar }: { f: FilaBandeja; dias: Dia[]; a
 
 function TarjetaSinAsignar({ f, dias, alAsignar }: { f: FilaBandeja; dias: Dia[]; alAsignar: (id: string, fecha: string) => void }) {
   return (
-    <article className="space-y-2 rounded-xl border border-amber-600 bg-white p-3">
+    <article className="space-y-2 rounded-xl border border-verde-600 bg-white p-3">
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-lg font-bold leading-snug">{f.cliente}</h3>
@@ -93,7 +93,7 @@ function EncabezadoDia({ d, abierto, alternar }: { d: Dia; abierto: boolean; alt
       type="button"
       onClick={alternar}
       aria-expanded={abierto}
-      className={`flex w-full items-center justify-between gap-4 rounded-xl border px-4 py-3 text-left ${d.hoy ? "border-stone-800" : "border-stone-300"} ${abierto ? "bg-white" : "bg-stone-100"} ${isOver ? "ring-2 ring-amber-600" : ""}`}
+      className={`flex w-full items-center justify-between gap-4 rounded-xl border px-4 py-3 text-left ${d.hoy ? "border-stone-800" : "border-stone-300"} ${abierto ? "bg-white" : "bg-crema-100"} ${isOver ? "ring-2 ring-verde-600" : ""}`}
     >
       <span className="flex items-baseline gap-3">
         <span className="text-stone-500" aria-hidden="true">{abierto ? "▾" : "▸"}</span>
@@ -144,13 +144,13 @@ export function PaginaPedidos({ bandeja: bandejaInicial, dias, esDueno, abiertos
 
   return (
     <div className="space-y-8">
-      {error && <p className="rounded-lg border border-red-600 bg-red-50 p-3 text-sm text-red-700" role="alert">{error}</p>}
+      {error && <p className="rounded-lg border border-rojo-600 bg-rojo-50 p-3 text-sm text-rojo-700" role="alert">{error}</p>}
 
       <DndContext sensors={sensores} collisionDetection={pointerWithin} onDragStart={(e: DragStartEvent) => setActivo(String(e.active.id))} onDragEnd={alSoltar} onDragCancel={() => setActivo(null)}>
         <section className="space-y-3" aria-label="Sin asignar">
           <div className="flex flex-wrap items-baseline gap-3">
             <h2 className="text-xl font-bold">Sin asignar</h2>
-            <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-sm font-semibold tabular-nums">{bandeja.length}</span>
+            <span className="rounded-full bg-crema-200 px-2.5 py-0.5 text-sm font-semibold tabular-nums">{bandeja.length}</span>
             <p className="text-sm text-stone-600">Los pedidos cargados que todavía no tienen día. Asignalos con el botón del día, o arrastralos hasta el día de abajo.</p>
           </div>
           {bandeja.length === 0 ? (
@@ -193,7 +193,7 @@ export function PaginaPedidos({ bandeja: bandejaInicial, dias, esDueno, abiertos
 
         <DragOverlay>
           {enArrastre ? (
-            <div className="rounded-lg border border-amber-600 bg-white p-3 text-sm shadow-lg">
+            <div className="rounded-lg border border-verde-600 bg-white p-3 text-sm shadow-lg">
               <p className="font-semibold">{enArrastre.cliente}</p>
               <p className="text-stone-600">{enArrastre.items.map((i) => `${i.cantidad} ${i.nombre}`).join(" · ")}</p>
             </div>

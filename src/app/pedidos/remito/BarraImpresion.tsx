@@ -9,7 +9,7 @@ export function BarraImpresion({ volver, textoVolver, conPrecios, enlacePrecios 
       <Link href={volver} className="text-sm text-stone-600">← {textoVolver}</Link>
       <div className="flex items-center gap-3">
         <Link href={enlacePrecios} className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm">{conPrecios ? "Sin precios" : "Con precios"}</Link>
-        <button type="button" onClick={() => window.print()} className="rounded-lg bg-amber-700 px-5 py-2.5 font-semibold text-white">Imprimir</button>
+        <button type="button" onClick={() => window.print()} className="rounded-lg bg-verde-700 px-5 py-2.5 font-semibold text-white">Imprimir</button>
       </div>
     </div>
   );

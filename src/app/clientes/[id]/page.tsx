@@ -8,7 +8,7 @@ import { actualizarCliente, cambiarActivoCliente, guardarPreciosEspeciales } fro
 import { formatoPesos } from "@/lib/numeros";
 import { ClienteForm, type DatosCliente } from "../ClienteForm";
 import { PreciosEspeciales, type FilaPrecio } from "../PreciosEspeciales";
-import { EncabezadoSucursales, FilaSucursal, ListaBarrios } from "../SucursalForm";
+import { EncabezadoSucursales, FilaSucursal } from "../SucursalForm";
 
 export default async function FichaCliente({ params }: { params: Promise<{ id: string }> }) {
   const usuario = await exigirOficina();
@@ -74,7 +74,7 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
             <Link href="/clientes" className="text-sm text-stone-600">← Clientes</Link>
             <h1 className="text-2xl font-bold">{cliente.nombre}</h1>
             {cliente.listaPrecios && <p className="text-sm text-stone-600">Lista de precios: {cliente.listaPrecios.nombre}</p>}
-            {!cliente.activo && <p className="text-sm text-red-700">Cliente desactivado</p>}
+            {!cliente.activo && <p className="text-sm text-rojo-700">Cliente desactivado</p>}
           </div>
           <div className="flex flex-col items-end gap-2">
           <Link href={`/clientes/${cliente.id}/cuenta`} className={estiloBotonChico}>Cuenta corriente</Link>
@@ -100,8 +100,7 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
         )}
 
         <section className="space-y-2">
-          <h2 className="pb-2 pt-4 text-center text-3xl font-bold tracking-tight">Sucursales <span className="text-amber-700">({cliente.puntos.length})</span></h2>
-          <ListaBarrios barrios={listaBarrios} />
+          <h2 className="pb-2 pt-4 text-center text-3xl font-bold tracking-tight">Sucursales <span className="text-verde-700">({cliente.puntos.length})</span></h2>
           <EncabezadoSucursales />
           {cliente.puntos.map((p) => (
             <FilaSucursal

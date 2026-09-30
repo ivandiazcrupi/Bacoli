@@ -45,7 +45,7 @@ export default async function CuentaCorriente({ params }: { params: Promise<{ id
         <section className="grid gap-3 sm:grid-cols-3" aria-label="Saldo">
           <div className="rounded-lg border border-stone-200 bg-white p-4">
             <p className="text-sm text-stone-600">Saldo total</p>
-            <p className={`text-2xl font-bold tabular-nums ${total > 0 ? "text-amber-800" : ""}`}>{formatoPesos(total)}</p>
+            <p className={`text-2xl font-bold tabular-nums ${total > 0 ? "text-verde-800" : ""}`}>{formatoPesos(total)}</p>
             <p className="text-xs text-stone-500">{total > 0 ? "Lo que debe el cliente" : total < 0 ? "Saldo a favor del cliente" : "Al día"}</p>
           </div>
           <div className="rounded-lg border border-stone-200 bg-white p-4">
@@ -75,11 +75,11 @@ export default async function CuentaCorriente({ params }: { params: Promise<{ id
                     {m.pedido && (
                       <p className="text-sm">
                         {m.pedido.conFactura ? (
-                          m.pedido.numeroFactura ? <>Factura <b>{m.pedido.numeroFactura}</b></> : <span className="text-amber-800">Factura sin número</span>
+                          m.pedido.numeroFactura ? <>Factura <b>{m.pedido.numeroFactura}</b></> : <span className="text-verde-800">Factura sin número</span>
                         ) : m.pedido.remitoNumero ? (
                           <>Remito <b>{formatoRemito(m.pedido.remitoNumero)}</b></>
                         ) : (
-                          <span className="text-amber-800">Remito sin emitir</span>
+                          <span className="text-verde-800">Remito sin emitir</span>
                         )}
                         {m.pedido.conFactura && m.pedido.remitoNumero ? <> · Remito {formatoRemito(m.pedido.remitoNumero)}</> : null}
                         {" · "}<Link href={`/pedidos/${m.pedidoId}`} className="underline">ver pedido</Link>
@@ -88,7 +88,7 @@ export default async function CuentaCorriente({ params }: { params: Promise<{ id
                     <p className="text-xs text-stone-500">{formatoFecha.format(m.fecha)}{m.pedido ? ` · ${m.pedido.punto.alias ?? titulo(m.pedido.punto.direccion)}` : ""}</p>
                   </div>
                   <div className="text-right tabular-nums">
-                    <p className={`font-semibold ${Number(m.monto) < 0 ? "text-green-700" : ""}`}>{Number(m.monto) > 0 ? "+" : ""}{formatoPesos(Number(m.monto))}</p>
+                    <p className={`font-semibold ${Number(m.monto) < 0 ? "text-verde-700" : ""}`}>{Number(m.monto) > 0 ? "+" : ""}{formatoPesos(Number(m.monto))}</p>
                     <p className="text-xs text-stone-500">saldo {formatoPesos(m.saldo)}</p>
                   </div>
                 </li>

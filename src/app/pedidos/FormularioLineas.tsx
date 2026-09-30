@@ -19,7 +19,7 @@ type Props = {
   alGuardar?: (mensaje: string) => void;
 };
 
-const boton = "flex h-11 w-11 items-center justify-center rounded-lg border border-stone-300 bg-white text-xl font-medium active:bg-stone-100";
+const boton = "flex h-11 w-11 items-center justify-center rounded-lg border border-stone-300 bg-white text-xl font-medium active:bg-crema-100";
 
 // Productos con cantidad y precio. Al tocar + / − o escribir el número, el total se calcula al instante.
 export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial, notaInicial, esDueno, textoBoton, alGuardar }: Props) {
@@ -47,7 +47,7 @@ export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial
           const q = cantidad(p.id);
           const sinPrecio = q > 0 && !leerMonto(precios[p.id]);
           return (
-            <li key={p.id} className={`space-y-2 py-3 ${q > 0 ? "bg-amber-50" : ""}`}>
+            <li key={p.id} className={`space-y-2 py-3 ${q > 0 ? "bg-crema-50" : ""}`}>
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="truncate font-medium">{p.nombre}</p>
@@ -77,11 +77,11 @@ export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial
                       inputMode="decimal"
                       value={precios[p.id] ?? ""}
                       onChange={(e) => setPrecios((x) => ({ ...x, [p.id]: e.target.value }))}
-                      className={`h-9 w-28 rounded-md border bg-white pl-5 pr-2 text-right tabular-nums text-stone-900 ${sinPrecio ? "border-red-500" : "border-stone-200"}`}
+                      className={`h-9 w-28 rounded-md border bg-white pl-5 pr-2 text-right tabular-nums text-stone-900 ${sinPrecio ? "border-rojo-500" : "border-stone-200"}`}
                     />
                   </span>
                 </label>
-                <span className="tabular-nums text-stone-700">{q > 0 && !sinPrecio ? formatoPesos(q * (leerMonto(precios[p.id]) ?? 0)) : sinPrecio ? <span className="text-red-700">Falta el precio</span> : ""}</span>
+                <span className="tabular-nums text-stone-700">{q > 0 && !sinPrecio ? formatoPesos(q * (leerMonto(precios[p.id]) ?? 0)) : sinPrecio ? <span className="text-rojo-700">Falta el precio</span> : ""}</span>
               </div>
             </li>
           );
@@ -98,7 +98,7 @@ export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial
             type="button"
             aria-pressed={conFactura === o.valor}
             onClick={() => setConFactura(o.valor)}
-            className={`rounded-lg border px-3 py-3 text-sm font-medium ${conFactura === o.valor ? "border-amber-700 bg-amber-700 text-white" : "border-stone-300 bg-white"}`}
+            className={`rounded-lg border px-3 py-3 text-sm font-medium ${conFactura === o.valor ? "border-verde-700 bg-verde-700 text-white" : "border-stone-300 bg-white"}`}
           >
             {o.texto}
           </button>
@@ -117,7 +117,7 @@ export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial
       </div>
 
       {estado?.aviso && (
-        <div className="space-y-3 rounded-lg border border-amber-600 bg-amber-50 p-4 text-sm">
+        <div className="space-y-3 rounded-lg border border-rojo-600 bg-rojo-50 p-4 text-sm">
           <p>{estado.aviso}</p>
           {esDueno && <button name="autorizar" value="1" disabled={cargando} className={estiloBoton}>Autorizar y guardar el pedido</button>}
         </div>

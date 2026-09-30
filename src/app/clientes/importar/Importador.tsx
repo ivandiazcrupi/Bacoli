@@ -92,7 +92,7 @@ export function Importador({ zonas }: { zonas: string[] }) {
             </details>
           )}
 
-          <div className="space-y-3 rounded-lg border-2 border-amber-700 bg-white p-4">
+          <div className="space-y-3 rounded-lg border-2 border-verde-700 bg-white p-4">
             <p className="text-sm">Al confirmar se cargan <b>{nuevos.length} clientes</b> en el sistema. Los que ya existen no se modifican.</p>
             <Mensajes estado={resultado ?? estado} />
             <button formAction={aplicar} disabled={aplicando || !!resultado?.ok || nuevos.length === 0} className={estiloBoton}>

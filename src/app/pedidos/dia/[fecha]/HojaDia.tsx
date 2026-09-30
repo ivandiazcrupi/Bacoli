@@ -53,7 +53,7 @@ type Acciones = {
 function FilaHoja({ f, n, bloqueada, acc }: { f: Fila; n: number; bloqueada: boolean; acc: Acciones }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: f.id, disabled: bloqueada });
   const [eligiendo, setEligiendo] = useState(false);
-  const fondo = f.estado === "ENTREGADO" ? "border-green-600 bg-green-50" : f.estado === "NO_ENTREGADO" ? "border-red-600 bg-red-50" : "border-stone-200 bg-white";
+  const fondo = f.estado === "ENTREGADO" ? "border-verde-600 bg-verde-50" : f.estado === "NO_ENTREGADO" ? "border-rojo-600 bg-rojo-50" : "border-stone-200 bg-white";
   const boton = "h-9 rounded-md border px-2 text-sm font-medium disabled:opacity-40";
 
   return (
@@ -73,7 +73,7 @@ function FilaHoja({ f, n, bloqueada, acc }: { f: Fila; n: number; bloqueada: boo
         {f.telefono ? (
           <>
             <span className="block">{f.telefono}</span>
-            {enlaceWhatsApp(f.telefono) && <a href={enlaceWhatsApp(f.telefono)!} target="_blank" rel="noreferrer" className="text-xs font-medium text-green-800 underline">WhatsApp</a>}
+            {enlaceWhatsApp(f.telefono) && <a href={enlaceWhatsApp(f.telefono)!} target="_blank" rel="noreferrer" className="text-xs font-medium text-verde-800 underline">WhatsApp</a>}
           </>
         ) : (
           <span className="text-stone-400">—</span>
@@ -93,7 +93,7 @@ function FilaHoja({ f, n, bloqueada, acc }: { f: Fila; n: number; bloqueada: boo
             defaultValue={f.numeroFactura}
             disabled={bloqueada}
             onBlur={(e) => e.target.value.trim() !== f.numeroFactura && acc.factura(f, e.target.value)}
-            className={`h-9 w-full rounded-md border bg-white px-2 tabular-nums disabled:bg-stone-100 ${f.estado === "ENTREGADO" && !f.numeroFactura ? "border-amber-600 ring-1 ring-amber-600" : "border-stone-300"}`}
+            className={`h-9 w-full rounded-md border bg-white px-2 tabular-nums disabled:bg-crema-100 ${f.estado === "ENTREGADO" && !f.numeroFactura ? "border-rojo-600 ring-1 ring-rojo-600" : "border-stone-300"}`}
           />
         ) : (
           <span className="block pt-1.5 text-stone-400">—</span>
@@ -101,8 +101,8 @@ function FilaHoja({ f, n, bloqueada, acc }: { f: Fila; n: number; bloqueada: boo
       </div>
       <div role="cell" className="space-y-1">
         <div className="flex gap-1">
-          <button type="button" disabled={bloqueada} aria-pressed={f.estado === "ENTREGADO"} aria-label="Entregado" onClick={() => acc.entrega(f, f.estado === "ENTREGADO" ? "PENDIENTE" : "ENTREGADO")} className={`${boton} w-14 text-lg ${f.estado === "ENTREGADO" ? "border-green-700 bg-green-700 text-white" : "border-stone-300 bg-white text-green-700"}`}>✓</button>
-          <button type="button" disabled={bloqueada} aria-pressed={f.estado === "NO_ENTREGADO"} aria-label="No entregado" onClick={() => acc.entrega(f, f.estado === "NO_ENTREGADO" ? "PENDIENTE" : "NO_ENTREGADO")} className={`${boton} w-14 text-lg ${f.estado === "NO_ENTREGADO" ? "border-red-700 bg-red-700 text-white" : "border-stone-300 bg-white text-red-700"}`}>✗</button>
+          <button type="button" disabled={bloqueada} aria-pressed={f.estado === "ENTREGADO"} aria-label="Entregado" onClick={() => acc.entrega(f, f.estado === "ENTREGADO" ? "PENDIENTE" : "ENTREGADO")} className={`${boton} w-14 text-lg ${f.estado === "ENTREGADO" ? "border-verde-700 bg-verde-700 text-white" : "border-stone-300 bg-white text-verde-700"}`}>✓</button>
+          <button type="button" disabled={bloqueada} aria-pressed={f.estado === "NO_ENTREGADO"} aria-label="No entregado" onClick={() => acc.entrega(f, f.estado === "NO_ENTREGADO" ? "PENDIENTE" : "NO_ENTREGADO")} className={`${boton} w-14 text-lg ${f.estado === "NO_ENTREGADO" ? "border-rojo-700 bg-rojo-700 text-white" : "border-stone-300 bg-white text-rojo-700"}`}>✗</button>
         </div>
         {f.estado !== "NO_ENTREGADO" && <Link href={`/pedidos/${f.id}`} className="block text-xs text-stone-500 underline">Entrega parcial</Link>}
       </div>
@@ -110,35 +110,35 @@ function FilaHoja({ f, n, bloqueada, acc }: { f: Fila; n: number; bloqueada: boo
         {f.estado !== "ENTREGADO" ? (
           <span className="block pt-1.5 text-stone-400">—</span>
         ) : f.cobro === "COBRADO" ? (
-          <div className="flex items-center justify-between gap-2 rounded-md bg-green-100 px-2 py-1.5 font-medium text-green-800">
+          <div className="flex items-center justify-between gap-2 rounded-md bg-verde-100 px-2 py-1.5 font-medium text-verde-800">
             <span>Cobrado · {textoMedio(f.medioCobro)}</span>
-            {!bloqueada && <button type="button" onClick={() => acc.deshacer(f)} aria-label="Deshacer el cobro" className="text-green-800 underline">✕</button>}
+            {!bloqueada && <button type="button" onClick={() => acc.deshacer(f)} aria-label="Deshacer el cobro" className="text-verde-800 underline">✕</button>}
           </div>
         ) : f.cobro === "CUENTA_CORRIENTE" ? (
-          <div className="flex items-center justify-between gap-2 rounded-md bg-amber-100 px-2 py-1.5 font-medium text-amber-900">
+          <div className="flex items-center justify-between gap-2 rounded-md bg-crema-200 px-2 py-1.5 font-medium text-verde-900">
             <span>Cuenta corriente</span>
-            {!bloqueada && <button type="button" onClick={() => acc.deshacer(f)} aria-label="Deshacer" className="text-amber-900 underline">✕</button>}
+            {!bloqueada && <button type="button" onClick={() => acc.deshacer(f)} aria-label="Deshacer" className="text-verde-900 underline">✕</button>}
           </div>
         ) : eligiendo ? (
           <div className="flex flex-wrap gap-1">
             {MEDIOS.map((m) => (
-              <button key={m.valor} type="button" onClick={() => { setEligiendo(false); acc.cobrar(f, m.valor); }} className="h-8 rounded-md border border-green-700 bg-white px-2 text-xs font-medium text-green-800">{m.texto}</button>
+              <button key={m.valor} type="button" onClick={() => { setEligiendo(false); acc.cobrar(f, m.valor); }} className="h-8 rounded-md border border-verde-700 bg-white px-2 text-xs font-medium text-verde-800">{m.texto}</button>
             ))}
             <button type="button" onClick={() => setEligiendo(false)} aria-label="Cancelar" className="h-8 px-1 text-stone-500">✕</button>
           </div>
         ) : (
           <div className="flex flex-wrap gap-1">
-            <button type="button" disabled={bloqueada} onClick={() => setEligiendo(true)} className={`${boton} border-green-700 bg-white text-green-800`}>Cobrado</button>
-            <button type="button" disabled={bloqueada} onClick={() => acc.cuentaCorriente(f)} className={`${boton} border-amber-700 bg-white text-amber-900`}>Cuenta corriente</button>
+            <button type="button" disabled={bloqueada} onClick={() => setEligiendo(true)} className={`${boton} border-verde-700 bg-white text-verde-800`}>Cobrado</button>
+            <button type="button" disabled={bloqueada} onClick={() => acc.cuentaCorriente(f)} className={`${boton} border-verde-700 bg-white text-verde-900`}>Cuenta corriente</button>
           </div>
         )}
       </div>
       <div role="cell">
-        <BotonRemito pedidoId={f.id} numero={f.remito} clase={`h-9 rounded-md border px-2 text-sm font-medium ${f.remito ? "border-stone-800 bg-white text-stone-900" : f.estado === "ENTREGADO" && !f.conFactura ? "border-amber-600 bg-amber-50 text-amber-900 ring-1 ring-amber-600" : "border-stone-300 bg-white text-stone-700"}`} />
+        <BotonRemito pedidoId={f.id} numero={f.remito} clase={`h-9 rounded-md border px-2 text-sm font-medium ${f.remito ? "border-stone-800 bg-white text-stone-900" : f.estado === "ENTREGADO" && !f.conFactura ? "border-rojo-600 bg-rojo-50 text-rojo-800 ring-1 ring-rojo-600" : "border-stone-300 bg-white text-stone-700"}`} />
       </div>
       <div role="cell">
-        <Link href={`/clientes/${f.clienteId}/cuenta`} className="inline-flex h-9 items-center gap-1.5 rounded-md border border-stone-300 bg-white px-2 text-sm font-medium hover:bg-stone-100">
-          Abrir{f.tieneDeuda && <span className="h-2 w-2 rounded-full bg-amber-600" title="Este cliente tiene deuda" aria-label="Tiene deuda" />}
+        <Link href={`/clientes/${f.clienteId}/cuenta`} className="inline-flex h-9 items-center gap-1.5 rounded-md border border-stone-300 bg-white px-2 text-sm font-medium hover:bg-crema-100">
+          Abrir{f.tieneDeuda && <span className="h-2 w-2 rounded-full bg-rojo-600" title="Este cliente tiene deuda" aria-label="Tiene deuda" />}
         </Link>
       </div>
     </div>
@@ -152,7 +152,7 @@ const mapa = (f: Fila) => `https://www.google.com/maps/search/?api=1&query=${enc
 // El mismo pedido, en el celular: una tarjeta con botones grandes (dirección a Google Maps, teléfono que llama).
 function FilaTarjeta({ f, n, bloqueada, acc }: { f: Fila; n: number; bloqueada: boolean; acc: Acciones }) {
   const [eligiendo, setEligiendo] = useState(false);
-  const fondo = f.estado === "ENTREGADO" ? "border-green-600 bg-green-50" : f.estado === "NO_ENTREGADO" ? "border-red-600 bg-red-50" : "border-stone-200 bg-white";
+  const fondo = f.estado === "ENTREGADO" ? "border-verde-600 bg-verde-50" : f.estado === "NO_ENTREGADO" ? "border-rojo-600 bg-rojo-50" : "border-stone-200 bg-white";
   const grande = "h-12 rounded-lg border px-3 text-base font-semibold disabled:opacity-40";
   return (
     <article className={`space-y-3 rounded-xl border p-3 ${fondo}`}>
@@ -170,7 +170,7 @@ function FilaTarjeta({ f, n, bloqueada, acc }: { f: Fila; n: number; bloqueada: 
         {f.telefono && (
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <a href={`tel:${digitos(f.telefono)}`} className="inline-flex h-11 items-center rounded-lg border border-stone-300 bg-white px-3 text-base font-medium">Llamar · {f.telefono}</a>
-            {enlaceWhatsApp(f.telefono) && <a href={enlaceWhatsApp(f.telefono)!} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center rounded-lg border border-green-700 bg-white px-3 text-base font-medium text-green-800">WhatsApp</a>}
+            {enlaceWhatsApp(f.telefono) && <a href={enlaceWhatsApp(f.telefono)!} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center rounded-lg border border-verde-700 bg-white px-3 text-base font-medium text-verde-800">WhatsApp</a>}
           </div>
         )}
       </div>
@@ -183,26 +183,26 @@ function FilaTarjeta({ f, n, bloqueada, acc }: { f: Fila; n: number; bloqueada: 
       <p className="flex items-baseline justify-between text-lg font-bold"><span className="text-sm font-medium text-stone-600">Monto</span><span className="tabular-nums">{formatoPesos(f.monto)}</span></p>
 
       <div className="grid grid-cols-2 gap-2">
-        <button type="button" disabled={bloqueada} aria-pressed={f.estado === "ENTREGADO"} onClick={() => acc.entrega(f, f.estado === "ENTREGADO" ? "PENDIENTE" : "ENTREGADO")} className={`${grande} ${f.estado === "ENTREGADO" ? "border-green-700 bg-green-700 text-white" : "border-green-700 bg-white text-green-800"}`}>✓ Entregado</button>
-        <button type="button" disabled={bloqueada} aria-pressed={f.estado === "NO_ENTREGADO"} onClick={() => acc.entrega(f, f.estado === "NO_ENTREGADO" ? "PENDIENTE" : "NO_ENTREGADO")} className={`${grande} ${f.estado === "NO_ENTREGADO" ? "border-red-700 bg-red-700 text-white" : "border-red-700 bg-white text-red-800"}`}>✗ No entregado</button>
+        <button type="button" disabled={bloqueada} aria-pressed={f.estado === "ENTREGADO"} onClick={() => acc.entrega(f, f.estado === "ENTREGADO" ? "PENDIENTE" : "ENTREGADO")} className={`${grande} ${f.estado === "ENTREGADO" ? "border-verde-700 bg-verde-700 text-white" : "border-verde-700 bg-white text-verde-800"}`}>✓ Entregado</button>
+        <button type="button" disabled={bloqueada} aria-pressed={f.estado === "NO_ENTREGADO"} onClick={() => acc.entrega(f, f.estado === "NO_ENTREGADO" ? "PENDIENTE" : "NO_ENTREGADO")} className={`${grande} ${f.estado === "NO_ENTREGADO" ? "border-rojo-700 bg-rojo-700 text-white" : "border-rojo-700 bg-white text-rojo-800"}`}>✗ No entregado</button>
       </div>
       {f.estado !== "NO_ENTREGADO" && <Link href={`/pedidos/${f.id}`} className="block text-sm text-stone-600 underline">Entrega parcial</Link>}
 
       {f.estado === "ENTREGADO" && (
         <div className="space-y-2">
           {f.cobro === "COBRADO" ? (
-            <div className="flex items-center justify-between rounded-lg bg-green-100 px-3 py-3 font-semibold text-green-800"><span>Cobrado · {textoMedio(f.medioCobro)}</span>{!bloqueada && <button type="button" onClick={() => acc.deshacer(f)} aria-label="Deshacer el cobro" className="px-2 text-xl">✕</button>}</div>
+            <div className="flex items-center justify-between rounded-lg bg-verde-100 px-3 py-3 font-semibold text-verde-800"><span>Cobrado · {textoMedio(f.medioCobro)}</span>{!bloqueada && <button type="button" onClick={() => acc.deshacer(f)} aria-label="Deshacer el cobro" className="px-2 text-xl">✕</button>}</div>
           ) : f.cobro === "CUENTA_CORRIENTE" ? (
-            <div className="flex items-center justify-between rounded-lg bg-amber-100 px-3 py-3 font-semibold text-amber-900"><span>Cuenta corriente</span>{!bloqueada && <button type="button" onClick={() => acc.deshacer(f)} aria-label="Deshacer" className="px-2 text-xl">✕</button>}</div>
+            <div className="flex items-center justify-between rounded-lg bg-crema-200 px-3 py-3 font-semibold text-verde-900"><span>Cuenta corriente</span>{!bloqueada && <button type="button" onClick={() => acc.deshacer(f)} aria-label="Deshacer" className="px-2 text-xl">✕</button>}</div>
           ) : eligiendo ? (
             <div className="grid grid-cols-2 gap-2">
-              {MEDIOS.map((m) => <button key={m.valor} type="button" onClick={() => { setEligiendo(false); acc.cobrar(f, m.valor); }} className="h-12 rounded-lg border border-green-700 bg-white font-semibold text-green-800">{m.texto}</button>)}
+              {MEDIOS.map((m) => <button key={m.valor} type="button" onClick={() => { setEligiendo(false); acc.cobrar(f, m.valor); }} className="h-12 rounded-lg border border-verde-700 bg-white font-semibold text-verde-800">{m.texto}</button>)}
               <button type="button" onClick={() => setEligiendo(false)} className="h-12 rounded-lg border border-stone-300 bg-white text-stone-600">Cancelar</button>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-2">
-              <button type="button" disabled={bloqueada} onClick={() => setEligiendo(true)} className={`${grande} border-green-700 bg-white text-green-800`}>Cobrado</button>
-              <button type="button" disabled={bloqueada} onClick={() => acc.cuentaCorriente(f)} className={`${grande} border-amber-700 bg-white text-amber-900`}>Cuenta corriente</button>
+              <button type="button" disabled={bloqueada} onClick={() => setEligiendo(true)} className={`${grande} border-verde-700 bg-white text-verde-800`}>Cobrado</button>
+              <button type="button" disabled={bloqueada} onClick={() => acc.cuentaCorriente(f)} className={`${grande} border-verde-700 bg-white text-verde-900`}>Cuenta corriente</button>
             </div>
           )}
         </div>
@@ -216,15 +216,15 @@ function FilaTarjeta({ f, n, bloqueada, acc }: { f: Fila; n: number; bloqueada: 
             disabled={bloqueada}
             inputMode="numeric"
             onBlur={(e) => e.target.value.trim() !== f.numeroFactura && acc.factura(f, e.target.value)}
-            className={`mt-1 h-12 w-full rounded-lg border bg-white px-3 text-base tabular-nums ${f.estado === "ENTREGADO" && !f.numeroFactura ? "border-amber-600 ring-1 ring-amber-600" : "border-stone-300"}`}
+            className={`mt-1 h-12 w-full rounded-lg border bg-white px-3 text-base tabular-nums ${f.estado === "ENTREGADO" && !f.numeroFactura ? "border-rojo-600 ring-1 ring-rojo-600" : "border-stone-300"}`}
           />
         </label>
       )}
 
       <div className="grid grid-cols-2 gap-2">
-        <BotonRemito pedidoId={f.id} numero={f.remito} clase={`h-12 w-full rounded-lg border px-3 text-base font-semibold ${f.remito ? "border-stone-800 bg-white text-stone-900" : f.estado === "ENTREGADO" && !f.conFactura ? "border-amber-600 bg-amber-50 text-amber-900 ring-1 ring-amber-600" : "border-stone-300 bg-white text-stone-700"}`} />
+        <BotonRemito pedidoId={f.id} numero={f.remito} clase={`h-12 w-full rounded-lg border px-3 text-base font-semibold ${f.remito ? "border-stone-800 bg-white text-stone-900" : f.estado === "ENTREGADO" && !f.conFactura ? "border-rojo-600 bg-rojo-50 text-rojo-800 ring-1 ring-rojo-600" : "border-stone-300 bg-white text-stone-700"}`} />
         <Link href={`/clientes/${f.clienteId}/cuenta`} className="flex h-12 items-center justify-center gap-2 rounded-lg border border-stone-300 bg-white px-3 text-base font-semibold">
-          Cuenta corriente{f.tieneDeuda && <span className="h-2.5 w-2.5 rounded-full bg-amber-600" aria-label="Tiene deuda" />}
+          Cuenta corriente{f.tieneDeuda && <span className="h-2.5 w-2.5 rounded-full bg-rojo-600" aria-label="Tiene deuda" />}
         </Link>
       </div>
     </article>
@@ -318,7 +318,7 @@ export function HojaDia({ fecha, filasIniciales, cerrado, esDueno }: { fecha: st
     <div className="space-y-3">
       <div className="flex flex-col gap-3 rounded-lg border border-stone-200 bg-white p-3 text-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <p className="text-stone-700">
-          {filas.length} {filas.length === 1 ? "pedido" : "pedidos"} · <span className="font-semibold text-green-700">{verdes} {verdes === 1 ? "entregado" : "entregados"}</span> · <span className="font-semibold text-red-700">{rojos} {rojos === 1 ? "no entregado" : "no entregados"}</span>
+          {filas.length} {filas.length === 1 ? "pedido" : "pedidos"} · <span className="font-semibold text-verde-700">{verdes} {verdes === 1 ? "entregado" : "entregados"}</span> · <span className="font-semibold text-rojo-700">{rojos} {rojos === 1 ? "no entregado" : "no entregados"}</span>
           {!cerrado && !completo && filas.length > 0 && (
             <span className="text-stone-600"> · falta marcar {[
               sinEntrega > 0 && `${sinEntrega} ${sinEntrega === 1 ? "entrega" : "entregas"}`,
@@ -339,7 +339,7 @@ export function HojaDia({ fecha, filasIniciales, cerrado, esDueno }: { fecha: st
         )}
         </div>
       </div>
-      {error && <p className="rounded-lg border border-red-600 bg-red-50 p-3 text-sm text-red-700" role="alert">{error}</p>}
+      {error && <p className="rounded-lg border border-rojo-600 bg-rojo-50 p-3 text-sm text-rojo-700" role="alert">{error}</p>}
 
       {filas.length === 0 ? (
         <p className="rounded-lg border border-dashed border-stone-300 p-6 text-center text-stone-600">Todavía no hay pedidos en este día. Asignalos desde la semana.</p>

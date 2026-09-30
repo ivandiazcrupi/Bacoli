@@ -17,7 +17,7 @@ export function GrillaPrecios({ lista, productos, precios }: { lista: Lista; pro
           <li key={p.id} className="border-b border-stone-100">
             <label className="flex items-center justify-between gap-4 py-3">
               <span className="flex min-w-0 items-center gap-3">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-100 text-xs font-bold text-amber-800">{p.orden}</span>
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-crema-200 text-xs font-bold text-verde-800">{p.orden}</span>
                 <span className="min-w-0">
                   <span className="block truncate font-medium">{p.nombre}</span>
                   <span className="block text-xs text-stone-500">{p.sku ?? "Sin código"}</span>
@@ -30,7 +30,7 @@ export function GrillaPrecios({ lista, productos, precios }: { lista: Lista; pro
                   aria-label={`Precio de ${p.nombre} en la lista ${lista.nombre}`}
                   inputMode="decimal"
                   defaultValue={estado?.valores?.[`p_${p.id}`] ?? precios[p.id] ?? ""}
-                  className="w-32 rounded-lg sm:w-40 border border-stone-200 bg-stone-50 py-3 pl-7 pr-3 text-right text-lg font-semibold tabular-nums focus:border-amber-600 focus:bg-white focus:outline-none"
+                  className="w-32 rounded-lg sm:w-40 border border-stone-200 bg-stone-50 py-3 pl-7 pr-3 text-right text-lg font-semibold tabular-nums focus:border-verde-600 focus:bg-white focus:outline-none"
                 />
               </span>
             </label>
@@ -39,7 +39,7 @@ export function GrillaPrecios({ lista, productos, precios }: { lista: Lista; pro
       </ul>
       <p className="text-xs text-stone-500">Dejá vacío si ese producto no tiene precio en esta lista.</p>
       <Mensajes estado={estado} />
-      <div className="flex justify-end"><button disabled={cargando} className="rounded-lg bg-amber-700 px-6 py-3 font-semibold text-white hover:bg-amber-800 disabled:opacity-60">{cargando ? "Guardando…" : `Guardar precios de ${lista.nombre}`}</button></div>
+      <div className="flex justify-end"><button disabled={cargando} className="rounded-lg bg-verde-700 px-6 py-3 font-semibold text-white hover:bg-verde-800 disabled:opacity-60">{cargando ? "Guardando…" : `Guardar precios de ${lista.nombre}`}</button></div>
     </form>
   );
 }

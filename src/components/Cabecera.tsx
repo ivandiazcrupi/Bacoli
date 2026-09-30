@@ -12,15 +12,15 @@ export function Cabecera({ usuario }: { usuario: Usuario }) {
   const botonCargar = "rounded-lg px-3 py-2 text-center text-xs font-bold uppercase tracking-wide";
   const acciones = oficina && (
     <>
-      <Link href="/pedidos/nuevo" className={`${botonCargar} bg-amber-700 text-white hover:bg-amber-800`}>Cargar pedido</Link>
-      <Link href="/clientes/nuevo" className={`${botonCargar} bg-amber-700 text-white hover:bg-amber-800`}>Cargar cliente</Link>
+      <Link href="/pedidos/nuevo" className={`${botonCargar} bg-verde-700 text-white hover:bg-verde-800`}>Cargar pedido</Link>
+      <Link href="/clientes/nuevo" className={`${botonCargar} bg-verde-700 text-white hover:bg-verde-800`}>Cargar cliente</Link>
     </>
   );
   return (
-    <header className="border-b border-stone-200 bg-white print:hidden">
+    <header className="border-b-2 border-verde-700 bg-white print:hidden">
       <div className="mx-auto flex max-w-[1900px] flex-wrap items-center justify-between gap-x-4 px-4 pt-2 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:py-2">
         <Link href="/" className="py-2 text-xl font-extrabold uppercase tracking-wide">
-          BACOLI <span className="font-medium text-stone-500">GESTIÓN</span>
+          <span className="text-verde-700">BACOLI</span> <span className="font-medium text-rojo-700">GESTIÓN</span>
         </Link>
 
         <nav aria-label="Menú principal" className="order-[98] -mx-4 flex w-[calc(100%+2rem)] items-center gap-3 overflow-x-auto whitespace-nowrap px-4 pb-1 lg:order-none lg:mx-0 lg:w-auto lg:justify-center lg:gap-2 lg:overflow-visible lg:px-0 lg:pb-0">

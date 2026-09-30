@@ -27,7 +27,7 @@ export function FormularioEntrega({ pedidoId, items }: { pedidoId: string; items
         ))}
       </ul>
       <Mensajes estado={estado} />
-      <button disabled={cargando} className="w-full rounded-lg bg-green-700 px-4 py-3 font-semibold text-white disabled:opacity-60">{cargando ? "Guardando…" : "Confirmar entrega"}</button>
+      <button disabled={cargando} className="w-full rounded-lg bg-verde-700 px-4 py-3 font-semibold text-white disabled:opacity-60">{cargando ? "Guardando…" : "Confirmar entrega"}</button>
     </form>
   );
 }

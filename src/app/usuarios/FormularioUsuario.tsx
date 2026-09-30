@@ -37,9 +37,9 @@ export function FormularioUsuario() {
           ))}
         </select>
       </label>
-      {estado?.error && <p className="text-sm text-red-700">{estado.error}</p>}
-      {estado?.ok && <p className="text-sm text-green-700">{estado.ok}</p>}
-      <button disabled={cargando} className="w-full rounded-lg bg-amber-700 px-4 py-3 font-semibold text-white disabled:opacity-60">
+      {estado?.error && <p className="text-sm text-rojo-700">{estado.error}</p>}
+      {estado?.ok && <p className="text-sm text-verde-700">{estado.ok}</p>}
+      <button disabled={cargando} className="w-full rounded-lg bg-verde-700 px-4 py-3 font-semibold text-white disabled:opacity-60">
         {cargando ? "Creando…" : "Crear usuario"}
       </button>
     </form>
