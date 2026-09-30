@@ -55,7 +55,8 @@ Si hay duda, preguntar. Probar siempre antes de subir.
 - **Cliente → Sucursal.** Cliente = quien tiene CUIT: lleva su **cuenta corriente, factura y límites** (cada franquicia de
   VACALIN paga por su cuenta). Sucursal = el local (dirección, barrio, zona de reparto). El nombre del cliente lleva la
   marca ("VACALIN - Pomelo Producciones"); se vende a "VACALIN Olivos" = sucursal Olivos. La búsqueda entiende varias
-  palabras ("vacalin olivos"). **No hay entidad "Marca"** (se probó y se descartó: sobraba); VACALIN es una lista de precios.
+  palabras ("vacalin olivos"). **No hay entidad "Marca"** (se probó, se descartó y sus tablas se borraron con OK del dueño en
+  la migración `quitar_marcas`); VACALIN es una lista de precios.
 - **Precio de un cliente por producto** (`precioParaCliente`): precio propio del cliente (final, sin descuento encima) o,
   si no tiene, el de su lista menos el descuento general del cliente. **Un cambio de precio no toca pedidos ya hechos**:
   el pedido guardará el precio que tenía (implementar así en el módulo de Pedidos).
@@ -116,8 +117,6 @@ y ~1000 minoristas.
   es un botón en Clientes).
 
 ## Pendientes conocidos
-- **Limpieza de Marcas en la base:** las tablas `Marca`, `PrecioMarca` y la columna `Cliente.marcaId` ya no se usan. Borrarlas
-  (migración destructiva) **solo con OK del dueño**, cuando confirme que en Railway estaban vacías.
 - La enumeración `TipoCliente` conserva el valor DISTRIBUIDOR (oculto en pantallas) para no alterar datos existentes.
 - Login: bloqueo de 15 min tras 5 fallos por email (en memoria; revisar si se usa más de una instancia).
 - Recuperación de contraseña olvidada (hoy: el dueño usa SEED_ADMIN_RESET en Railway; no hay reset para otros usuarios).

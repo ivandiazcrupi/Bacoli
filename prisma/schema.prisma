@@ -52,16 +52,15 @@ model Zona {
 }
 
 model Producto {
-  id           String           @id @default(cuid())
-  nombre       String           @unique
-  sku          String?          @unique // código interno, ej. PPT01
-  ean          String? // código de barras (opcional)
-  descripcion  String? // texto para el remito
-  unidad       String           @default("paquete") // unidad de venta: "paquete" o "unidad"
-  activo       Boolean          @default(true)
-  precios      Precio[]
-  especiales   PrecioEspecial[]
-  preciosMarca PrecioMarca[]
+  id          String           @id @default(cuid())
+  nombre      String           @unique
+  sku         String?          @unique // código interno, ej. PPT01
+  ean         String? // código de barras (opcional)
+  descripcion String? // texto para el remito
+  unidad      String           @default("paquete") // unidad de venta: "paquete" o "unidad"
+  activo      Boolean          @default(true)
+  precios     Precio[]
+  especiales  PrecioEspecial[]
 }
 
 model ListaPrecios {
@@ -97,7 +96,6 @@ model Cliente {
   sinLimite         Boolean        @default(false)
   maxPedidosImpagos Int?
   maxMonto          Decimal?       @db.Decimal(14, 2)
-  marcaId           String?
   comisionista      String?
   comisionPct       Decimal?       @db.Decimal(5, 2)
   activo            Boolean        @default(true)
@@ -107,7 +105,6 @@ model Cliente {
   listaPrecios      ListaPrecios?    @relation(fields: [listaPreciosId], references: [id])
   puntos            PuntoEntrega[]
   preciosEspeciales PrecioEspecial[]
-  marca             Marca?           @relation(fields: [marcaId], references: [id])
 
   @@index([nombre])
 }
@@ -140,23 +137,4 @@ model PrecioEspecial {
   producto   Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
 
   @@id([clienteId, productoId])
-}
-
-// Marca o grupo (ej. VACALIN): agrupa clientes (cada franquicia con su CUIT) y guarda un precio especial común.
-model Marca {
-  id       String        @id @default(cuid())
-  nombre   String        @unique
-  clientes Cliente[]
-  precios  PrecioMarca[]
-}
-
-// Precio final por paquete, sin IVA, para todos los clientes de la marca (el precio propio del cliente le gana).
-model PrecioMarca {
-  marcaId    String
-  productoId String
-  precio     Decimal  @db.Decimal(12, 2)
-  marca      Marca    @relation(fields: [marcaId], references: [id], onDelete: Cascade)
-  producto   Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
-
-  @@id([marcaId, productoId])
 }
