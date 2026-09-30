@@ -19,7 +19,7 @@ export function PreciosEspeciales({ accion, filas, pie }: { accion: (estado: Est
             name={`pe_${f.productoId}`}
             defaultValue={estado?.valores?.[`pe_${f.productoId}`] ?? f.especial}
             inputMode="decimal"
-            placeholder="Sin precio propio"
+            placeholder="Usa el de su lista"
             className={estiloCampo}
           />
           <span className="mt-1 block text-xs font-normal text-stone-500">{f.especial ? f.textoLleno : f.textoVacio}</span>

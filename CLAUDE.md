@@ -28,12 +28,17 @@ Si hay duda, preguntar. Probar siempre antes de subir.
 - Local: necesita un PostgreSQL y un `.env` copiado de `.env.example`.
 
 ## Reglas del negocio (acordadas con el dueño)
-- **Todo se cuenta en PAQUETES** (1 paquete = 2 prepizzas). Caja = 12 paquetes. Productos hoy: prepizza
-  tomate y prepizza cebolla.
+- **Cada producto tiene su unidad de venta** (campo `unidad`: "paquete" o "unidad"), y todo (pedidos, precios, remito) se
+  cuenta en esa unidad. Catálogo inicial (código SKU): PPT01 prepizza tomate y PPC02 prepizza cebolla (paquete de 2),
+  PZT03 pizzeta tomate (paquete de 6), FOO04 focaccia oliva (unidad), PCM05 pizza congelada muzzarella, PCJ06 jamón y
+  PCF07 fugazzeta (unidad). Cada producto guarda además EAN (opcional) y descripción para el remito.
 - **Precios SIN IVA.** Clientes facturados: se suma IVA 10,5%.
-- Tipos de cliente: minorista, mayorista, distribuidor (precio propio, ej. $3.500) y "clientes de Migue"
-  (Miguel cobra 8% de comisión). Listas de precios + descuento por cliente especial. Precios minoristas =
-  los de la tienda online (Empretienda; vincular más adelante).
+- **Tipos de cliente:** minorista y mayorista. **Distribuidor NO es un tipo de cliente: es una lista de precios** (el
+  producto es el mismo, cambia el precio). Los precios minoristas viven en la tienda online (Empretienda): no se cargan
+  acá; la lista Minorista está oculta (`activa = false`). "Clientes de Migue" = mayorista con comisionista Migue 8%.
+- **El precio se define por LISTA** (pocas: Mayorista, Distribuidor, VACALIN…), no por cliente. Cada cliente elige una
+  lista en su ficha. Así crecer a miles de clientes no multiplica los precios (productos × listas). El **precio propio**
+  de un cliente es solo una excepción para precios que no comparte con nadie; hay filtro "Con precio propio" en Clientes.
 - Un **cliente** puede tener varias **sucursales/puntos de entrega** (ej. ALMACEN 1249, ALCANCIA; cadenas con 40).
   Cada punto tiene barrio/zona (dato clave para armar el reparto) y se relaciona con una zona de reparto
   (norte, oeste, sur, CABA). La zona-barrio se carga con cada cliente.
@@ -47,14 +52,13 @@ Si hay duda, preguntar. Probar siempre antes de subir.
   - Hay devoluciones, notas de crédito y descuentos. Cada cliente paga contra saldo total o contra pedido puntual.
 - **Límites por cliente:** máx. de pedidos impagos y máx. de monto en $. Al pasarse: avisar y pedir autorización
   de un dueño (no bloquear). Opción "cuenta sin límite" (ej. Carrefour).
-- **Marca → Cliente → Sucursal.** Marca (ej. VACALIN) agrupa clientes y guarda un **precio especial común**. Cliente = quien
-  tiene CUIT: lleva su **cuenta corriente, factura y límites** (cada franquicia paga por su cuenta). Sucursal = el local
-  (dirección, barrio, zona de reparto). Se vende a "VACALIN Olivos" = sucursal Olivos del cliente que corresponda; la
-  búsqueda entiende varias palabras ("vacalin olivos").
-- **Precio de un cliente por producto** (`precioParaCliente`), por orden: precio propio del cliente > precio de su marca >
-  precio de su lista menos el descuento general del cliente. Los precios propios y de marca son finales (sin descuento
-  encima), se cargan a mano y valen para todas las sucursales. **Un cambio de precio no toca pedidos ya hechos**: el
-  pedido guardará el precio que tenía (implementar así en el módulo de Pedidos).
+- **Cliente → Sucursal.** Cliente = quien tiene CUIT: lleva su **cuenta corriente, factura y límites** (cada franquicia de
+  VACALIN paga por su cuenta). Sucursal = el local (dirección, barrio, zona de reparto). El nombre del cliente lleva la
+  marca ("VACALIN - Pomelo Producciones"); se vende a "VACALIN Olivos" = sucursal Olivos. La búsqueda entiende varias
+  palabras ("vacalin olivos"). **No hay entidad "Marca"** (se probó y se descartó: sobraba); VACALIN es una lista de precios.
+- **Precio de un cliente por producto** (`precioParaCliente`): precio propio del cliente (final, sin descuento encima) o,
+  si no tiene, el de su lista menos el descuento general del cliente. **Un cambio de precio no toca pedidos ya hechos**:
+  el pedido guardará el precio que tenía (implementar así en el módulo de Pedidos).
 - Facturas cargadas a mano hoy (numeración 1 a 5000). Después: emitir con ARCA vía intermediario (Afip SDK /
   Tusfacturas), quedando "por revisar" hasta que Miguel confirme. Preparar campos: CUIT, condición IVA,
   punto de venta, CAE. Muchos clientes no tienen CUIT/razón social: campos opcionales.
@@ -64,8 +68,9 @@ Si hay duda, preguntar. Probar siempre antes de subir.
 - Migración de planilla de clientes (columnas: Zona=barrio, Nombre, Cliente=tipo, Dirección, Teléfono, Razón Social,
   CUIT, Estado, Comentario, Día entrega, Volumen semanal, Facturación estimada). Reglas acordadas:
   - **No migrar** comentarios, volumen semanal, facturación estimada ni notas entre paréntesis en la dirección.
-  - Sucursales: se agrupan solo nombres **idénticos**. Las marcas VACALIN, PARMEGIANO, ABASTECEDOR y BAQUIANO se crean como Marca.
-    En las marcas, las **franquicias con otro CUIT son clientes aparte** (los locales con el mismo CUIT quedan juntos).
+  - Sucursales: se agrupan solo nombres **idénticos**, más los nombres VACALIN, PARMEGIANO, ABASTECEDOR y BAQUIANO. En
+    esos, las **franquicias con otro CUIT son clientes aparte** (los locales con el mismo CUIT quedan juntos). Cada cliente
+    de VACALIN usa la lista VACALIN; "Dist." usa la lista Distribuidor; el resto, Mayorista.
   - Tipo "Migue." = mayorista con comisionista Migue 8%. Estados Baja/Contactar = clientes desactivados.
   - Filas de tipo "Cobro"/"Muestra" NO son clientes: son **paradas de cobranza/muestra de la hoja de ruta**
     (hoy se cargaban como clientes solo para poder ponerlas en la ruta).
@@ -88,8 +93,9 @@ y ~1000 minoristas.
 - [x] Módulo 2 (parte B): importación de la planilla de clientes (`/clientes/importar`, CSV con `;` o `,`):
   vista previa, propuesta de zona por barrio (corregible; no deja importar con barrios sin zona), confirmación,
   y no duplica clientes ya cargados (mismo nombre). Lógica en `src/lib/importar-clientes.ts`.
-- [x] Módulo 2 (parte C): Marcas (`/marcas`, precio de marca), campo Marca en el cliente, búsqueda por varias palabras,
-  la importación crea las marcas y las asigna.
+- [x] Módulo 2 (parte C): búsqueda por varias palabras. Marcas se probó y se **quitó** (ver reglas): reemplazado por listas.
+- [x] Módulo 2 (parte D): Precios rediseñada (bloque por producto, una casilla con $ por lista), productos con código SKU,
+  EAN, descripción y unidad; listas VACALIN y Distribuidor; Importar es un botón en Clientes.
 - [ ] Módulo 3: Pedidos.
 - [ ] Módulo 4: Cuenta corriente.
 - [ ] Módulo 5: Hoja de ruta + vista del repartidor. Debe incluir: paradas de cobranza/muestra (sin pedido) y el cobro de
@@ -106,10 +112,13 @@ y ~1000 minoristas.
 ## Navegación (regla para no llenar el menú)
 - Menú principal corto (máx. ~5 entradas): Clientes, Precios, y a futuro Pedidos, Ruta, Cuentas. Usuarios y Mi cuenta son de
   administración.
-- Lo que sea parte de una sección va como **pestañas dentro de esa sección**, no como menú nuevo. Ej.: Clientes tiene las
-  pestañas Clientes | Marcas | Importar (`src/components/NavClientes.tsx`).
+- Lo que sea parte de una sección va como **pestañas o botones dentro de esa sección**, no como menú nuevo (ej.: Importar
+  es un botón en Clientes).
 
 ## Pendientes conocidos
+- **Limpieza de Marcas en la base:** las tablas `Marca`, `PrecioMarca` y la columna `Cliente.marcaId` ya no se usan. Borrarlas
+  (migración destructiva) **solo con OK del dueño**, cuando confirme que en Railway estaban vacías.
+- La enumeración `TipoCliente` conserva el valor DISTRIBUIDOR (oculto en pantallas) para no alterar datos existentes.
 - Login: bloqueo de 15 min tras 5 fallos por email (en memoria; revisar si se usa más de una instancia).
 - Recuperación de contraseña olvidada (hoy: el dueño usa SEED_ADMIN_RESET en Railway; no hay reset para otros usuarios).
 - El formulario de Usuarios pierde lo cargado si da error (aplicar el mismo `key` que en Clientes).

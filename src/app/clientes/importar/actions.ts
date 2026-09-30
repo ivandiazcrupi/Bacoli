@@ -74,18 +74,12 @@ export async function importar(_: EstadoImport, formData: FormData): Promise<Est
   const faltan = r.analisis.barrios.filter((b) => !r.zonaPorBarrio[b.barrio]);
   if (faltan.length) return { ...r, error: `Falta elegir la zona de: ${faltan.map((b) => b.titulo).join(", ")}.` };
 
-  const [zonas, listas] = await Promise.all([db.zona.findMany(), db.listaPrecios.findMany()]);
+  const [zonas, listas] = await Promise.all([db.zona.findMany(), db.listaPrecios.findMany({ where: { activa: true } })]);
   const zonaId = new Map(zonas.map((z) => [z.nombre, z.id]));
-  const listaId = (nombre: string) => listas.find((l) => l.nombre.toLowerCase() === nombre.toLowerCase())?.id ?? null;
+  // Cada cliente usa la lista de su nombre de marca (ej. VACALIN) si existe; si no, Mayorista.
+  const listaId = (nombre: string) =>
+    (listas.find((l) => l.nombre.toLowerCase() === nombre.toLowerCase()) ?? listas.find((l) => l.nombre === "Mayorista"))?.id ?? null;
   const yaExisten = new Set(r.existentes.map((n) => n.toLowerCase()));
-
-  // Las marcas se crean si faltan (una por nombre) y se asignan a sus clientes.
-  const nombresMarcas = [...new Set(r.analisis.clientes.map((c) => c.marca).filter((m): m is string => !!m))];
-  for (const nombre of nombresMarcas) {
-    if (!(await db.marca.findFirst({ where: { nombre: { equals: nombre, mode: "insensitive" } } }))) await db.marca.create({ data: { nombre } });
-  }
-  const marcas = await db.marca.findMany();
-  const marcaId = (nombre: string | null) => (nombre ? marcas.find((m) => m.nombre.toLowerCase() === nombre.toLowerCase())?.id ?? null : null);
 
   const nuevos = r.analisis.clientes.filter((c) => !yaExisten.has(c.nombre.toLowerCase()));
   if (nuevos.length === 0) return { ...r, error: "No hay clientes nuevos para importar (todos ya existen)." };
@@ -99,10 +93,9 @@ export async function importar(_: EstadoImport, formData: FormData): Promise<Est
           razonSocial: c.razonSocial,
           cuit: c.cuit,
           activo: c.activo,
-          marcaId: marcaId(c.marca),
           comisionista: c.comisionista,
           comisionPct: c.comisionPct,
-          listaPreciosId: listaId(c.tipo === "DISTRIBUIDOR" ? "Distribuidor" : "Mayorista"),
+          listaPreciosId: listaId(c.lista),
           puntos: {
             create: c.sucursales.map((s) => ({
               alias: s.alias,

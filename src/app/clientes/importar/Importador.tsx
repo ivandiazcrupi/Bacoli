@@ -19,7 +19,7 @@ export function Importador({ zonas }: { zonas: string[] }) {
           <input type="file" name="archivo" accept=".csv,text/csv" className={estiloCampo} />
         </Campo>
         {estado?.csv && <textarea name="csv" defaultValue={estado.csv} hidden readOnly />}
-        <Campo etiqueta="Marcas que se agrupan en un solo cliente" ayuda="Separadas por coma. Las franquicias con otro CUIT quedan como clientes aparte.">
+        <Campo etiqueta="Nombres que se agrupan (una sola lista y un solo nombre)" ayuda="Separadas por coma. Las franquicias con otro CUIT quedan como clientes aparte.">
           <input name="marcas" defaultValue={estado?.opciones?.marcas.join(", ") ?? MARCAS_INICIALES.join(", ")} className={estiloCampo} />
         </Campo>
         <label className="flex items-start gap-3 text-sm">
@@ -71,8 +71,8 @@ export function Importador({ zonas }: { zonas: string[] }) {
                 <li key={c.nombre} className="py-2">
                   <p className="font-medium">{c.nombre}{!c.activo && <span className="font-normal text-stone-500"> · desactivado</span>}</p>
                   <p className="text-stone-600">
-                    {c.tipo === "DISTRIBUIDOR" ? "Distribuidor" : "Mayorista"} · {c.sucursales.length} {c.sucursales.length === 1 ? "sucursal" : "sucursales"}
-                    {c.marca && ` · marca ${c.marca}`}{c.cuit && ` · CUIT ${c.cuit}`}{c.comisionista && ` · comisión ${c.comisionPct}% (${c.comisionista})`}
+                    Lista {c.lista} · {c.sucursales.length} {c.sucursales.length === 1 ? "sucursal" : "sucursales"}
+                    {c.cuit && ` · CUIT ${c.cuit}`}{c.comisionista && ` · comisión ${c.comisionPct}% (${c.comisionista})`}
                   </p>
                 </li>
               ))}

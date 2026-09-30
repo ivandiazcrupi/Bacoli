@@ -1,66 +1,100 @@
 "use client";
 
 import { useActionState } from "react";
-import { Mensajes, estiloBoton, estiloBotonChico, estiloCampo } from "@/components/campos";
-import { agregarLista, agregarProducto, guardarPrecios } from "./actions";
+import { Campo, Mensajes, estiloBoton, estiloBotonChico, estiloCampo } from "@/components/campos";
+import { agregarLista, crearProducto, guardarPrecios, guardarProducto, type EstadoPrecios } from "./actions";
 
-type Datos = {
-  listas: { id: string; nombre: string }[];
-  productos: { id: string; nombre: string }[];
-  precios: Record<string, string>; // "listaId_productoId" -> texto
-};
+type Lista = { id: string; nombre: string };
+type Producto = { id: string; nombre: string; sku: string | null; unidad: string };
 
-export function GrillaPrecios({ listas, productos, precios }: Datos) {
+export function GrillaPrecios({ listas, productos, precios }: { listas: Lista[]; productos: Producto[]; precios: Record<string, string> }) {
   const [estado, enviar, cargando] = useActionState(guardarPrecios, undefined);
   return (
-    <form action={enviar} className="space-y-3">
-      <div className="overflow-x-auto rounded-lg border border-stone-200 bg-white">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-stone-200 text-left">
-              <th className="p-3">Producto (por paquete)</th>
-              {listas.map((l) => <th key={l.id} className="p-3">{l.nombre}</th>)}
-            </tr>
-          </thead>
-          <tbody>
-            {productos.map((p) => (
-              <tr key={p.id} className="border-b border-stone-100 last:border-0">
-                <td className="p-3 font-medium">{p.nombre}</td>
-                {listas.map((l) => (
-                  <td key={l.id} className="p-2">
+    <form action={enviar} className="space-y-4">
+      <ul className="divide-y divide-stone-200 border-y border-stone-200">
+        {productos.map((p) => (
+          <li key={p.id} className="space-y-3 py-4">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="font-medium">{p.nombre}</span>
+              <span className="whitespace-nowrap text-xs text-stone-500">{p.sku ? `${p.sku} · ` : ""}por {p.unidad}</span>
+            </div>
+            <div className={`grid gap-2 ${listas.length <= 3 ? "grid-cols-3" : "grid-cols-2 sm:grid-cols-3"}`}>
+              {listas.map((l) => (
+                <label key={l.id} className="block text-xs font-medium uppercase tracking-wide text-stone-500">
+                  {l.nombre}
+                  <div className="relative mt-1">
+                    <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[15px] normal-case text-stone-400" aria-hidden="true">$</span>
                     <input
                       name={`p_${l.id}_${p.id}`}
                       inputMode="decimal"
-                      placeholder="$"
                       defaultValue={precios[`${l.id}_${p.id}`] ?? ""}
-                      className={`${estiloCampo} mt-0 min-w-24 py-2`}
+                      className="w-full rounded-md border border-stone-200 bg-white py-3 pl-6 pr-2 text-right text-[15px] normal-case tabular-nums text-stone-900"
                     />
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <p className="text-xs text-stone-500">Precios sin IVA, por paquete (2 prepizzas). Dejar vacío = sin precio.</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </li>
+        ))}
+      </ul>
+      <p className="text-xs text-stone-500">Precios sin IVA, por la unidad de venta de cada producto. Vacío = sin precio.</p>
       <Mensajes estado={estado} />
       <button disabled={cargando} className={estiloBoton}>{cargando ? "Guardando…" : "Guardar precios"}</button>
     </form>
   );
 }
 
-function AgregarNombre({ etiqueta, accion }: { etiqueta: string; accion: typeof agregarProducto }) {
-  const [estado, enviar, cargando] = useActionState(accion, undefined);
+export function EditarProducto({ producto }: { producto: Producto & { ean: string | null; descripcion: string | null } }) {
+  const [estado, enviar, cargando] = useActionState(guardarProducto.bind(null, producto.id), undefined as EstadoPrecios);
   return (
-    <form action={enviar} className="space-y-2">
-      <div className="flex gap-2">
-        <input name="nombre" placeholder={etiqueta} required className={`${estiloCampo} mt-0`} />
-        <button disabled={cargando} className={estiloBotonChico}>Agregar</button>
+    <form action={enviar} className="space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <Campo etiqueta="Código (SKU)"><input name="sku" defaultValue={producto.sku ?? ""} className={estiloCampo} /></Campo>
+        <Campo etiqueta="Unidad de venta">
+          <select name="unidad" defaultValue={producto.unidad} className={estiloCampo}>
+            <option value="paquete">Paquete</option>
+            <option value="unidad">Unidad</option>
+          </select>
+        </Campo>
       </div>
+      <Campo etiqueta="Nombre"><input name="nombre" defaultValue={producto.nombre} required className={estiloCampo} /></Campo>
+      <Campo etiqueta="Descripción para el remito"><input name="descripcion" defaultValue={producto.descripcion ?? ""} className={estiloCampo} /></Campo>
+      <Campo etiqueta="EAN (código de barras)" ayuda="Opcional. Entre 8 y 14 números."><input name="ean" inputMode="numeric" defaultValue={producto.ean ?? ""} className={estiloCampo} /></Campo>
       <Mensajes estado={estado} />
+      <button disabled={cargando} className={estiloBoton}>{cargando ? "Guardando…" : "Guardar producto"}</button>
     </form>
   );
 }
 
-export const AgregarProducto = () => <AgregarNombre etiqueta="Nuevo producto" accion={agregarProducto} />;
-export const AgregarLista = () => <AgregarNombre etiqueta="Nueva lista de precios" accion={agregarLista} />;
+export function AgregarProducto() {
+  const [estado, enviar, cargando] = useActionState(crearProducto, undefined);
+  return (
+    <form key={JSON.stringify(estado ?? null)} action={enviar} className="space-y-3">
+      <Campo etiqueta="Nombre"><input name="nombre" required className={estiloCampo} /></Campo>
+      <div className="grid grid-cols-2 gap-3">
+        <Campo etiqueta="Código (SKU)"><input name="sku" className={estiloCampo} /></Campo>
+        <Campo etiqueta="Unidad de venta">
+          <select name="unidad" defaultValue="paquete" className={estiloCampo}>
+            <option value="paquete">Paquete</option>
+            <option value="unidad">Unidad</option>
+          </select>
+        </Campo>
+      </div>
+      <Mensajes estado={estado} />
+      <button disabled={cargando} className={estiloBotonChico}>Agregar producto</button>
+    </form>
+  );
+}
+
+export function AgregarLista() {
+  const [estado, enviar, cargando] = useActionState(agregarLista, undefined);
+  return (
+    <form key={JSON.stringify(estado ?? null)} action={enviar} className="space-y-3">
+      <Campo etiqueta="Nombre de la lista" ayuda="Ej: VACALIN. Después se la asignas a cada cliente en su ficha.">
+        <input name="nombre" required className={estiloCampo} />
+      </Campo>
+      <Mensajes estado={estado} />
+      <button disabled={cargando} className={estiloBotonChico}>Agregar lista</button>
+    </form>
+  );
+}

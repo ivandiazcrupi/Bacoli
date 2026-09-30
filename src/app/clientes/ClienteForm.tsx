@@ -13,7 +13,6 @@ export type DatosCliente = {
   facturado: boolean;
   condicionPago: string;
   listaPreciosId: string;
-  marcaId: string;
   descuentoPct: string;
   imputacionPago: string;
   sinLimite: boolean;
@@ -24,7 +23,7 @@ export type DatosCliente = {
 };
 
 export const CLIENTE_VACIO: DatosCliente = {
-  nombre: "", tipo: "", razonSocial: "", cuit: "", facturado: false, condicionPago: "CONTADO", listaPreciosId: "", marcaId: "",
+  nombre: "", tipo: "", razonSocial: "", cuit: "", facturado: false, condicionPago: "CONTADO", listaPreciosId: "",
   descuentoPct: "", imputacionPago: "SALDO", sinLimite: false, maxPedidosImpagos: "", maxMonto: "", comisionista: "", comisionPct: "",
 };
 
@@ -32,13 +31,12 @@ type Props = {
   accion: (estado: EstadoForm, formData: FormData) => Promise<EstadoForm>;
   inicial: DatosCliente;
   listas: { id: string; nombre: string }[];
-  marcas: { id: string; nombre: string }[];
   zonas?: { id: string; nombre: string }[]; // solo al crear: pide la primera sucursal
   barrios?: string[];
   textoBoton: string;
 };
 
-export function ClienteForm({ accion, inicial, listas, marcas, zonas, barrios = [], textoBoton }: Props) {
+export function ClienteForm({ accion, inicial, listas, zonas, barrios = [], textoBoton }: Props) {
   const [estado, enviar, cargando] = useActionState(accion, undefined);
   const v = (campo: keyof DatosCliente) => estado?.valores?.[campo] ?? (inicial[campo] as string);
   const [sinLimite, setSinLimite] = useState(inicial.sinLimite);
@@ -52,13 +50,9 @@ export function ClienteForm({ accion, inicial, listas, marcas, zonas, barrios = 
       <Campo etiqueta="Tipo de cliente *">
         <select name="tipo" defaultValue={v("tipo")} required className={estiloCampo}>
           <option value="" disabled>Elegí el tipo</option>
-          {Object.entries(TIPO_CLIENTE).map(([k, t]) => <option key={k} value={k}>{t}</option>)}
-        </select>
-      </Campo>
-      <Campo etiqueta="Marca" ayuda="Para franquicias o grupos (ej. VACALIN). Comparte el precio especial de la marca. Las marcas se crean en el menú Marcas.">
-        <select name="marcaId" defaultValue={v("marcaId")} className={estiloCampo}>
-          <option value="">Sin marca</option>
-          {marcas.map((m) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
+          {Object.entries(TIPO_CLIENTE)
+            .filter(([k]) => k !== "DISTRIBUIDOR" || inicial.tipo === "DISTRIBUIDOR")
+            .map(([k, t]) => <option key={k} value={k}>{t}</option>)}
         </select>
       </Campo>
       <Campo etiqueta="Razón social" ayuda="Opcional.">
@@ -73,7 +67,7 @@ export function ClienteForm({ accion, inicial, listas, marcas, zonas, barrios = 
       </label>
 
       <h2 className="pt-2 font-semibold">Precios y pago</h2>
-      <Campo etiqueta="Lista de precios">
+      <Campo etiqueta="Lista de precios" ayuda="Define el precio de cada producto. Las franquicias de VACALIN usan la lista VACALIN.">
         <select name="listaPreciosId" defaultValue={v("listaPreciosId")} className={estiloCampo}>
           <option value="">Sin asignar</option>
           {listas.map((l) => <option key={l.id} value={l.id}>{l.nombre}</option>)}

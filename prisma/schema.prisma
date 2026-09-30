@@ -54,6 +54,10 @@ model Zona {
 model Producto {
   id           String           @id @default(cuid())
   nombre       String           @unique
+  sku          String?          @unique // código interno, ej. PPT01
+  ean          String? // código de barras (opcional)
+  descripcion  String? // texto para el remito
+  unidad       String           @default("paquete") // unidad de venta: "paquete" o "unidad"
   activo       Boolean          @default(true)
   precios      Precio[]
   especiales   PrecioEspecial[]
@@ -63,6 +67,7 @@ model Producto {
 model ListaPrecios {
   id       String    @id @default(cuid())
   nombre   String    @unique
+  activa   Boolean   @default(true)
   precios  Precio[]
   clientes Cliente[]
 }

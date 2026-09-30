@@ -131,7 +131,8 @@ export const OPCIONES_INICIALES: Opciones = { marcas: MARCAS_INICIALES, separarM
 export type SucursalImport = { alias: string | null; direccion: string; barrio: string; telefono: string | null; activo: boolean };
 export type ClienteImport = {
   nombre: string;
-  tipo: "MAYORISTA" | "DISTRIBUIDOR";
+  tipo: "MAYORISTA";
+  lista: string; // lista de precios: "Distribuidor", el nombre de la marca si existe una lista así, o "Mayorista"
   marca: string | null;
   razonSocial: string | null;
   cuit: string | null;
@@ -264,7 +265,8 @@ export function analizar(filasCsv: Record<string, string>[], opciones: Opciones)
 
     clientes.push({
       nombre,
-      tipo: activasOSinBaja.some((f) => f.tipo === "DISTRIBUIDOR") ? "DISTRIBUIDOR" : "MAYORISTA",
+      tipo: "MAYORISTA",
+      lista: activasOSinBaja.some((f) => f.tipo === "DISTRIBUIDOR") ? "Distribuidor" : g.marca ? g.marca : "Mayorista",
       marca: g.marca ?? null,
       razonSocial: razon,
       cuit: cuits[0] ?? null,

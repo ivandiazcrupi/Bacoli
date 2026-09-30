@@ -9,11 +9,22 @@ async function datosBase() {
   for (const [orden, nombre] of ["Norte", "Oeste", "Sur", "CABA"].entries()) {
     await db.zona.upsert({ where: { nombre }, update: {}, create: { nombre, orden } });
   }
+  // Solo en una instalación nueva. En una base ya en uso, el catálogo inicial lo carga la migración "catalogo".
   if ((await db.listaPrecios.count()) === 0) {
-    await db.listaPrecios.createMany({ data: [{ nombre: "Minorista" }, { nombre: "Mayorista" }, { nombre: "Distribuidor" }] });
+    await db.listaPrecios.createMany({ data: [{ nombre: "Mayorista" }, { nombre: "Distribuidor" }, { nombre: "VACALIN" }] });
   }
   if ((await db.producto.count()) === 0) {
-    await db.producto.createMany({ data: [{ nombre: "Prepizza tomate" }, { nombre: "Prepizza cebolla" }] });
+    await db.producto.createMany({
+      data: [
+        { nombre: "Prepizza tomate", sku: "PPT01", unidad: "paquete", descripcion: "Prepizza de tomate x 2 un" },
+        { nombre: "Prepizza cebolla", sku: "PPC02", unidad: "paquete", descripcion: "Prepizza de cebolla x 2 un" },
+        { nombre: "Pizzeta tomate", sku: "PZT03", unidad: "paquete", descripcion: "Pizzeta de tomate x 6 un" },
+        { nombre: "Focaccia oliva", sku: "FOO04", unidad: "unidad", descripcion: "Focaccia de oliva" },
+        { nombre: "Pizza congelada muzzarella", sku: "PCM05", unidad: "unidad", descripcion: "Pizza congelada de muzzarella" },
+        { nombre: "Pizza congelada jamón", sku: "PCJ06", unidad: "unidad", descripcion: "Pizza congelada de jamón" },
+        { nombre: "Pizza congelada fugazzeta", sku: "PCF07", unidad: "unidad", descripcion: "Pizza congelada fugazzeta" },
+      ],
+    });
   }
 }
 
