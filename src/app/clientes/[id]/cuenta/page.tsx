@@ -45,7 +45,7 @@ export default async function CuentaCorriente({ params }: { params: Promise<{ id
         <section className="grid gap-3 sm:grid-cols-3" aria-label="Saldo">
           <div className="rounded-lg border border-stone-200 bg-white p-4">
             <p className="text-sm text-stone-600">Saldo total</p>
-            <p className={`text-2xl font-bold tabular-nums ${total > 0 ? "text-verde-800" : ""}`}>{formatoPesos(total)}</p>
+            <p className={`text-2xl font-bold tabular-nums ${total > 0 ? "text-rojo-700" : ""}`}>{formatoPesos(total)}</p>
             <p className="text-xs text-stone-500">{total > 0 ? "Lo que debe el cliente" : total < 0 ? "Saldo a favor del cliente" : "Al día"}</p>
           </div>
           <div className="rounded-lg border border-stone-200 bg-white p-4">
@@ -75,11 +75,11 @@ export default async function CuentaCorriente({ params }: { params: Promise<{ id
                     {m.pedido && (
                       <p className="text-sm">
                         {m.pedido.conFactura ? (
-                          m.pedido.numeroFactura ? <>Factura <b>{m.pedido.numeroFactura}</b></> : <span className="text-verde-800">Factura sin número</span>
+                          m.pedido.numeroFactura ? <>Factura <b>{m.pedido.numeroFactura}</b></> : <span className="text-rojo-700">Factura sin número</span>
                         ) : m.pedido.remitoNumero ? (
                           <>Remito <b>{formatoRemito(m.pedido.remitoNumero)}</b></>
                         ) : (
-                          <span className="text-verde-800">Remito sin emitir</span>
+                          <span className="text-rojo-700">Remito sin emitir</span>
                         )}
                         {m.pedido.conFactura && m.pedido.remitoNumero ? <> · Remito {formatoRemito(m.pedido.remitoNumero)}</> : null}
                         {" · "}<Link href={`/pedidos/${m.pedidoId}`} className="underline">ver pedido</Link>
