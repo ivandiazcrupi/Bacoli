@@ -7,6 +7,8 @@ import { deFecha, diaMes, nombreDia } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
 import { exigirOficina } from "@/lib/session";
 import { cancelarPedido, marcarNoEntregado, reabrirPedido } from "../actions";
+import { formatoRemito } from "@/lib/remito";
+import { BotonRemito } from "../BotonRemito";
 import { BotonConAviso, FormularioEntrega } from "./Acciones";
 
 const ETIQUETA = { PENDIENTE: "Pendiente", ENTREGADO: "Entregado", NO_ENTREGADO: "No entregado", CANCELADO: "Cancelado" } as const;
@@ -18,7 +20,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
   const { id } = await params;
   const pedido = await db.pedido.findUnique({
     where: { id },
-    include: { cliente: true, punto: { include: { zona: true } }, items: true, movimientos: { orderBy: { fecha: "asc" } } },
+    include: { cliente: true, punto: { include: { zona: true } }, items: { orderBy: { producto: { orden: "asc" } } }, movimientos: { orderBy: { fecha: "asc" } } },
   });
   if (!pedido) notFound();
 
@@ -68,6 +70,11 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
         {abierto && <FormularioEntrega pedidoId={pedido.id} items={pedido.items.map((i) => ({ id: i.id, nombre: i.nombre, unidad: i.unidad, cantidad: i.cantidad, entregada: i.cantidadEntregada }))} />}
 
         <div className="grid grid-cols-2 gap-2">
+          {pedido.estado !== "CANCELADO" && (
+            <div className="col-span-2">
+              <BotonRemito pedidoId={pedido.id} numero={pedido.remitoNumero ? `Remito ${formatoRemito(pedido.remitoNumero)} · imprimir` : null} clase="w-full rounded-lg border border-stone-800 bg-white px-3 py-3 font-semibold" />
+            </div>
+          )}
           {abierto && <Link href={`/pedidos/${pedido.id}/editar`} className="rounded-lg border border-stone-300 bg-white px-3 py-3 text-center font-medium">Editar pedido</Link>}
           {abierto && (
             <form action={marcarNoEntregado}>

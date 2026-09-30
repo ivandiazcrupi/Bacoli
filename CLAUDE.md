@@ -122,6 +122,17 @@ y ~1000 minoristas.
   "Abrir" a la cuenta corriente del cliente con una marca chica si tiene deuda (el **monto NO va en la hoja**). **Cerrar el día**
   exige entrega marcada en todos y cobro marcado en los entregados; al cerrar, los rojos vuelven a "Sin asignar" con una nota;
   un día cerrado es de solo lectura (no se mueven pedidos desde/hacia él); solo un dueño lo reabre (`DiaCerrado`).
+- [x] Remito (`src/app/pedidos/remito/`): botón **Remito** en cada fila de la hoja del día y en el detalle del pedido, y **"Imprimir
+  todos los remitos"** del día. Número correlativo con letra **R** (`R-000001`, `formatoRemito`), que se asigna **al emitir** (no al
+  cargar el pedido), desde un contador atómico (`Numerador`), y **no cambia nunca**; los de un día se numeran en el orden del
+  reparto. Sale en A4 listo para imprimir (opción "con precios"), con datos de la empresa (menú **Empresa**, solo dueños: razón
+  social, CUIT, domicilio, IVA, y "próximo número de remito", que solo puede subir), firma/aclaración/fecha de recepción y la
+  leyenda **"Documento no válido como factura"**. Un remito es un documento de entrega; **no reemplaza a la factura ante ARCA**
+  (confirmar el uso con el contador).
+- [ ] **Factura electrónica (pendiente, necesita ARCA):** el botón "Factura" solo puede emitir una factura válida con la
+  autorización de ARCA (CAE) vía un intermediario (Afip SDK, Tusfacturas u otro; tiene costo). Requisitos: CUIT con factura
+  electrónica por web service y punto de venta habilitado, condición frente al IVA, contador. **No generar PDF de factura sin
+  CAE**: hasta entonces el N° de factura se carga a mano en la hoja. Al conectarla: queda "por revisar" hasta que Miguel confirme.
 - [ ] Módulo 3 (parte C, pendiente): asignar cada día a los 3 vehículos/repartidores (**falta definir con el dueño si van tablas
   separadas o una columna, y las zonas de cada vehículo**), semanas anteriores (solo lectura, con resumen y Excel), vista del
   repartidor en el celular (tarjetas grandes), cobro parcial (hoy se cobra el total), cierre de semana automático.

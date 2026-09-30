@@ -186,6 +186,8 @@ model Pedido {
   ivaPct          Decimal      @default(0) @db.Decimal(5, 2)
   pagado          Boolean      @default(false)
   numeroFactura   String?
+  remitoNumero    Int?         @unique // R-000123: se asigna al emitir el remito y no cambia nunca
+  remitoEmitidoEn DateTime?
   cobro           EstadoCobro?
   medioCobro      MedioPago?
   montoCobrado    Decimal?     @db.Decimal(14, 2)
@@ -246,4 +248,25 @@ model DiaCerrado {
   fecha      DateTime @id @db.Date
   cerradoPor String
   cerradoEn  DateTime @default(now())
+}
+
+// Datos de la empresa: salen impresos en el remito (y más adelante en la factura). Hay una sola fila.
+model Empresa {
+  id                String  @id @default("principal")
+  razonSocial       String  @default("")
+  nombreComercial   String  @default("BACOLI")
+  cuit              String?
+  condicionIva      String?
+  domicilio         String?
+  telefono          String?
+  email             String?
+  ingresosBrutos    String?
+  inicioActividades String?
+  puntoVenta        String? // para la factura electrónica, más adelante
+}
+
+// Contadores correlativos (por ejemplo "REMITO"). Nunca se retrocede.
+model Numerador {
+  id     String @id
+  ultimo Int    @default(0)
 }

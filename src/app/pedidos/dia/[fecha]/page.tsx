@@ -5,6 +5,7 @@ import { importeVigente } from "@/lib/cuenta";
 import { db } from "@/lib/db";
 import { aFecha, diaMes, esFechaValida, lunesDe, nombreDia, sumarDias } from "@/lib/fechas";
 import { titulo } from "@/lib/mayusculas";
+import { formatoRemito } from "@/lib/remito";
 import { exigirOficina } from "@/lib/session";
 import { HojaDia, type Fila } from "./HojaDia";
 
@@ -16,7 +17,7 @@ export default async function HojaDelDia({ params }: { params: Promise<{ fecha: 
   const [pedidos, cerrado] = await Promise.all([
     db.pedido.findMany({
       where: { fechaEntrega: aFecha(fecha), estado: { not: "CANCELADO" } },
-      include: { cliente: true, punto: true, items: true },
+      include: { cliente: true, punto: true, items: { orderBy: { producto: { orden: "asc" } } } },
       orderBy: [{ ordenDia: "asc" }, { creadoEn: "asc" }],
     }),
     db.diaCerrado.findUnique({ where: { fecha: aFecha(fecha) } }),
@@ -41,6 +42,7 @@ export default async function HojaDelDia({ params }: { params: Promise<{ fecha: 
     cobro: p.cobro,
     medioCobro: p.medioCobro,
     tieneDeuda: debe.has(p.clienteId),
+    remito: p.remitoNumero ? formatoRemito(p.remitoNumero) : null,
   }));
 
   const lunes = lunesDe(fecha);

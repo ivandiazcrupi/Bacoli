@@ -17,7 +17,7 @@ export default async function Pedidos({ searchParams }: { searchParams: Promise<
       estado: { not: "CANCELADO" },
       OR: [{ fechaEntrega: null }, { fechaEntrega: { gte: aFecha(lunes), lte: aFecha(domingo) } }],
     },
-    include: { cliente: true, punto: { include: { zona: true } }, items: true },
+    include: { cliente: true, punto: { include: { zona: true } }, items: { orderBy: { producto: { orden: "asc" } } } },
     orderBy: [{ ordenDia: "asc" }, { creadoEn: "asc" }],
   });
 

@@ -13,6 +13,7 @@ export function Cabecera({ usuario }: { usuario: Usuario }) {
           {esPersonalDeOficina(usuario.rol) && <Link href="/clientes">Clientes</Link>}
           {esPersonalDeOficina(usuario.rol) && <Link href="/precios">Precios</Link>}
           {puedeGestionarUsuarios(usuario.rol) && <Link href="/usuarios">Usuarios</Link>}
+          {puedeGestionarUsuarios(usuario.rol) && <Link href="/empresa">Empresa</Link>}
         </nav>
         <form action={salir} className="flex items-center gap-3 text-sm">
           <Link href="/cuenta" className="hidden text-stone-600 underline-offset-2 hover:underline sm:inline">

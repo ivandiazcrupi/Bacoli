@@ -7,7 +7,9 @@ import { DndContext, MouseSensor, TouchSensor, closestCenter, useSensor, useSens
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { formatoPesos } from "@/lib/numeros";
+import { BotonRemito } from "../../BotonRemito";
 import { moverPedido } from "../../actions";
+import { emitirRemitosDia } from "../../remito/actions";
 import { cerrarDia, dejarEnCuentaCorriente, deshacerCobro, guardarNumeroFactura, marcarEntrega, reabrirDia, registrarCobro, type Resultado } from "../actions";
 
 export type Fila = {
@@ -25,10 +27,11 @@ export type Fila = {
   cobro: "COBRADO" | "CUENTA_CORRIENTE" | null;
   medioCobro: string | null;
   tieneDeuda: boolean;
+  remito: string | null;
 };
 
-const COLUMNAS = "44px 140px 210px 190px 120px minmax(240px,1fr) 110px 100px 120px 120px 230px 140px";
-const ENCABEZADOS = ["N°", "Barrio", "Cliente", "Dirección", "Teléfono", "Pedido", "Monto", "Comprobante", "N° factura", "Entrega", "Cobro", "Cuenta corriente"];
+const COLUMNAS = "44px 140px 210px 190px 120px minmax(240px,1fr) 110px 100px 120px 120px 230px 110px 140px";
+const ENCABEZADOS = ["N°", "Barrio", "Cliente", "Dirección", "Teléfono", "Pedido", "Monto", "Comprobante", "N° factura", "Entrega", "Cobro", "Remito", "Cuenta corriente"];
 const MEDIOS: { valor: string; texto: string }[] = [
   { valor: "EFECTIVO", texto: "Efectivo" },
   { valor: "TRANSFERENCIA", texto: "Transferencia" },
@@ -121,6 +124,9 @@ function FilaHoja({ f, n, bloqueada, acc }: { f: Fila; n: number; bloqueada: boo
         )}
       </div>
       <div role="cell">
+        <BotonRemito pedidoId={f.id} numero={f.remito} clase={`h-9 rounded-md border px-2 text-sm font-medium ${f.remito ? "border-stone-800 bg-white text-stone-900" : "border-stone-300 bg-white text-stone-700"}`} />
+      </div>
+      <div role="cell">
         <Link href={`/clientes/${f.clienteId}/cuenta`} className="inline-flex h-9 items-center gap-1.5 rounded-md border border-stone-300 bg-white px-2 text-sm font-medium hover:bg-stone-100">
           Abrir{f.tieneDeuda && <span className="h-2 w-2 rounded-full bg-amber-600" title="Este cliente tiene deuda" aria-label="Tiene deuda" />}
         </Link>
@@ -192,6 +198,17 @@ export function HojaDia({ fecha, filasIniciales, cerrado, esDueno }: { fecha: st
       router.refresh();
     });
   };
+  const imprimirTodos = async () => {
+    const ventana = window.open("", "_blank");
+    const r = await emitirRemitosDia(fecha);
+    if (!r.ok) {
+      ventana?.close();
+      setError(r.error ?? "No se pudieron emitir los remitos.");
+      return;
+    }
+    if (ventana) ventana.location.href = `/pedidos/dia/${fecha}/remitos`;
+    router.refresh();
+  };
   const reabrir = () => {
     empezar(async () => {
       const r = await reabrirDia(fecha);
@@ -207,6 +224,8 @@ export function HojaDia({ fecha, filasIniciales, cerrado, esDueno }: { fecha: st
           {filas.length} {filas.length === 1 ? "pedido" : "pedidos"} · <span className="font-semibold text-green-700">{verdes} {verdes === 1 ? "entregado" : "entregados"}</span> · <span className="font-semibold text-red-700">{rojos} {rojos === 1 ? "no entregado" : "no entregados"}</span>
           {!cerrado && !completo && filas.length > 0 && <span className="text-stone-600"> · falta marcar {sinEntrega > 0 ? `${sinEntrega} ${sinEntrega === 1 ? "entrega" : "entregas"}` : ""}{sinEntrega > 0 && sinCobro > 0 ? " y " : ""}{sinCobro > 0 ? `${sinCobro} ${sinCobro === 1 ? "cobro" : "cobros"}` : ""}</span>}
         </p>
+        <div className="flex flex-wrap items-center gap-3">
+        {filas.length > 0 && <button type="button" onClick={imprimirTodos} className="rounded-lg border border-stone-300 bg-white px-3 py-2 font-medium">Imprimir todos los remitos</button>}
         {cerrado ? (
           <div className="flex items-center gap-3">
             <span className="rounded-md bg-stone-800 px-3 py-1.5 font-semibold text-white">Día cerrado</span>
@@ -215,6 +234,7 @@ export function HojaDia({ fecha, filasIniciales, cerrado, esDueno }: { fecha: st
         ) : (
           <button type="button" onClick={cerrar} disabled={!completo} className="rounded-lg bg-stone-800 px-4 py-2 font-semibold text-white disabled:opacity-40">Cerrar día</button>
         )}
+        </div>
       </div>
       {error && <p className="rounded-lg border border-red-600 bg-red-50 p-3 text-sm text-red-700" role="alert">{error}</p>}
 
@@ -222,7 +242,7 @@ export function HojaDia({ fecha, filasIniciales, cerrado, esDueno }: { fecha: st
         <p className="rounded-lg border border-dashed border-stone-300 p-6 text-center text-stone-600">Todavía no hay pedidos en este día. Asignalos desde la semana.</p>
       ) : (
         <div className="overflow-x-auto pb-4">
-          <div role="table" className="min-w-[1750px] space-y-2">
+          <div role="table" className="min-w-[1870px] space-y-2">
             <div role="row" style={{ gridTemplateColumns: COLUMNAS }} className="grid gap-x-3 px-2 text-xs font-semibold text-stone-500">
               {ENCABEZADOS.map((h) => <div key={h} role="columnheader" className={h === "Monto" ? "text-right" : ""}>{h}</div>)}
             </div>
