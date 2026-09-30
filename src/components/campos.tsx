@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 
 export const estiloCampo = "mt-1 w-full rounded-lg border border-stone-300 bg-white px-3 py-3 text-base";
+/** Campo de datos: se ve en MAYÚSCULA al escribir (y se guarda así). */
+export const estiloDato = `${estiloCampo} dato`;
 export const estiloBoton = "w-full rounded-lg bg-amber-700 px-4 py-3 font-semibold text-white disabled:opacity-60";
 export const estiloBotonChico = "rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm";
 

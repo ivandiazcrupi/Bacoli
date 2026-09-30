@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Campo, Mensajes, estiloBoton, estiloCampo } from "@/components/campos";
+import { Campo, Mensajes, estiloBoton, estiloCampo, estiloDato } from "@/components/campos";
 import { CONDICION_PAGO, IMPUTACION_PAGO, TIPO_CLIENTE } from "@/lib/etiquetas";
 import type { EstadoForm } from "./validacion";
 
@@ -45,7 +45,7 @@ export function ClienteForm({ accion, inicial, listas, zonas, barrios = [], text
   return (
     <form key={JSON.stringify(estado ?? null)} action={enviar} className="space-y-4 rounded-lg border border-stone-200 bg-white p-4">
       <Campo etiqueta="Nombre *">
-        <input name="nombre" defaultValue={v("nombre")} required className={estiloCampo} />
+        <input name="nombre" autoCapitalize="characters" defaultValue={v("nombre")} required className={estiloDato} />
       </Campo>
       <Campo etiqueta="Tipo de cliente *">
         <select name="tipo" defaultValue={v("tipo")} required className={estiloCampo}>
@@ -56,7 +56,7 @@ export function ClienteForm({ accion, inicial, listas, zonas, barrios = [], text
         </select>
       </Campo>
       <Campo etiqueta="Razón social" ayuda="Opcional.">
-        <input name="razonSocial" defaultValue={v("razonSocial")} className={estiloCampo} />
+        <input name="razonSocial" autoCapitalize="characters" defaultValue={v("razonSocial")} className={estiloDato} />
       </Campo>
       <Campo etiqueta="CUIT" ayuda="Opcional. Obligatorio si lleva factura.">
         <input name="cuit" inputMode="numeric" defaultValue={v("cuit")} className={estiloCampo} />
@@ -105,7 +105,7 @@ export function ClienteForm({ accion, inicial, listas, zonas, barrios = [], text
 
       <h2 className="pt-2 font-semibold">Comisión</h2>
       <Campo etiqueta="Comisionista" ayuda="Ej: Migue. Vacío si no corresponde.">
-        <input name="comisionista" defaultValue={v("comisionista")} className={estiloCampo} />
+        <input name="comisionista" autoCapitalize="characters" defaultValue={v("comisionista")} className={estiloDato} />
       </Campo>
       <Campo etiqueta="Comisión (%)">
         <input name="comisionPct" inputMode="decimal" defaultValue={v("comisionPct")} className={estiloCampo} />
@@ -115,13 +115,13 @@ export function ClienteForm({ accion, inicial, listas, zonas, barrios = [], text
         <>
           <h2 className="pt-2 font-semibold">Primera sucursal</h2>
           <Campo etiqueta="Nombre de la sucursal" ayuda="Opcional. Ej: Retiro.">
-            <input name="alias" defaultValue={estado?.valores?.alias ?? ""} className={estiloCampo} />
+            <input name="alias" autoCapitalize="characters" defaultValue={estado?.valores?.alias ?? ""} className={estiloDato} />
           </Campo>
           <Campo etiqueta="Dirección *">
-            <input name="direccion" defaultValue={estado?.valores?.direccion ?? ""} required className={estiloCampo} />
+            <input name="direccion" autoCapitalize="characters" defaultValue={estado?.valores?.direccion ?? ""} required className={estiloDato} />
           </Campo>
           <Campo etiqueta="Barrio *">
-            <input name="barrio" list="barrios" defaultValue={estado?.valores?.barrio ?? ""} required className={estiloCampo} />
+            <input name="barrio" autoCapitalize="characters" list="barrios" defaultValue={estado?.valores?.barrio ?? ""} required className={estiloDato} />
           </Campo>
           <datalist id="barrios">{barrios.map((b) => <option key={b} value={b} />)}</datalist>
           <Campo etiqueta="Zona de reparto *">

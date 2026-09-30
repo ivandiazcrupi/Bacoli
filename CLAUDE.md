@@ -106,13 +106,16 @@ y ~1000 minoristas.
 - [ ] Publicación en Railway (guiar al dueño paso a paso; él crea el proyecto y carga las claves).
 - [ ] Más adelante: facturación ARCA, reportes, migración de planillas, Empretienda, sugerencia de ruta.
 
-## Mayúsculas (acordado con el dueño)
-- **Todo el sistema va en MAYÚSCULA** (títulos, botones, etiquetas, datos), salvo los **textos de acompañamiento** (ayudas,
-  detalles, contadores y mensajes), que van en minúscula normal. Se logra con CSS global (`src/app/globals.css`): el texto
-  gris (`text-stone-500/600`), `text-xs` y los mensajes rojo/verde quedan sin mayúscula; para exceptuar algo, usar `normal-case`.
-- **Datos guardados en mayúscula** (se fuerza al guardar con `mayus()` de `src/lib/mayusculas.ts`): nombre, razón social y
-  comisionista del cliente; alias, dirección y barrio de la sucursal; nombre y descripción del producto; nombre de la lista.
-  No se fuerzan: email (minúscula), contraseñas, comentarios libres ni nombres de zona/usuario. Al importar se aplica igual.
+## Mayúsculas (acordado con el dueño): mix
+- **El sistema** (menús, botones, títulos, etiquetas, ayudas, filtros) va en **minúscula normal**.
+- **Lo que cargan ellos va en MAYÚSCULA**, para no depender del teclado: nombres, productos, listas de precios, direcciones,
+  barrios, razón social. Se logra de tres maneras juntas: (1) el campo se ve en mayúscula al escribir (`estiloDato` /
+  clase `dato` en `src/components/campos.tsx`); (2) el celular abre el teclado en mayúsculas (`autoCapitalize="characters"`);
+  (3) se **fuerza al guardar** con `mayus()` de `src/lib/mayusculas.ts` (también al importar).
+- Campos de datos en mayúscula: nombre, razón social y comisionista del cliente; alias, dirección y barrio de la sucursal;
+  nombre, SKU y descripción del producto; nombre de la lista. **No** se fuerzan: email (minúscula), contraseñas, comentarios
+  libres, CUIT/teléfono, ni el nombre de las personas usuarias del sistema.
+- Al agregar un formulario nuevo con datos de este tipo: usar `estiloDato` + `autoCapitalize="characters"` y `mayus()` en la acción.
 
 ## Convenciones de código
 - Formularios: server actions + `useActionState`; al fallar devuelven `valores` y el `<form>` usa `key` para

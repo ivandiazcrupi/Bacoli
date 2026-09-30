@@ -58,19 +58,19 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
         <form className="grid grid-cols-2 gap-2">
           <input name="q" defaultValue={q} placeholder="Buscar cliente, sucursal o barrio" className={`${estiloCampo} col-span-2 mt-0`} />
           <select name="tipo" defaultValue={tipo} className={`${estiloCampo} mt-0`}>
-            <option value="">Tipo: todos</option>
+            <option value="">Todos los tipos</option>
             {Object.entries(TIPO_CLIENTE).filter(([k]) => k !== "DISTRIBUIDOR").map(([k, t]) => <option key={k} value={k}>{t}</option>)}
           </select>
           <select name="zona" defaultValue={zona} className={`${estiloCampo} mt-0`}>
-            <option value="">Zona: todas</option>
+            <option value="">Todas las zonas</option>
             {zonas.map((z) => <option key={z.id} value={z.id}>{z.nombre}</option>)}
           </select>
           <select name="lista" defaultValue={lista} className={`${estiloCampo} mt-0`}>
-            <option value="">Lista: todas</option>
+            <option value="">Todas las listas</option>
             {listas.map((l) => <option key={l.id} value={l.id}>Lista {l.nombre}</option>)}
           </select>
           <select name="precio" defaultValue={precio} className={`${estiloCampo} mt-0`}>
-            <option value="">Precio: todos</option>
+            <option value="">Todos los precios</option>
             <option value="propio">Con precio propio</option>
           </select>
           <select name="estado" defaultValue={estado} className={`${estiloCampo} mt-0`}>

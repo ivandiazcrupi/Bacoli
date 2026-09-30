@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useActionState } from "react";
-import { Campo, Mensajes, estiloBoton, estiloBotonChico, estiloCampo } from "@/components/campos";
+import { Campo, Mensajes, estiloBoton, estiloBotonChico, estiloCampo, estiloDato } from "@/components/campos";
 import { crearLista, crearProducto, guardarPrecios, guardarProducto, type EstadoPrecios } from "./actions";
 
 type Lista = { id: string; nombre: string };
@@ -11,7 +11,7 @@ type Producto = { id: string; nombre: string; sku: string | null; unidad: string
 export function SelectorLista({ listas, actual }: { listas: Lista[]; actual: string }) {
   const router = useRouter();
   return (
-    <label className="block text-xs font-medium uppercase tracking-wide text-stone-500">
+    <label className="block text-sm font-medium text-stone-600">
       Lista de precios
       <select
         value={actual}
@@ -63,9 +63,9 @@ export function EditarProducto({ producto }: { producto: Producto & { ean: strin
   const v = (c: string, inicial: string) => estado?.valores?.[c] ?? inicial;
   return (
     <form key={JSON.stringify(estado ?? null)} action={enviar} className="space-y-3">
-      <Campo etiqueta="Nombre"><input name="nombre" defaultValue={v("nombre", producto.nombre)} required className={`${estiloCampo} uppercase`} /></Campo>
+      <Campo etiqueta="Nombre"><input name="nombre" autoCapitalize="characters" defaultValue={v("nombre", producto.nombre)} required className={estiloDato} /></Campo>
       <div className="grid grid-cols-3 gap-3">
-        <Campo etiqueta="Código (SKU)"><input name="sku" defaultValue={v("sku", producto.sku ?? "")} className={`${estiloCampo} uppercase`} /></Campo>
+        <Campo etiqueta="Código (SKU)"><input name="sku" autoCapitalize="characters" defaultValue={v("sku", producto.sku ?? "")} className={estiloDato} /></Campo>
         <Campo etiqueta="Orden"><input name="orden" inputMode="numeric" defaultValue={v("orden", String(producto.orden))} className={estiloCampo} /></Campo>
         <Campo etiqueta="Se vende por">
           <select name="unidad" defaultValue={v("unidad", producto.unidad)} className={estiloCampo}>
@@ -74,7 +74,7 @@ export function EditarProducto({ producto }: { producto: Producto & { ean: strin
           </select>
         </Campo>
       </div>
-      <Campo etiqueta="Descripción para el remito"><input name="descripcion" defaultValue={v("descripcion", producto.descripcion ?? "")} className={estiloCampo} /></Campo>
+      <Campo etiqueta="Descripción para el remito"><input name="descripcion" autoCapitalize="characters" defaultValue={v("descripcion", producto.descripcion ?? "")} className={estiloDato} /></Campo>
       <Campo etiqueta="EAN (código de barras)" ayuda="Opcional. Entre 8 y 14 números."><input name="ean" inputMode="numeric" defaultValue={v("ean", producto.ean ?? "")} className={estiloCampo} /></Campo>
       <Mensajes estado={estado} />
       <button disabled={cargando} className={estiloBoton}>{cargando ? "Guardando…" : "Guardar producto"}</button>
@@ -86,9 +86,9 @@ export function AgregarProducto() {
   const [estado, enviar, cargando] = useActionState(crearProducto, undefined);
   return (
     <form key={JSON.stringify(estado ?? null)} action={enviar} className="space-y-3">
-      <Campo etiqueta="Nombre"><input name="nombre" defaultValue={estado?.valores?.nombre ?? ""} required className={`${estiloCampo} uppercase`} /></Campo>
+      <Campo etiqueta="Nombre"><input name="nombre" autoCapitalize="characters" defaultValue={estado?.valores?.nombre ?? ""} required className={estiloDato} /></Campo>
       <div className="grid grid-cols-2 gap-3">
-        <Campo etiqueta="Código (SKU)"><input name="sku" defaultValue={estado?.valores?.sku ?? ""} className={`${estiloCampo} uppercase`} /></Campo>
+        <Campo etiqueta="Código (SKU)"><input name="sku" autoCapitalize="characters" defaultValue={estado?.valores?.sku ?? ""} className={estiloDato} /></Campo>
         <Campo etiqueta="Se vende por">
           <select name="unidad" defaultValue={estado?.valores?.unidad ?? "paquete"} className={estiloCampo}>
             <option value="paquete">Paquete</option>
@@ -107,7 +107,7 @@ export function AgregarLista({ listas }: { listas: Lista[] }) {
   return (
     <form key={JSON.stringify(estado ?? null)} action={enviar} className="space-y-3">
       <Campo etiqueta="Nombre de la lista" ayuda="Ej: ABASTECEDOR. Después se la asignas a cada cliente en su ficha.">
-        <input name="nombre" defaultValue={estado?.valores?.nombre ?? ""} required className={estiloCampo} />
+        <input name="nombre" autoCapitalize="characters" defaultValue={estado?.valores?.nombre ?? ""} required className={estiloDato} />
       </Campo>
       <Campo etiqueta="Precios iniciales">
         <select name="copiarDe" defaultValue={estado?.valores?.copiarDe ?? ""} className={estiloCampo}>

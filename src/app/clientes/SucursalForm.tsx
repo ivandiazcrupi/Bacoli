@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { Campo, Mensajes, estiloBoton, estiloCampo } from "@/components/campos";
+import { Campo, Mensajes, estiloBoton, estiloCampo, estiloDato } from "@/components/campos";
 import { guardarSucursal } from "./actions";
 
 type Props = {
@@ -18,13 +18,13 @@ export function SucursalForm({ clienteId, sucursal, zonas, barrios }: Props) {
   return (
     <form key={JSON.stringify(estado ?? null)} action={enviar} className="space-y-3">
       <Campo etiqueta="Nombre de la sucursal" ayuda="Opcional. Ej: Retiro.">
-        <input name="alias" defaultValue={v("alias")} className={estiloCampo} />
+        <input name="alias" autoCapitalize="characters" defaultValue={v("alias")} className={estiloDato} />
       </Campo>
       <Campo etiqueta="Dirección *">
-        <input name="direccion" defaultValue={v("direccion")} required className={estiloCampo} />
+        <input name="direccion" autoCapitalize="characters" defaultValue={v("direccion")} required className={estiloDato} />
       </Campo>
       <Campo etiqueta="Barrio *">
-        <input name="barrio" list="barrios-sucursal" defaultValue={v("barrio")} required className={estiloCampo} />
+        <input name="barrio" autoCapitalize="characters" list="barrios-sucursal" defaultValue={v("barrio")} required className={estiloDato} />
       </Campo>
       <datalist id="barrios-sucursal">{barrios.map((b) => <option key={b} value={b} />)}</datalist>
       <Campo etiqueta="Zona de reparto *">
