@@ -22,7 +22,7 @@ export default async function Precios({ searchParams }: { searchParams: Promise<
   return (
     <>
       <Cabecera usuario={usuario} />
-      <main className="relative mx-auto max-w-[1400px] space-y-8 px-4 py-8 sm:px-8">
+      <main className="relative mx-auto max-w-5xl space-y-8 px-4 py-8 sm:px-8">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Precios</h1>
@@ -50,7 +50,7 @@ export default async function Precios({ searchParams }: { searchParams: Promise<
           </div>
 
           {lista ? (
-            <div className="max-w-4xl rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6">
+            <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6">
               <div className="mb-4 flex items-baseline justify-between gap-3 border-b border-stone-100 pb-4">
                 <h2 className="shrink-0 text-xl font-bold uppercase tracking-wide">Lista {lista.nombre}</h2>
                 <span className="text-right text-xs text-stone-500">Precios sin IVA, por la unidad de venta de cada producto</span>
@@ -62,7 +62,7 @@ export default async function Precios({ searchParams }: { searchParams: Promise<
           )}
         </section>
 
-        <details className="group max-w-4xl overflow-hidden rounded-2xl border border-amber-200 bg-amber-50/60">
+        <details className="group overflow-hidden rounded-2xl border border-amber-200 bg-amber-50/60">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-6 py-4">
             <span>
               <span className="block text-lg font-bold">Productos <span className="ml-1 rounded-full bg-amber-700 px-2.5 py-0.5 text-xs font-semibold text-white">{productos.length}</span></span>
