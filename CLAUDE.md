@@ -65,6 +65,8 @@ Si hay duda, preguntar. Probar siempre antes de subir.
   "cuenta sin límite"; la columna `sinLimite` queda por compatibilidad y se apaga al guardar). Al pasarse: avisar y pedir autorización de un dueño (no bloquear).
 - **Ficha del cliente:** "Se le factura normalmente" (`facturado`) solo **pre-marca** "con factura" al cargarle un pedido (cada pedido se puede cambiar) y exige CUIT.
   "Los pagos se aplican contra saldo total / cada pedido" (`imputacionPago`) **no se usa todavía**: se sacó de la pantalla y vuelve con Cuenta corriente (módulo 4).
+  **Precio propio por cliente: el dueño lo considera innecesario** (si tiene un precio distinto, es una lista de precios —ej. VACALIN— o un descuento %). Se sacó de la ficha; la tabla y la lógica (`precioParaCliente`) siguen, y la sección "Precios propios anteriores" solo aparece si el cliente ya tenía alguno (para poder vaciarlo). No borrar la tabla sin OK del dueño.
+  **Orden de la ficha (PC, 2 columnas en tarjetas):** Datos del cliente + Comisión (izquierda); Precios y pago + Límites de deuda (derecha); abajo Primera sucursal (al crear) o Sucursales (ficha).
   Comisión (comisionista + %): solo queda anotada (ej. Migue 8%); servirá para calcular cuánto se le debe (reportes).
 - **Cliente → Sucursal.** Cliente = quien tiene CUIT: lleva su **cuenta corriente, factura y límites** (cada franquicia de
   VACALIN paga por su cuenta). Sucursal = el local (dirección, barrio, zona de reparto). El nombre del cliente lleva la

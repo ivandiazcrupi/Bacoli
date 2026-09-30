@@ -68,7 +68,7 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
   return (
     <>
       <Cabecera usuario={usuario} />
-      <main className="mx-auto max-w-6xl space-y-6 px-4 py-6">
+      <main className="mx-auto max-w-5xl space-y-6 px-4 py-6">
         <div className="flex items-start justify-between gap-3">
           <div>
             <Link href="/clientes" className="text-sm text-stone-600">← Clientes</Link>
@@ -86,17 +86,18 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
         </div>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold">Datos</h2>
           <ClienteForm accion={actualizarCliente.bind(null, cliente.id)} inicial={inicial} listas={listas} textoBoton="Guardar cambios" />
         </section>
 
+        {cliente.preciosEspeciales.length > 0 && (
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold">Precio propio (excepción)</h2>
+          <h2 className="text-lg font-semibold">Precios propios anteriores</h2>
           <p className="text-sm text-stone-600">
-            Solo si este cliente tiene un precio que no comparte con nadie. Si dos o más clientes pagan lo mismo, conviene una lista en Precios.
+            Este cliente tiene precios propios cargados antes. Siguen valiendo. Hoy se prefiere usar una lista de precios o un descuento: para dejar de usarlos, vaciá el precio y guardá.
           </p>
           <PreciosEspeciales accion={guardarPreciosEspeciales.bind(null, cliente.id)} filas={filasPrecios} pie="Precio sin IVA, por la unidad de venta de cada producto. Vale para todas las sucursales del cliente." />
         </section>
+        )}
 
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">Sucursales ({cliente.puntos.length})</h2>
