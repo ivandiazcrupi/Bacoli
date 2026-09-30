@@ -1,0 +1,23 @@
+import Link from "next/link";
+import type { Usuario } from "@prisma/client";
+import { NOMBRE_ROL, puedeGestionarUsuarios } from "@/lib/roles";
+import { salir } from "@/app/actions";
+
+export function Cabecera({ usuario }: { usuario: Usuario }) {
+  return (
+    <header className="border-b border-stone-200 bg-white">
+      <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
+        <nav className="flex items-center gap-4 text-sm font-medium">
+          <Link href="/" className="text-lg font-bold">BACOLI</Link>
+          {puedeGestionarUsuarios(usuario.rol) && <Link href="/usuarios">Usuarios</Link>}
+        </nav>
+        <form action={salir} className="flex items-center gap-3 text-sm">
+          <span className="hidden text-stone-600 sm:inline">
+            {usuario.nombre} · {NOMBRE_ROL[usuario.rol]}
+          </span>
+          <button className="rounded-lg border border-stone-300 px-3 py-2">Salir</button>
+        </form>
+      </div>
+    </header>
+  );
+}
