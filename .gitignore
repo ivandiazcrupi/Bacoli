@@ -8,3 +8,7 @@ out
 .DS_Store
 next-env.d.ts
 tsconfig.tsbuildinfo
+
+# Datos reales de clientes: nunca al repositorio
+*.csv
+datos/

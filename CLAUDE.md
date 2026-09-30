@@ -51,8 +51,16 @@ confirmación antes de borrar o publicar** cualquier cosa (incluido el despliegu
 - Hoja de ruta: se arma el día anterior (Nicolás/Miguel) arrastrando pedidos a vehículos (3 vehículos), ordenando
   el recorrido; link a Google Maps con paradas. Más adelante botón "Sugerir ruta" (Google Maps API) que
   Miguel/Nicolás revisan y ajustan. El repartidor solo ve su ruta.
-- Migración de planilla de clientes (columnas: Zona, Nombre, Cliente, Dirección, Teléfono, Razón Social, CUIT,
-  Estado, Comentario): **no migrar comentarios ni notas** mezcladas en dirección. Agrupar sucursales por nombre.
+- Migración de planilla de clientes (columnas: Zona=barrio, Nombre, Cliente=tipo, Dirección, Teléfono, Razón Social,
+  CUIT, Estado, Comentario, Día entrega, Volumen semanal, Facturación estimada). Reglas acordadas:
+  - **No migrar** comentarios, volumen semanal, facturación estimada ni notas entre paréntesis en la dirección.
+  - Sucursales: se agrupan solo nombres **idénticos**, más las marcas VACALIN, PARMEGIANO, ABASTECEDOR y BAQUIANO.
+    En las marcas, las **franquicias con otro CUIT son clientes aparte** (los locales con el mismo CUIT quedan juntos).
+  - Tipo "Migue." = mayorista con comisionista Migue 8%. Estados Baja/Contactar = clientes desactivados.
+  - Filas de tipo "Cobro"/"Muestra" NO son clientes: son **paradas de cobranza/muestra de la hoja de ruta**
+    (hoy se cargaban como clientes solo para poder ponerlas en la ruta).
+  - "NO SE COBRA ENVIO" aparecía en Razón Social: hay clientes sin cobro de envío. El **envío se maneja en el módulo
+    de reparto/hoja de ruta, no en Clientes**.
 
 ## Equipo / usuarios
 Dueños (2), Miguel (administración y logística), Nicolás (empleado; ve lo mismo que Miguel), 3 repartidores
@@ -67,10 +75,13 @@ y ~1000 minoristas.
 - [x] Módulo 2 (parte A2): precio especial por cliente y producto, cargado a mano en la ficha del cliente
   (recuadro "Precios especiales"; vale para todas las sucursales). Lógica en `src/lib/precios.ts`.
   Se decidió NO hacer hoja masiva, aumentos automáticos, historial ni precios en %: el dueño prefiere manual y simple.
-- [ ] Módulo 2 (parte B): importar la planilla de clientes (CSV) con vista previa y confirmación.
+- [x] Módulo 2 (parte B): importación de la planilla de clientes (`/clientes/importar`, CSV con `;` o `,`):
+  vista previa, propuesta de zona por barrio (corregible; no deja importar con barrios sin zona), confirmación,
+  y no duplica clientes ya cargados (mismo nombre). Lógica en `src/lib/importar-clientes.ts`.
 - [ ] Módulo 3: Pedidos.
 - [ ] Módulo 4: Cuenta corriente.
-- [ ] Módulo 5: Hoja de ruta + vista del repartidor.
+- [ ] Módulo 5: Hoja de ruta + vista del repartidor. Debe incluir: paradas de cobranza/muestra (sin pedido) y el cobro de
+  envío (con opción "no se cobra envío" por cliente o parada).
 - [ ] Publicación en Railway (guiar al dueño paso a paso; él crea el proyecto y carga las claves).
 - [ ] Más adelante: facturación ARCA, reportes, migración de planillas, Empretienda, sugerencia de ruta.
 
