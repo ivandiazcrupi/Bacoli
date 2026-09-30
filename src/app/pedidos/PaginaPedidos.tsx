@@ -48,7 +48,7 @@ function FilaSinAsignar({ f, dias, alAsignar }: { f: FilaBandeja; dias: Dia[]; a
       </div>
       <div role="cell" className="pt-1.5 font-medium">{f.barrio}</div>
       <div role="cell" className="pt-1.5 font-semibold leading-snug">{f.cliente}</div>
-      <div role="cell" className="pt-1.5 leading-snug">{f.direccion}</div>
+      <div role="cell" className="pt-1.5 leading-snug">{f.direccion}{f.comentario && <p className="text-xs font-medium text-rojo-700">{f.comentario}</p>}</div>
       <div role="cell" className="pt-1.5 tabular-nums">{f.telefono || <span className="text-stone-400">—</span>}</div>
       <div role="cell" className="space-y-0.5 pt-1.5">
         {f.items.map((i, k) => (
@@ -72,6 +72,7 @@ function TarjetaSinAsignar({ f, dias, alAsignar }: { f: FilaBandeja; dias: Dia[]
         <div className="min-w-0">
           <h3 className="text-lg font-bold leading-snug">{f.cliente}</h3>
           <p className="text-sm text-stone-600">{f.barrio} · {f.direccion}</p>
+          {f.comentario && <p className="text-sm font-medium text-rojo-700">{f.comentario}</p>}
         </div>
         <Comprobante conFactura={f.conFactura} />
       </header>

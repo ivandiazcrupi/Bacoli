@@ -61,8 +61,8 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
         {clientes.length === 0 ? (
           <p className="rounded-lg border border-dashed border-stone-300 p-4 text-stone-600">No hay clientes con esos filtros.</p>
         ) : (
-          <div className="space-y-2">
-            <div className={`hidden gap-x-4 px-5 text-xs font-semibold uppercase tracking-wide text-stone-500 lg:grid ${COLUMNAS}`}>
+          <div className="space-y-1.5">
+            <div className={`hidden gap-x-4 px-4 text-xs font-semibold uppercase tracking-wide text-stone-500 lg:grid ${COLUMNAS}`}>
               <span>Barrio</span><span>Nombre</span><span>Dirección</span><span>Teléfono</span><span />
             </div>
             {clientes.map((c) => <FilaCliente key={c.id} c={c} />)}
@@ -74,8 +74,9 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
 }
 
 // Columnas (PC): barrio, nombre, dirección, teléfono, accesos.
-const COLUMNAS = "lg:grid-cols-[1.3fr_1.7fr_2fr_1.2fr_23rem]";
-const acceso = "rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium uppercase hover:border-verde-700 hover:text-verde-800";
+const COLUMNAS = "lg:grid-cols-[1.2fr_1.6fr_2fr_1.1fr_19rem]";
+const acceso = "rounded-md border border-stone-300 bg-white px-2.5 py-1 text-xs font-medium uppercase hover:border-verde-700 hover:text-verde-800";
+const accesoEditar = "rounded-md border border-verde-700 bg-white px-2.5 py-1 text-xs font-medium text-verde-800 hover:bg-verde-50";
 
 type Cliente = Prisma.ClienteGetPayload<{ include: { puntos: { include: { zona: true } } } }>;
 
@@ -91,14 +92,14 @@ function Telefono({ tel }: { tel: string | null }) {
 // Cada cliente es un cuadrante. Sus sucursales van todas a la vista, una debajo de otra y TODAS con la misma información
 // (barrio, nombre, dirección, teléfono y accesos), así cada línea se entiende sola.
 function FilaCliente({ c }: { c: Cliente }) {
-  const dato = "font-semibold";
+  const dato = "text-sm font-semibold";
   const puntos: (Cliente["puntos"][number] | null)[] = c.puntos.length ? c.puntos : [null];
 
   const accesos = (
     <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-      <Link href={`/clientes/${c.id}`} className={acceso}>Editar</Link>
       <Link href={`/clientes/${c.id}/cuenta`} className={acceso}>Cuenta corriente</Link>
       <Link href={`/clientes/${c.id}/pedidos`} className={acceso}>Pedidos</Link>
+      <Link href={`/clientes/${c.id}`} className={accesoEditar}>Editar</Link>
     </div>
   );
 
@@ -107,19 +108,20 @@ function FilaCliente({ c }: { c: Cliente }) {
       {puntos.map((p, i) => (
         <div key={p?.id ?? "sin"}>
           {/* PC: barrio, nombre, dirección, teléfono y accesos en una fila */}
-          <div className={`hidden items-center gap-x-4 px-5 py-3 lg:grid ${COLUMNAS} ${p && !p.activo ? "opacity-60" : ""}`}>
+          <div className={`hidden items-center gap-x-4 px-4 py-2 lg:grid ${COLUMNAS} ${p && !p.activo ? "opacity-60" : ""}`}>
             <span className={dato}>{p ? p.barrio : <span className="font-normal text-stone-400">Sin sucursal</span>}</span>
             <Link href={`/clientes/${c.id}`} className={`${dato} hover:text-verde-800 hover:underline`}>{c.nombre}</Link>
-            <span className="text-sm">{p ? titulo(p.direccion) : ""}</span>
+            <span className="text-sm leading-tight">{p ? titulo(p.direccion) : ""}{p?.comentario && <span className="block text-xs font-medium text-rojo-700">{p.comentario}</span>}</span>
             <span className="text-sm"><Telefono tel={p?.telefono ?? null} /></span>
             {accesos}
           </div>
 
           {/* Celular: la misma información apilada */}
           <div className={`space-y-1 p-4 lg:hidden ${p && !p.activo ? "opacity-60" : ""}`}>
-            <p className={`text-base ${dato}`}>{p ? p.barrio : "Sin sucursal"}</p>
+            <p className={dato}>{p ? p.barrio : "Sin sucursal"}</p>
             <Link href={`/clientes/${c.id}`} className={`block ${dato}`}>{c.nombre}</Link>
             {p && <p className="text-sm">{titulo(p.direccion)}</p>}
+            {p?.comentario && <p className="text-xs font-medium text-rojo-700">{p.comentario}</p>}
             {p && <p className="text-sm"><Telefono tel={p.telefono} /></p>}
             <div className="pt-1">{accesos}</div>
           </div>

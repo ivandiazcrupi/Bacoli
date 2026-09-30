@@ -14,6 +14,7 @@ export type FilaBandeja = {
   barrio: string;
   cliente: string;
   direccion: string;
+  comentario: string;
   telefono: string;
   items: { nombre: string; cantidad: number }[];
   monto: number;
@@ -36,6 +37,7 @@ export function aFila(p: PedidoCompleto, debe: Set<string>): Fila {
     barrio: p.punto.barrio,
     cliente: nombreCliente(p),
     direccion: titulo(p.punto.direccion),
+    comentario: p.punto.comentario ?? "",
     telefono: p.punto.telefono ?? "",
     items: p.items.map((i) => ({ nombre: i.nombre, cantidad: p.estado === "ENTREGADO" ? (i.cantidadEntregada ?? i.cantidad) : i.cantidad })),
     monto: importeVigente(p.items, Number(p.ivaPct), p.estado === "ENTREGADO" ? "ENTREGADO" : "PENDIENTE"),
@@ -55,6 +57,7 @@ export function aFilaBandeja(p: PedidoCompleto): FilaBandeja {
     barrio: p.punto.barrio,
     cliente: nombreCliente(p),
     direccion: titulo(p.punto.direccion),
+    comentario: p.punto.comentario ?? "",
     telefono: p.punto.telefono ?? "",
     items: p.items.map((i) => ({ nombre: i.nombre, cantidad: i.cantidad })),
     monto: importeVigente(p.items, Number(p.ivaPct), "PENDIENTE"),

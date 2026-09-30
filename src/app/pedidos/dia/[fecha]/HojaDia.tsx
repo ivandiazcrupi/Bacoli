@@ -19,6 +19,7 @@ export type Fila = {
   barrio: string;
   cliente: string;
   direccion: string;
+  comentario: string;
   telefono: string;
   items: { nombre: string; cantidad: number }[];
   monto: number;
@@ -68,7 +69,8 @@ function FilaHoja({ f, n, bloqueada, acc }: { f: Fila; n: number; bloqueada: boo
       </div>
       <div role="cell" className="pt-1.5 font-medium">{f.barrio}</div>
       <div role="cell" className="pt-1.5 font-semibold leading-snug">{f.cliente}</div>
-      <div role="cell" className="pt-1.5 leading-snug"><a href={mapa(f)} target="_blank" rel="noreferrer" className="hover:underline">{f.direccion}</a></div>
+      <div role="cell" className="pt-1.5 leading-snug"><a href={mapa(f)} target="_blank" rel="noreferrer" className="hover:underline">{f.direccion}</a>
+        {f.comentario && <p className="text-sm font-medium text-rojo-700">{f.comentario}</p>}{f.comentario && <p className="text-xs font-medium text-rojo-700">{f.comentario}</p>}</div>
       <div role="cell" className="pt-1.5 tabular-nums">
         {f.telefono ? (
           <>

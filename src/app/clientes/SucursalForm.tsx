@@ -57,7 +57,7 @@ export function FilaSucursal({ clienteId, sucursal, zonas, barrios }: { clienteI
         </label>
         <label className={celda}>
           <span className={etiquetaChica}>Comentario</span>
-          <input name="comentario" aria-label="Comentario" placeholder={sucursal ? "" : "Ej: horario de entrega"} defaultValue={v("comentario")} className={campo} />
+          <input name="comentario" aria-label="Comentario" placeholder={sucursal ? "" : "Ej: recibe hasta las 10 hs"} defaultValue={v("comentario")} className={campo} />
         </label>
         <div className="col-span-2 flex items-center gap-2 lg:col-span-1 lg:w-auto">
           <button disabled={cargando} className="rounded-lg bg-verde-700 px-4 py-2 text-sm font-semibold text-white hover:bg-verde-800 disabled:opacity-60">
