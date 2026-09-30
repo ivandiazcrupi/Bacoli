@@ -33,10 +33,11 @@ async function main() {
   const nombre = process.env.SEED_ADMIN_NOMBRE;
   const email = process.env.SEED_ADMIN_EMAIL?.trim().toLowerCase();
   const password = process.env.SEED_ADMIN_PASSWORD;
-  if (!nombre || !email || !password || password.length < 8) {
+  if (!nombre || !email || !password || password.length < 4) {
     console.log("Sin datos SEED_ADMIN_*: no se crea ningún usuario inicial.");
     return;
   }
+  const usuario = (process.env.SEED_ADMIN_USUARIO ?? email.split("@")[0]).trim().toLowerCase();
   const existe = await db.usuario.findUnique({ where: { email } });
   if (existe && process.env.SEED_ADMIN_RESET === "si") {
     // Restablecimiento de emergencia: nueva contraseña, vuelve a ser dueño y queda activo.
@@ -52,7 +53,7 @@ async function main() {
     return;
   }
   await db.usuario.create({
-    data: { nombre, email, rol: "DUENO", passwordHash: await bcrypt.hash(password, 12) },
+    data: { nombre, usuario, email, rol: "DUENO", passwordHash: await bcrypt.hash(password, 12) },
   });
   console.log(`Dueño creado: ${email}`);
 }

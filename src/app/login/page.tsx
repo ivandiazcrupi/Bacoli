@@ -12,11 +12,13 @@ export default function LoginPage() {
       <p className="mb-6 text-stone-600">Ingresá para continuar</p>
       <form action={accion} className="space-y-4">
         <label className="block">
-          <span className="text-sm font-medium">Email</span>
+          <span className="text-sm font-medium">Usuario</span>
           <input
-            name="email"
-            defaultValue={estado?.email}
-            type="email"
+            name="usuario"
+            defaultValue={estado?.usuario}
+            type="text"
+            autoCapitalize="none"
+            autoCorrect="off"
             autoComplete="username"
             required
             className="mt-1 w-full rounded-lg border border-stone-300 bg-white px-3 py-3 text-base"

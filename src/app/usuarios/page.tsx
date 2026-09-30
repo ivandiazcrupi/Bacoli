@@ -1,3 +1,4 @@
+import { esEmailSinCargar } from "@/lib/usuarios";
 import { redirect } from "next/navigation";
 import { Cabecera } from "@/components/Cabecera";
 import { db } from "@/lib/db";
@@ -23,7 +24,7 @@ export default async function Usuarios() {
               <div className={u.activo ? "" : "opacity-50"}>
                 <p className="font-medium">{u.nombre}</p>
                 <p className="text-sm text-stone-600">
-                  {u.email} · {NOMBRE_ROL[u.rol]}
+                  {u.usuario}{!esEmailSinCargar(u.email) && ` · ${u.email}`} · {NOMBRE_ROL[u.rol]}
                   {!u.activo && " · desactivado"}
                 </p>
               </div>

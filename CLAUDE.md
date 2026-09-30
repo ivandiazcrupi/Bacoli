@@ -15,7 +15,7 @@ Si hay duda, preguntar. Probar siempre antes de subir.
 ## Cómo está armado
 - Next.js 16 (App Router) + TypeScript + Tailwind 3. Una sola app: pantallas y lógica juntas (server actions).
 - PostgreSQL + Prisma 6 (`prisma/schema.prisma`). Despliegue en Railway con backups.
-- Login propio: email + contraseña (bcrypt), sesión en cookie firmada (`jose`). Ver `src/lib/session.ts`.
+- Login propio: **usuario** (o el email, como antes) + contraseña (bcrypt; mínimo 4 caracteres, decisión del dueño; `src/lib/usuarios.ts`). El usuario se cambia en Mi cuenta; el email es opcional (si falta se guarda `usuario@sin-email.local`, que no se muestra), sesión en cookie firmada (`jose`). Ver `src/lib/session.ts`.
 - `proxy.ts` manda al login si no hay cookie; cada página verifica la sesión con `exigirUsuario()`.
 - Roles en `src/lib/roles.ts`: DUENO, ADMINISTRACION, VENDEDOR, REPARTIDOR.
   Hoy todo el personal de oficina ve todo; el repartidor solo verá su ruta. Restringir más adelante ahí.
@@ -196,7 +196,8 @@ y ~1000 minoristas.
 
 ## Pendientes conocidos
 - La enumeración `TipoCliente` conserva el valor DISTRIBUIDOR (oculto en pantallas) para no alterar datos existentes.
-- Login: bloqueo de 15 min tras 5 fallos por email (en memoria; revisar si se usa más de una instancia).
+- Contraseñas cortas (mín. 4) y usuarios simples: riesgo aceptado por el dueño; el bloqueo de intentos es la defensa. Sin email no hay recuperación por correo.
+- Login: bloqueo de 15 min tras 5 fallos por usuario (en memoria; revisar si se usa más de una instancia).
 - Recuperación de contraseña olvidada (hoy: el dueño usa SEED_ADMIN_RESET en Railway; no hay reset para otros usuarios).
 - El formulario de Usuarios pierde lo cargado si da error (aplicar el mismo `key` que en Clientes).
 - `npm audit` marca 3 alertas en una herramienta interna de Prisma (solo desarrollo, no en producción).

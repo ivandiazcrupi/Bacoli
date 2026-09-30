@@ -29,6 +29,7 @@ Guía en lenguaje simple. Está pensada para retomar el trabajo aunque no recuer
 | `SESSION_SECRET` | Firma las sesiones de login | Mínimo 32 caracteres al azar. Si se cambia, todos deben volver a entrar. |
 | `SEED_ADMIN_NOMBRE` | Nombre del primer dueño | Solo se usa al crear el usuario inicial. |
 | `SEED_ADMIN_EMAIL` | Email del primer dueño | Ídem. |
+| `SEED_ADMIN_USUARIO` | Usuario del primer dueño (opcional) | Si falta, se usa lo que va antes de la @ del email. |
 | `SEED_ADMIN_PASSWORD` | Contraseña del primer dueño | **Temporal.** Se borra después del primer ingreso. |
 | `SEED_ADMIN_RESET` | Restablecer la contraseña del dueño | **Temporal.** Solo para emergencias. Ver abajo. |
 

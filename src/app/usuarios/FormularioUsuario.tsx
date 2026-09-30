@@ -17,12 +17,16 @@ export function FormularioUsuario() {
         <input name="nombre" required className={campo} />
       </label>
       <label className="block text-sm font-medium">
-        Email
-        <input name="email" type="email" required className={campo} />
+        Usuario (para entrar)
+        <input name="usuario" required autoCapitalize="none" autoCorrect="off" autoComplete="off" className={campo} />
       </label>
       <label className="block text-sm font-medium">
-        Contraseña inicial (mín. 8 caracteres)
-        <input name="password" type="text" minLength={8} required autoComplete="off" className={campo} />
+        Email (opcional)
+        <input name="email" type="email" className={campo} />
+      </label>
+      <label className="block text-sm font-medium">
+        Contraseña inicial (mín. 4 caracteres)
+        <input name="password" type="text" minLength={4} required autoComplete="off" className={campo} />
       </label>
       <label className="block text-sm font-medium">
         Rol
