@@ -3,8 +3,14 @@
 Sistema web (en español, pensado para celular) para BACOLI, fábrica de prepizzas y focaccias artesanales
 del Gran Buenos Aires. Reemplaza las planillas de Google Sheets (pedidos, cuentas corrientes, rutas).
 
-**Quien pide el trabajo no es programador:** explicar en términos simples antes de hacer, y **pedir
-confirmación antes de borrar o publicar** cualquier cosa (incluido el despliegue en Railway).
+**Quien pide el trabajo no es programador:** explicar en términos simples antes de hacer.
+
+**Publicar (acordado con el dueño):** los cambios de rutina se suben directo a la rama y Railway los publica solo; se
+avisa después qué se subió. **Se pide confirmación antes de** (1) borrar datos o tablas, o cambiar/renombrar columnas
+existentes (agregar tablas o columnas nuevas no lo requiere); (2) importar o modificar datos reales; (3) tocar login,
+sesiones, roles o permisos; (4) cambiar variables/configuración de Railway o algo que cueste plata; (5) cualquier cambio
+que pueda romper el sistema en uso o no se pueda deshacer; (6) usar credenciales o secretos.
+Si hay duda, preguntar. Probar siempre antes de subir.
 
 ## Cómo está armado
 - Next.js 16 (App Router) + TypeScript + Tailwind 3. Una sola app: pantallas y lógica juntas (server actions).
