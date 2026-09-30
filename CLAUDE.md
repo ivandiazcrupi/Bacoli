@@ -34,8 +34,7 @@ Si hay duda, preguntar. Probar siempre antes de subir.
   TOMATE (paquete de 6), FOO04 FOCACCIA OLIVA, PCM05 PIZZA MUZZARELLA, PCJ06 PIZZA JAMÓN y PCF07 PIZZA FUGAZZETA (por unidad).
   Cada producto guarda además EAN (opcional) y descripción para el remito.
 - **Precios SIN IVA.** Clientes facturados: se suma IVA 10,5%.
-- **Tipos de cliente (cambio del dueño): Mayorista y Distribuidor, nada más** (en pantallas ya no aparece Minorista). Además sigue existiendo la
-  lista de precios Distribuidor: el tipo y la lista son cosas separadas. Los **minoristas NO se cargan como clientes**: salen de Empretienda
+- **Tipo de cliente: en pantallas todos son MAYORISTA** (no hay selector ni filtro de tipo; el dueño lo probó y lo sacó). **Distribuidor es una lista de precios**, no un tipo. Los **minoristas NO se cargan como clientes**: salen de Empretienda
   (ver "Pedidos de tienda online" abajo). Los precios minoristas viven en la tienda online (Empretienda): no se cargan
   acá; la lista Minorista está oculta (`activa = false`). "Clientes de Migue" = mayorista con comisionista Migue 8%.
 - **Orden:** las listas van Mayorista, Distribuidor y luego las demás (campo `orden`); una lista o un producto nuevo
@@ -200,7 +199,7 @@ y ~1000 minoristas.
   pedido **"Tienda online"**: datos de entrega escritos en el mismo pedido (nombre, dirección, barrio, teléfono, N° de pedido de Empretienda), sin
   cuenta corriente ni lista ni límites, y que aparezca en la hoja del día con Llamar/WhatsApp. Falta confirmar con el dueño si pagan antes o al
   recibir y si todos los reparte la empresa. Más adelante, importar esos pedidos solos desde Empretienda.
-- Clientes (pantalla): filtros = buscador + tipo (Mayorista/Distribuidor) + zona + estado (por defecto **Activos**, siempre). El botón es "+ CARGAR CLIENTE".
+- Clientes (pantalla): buscador + **zona en pastillas** (TODAS, CABA, ZONA SUR, ZONA NORTE, ZONA OESTE; un cliente aparece en una zona si alguna sucursal está ahí) + estado (**Activos** por defecto, siempre; Desactivados; Todos). Sin desplegables. El botón es "+ CARGAR CLIENTE".
 
 ## Pendientes conocidos
 - La enumeración `TipoCliente` conserva el valor DISTRIBUIDOR (oculto en pantallas) para no alterar datos existentes.

@@ -3,14 +3,13 @@ import type { Prisma } from "@prisma/client";
 import { Cabecera } from "@/components/Cabecera";
 import { estiloCampo } from "@/components/campos";
 import { db } from "@/lib/db";
-import { TIPO_CLIENTE } from "@/lib/etiquetas";
 import { exigirOficina } from "@/lib/session";
 
 const LIMITE = 100;
 
 export default async function Clientes({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const usuario = await exigirOficina();
-  const { q = "", tipo = "", zona = "", estado = "activos" } = await searchParams;
+  const { q = "", zona = "", estado = "activos" } = await searchParams;
 
   const where: Prisma.ClienteWhereInput = {};
   // Cada palabra puede coincidir con cualquier dato del cliente: "vacalin olivos" = nombre VACALIN + sucursal Olivos.
@@ -29,7 +28,6 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
       };
     });
   }
-  if (tipo in TIPO_CLIENTE) where.tipo = tipo as keyof typeof TIPO_CLIENTE;
   if (zona) where.puntos = { some: { zonaId: zona } };
   if (estado === "activos") where.activo = true;
   if (estado === "inactivos") where.activo = false;
@@ -39,6 +37,14 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
     db.cliente.count({ where }),
     db.zona.findMany({ orderBy: { orden: "asc" } }),
   ]);
+
+  const pastilla = "rounded-full px-5 py-2 text-sm font-semibold uppercase tracking-wide transition";
+  // Enlaces de los filtros: cambian una sola cosa y conservan el resto (búsqueda, zona, estado).
+  const enlace = (cambio: Record<string, string>) => {
+    const v: Record<string, string> = { q, zona, estado, ...cambio };
+    const partes = Object.entries(v).filter(([k, x]) => x && !(k === "estado" && x === "activos"));
+    return `/clientes${partes.length ? `?${new URLSearchParams(partes)}` : ""}`;
+  };
 
   return (
     <>
@@ -52,23 +58,27 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
           </div>
         </div>
 
-        <form className="grid grid-cols-2 gap-2 md:grid-cols-3">
-          <input name="q" defaultValue={q} placeholder="Buscar cliente, sucursal o barrio" className={`${estiloCampo} col-span-2 md:col-span-3 mt-0`} />
-          <select name="tipo" defaultValue={tipo} className={`${estiloCampo} mt-0`}>
-            <option value="">Todos los tipos</option>
-            {Object.entries(TIPO_CLIENTE).filter(([k]) => k !== "MINORISTA").map(([k, t]) => <option key={k} value={k}>{t}</option>)}
-          </select>
-          <select name="zona" defaultValue={zona} className={`${estiloCampo} mt-0`}>
-            <option value="">Todas las zonas</option>
-            {zonas.map((z) => <option key={z.id} value={z.id}>{z.nombre}</option>)}
-          </select>
-          <select name="estado" defaultValue={estado} className={`${estiloCampo} mt-0`}>
-            <option value="activos">Activos</option>
-            <option value="inactivos">Desactivados</option>
-            <option value="todos">Todos</option>
-          </select>
-          <button className="col-span-2 md:col-span-3 rounded-lg border border-stone-300 bg-white px-3 py-3 font-medium">Filtrar</button>
+        <form className="flex gap-2">
+          <input name="q" defaultValue={q} placeholder="Buscar cliente, sucursal o barrio" className={`${estiloCampo} mt-0 flex-1`} />
+          {zona && <input type="hidden" name="zona" value={zona} />}
+          {estado !== "activos" && <input type="hidden" name="estado" value={estado} />}
+          <button className="rounded-lg border border-stone-300 bg-white px-6 py-3 font-medium">Buscar</button>
         </form>
+
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-2" aria-label="Zona">
+            {[{ id: "", nombre: "TODAS" }, ...zonas].map((z) => (
+              <Link key={z.id} href={enlace({ zona: z.id })} className={`${pastilla} ${z.id === zona ? "bg-amber-700 text-white shadow-sm" : "border border-stone-300 bg-white text-stone-600 hover:border-amber-600 hover:text-amber-800"}`}>
+                {z.nombre}
+              </Link>
+            ))}
+          </div>
+          <div className="flex gap-1 text-sm" aria-label="Estado">
+            {[["activos", "Activos"], ["inactivos", "Desactivados"], ["todos", "Todos"]].map(([k, t]) => (
+              <Link key={k} href={enlace({ estado: k })} className={`rounded-lg px-3 py-2 ${k === estado ? "bg-stone-800 font-semibold text-white" : "text-stone-600 hover:bg-stone-200"}`}>{t}</Link>
+            ))}
+          </div>
+        </div>
 
         <p className="text-sm text-stone-600">
           {total} {total === 1 ? "cliente" : "clientes"}{total > LIMITE && ` · mostrando los primeros ${LIMITE}, usá el buscador`}
@@ -85,7 +95,7 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
                   <Link href={`/clientes/${c.id}`} className={`block p-4 ${c.activo ? "" : "opacity-60"}`}>
                     <p className="font-medium">{c.nombre}</p>
                     <p className="text-sm text-stone-600">
-                      {TIPO_CLIENTE[c.tipo]} · {c.puntos.length} {c.puntos.length === 1 ? "sucursal" : "sucursales"}
+                      {c.puntos.length} {c.puntos.length === 1 ? "sucursal" : "sucursales"}
                       {zonasCliente && ` · ${zonasCliente}`}
                       {c.facturado && " · con factura"}
                       {c._count.preciosEspeciales > 0 && " · precio propio"}

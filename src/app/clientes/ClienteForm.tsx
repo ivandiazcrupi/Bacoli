@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { Campo, Mensajes, estiloBoton, estiloCampo, estiloDato } from "@/components/campos";
-import { CONDICION_PAGO, IMPUTACION_PAGO, TIPO_CLIENTE } from "@/lib/etiquetas";
+import { CONDICION_PAGO, IMPUTACION_PAGO } from "@/lib/etiquetas";
 import type { EstadoForm } from "./validacion";
 
 export type DatosCliente = {
@@ -47,14 +47,8 @@ export function ClienteForm({ accion, inicial, listas, zonas, barrios = [], text
       <Campo etiqueta="Nombre *">
         <input name="nombre" autoCapitalize="characters" defaultValue={v("nombre")} required className={estiloDato} />
       </Campo>
-      <Campo etiqueta="Tipo de cliente *">
-        <select name="tipo" defaultValue={v("tipo")} required className={estiloCampo}>
-          <option value="" disabled>Elegí el tipo</option>
-          {Object.entries(TIPO_CLIENTE)
-            .filter(([k]) => k !== "MINORISTA" || inicial.tipo === "MINORISTA")
-            .map(([k, t]) => <option key={k} value={k}>{t}</option>)}
-        </select>
-      </Campo>
+      {/* Todos los clientes son mayoristas: los minoristas salen de la tienda online y no se cargan acá. */}
+      <input type="hidden" name="tipo" value={inicial.tipo || "MAYORISTA"} />
       <Campo etiqueta="Razón social" ayuda="Opcional.">
         <input name="razonSocial" autoCapitalize="characters" defaultValue={v("razonSocial")} className={estiloDato} />
       </Campo>
