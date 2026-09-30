@@ -1,5 +1,6 @@
 "use server";
 
+import { titulo } from "@/lib/mayusculas";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { Prisma } from "@prisma/client";
@@ -41,7 +42,7 @@ export async function buscarDestinos(q: string): Promise<Destino[]> {
     take: 20,
   });
   return puntos.map((p) => ({
-    puntoId: p.id, clienteId: p.clienteId, cliente: p.cliente.nombre, alias: p.alias, direccion: p.direccion, barrio: p.barrio, zona: p.zona.nombre,
+    puntoId: p.id, clienteId: p.clienteId, cliente: p.cliente.nombre, alias: p.alias, direccion: titulo(p.direccion), barrio: p.barrio, zona: p.zona.nombre,
   }));
 }
 
@@ -53,7 +54,7 @@ export async function datosNuevoPedido(puntoId: string): Promise<DatosPedido | n
     puntoId,
     cliente: punto.cliente.nombre,
     clienteId: punto.clienteId,
-    sucursal: [punto.alias, punto.direccion].filter(Boolean).join(" · "),
+    sucursal: [punto.alias, titulo(punto.direccion)].filter(Boolean).join(" · "),
     facturado: punto.cliente.facturado,
     lista: punto.cliente.listaPrecios?.nombre ?? null,
     productos: await productosParaCliente(punto.clienteId),

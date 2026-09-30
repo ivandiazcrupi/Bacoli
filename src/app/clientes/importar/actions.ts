@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
+import { titulo } from "@/lib/mayusculas";
 import { analizar, leerCsv, MARCAS_INICIALES, type Analisis, type Opciones } from "@/lib/importar-clientes";
 import { exigirOficina } from "@/lib/session";
 
@@ -99,7 +100,7 @@ export async function importar(_: EstadoImport, formData: FormData): Promise<Est
           puntos: {
             create: c.sucursales.map((s) => ({
               alias: s.alias,
-              direccion: s.direccion,
+              direccion: titulo(s.direccion),
               barrio: s.barrio,
               zonaId: zonaId.get(r.zonaPorBarrio[s.barrio])!,
               telefono: s.telefono,

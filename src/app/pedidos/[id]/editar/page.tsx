@@ -1,3 +1,4 @@
+import { titulo } from "@/lib/mayusculas";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Cabecera } from "@/components/Cabecera";
@@ -33,7 +34,7 @@ export default async function EditarPedido({ params }: { params: Promise<{ id: s
         <div>
           <Link href={`/pedidos/${id}`} className="text-sm text-stone-600">← Volver al pedido</Link>
           <h1 className="text-2xl font-bold">{pedido.cliente.nombre}</h1>
-          <p className="text-stone-600">{[pedido.punto.alias, pedido.punto.direccion].filter(Boolean).join(" · ")}</p>
+          <p className="text-stone-600">{[pedido.punto.alias, titulo(pedido.punto.direccion)].filter(Boolean).join(" · ")}</p>
         </div>
         <FormularioLineas
           accion={actualizarPedido.bind(null, id)}

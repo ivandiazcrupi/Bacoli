@@ -1,3 +1,4 @@
+import { titulo } from "@/lib/mayusculas";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Cabecera } from "@/components/Cabecera";
@@ -37,7 +38,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
         <div>
           <Link href="/pedidos" className="text-sm text-stone-600">← Pedidos</Link>
           <h1 className="text-2xl font-bold">{pedido.cliente.nombre}</h1>
-          <p className="text-stone-600">{[pedido.punto.alias, pedido.punto.direccion, pedido.punto.barrio].filter(Boolean).join(" · ")} · {pedido.punto.zona.nombre}</p>
+          <p className="text-stone-600">{[pedido.punto.alias, titulo(pedido.punto.direccion), pedido.punto.barrio].filter(Boolean).join(" · ")} · {pedido.punto.zona.nombre}</p>
           <p className="mt-1 text-sm">
             <span className={`font-semibold ${COLOR[pedido.estado]}`}>{ETIQUETA[pedido.estado]}</span>
             <span className="text-stone-600"> · {fecha ? `${nombreDia(fecha)} ${diaMes(fecha)}` : "Sin asignar"} · {pedido.conFactura ? "con factura" : "con remito"}</span>

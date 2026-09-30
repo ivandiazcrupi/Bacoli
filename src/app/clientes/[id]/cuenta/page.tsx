@@ -1,3 +1,4 @@
+import { titulo } from "@/lib/mayusculas";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Cabecera } from "@/components/Cabecera";
@@ -84,7 +85,7 @@ export default async function CuentaCorriente({ params }: { params: Promise<{ id
                         {" · "}<Link href={`/pedidos/${m.pedidoId}`} className="underline">ver pedido</Link>
                       </p>
                     )}
-                    <p className="text-xs text-stone-500">{formatoFecha.format(m.fecha)}{m.pedido ? ` · ${m.pedido.punto.alias ?? m.pedido.punto.direccion}` : ""}</p>
+                    <p className="text-xs text-stone-500">{formatoFecha.format(m.fecha)}{m.pedido ? ` · ${m.pedido.punto.alias ?? titulo(m.pedido.punto.direccion)}` : ""}</p>
                   </div>
                   <div className="text-right tabular-nums">
                     <p className={`font-semibold ${Number(m.monto) < 0 ? "text-green-700" : ""}`}>{Number(m.monto) > 0 ? "+" : ""}{formatoPesos(Number(m.monto))}</p>

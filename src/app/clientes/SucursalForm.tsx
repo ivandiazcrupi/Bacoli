@@ -2,13 +2,14 @@
 
 import { useActionState } from "react";
 import { estiloCampo } from "@/components/campos";
+import { titulo } from "@/lib/mayusculas";
 import { cambiarActivoSucursal, eliminarSucursal, guardarSucursal } from "./actions";
 
 export type DatosSucursal = { id: string; alias: string; direccion: string; barrio: string; zonaId: string; telefono: string; comentario: string; activo: boolean };
 type Zona = { id: string; nombre: string };
 
-// Columnas de la fila (PC): nombre, dirección, barrio, zona, teléfono, comentario y los botones.
-const COLUMNAS = "lg:grid-cols-[1fr_1.8fr_1.6fr_1.1fr_1fr_1.2fr_auto]";
+// Columnas de la fila (PC): barrio, dirección, zona, nombre, teléfono, comentario y los botones.
+const COLUMNAS = "lg:grid-cols-[1.6fr_2fr_1.4fr_1fr_1fr_1fr_auto]";
 const celda = "min-w-0";
 const campo = `${estiloCampo} mt-0 py-2 text-sm`;
 const etiquetaChica = "mb-0.5 block text-xs font-medium text-stone-500 lg:hidden";
@@ -17,7 +18,7 @@ const etiquetaChica = "mb-0.5 block text-xs font-medium text-stone-500 lg:hidden
 export function EncabezadoSucursales() {
   return (
     <div className={`hidden gap-2 px-4 text-xs font-semibold uppercase tracking-wide text-stone-500 lg:grid ${COLUMNAS}`}>
-      <span>Nombre</span><span>Dirección *</span><span>Barrio *</span><span>Zona *</span><span>Teléfono</span><span>Comentario</span><span className="w-[17rem]" />
+      <span>Barrio *</span><span>Dirección *</span><span>Zona *</span><span>Nombre</span><span>Teléfono</span><span>Comentario</span><span className="w-[17rem]" />
     </div>
   );
 }
@@ -36,16 +37,12 @@ export function FilaSucursal({ clienteId, sucursal, zonas, barrios }: { clienteI
       <form key={JSON.stringify(estado ?? null)} action={enviar} className="contents">
         {sucursal && <input type="hidden" name="id" value={sucursal.id} />}
         <label className={celda}>
-          <span className={etiquetaChica}>Nombre</span>
-          <input name="alias" aria-label="Nombre de la sucursal" placeholder={sucursal ? "" : "Nombre (opcional)"} autoCapitalize="characters" defaultValue={v("alias")} className={`${campo} dato`} />
-        </label>
-        <label className={`${celda} col-span-2 lg:col-span-1`}>
-          <span className={etiquetaChica}>Dirección *</span>
-          <input name="direccion" aria-label="Dirección" placeholder={sucursal ? "" : "Dirección"} autoCapitalize="characters" defaultValue={v("direccion")} required className={`${campo} dato`} />
-        </label>
-        <label className={celda}>
           <span className={etiquetaChica}>Barrio *</span>
           <input name="barrio" aria-label="Barrio" placeholder={sucursal ? "" : "Barrio"} autoCapitalize="characters" list="barrios-sucursal" defaultValue={v("barrio")} required className={`${campo} dato`} />
+        </label>
+        <label className={`${celda}`}>
+          <span className={etiquetaChica}>Dirección *</span>
+          <input name="direccion" aria-label="Dirección" placeholder={sucursal ? "" : "Dirección"} autoCapitalize="words" defaultValue={titulo(v("direccion"))} required className={campo} />
         </label>
         <label className={celda}>
           <span className={etiquetaChica}>Zona *</span>
@@ -53,6 +50,10 @@ export function FilaSucursal({ clienteId, sucursal, zonas, barrios }: { clienteI
             <option value="" disabled>Zona</option>
             {zonas.map((z) => <option key={z.id} value={z.id}>{z.nombre}</option>)}
           </select>
+        </label>
+        <label className={celda}>
+          <span className={etiquetaChica}>Nombre</span>
+          <input name="alias" aria-label="Nombre de la sucursal" placeholder={sucursal ? "" : "Nombre (opcional)"} autoCapitalize="characters" defaultValue={v("alias")} className={`${campo} dato`} />
         </label>
         <label className={celda}>
           <span className={etiquetaChica}>Teléfono</span>

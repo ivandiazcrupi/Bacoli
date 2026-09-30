@@ -111,21 +111,21 @@ export function ClienteForm({ accion, inicial, listas, zonas, barrios = [], text
       {zonas && (
         <Bloque titulo="Primera sucursal" ayuda="Después se pueden agregar más.">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            <Campo etiqueta="Nombre">
-              <input name="alias" autoCapitalize="characters" placeholder="Opcional. Ej: Retiro" defaultValue={estado?.valores?.alias ?? ""} className={estiloDato} />
-            </Campo>
-            <Campo etiqueta="Dirección *">
-              <input name="direccion" autoCapitalize="characters" defaultValue={estado?.valores?.direccion ?? ""} required className={estiloDato} />
-            </Campo>
             <Campo etiqueta="Barrio *">
               <input name="barrio" autoCapitalize="characters" list="barrios" defaultValue={estado?.valores?.barrio ?? ""} required className={estiloDato} />
             </Campo>
             <datalist id="barrios">{barrios.map((b) => <option key={b} value={b} />)}</datalist>
+            <Campo etiqueta="Dirección *" ayuda="Ej: Malvinas Argentina 2842">
+              <input name="direccion" autoCapitalize="words" defaultValue={estado?.valores?.direccion ?? ""} required className={estiloCampo} />
+            </Campo>
             <Campo etiqueta="Zona de reparto *">
               <select name="zonaId" defaultValue={estado?.valores?.zonaId ?? ""} required className={estiloCampo}>
                 <option value="" disabled>Elegí la zona</option>
                 {zonas.map((z) => <option key={z.id} value={z.id}>{z.nombre}</option>)}
               </select>
+            </Campo>
+            <Campo etiqueta="Nombre">
+              <input name="alias" autoCapitalize="characters" placeholder="Opcional. Ej: Retiro" defaultValue={estado?.valores?.alias ?? ""} className={estiloDato} />
             </Campo>
             <Campo etiqueta="Teléfono">
               <input name="telefono" inputMode="tel" defaultValue={estado?.valores?.telefono ?? ""} className={estiloCampo} />
