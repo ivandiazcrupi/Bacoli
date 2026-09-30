@@ -26,7 +26,7 @@ export const esquemaCliente = z
       (v) => (typeof v === "string" && v.trim() ? leerMonto(v) : 0),
       z.number("El descuento no es válido.").min(0).max(100, "El descuento no puede pasar de 100%."),
     ),
-    imputacionPago: z.enum(["SALDO", "PEDIDO"]),
+    imputacionPago: z.preprocess((v) => v || "SALDO", z.enum(["SALDO", "PEDIDO"])),
     sinLimite: z.preprocess((v) => v === "on", z.boolean()),
     maxPedidosImpagos: z.preprocess(
       (v) => (typeof v === "string" && v.trim() ? Number(v) : null),

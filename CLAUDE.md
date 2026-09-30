@@ -61,8 +61,11 @@ Si hay duda, preguntar. Probar siempre antes de subir.
   - Módulo Ruta: cada pedido se marca verde (entregado) o rojo (no entregado) y **no se puede cerrar la semana** con pedidos
     sin marcar. Hoy el Inicio avisa los "vencidos sin marcar entregado".
   - Hay devoluciones, notas de crédito y descuentos (módulo 4). Cada cliente paga contra saldo total o contra pedido puntual.
-- **Límites por cliente:** máx. de pedidos impagos y máx. de monto en $. Al pasarse: avisar y pedir autorización
-  de un dueño (no bloquear). Opción "cuenta sin límite" (ej. Carrefour).
+- **Límites por cliente:** "Deuda máxima ($)" y "Pedidos sin pagar (máx.)", **uno al lado del otro; si no se completa nada, no hay límite** (ya no hay casillero
+  "cuenta sin límite"; la columna `sinLimite` queda por compatibilidad y se apaga al guardar). Al pasarse: avisar y pedir autorización de un dueño (no bloquear).
+- **Ficha del cliente:** "Se le factura normalmente" (`facturado`) solo **pre-marca** "con factura" al cargarle un pedido (cada pedido se puede cambiar) y exige CUIT.
+  "Los pagos se aplican contra saldo total / cada pedido" (`imputacionPago`) **no se usa todavía**: se sacó de la pantalla y vuelve con Cuenta corriente (módulo 4).
+  Comisión (comisionista + %): solo queda anotada (ej. Migue 8%); servirá para calcular cuánto se le debe (reportes).
 - **Cliente → Sucursal.** Cliente = quien tiene CUIT: lleva su **cuenta corriente, factura y límites** (cada franquicia de
   VACALIN paga por su cuenta). Sucursal = el local (dirección, barrio, zona de reparto). El nombre del cliente lleva la
   marca ("VACALIN - Pomelo Producciones"); se vende a "VACALIN Olivos" = sucursal Olivos. La búsqueda entiende varias

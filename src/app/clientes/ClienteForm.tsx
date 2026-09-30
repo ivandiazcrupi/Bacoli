@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { Campo, Mensajes, estiloBoton, estiloCampo, estiloDato } from "@/components/campos";
-import { CONDICION_PAGO, IMPUTACION_PAGO } from "@/lib/etiquetas";
+import { CONDICION_PAGO } from "@/lib/etiquetas";
 import type { EstadoForm } from "./validacion";
 
 export type DatosCliente = {
@@ -39,7 +39,6 @@ type Props = {
 export function ClienteForm({ accion, inicial, listas, zonas, barrios = [], textoBoton }: Props) {
   const [estado, enviar, cargando] = useActionState(accion, undefined);
   const v = (campo: keyof DatosCliente) => estado?.valores?.[campo] ?? (inicial[campo] as string);
-  const [sinLimite, setSinLimite] = useState(inicial.sinLimite);
   const [facturado, setFacturado] = useState(inicial.facturado);
 
   return (
@@ -55,9 +54,14 @@ export function ClienteForm({ accion, inicial, listas, zonas, barrios = [], text
       <Campo etiqueta="CUIT" ayuda="Opcional. Obligatorio si lleva factura.">
         <input name="cuit" inputMode="numeric" defaultValue={v("cuit")} className={estiloCampo} />
       </Campo>
-      <label className="flex items-center gap-3 text-sm font-medium">
-        <input type="checkbox" name="facturado" checked={facturado} onChange={(e) => setFacturado(e.target.checked)} className="h-5 w-5" />
-        Lleva factura (se suma IVA 10,5%). Si no, va con remito.
+      <label className="block text-sm font-medium">
+        <span className="flex items-center gap-3">
+          <input type="checkbox" name="facturado" checked={facturado} onChange={(e) => setFacturado(e.target.checked)} className="h-5 w-5" />
+          Se le factura normalmente
+        </span>
+        <span className="mt-1 block pl-8 text-xs font-normal text-stone-500">
+          Solo adelanta una elección: al cargarle un pedido ya viene marcado “con factura” (se suma IVA 10,5%) en vez de “con remito”. En cada pedido se puede cambiar.
+        </span>
       </label>
 
       <h2 className="pt-2 font-semibold">Precios y pago</h2>
@@ -75,35 +79,30 @@ export function ClienteForm({ accion, inicial, listas, zonas, barrios = [], text
           {Object.entries(CONDICION_PAGO).map(([k, t]) => <option key={k} value={k}>{t}</option>)}
         </select>
       </Campo>
-      <Campo etiqueta="Los pagos se aplican">
-        <select name="imputacionPago" defaultValue={v("imputacionPago")} className={estiloCampo}>
-          {Object.entries(IMPUTACION_PAGO).map(([k, t]) => <option key={k} value={k}>{t}</option>)}
-        </select>
-      </Campo>
+      {/* Cómo se aplican los pagos (contra el saldo o contra cada pedido) todavía no se usa: se mantiene el valor y vuelve en Cuenta corriente. */}
+      <input type="hidden" name="imputacionPago" value={inicial.imputacionPago} />
 
       <h2 className="pt-2 font-semibold">Límites de deuda</h2>
-      <label className="flex items-center gap-3 text-sm font-medium">
-        <input type="checkbox" name="sinLimite" checked={sinLimite} onChange={(e) => setSinLimite(e.target.checked)} className="h-5 w-5" />
-        Cuenta sin límite (nunca se frena un pedido)
-      </label>
-      {!sinLimite && (
-        <>
-          <Campo etiqueta="Máximo de pedidos sin pagar" ayuda="Ej: 2 = no puede pedir el tercero sin haber pagado los dos anteriores. Vacío = sin tope.">
-            <input name="maxPedidosImpagos" inputMode="numeric" defaultValue={v("maxPedidosImpagos")} className={estiloCampo} />
-          </Campo>
-          <Campo etiqueta="Deuda máxima ($)" ayuda="Vacío = sin tope.">
-            <input name="maxMonto" inputMode="decimal" defaultValue={v("maxMonto")} className={estiloCampo} />
-          </Campo>
-        </>
-      )}
+      <p className="-mt-2 text-xs text-stone-500">Si no completás nada, el cliente no tiene límite. Al pasarse se avisa y solo un dueño puede autorizar el pedido.</p>
+      <div className="grid grid-cols-2 gap-3">
+        <Campo etiqueta="Deuda máxima ($)">
+          <input name="maxMonto" inputMode="decimal" placeholder="Sin límite" defaultValue={v("maxMonto")} className={estiloCampo} />
+        </Campo>
+        <Campo etiqueta="Pedidos sin pagar (máx.)">
+          <input name="maxPedidosImpagos" inputMode="numeric" placeholder="Sin límite" defaultValue={v("maxPedidosImpagos")} className={estiloCampo} />
+        </Campo>
+      </div>
 
       <h2 className="pt-2 font-semibold">Comisión</h2>
-      <Campo etiqueta="Comisionista" ayuda="Ej: Migue. Vacío si no corresponde.">
-        <input name="comisionista" autoCapitalize="characters" defaultValue={v("comisionista")} className={estiloDato} />
-      </Campo>
-      <Campo etiqueta="Comisión (%)">
-        <input name="comisionPct" inputMode="decimal" defaultValue={v("comisionPct")} className={estiloCampo} />
-      </Campo>
+      <p className="-mt-2 text-xs text-stone-500">Solo si la venta a este cliente le deja una comisión a alguien (ej.: Migue 8%). Por ahora queda anotado; más adelante servirá para calcular cuánto se le debe.</p>
+      <div className="grid grid-cols-[2fr_1fr] gap-3">
+        <Campo etiqueta="Comisionista">
+          <input name="comisionista" autoCapitalize="characters" placeholder="Ej: MIGUE" defaultValue={v("comisionista")} className={estiloDato} />
+        </Campo>
+        <Campo etiqueta="Comisión (%)">
+          <input name="comisionPct" inputMode="decimal" placeholder="Ej: 8" defaultValue={v("comisionPct")} className={estiloCampo} />
+        </Campo>
+      </div>
 
       {zonas && (
         <>
