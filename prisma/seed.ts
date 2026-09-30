@@ -6,7 +6,7 @@ const db = new PrismaClient();
 
 // Datos base: se crean solo si faltan, sin pisar lo que ya se cambió a mano.
 async function datosBase() {
-  for (const [orden, nombre] of ["Norte", "Oeste", "Sur", "CABA"].entries()) {
+  for (const [orden, nombre] of ["CABA", "ZONA SUR", "ZONA NORTE", "ZONA OESTE"].entries()) {
     await db.zona.upsert({ where: { nombre }, update: {}, create: { nombre, orden } });
   }
   // Solo en una instalación nueva. En una base ya en uso, el catálogo inicial lo carga la migración "catalogo".

@@ -10,7 +10,7 @@ const LIMITE = 100;
 
 export default async function Clientes({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const usuario = await exigirOficina();
-  const { q = "", tipo = "", zona = "", lista = "", precio = "", estado = "activos" } = await searchParams;
+  const { q = "", tipo = "", zona = "", estado = "activos" } = await searchParams;
 
   const where: Prisma.ClienteWhereInput = {};
   // Cada palabra puede coincidir con cualquier dato del cliente: "vacalin olivos" = nombre VACALIN + sucursal Olivos.
@@ -31,16 +31,13 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
   }
   if (tipo in TIPO_CLIENTE) where.tipo = tipo as keyof typeof TIPO_CLIENTE;
   if (zona) where.puntos = { some: { zonaId: zona } };
-  if (lista) where.listaPreciosId = lista;
-  if (precio === "propio") where.preciosEspeciales = { some: {} };
   if (estado === "activos") where.activo = true;
   if (estado === "inactivos") where.activo = false;
 
-  const [clientes, total, zonas, listas] = await Promise.all([
+  const [clientes, total, zonas] = await Promise.all([
     db.cliente.findMany({ where, orderBy: { nombre: "asc" }, take: LIMITE, include: { puntos: { include: { zona: true } }, _count: { select: { preciosEspeciales: true } } } }),
     db.cliente.count({ where }),
     db.zona.findMany({ orderBy: { orden: "asc" } }),
-    db.listaPrecios.findMany({ where: { activa: true }, orderBy: [{ orden: "asc" }, { nombre: "asc" }] }),
   ]);
 
   return (
@@ -51,34 +48,26 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
           <h1 className="text-2xl font-bold">Clientes</h1>
           <div className="flex items-center gap-2">
             <Link href="/clientes/importar" className="rounded-lg border border-stone-300 bg-white px-3 py-3 text-sm font-medium">Importar</Link>
-            <Link href="/clientes/nuevo" className="rounded-lg bg-amber-700 px-4 py-3 text-sm font-semibold text-white">+ Nuevo</Link>
+            <Link href="/clientes/nuevo" className="rounded-lg bg-amber-700 px-10 py-3 text-sm font-bold uppercase tracking-wide text-white hover:bg-amber-800">+ Cargar cliente</Link>
           </div>
         </div>
 
-        <form className="grid grid-cols-2 gap-2 md:grid-cols-6">
-          <input name="q" defaultValue={q} placeholder="Buscar cliente, sucursal o barrio" className={`${estiloCampo} col-span-2 md:col-span-6 mt-0`} />
+        <form className="grid grid-cols-2 gap-2 md:grid-cols-3">
+          <input name="q" defaultValue={q} placeholder="Buscar cliente, sucursal o barrio" className={`${estiloCampo} col-span-2 md:col-span-3 mt-0`} />
           <select name="tipo" defaultValue={tipo} className={`${estiloCampo} mt-0`}>
             <option value="">Todos los tipos</option>
-            {Object.entries(TIPO_CLIENTE).filter(([k]) => k !== "DISTRIBUIDOR").map(([k, t]) => <option key={k} value={k}>{t}</option>)}
+            {Object.entries(TIPO_CLIENTE).filter(([k]) => k !== "MINORISTA").map(([k, t]) => <option key={k} value={k}>{t}</option>)}
           </select>
           <select name="zona" defaultValue={zona} className={`${estiloCampo} mt-0`}>
             <option value="">Todas las zonas</option>
             {zonas.map((z) => <option key={z.id} value={z.id}>{z.nombre}</option>)}
-          </select>
-          <select name="lista" defaultValue={lista} className={`${estiloCampo} mt-0`}>
-            <option value="">Todas las listas</option>
-            {listas.map((l) => <option key={l.id} value={l.id}>Lista {l.nombre}</option>)}
-          </select>
-          <select name="precio" defaultValue={precio} className={`${estiloCampo} mt-0`}>
-            <option value="">Todos los precios</option>
-            <option value="propio">Con precio propio</option>
           </select>
           <select name="estado" defaultValue={estado} className={`${estiloCampo} mt-0`}>
             <option value="activos">Activos</option>
             <option value="inactivos">Desactivados</option>
             <option value="todos">Todos</option>
           </select>
-          <button className="col-span-2 md:col-span-6 rounded-lg border border-stone-300 bg-white px-3 py-3 font-medium">Filtrar</button>
+          <button className="col-span-2 md:col-span-3 rounded-lg border border-stone-300 bg-white px-3 py-3 font-medium">Filtrar</button>
         </form>
 
         <p className="text-sm text-stone-600">

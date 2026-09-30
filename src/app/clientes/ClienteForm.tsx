@@ -51,7 +51,7 @@ export function ClienteForm({ accion, inicial, listas, zonas, barrios = [], text
         <select name="tipo" defaultValue={v("tipo")} required className={estiloCampo}>
           <option value="" disabled>Elegí el tipo</option>
           {Object.entries(TIPO_CLIENTE)
-            .filter(([k]) => k !== "DISTRIBUIDOR" || inicial.tipo === "DISTRIBUIDOR")
+            .filter(([k]) => k !== "MINORISTA" || inicial.tipo === "MINORISTA")
             .map(([k, t]) => <option key={k} value={k}>{t}</option>)}
         </select>
       </Campo>

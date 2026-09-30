@@ -34,17 +34,18 @@ Si hay duda, preguntar. Probar siempre antes de subir.
   TOMATE (paquete de 6), FOO04 FOCACCIA OLIVA, PCM05 PIZZA MUZZARELLA, PCJ06 PIZZA JAMÓN y PCF07 PIZZA FUGAZZETA (por unidad).
   Cada producto guarda además EAN (opcional) y descripción para el remito.
 - **Precios SIN IVA.** Clientes facturados: se suma IVA 10,5%.
-- **Tipos de cliente:** minorista y mayorista. **Distribuidor NO es un tipo de cliente: es una lista de precios** (el
-  producto es el mismo, cambia el precio). Los precios minoristas viven en la tienda online (Empretienda): no se cargan
+- **Tipos de cliente (cambio del dueño): Mayorista y Distribuidor, nada más** (en pantallas ya no aparece Minorista). Además sigue existiendo la
+  lista de precios Distribuidor: el tipo y la lista son cosas separadas. Los **minoristas NO se cargan como clientes**: salen de Empretienda
+  (ver "Pedidos de tienda online" abajo). Los precios minoristas viven en la tienda online (Empretienda): no se cargan
   acá; la lista Minorista está oculta (`activa = false`). "Clientes de Migue" = mayorista con comisionista Migue 8%.
 - **Orden:** las listas van Mayorista, Distribuidor y luego las demás (campo `orden`); una lista o un producto nuevo
   siempre va **al final**.
 - **El precio se define por LISTA** (pocas: Mayorista, Distribuidor, VACALIN…), no por cliente. Cada cliente elige una
   lista en su ficha. Así crecer a miles de clientes no multiplica los precios (productos × listas). El **precio propio**
-  de un cliente es solo una excepción para precios que no comparte con nadie; hay filtro "Con precio propio" en Clientes.
+  de un cliente es solo una excepción para precios que no comparte con nadie; (la lista Clientes ya no tiene filtro por lista ni por precio: se busca por nombre, p. ej. "vacalin").
 - Un **cliente** puede tener varias **sucursales/puntos de entrega** (ej. ALMACEN 1249, ALCANCIA; cadenas con 40).
   Cada punto tiene barrio/zona (dato clave para armar el reparto) y se relaciona con una zona de reparto
-  (norte, oeste, sur, CABA). La zona-barrio se carga con cada cliente.
+  (**CABA, ZONA SUR, ZONA NORTE, ZONA OESTE**, en ese orden y en mayúscula). La zona-barrio se carga con cada cliente.
 - Condiciones de pago: contado, 7, 15, 30, 45 días. Medios: efectivo, transferencia, cheque, etc.
 - Dos tipos de pedido: **con factura** (con IVA) y **con remito**. Se marca al cargar.
 - **Toda venta lleva un número de comprobante** (regla del dueño): el **N° de factura** si el pedido lleva factura, o el **N° de
@@ -97,7 +98,7 @@ y ~1000 minoristas.
 ## Estado del proyecto
 - [x] Módulo 1: base, login, roles, usuarios (alta, activar/desactivar).
 - [x] Módulo 2 (parte A): Clientes (con sucursales, zonas, límites, comisión), Precios (listas × productos, por
-  paquete sin IVA) y Mi cuenta (cambio de contraseña). Datos base (zonas Norte/Oeste/Sur/CABA, listas, productos)
+  paquete sin IVA) y Mi cuenta (cambio de contraseña). Datos base (zonas CABA/ZONA SUR/ZONA NORTE/ZONA OESTE, listas, productos)
   se crean solos en `prisma/seed.ts` si faltan.
 - [x] Módulo 2 (parte A2): precio especial por cliente y producto, cargado a mano en la ficha del cliente
   (recuadro "Precios especiales"; vale para todas las sucursales). Lógica en `src/lib/precios.ts`.
@@ -193,6 +194,13 @@ y ~1000 minoristas.
   administración.
 - Lo que sea parte de una sección va como **pestañas o botones dentro de esa sección**, no como menú nuevo (ej.: Importar
   es un botón en Clientes).
+
+## Pedidos de tienda online (minoristas) — decisión en curso
+- Los minoristas (~25 pedidos/día) vienen de Empretienda y **no se cargan como clientes** (los datos ya viven allá). Hay que hacer un tipo de
+  pedido **"Tienda online"**: datos de entrega escritos en el mismo pedido (nombre, dirección, barrio, teléfono, N° de pedido de Empretienda), sin
+  cuenta corriente ni lista ni límites, y que aparezca en la hoja del día con Llamar/WhatsApp. Falta confirmar con el dueño si pagan antes o al
+  recibir y si todos los reparte la empresa. Más adelante, importar esos pedidos solos desde Empretienda.
+- Clientes (pantalla): filtros = buscador + tipo (Mayorista/Distribuidor) + zona + estado (por defecto **Activos**, siempre). El botón es "+ CARGAR CLIENTE".
 
 ## Pendientes conocidos
 - La enumeración `TipoCliente` conserva el valor DISTRIBUIDOR (oculto en pantallas) para no alterar datos existentes.
