@@ -42,6 +42,11 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
             <span className={`font-semibold ${COLOR[pedido.estado]}`}>{ETIQUETA[pedido.estado]}</span>
             <span className="text-stone-600"> · {fecha ? `${nombreDia(fecha)} ${diaMes(fecha)}` : "Sin asignar"} · {pedido.conFactura ? "con factura" : "con remito"}</span>
           </p>
+          <p className="text-sm text-stone-600">
+            {pedido.conFactura ? <>Factura: {pedido.numeroFactura ? <b>{pedido.numeroFactura}</b> : <span className="text-amber-800">sin número todavía</span>}</> : null}
+            {pedido.conFactura && pedido.remitoNumero ? " · " : ""}
+            {pedido.remitoNumero ? <>Remito: <b>{formatoRemito(pedido.remitoNumero)}</b></> : !pedido.conFactura ? <span className="text-amber-800">Remito sin emitir</span> : null}
+          </p>
         </div>
 
         <section className="rounded-lg border border-stone-200 bg-white p-4">

@@ -97,7 +97,12 @@ export async function guardarNumeroFactura(pedidoId: string, numero: string): Pr
   await exigirOficina();
   const r = await pedidoAbierto(pedidoId);
   if ("error" in r) return { ok: false, error: r.error };
-  await db.pedido.update({ where: { id: pedidoId }, data: { numeroFactura: numero.trim() || null } });
+  const limpio = numero.trim();
+  if (limpio) {
+    const repetido = await db.pedido.findFirst({ where: { numeroFactura: { equals: limpio, mode: "insensitive" }, id: { not: pedidoId } }, include: { cliente: true } });
+    if (repetido) return { ok: false, error: `El N° de factura ${limpio} ya está cargado en un pedido de ${repetido.cliente.nombre}.` };
+  }
+  await db.pedido.update({ where: { id: pedidoId }, data: { numeroFactura: limpio || null } });
   return { ok: true };
 }
 
@@ -114,6 +119,9 @@ export async function cerrarDia(fecha: string): Promise<Resultado & { faltan?: n
   if (pedidos.length === 0) return { ok: false, error: "No hay pedidos en este día." };
   const faltan = pedidos.filter((p) => p.estado === "PENDIENTE" || (p.estado === "ENTREGADO" && p.cobro === null)).length;
   if (faltan > 0) return { ok: false, faltan, error: `Faltan ${faltan} ${faltan === 1 ? "pedido" : "pedidos"} por marcar (entrega o cobro).` };
+  // Toda venta entregada lleva un número: el de la factura si lleva factura, o el del remito.
+  const sinNumero = pedidos.filter((p) => p.estado === "ENTREGADO" && (p.conFactura ? !p.numeroFactura : p.remitoNumero === null)).length;
+  if (sinNumero > 0) return { ok: false, faltan: sinNumero, error: `Faltan ${sinNumero} ${sinNumero === 1 ? "pedido" : "pedidos"} sin número de factura o de remito.` };
 
   await db.$transaction(async (tx) => {
     await tx.diaCerrado.create({ data: { fecha: aFecha(fecha), cerradoPor: usuario.id } });

@@ -4,6 +4,7 @@ import { Cabecera } from "@/components/Cabecera";
 import { importeVigente } from "@/lib/cuenta";
 import { db } from "@/lib/db";
 import { formatoPesos } from "@/lib/numeros";
+import { formatoRemito } from "@/lib/remito";
 import { exigirOficina } from "@/lib/session";
 
 const formatoFecha = new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Argentina/Buenos_Aires" });
@@ -69,8 +70,20 @@ export default async function CuentaCorriente({ params }: { params: Promise<{ id
                   <div className="min-w-0">
                     <p className="font-medium">
                       {m.nota}{m.medio ? ` · ${MEDIO[m.medio]}` : ""}
-                      {m.pedido && <> · <Link href={`/pedidos/${m.pedidoId}`} className="underline">ver pedido</Link></>}
                     </p>
+                    {m.pedido && (
+                      <p className="text-sm">
+                        {m.pedido.conFactura ? (
+                          m.pedido.numeroFactura ? <>Factura <b>{m.pedido.numeroFactura}</b></> : <span className="text-amber-800">Factura sin número</span>
+                        ) : m.pedido.remitoNumero ? (
+                          <>Remito <b>{formatoRemito(m.pedido.remitoNumero)}</b></>
+                        ) : (
+                          <span className="text-amber-800">Remito sin emitir</span>
+                        )}
+                        {m.pedido.conFactura && m.pedido.remitoNumero ? <> · Remito {formatoRemito(m.pedido.remitoNumero)}</> : null}
+                        {" · "}<Link href={`/pedidos/${m.pedidoId}`} className="underline">ver pedido</Link>
+                      </p>
+                    )}
                     <p className="text-xs text-stone-500">{formatoFecha.format(m.fecha)}{m.pedido ? ` · ${m.pedido.punto.alias ?? m.pedido.punto.direccion}` : ""}</p>
                   </div>
                   <div className="text-right tabular-nums">

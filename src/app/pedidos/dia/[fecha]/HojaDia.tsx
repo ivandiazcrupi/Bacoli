@@ -83,7 +83,7 @@ function FilaHoja({ f, n, bloqueada, acc }: { f: Fila; n: number; bloqueada: boo
             defaultValue={f.numeroFactura}
             disabled={bloqueada}
             onBlur={(e) => e.target.value.trim() !== f.numeroFactura && acc.factura(f, e.target.value)}
-            className="h-9 w-full rounded-md border border-stone-300 bg-white px-2 tabular-nums disabled:bg-stone-100"
+            className={`h-9 w-full rounded-md border bg-white px-2 tabular-nums disabled:bg-stone-100 ${f.estado === "ENTREGADO" && !f.numeroFactura ? "border-amber-600 ring-1 ring-amber-600" : "border-stone-300"}`}
           />
         ) : (
           <span className="block pt-1.5 text-stone-400">—</span>
@@ -124,7 +124,7 @@ function FilaHoja({ f, n, bloqueada, acc }: { f: Fila; n: number; bloqueada: boo
         )}
       </div>
       <div role="cell">
-        <BotonRemito pedidoId={f.id} numero={f.remito} clase={`h-9 rounded-md border px-2 text-sm font-medium ${f.remito ? "border-stone-800 bg-white text-stone-900" : "border-stone-300 bg-white text-stone-700"}`} />
+        <BotonRemito pedidoId={f.id} numero={f.remito} clase={`h-9 rounded-md border px-2 text-sm font-medium ${f.remito ? "border-stone-800 bg-white text-stone-900" : f.estado === "ENTREGADO" && !f.conFactura ? "border-amber-600 bg-amber-50 text-amber-900 ring-1 ring-amber-600" : "border-stone-300 bg-white text-stone-700"}`} />
       </div>
       <div role="cell">
         <Link href={`/clientes/${f.clienteId}/cuenta`} className="inline-flex h-9 items-center gap-1.5 rounded-md border border-stone-300 bg-white px-2 text-sm font-medium hover:bg-stone-100">
@@ -186,7 +186,8 @@ export function HojaDia({ fecha, filasIniciales, cerrado, esDueno }: { fecha: st
 
   const sinEntrega = filas.filter((f) => f.estado === "PENDIENTE").length;
   const sinCobro = filas.filter((f) => f.estado === "ENTREGADO" && f.cobro === null).length;
-  const completo = filas.length > 0 && sinEntrega === 0 && sinCobro === 0;
+  const sinNumero = filas.filter((f) => f.estado === "ENTREGADO" && (f.conFactura ? !f.numeroFactura : !f.remito)).length;
+  const completo = filas.length > 0 && sinEntrega === 0 && sinCobro === 0 && sinNumero === 0;
   const verdes = filas.filter((f) => f.estado === "ENTREGADO").length;
   const rojos = filas.filter((f) => f.estado === "NO_ENTREGADO").length;
 
@@ -222,7 +223,13 @@ export function HojaDia({ fecha, filasIniciales, cerrado, esDueno }: { fecha: st
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-stone-200 bg-white p-3 text-sm">
         <p className="text-stone-700">
           {filas.length} {filas.length === 1 ? "pedido" : "pedidos"} · <span className="font-semibold text-green-700">{verdes} {verdes === 1 ? "entregado" : "entregados"}</span> · <span className="font-semibold text-red-700">{rojos} {rojos === 1 ? "no entregado" : "no entregados"}</span>
-          {!cerrado && !completo && filas.length > 0 && <span className="text-stone-600"> · falta marcar {sinEntrega > 0 ? `${sinEntrega} ${sinEntrega === 1 ? "entrega" : "entregas"}` : ""}{sinEntrega > 0 && sinCobro > 0 ? " y " : ""}{sinCobro > 0 ? `${sinCobro} ${sinCobro === 1 ? "cobro" : "cobros"}` : ""}</span>}
+          {!cerrado && !completo && filas.length > 0 && (
+            <span className="text-stone-600"> · falta marcar {[
+              sinEntrega > 0 && `${sinEntrega} ${sinEntrega === 1 ? "entrega" : "entregas"}`,
+              sinCobro > 0 && `${sinCobro} ${sinCobro === 1 ? "cobro" : "cobros"}`,
+              sinNumero > 0 && `${sinNumero} ${sinNumero === 1 ? "número" : "números"} de factura o remito`,
+            ].filter(Boolean).join(", ")}</span>
+          )}
         </p>
         <div className="flex flex-wrap items-center gap-3">
         {filas.length > 0 && <button type="button" onClick={imprimirTodos} className="rounded-lg border border-stone-300 bg-white px-3 py-2 font-medium">Imprimir todos los remitos</button>}

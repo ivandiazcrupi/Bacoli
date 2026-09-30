@@ -47,6 +47,10 @@ Si hay duda, preguntar. Probar siempre antes de subir.
   (norte, oeste, sur, CABA). La zona-barrio se carga con cada cliente.
 - Condiciones de pago: contado, 7, 15, 30, 45 días. Medios: efectivo, transferencia, cheque, etc.
 - Dos tipos de pedido: **con factura** (con IVA) y **con remito**. Se marca al cargar.
+- **Toda venta lleva un número de comprobante** (regla del dueño): el **N° de factura** si el pedido lleva factura, o el **N° de
+  remito** (R-000001…) si lleva remito. Se ve en cada movimiento de la cuenta corriente del cliente (`/clientes/[id]/cuenta`), en la
+  hoja del día y en el detalle del pedido. **No se puede cerrar un día** con un pedido entregado sin su número. El N° de factura no
+  puede repetirse en dos pedidos. Un pedido con factura puede tener además su remito de entrega.
 - **Cuenta corriente = libro de movimientos** (`MovimientoCuenta`); el saldo es la suma, los movimientos nunca se editan ni se
   borran, solo se agregan. **El pedido cuenta en la cuenta corriente DESDE QUE SE CARGA** (decisión del dueño: para que ningún
   pedido pueda quedar afuera por olvidar marcarlo como entregado). `sincronizarCuentaPedido` (`src/lib/cuenta.ts`) se llama al
