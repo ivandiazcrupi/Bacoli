@@ -52,10 +52,11 @@ model Zona {
 }
 
 model Producto {
-  id      String   @id @default(cuid())
-  nombre  String   @unique
-  activo  Boolean  @default(true)
-  precios Precio[]
+  id         String           @id @default(cuid())
+  nombre     String           @unique
+  activo     Boolean          @default(true)
+  precios    Precio[]
+  especiales PrecioEspecial[]
 }
 
 model ListaPrecios {
@@ -96,8 +97,9 @@ model Cliente {
   creadoEn          DateTime       @default(now())
   actualizadoEn     DateTime       @updatedAt
 
-  listaPrecios ListaPrecios?  @relation(fields: [listaPreciosId], references: [id])
-  puntos       PuntoEntrega[]
+  listaPrecios      ListaPrecios?    @relation(fields: [listaPreciosId], references: [id])
+  puntos            PuntoEntrega[]
+  preciosEspeciales PrecioEspecial[]
 
   @@index([nombre])
 }
@@ -118,4 +120,16 @@ model PuntoEntrega {
 
   @@index([clienteId])
   @@index([barrio])
+}
+
+// Precio final negociado de un cliente para un producto (por paquete, sin IVA).
+// Manda sobre la lista y no lleva descuento encima. Vale para todas las sucursales del cliente.
+model PrecioEspecial {
+  clienteId  String
+  productoId String
+  precio     Decimal  @db.Decimal(12, 2)
+  cliente    Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  producto   Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+
+  @@id([clienteId, productoId])
 }

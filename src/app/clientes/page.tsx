@@ -27,7 +27,7 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
   if (estado === "inactivos") where.activo = false;
 
   const [clientes, total, zonas] = await Promise.all([
-    db.cliente.findMany({ where, orderBy: { nombre: "asc" }, take: LIMITE, include: { puntos: { include: { zona: true } } } }),
+    db.cliente.findMany({ where, orderBy: { nombre: "asc" }, take: LIMITE, include: { puntos: { include: { zona: true } }, _count: { select: { preciosEspeciales: true } } } }),
     db.cliente.count({ where }),
     db.zona.findMany({ orderBy: { orden: "asc" } }),
   ]);
@@ -77,6 +77,7 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
                       {TIPO_CLIENTE[c.tipo]} · {c.puntos.length} {c.puntos.length === 1 ? "sucursal" : "sucursales"}
                       {zonasCliente && ` · ${zonasCliente}`}
                       {c.facturado && " · con factura"}
+                      {c._count.preciosEspeciales > 0 && " · precio especial"}
                     </p>
                   </Link>
                 </li>

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
+import { leerMonto } from "@/lib/numeros";
 import { exigirOficina } from "@/lib/session";
 import { esquemaCliente, esquemaSucursal, valoresDe, type EstadoForm } from "./validacion";
 
@@ -75,4 +76,30 @@ export async function cambiarActivoSucursal(formData: FormData) {
   if (!p) return;
   await db.puntoEntrega.update({ where: { id }, data: { activo: !p.activo } });
   revalidatePath(`/clientes/${p.clienteId}`);
+}
+
+// Campos "pe_<productoId>". Vacío = el cliente paga el precio de su lista.
+export async function guardarPreciosEspeciales(clienteId: string, _: EstadoForm, formData: FormData): Promise<EstadoForm> {
+  await exigirOficina();
+  const valores = valoresDe(formData);
+  const productos = await db.producto.findMany({ where: { activo: true } });
+  const operaciones = [];
+  for (const p of productos) {
+    const texto = String(formData.get(`pe_${p.id}`) ?? "");
+    const precio = leerMonto(texto);
+    if (texto.trim() && precio === null) return { error: `${p.nombre}: "${texto}" no es un precio válido.`, valores };
+    operaciones.push(
+      precio === null
+        ? db.precioEspecial.deleteMany({ where: { clienteId, productoId: p.id } })
+        : db.precioEspecial.upsert({
+            where: { clienteId_productoId: { clienteId, productoId: p.id } },
+            update: { precio },
+            create: { clienteId, productoId: p.id, precio },
+          }),
+    );
+  }
+  await db.$transaction(operaciones);
+  revalidatePath(`/clientes/${clienteId}`);
+  revalidatePath("/clientes");
+  return { ok: "Precios especiales guardados." };
 }

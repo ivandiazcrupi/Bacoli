@@ -41,6 +41,10 @@ confirmación antes de borrar o publicar** cualquier cosa (incluido el despliegu
   - Hay devoluciones, notas de crédito y descuentos. Cada cliente paga contra saldo total o contra pedido puntual.
 - **Límites por cliente:** máx. de pedidos impagos y máx. de monto en $. Al pasarse: avisar y pedir autorización
   de un dueño (no bloquear). Opción "cuenta sin límite" (ej. Carrefour).
+- **Precio de un cliente por producto** (`precioParaCliente`): si tiene precio especial, ese es el final (sin
+  descuento encima); si no, el de su lista menos el descuento general del cliente. Los precios especiales se
+  negocian uno por uno y se cargan a mano. **Un cambio de precio no toca pedidos ya hechos**: el pedido guardará
+  el precio que tenía (implementar así en el módulo de Pedidos).
 - Facturas cargadas a mano hoy (numeración 1 a 5000). Después: emitir con ARCA vía intermediario (Afip SDK /
   Tusfacturas), quedando "por revisar" hasta que Miguel confirme. Preparar campos: CUIT, condición IVA,
   punto de venta, CAE. Muchos clientes no tienen CUIT/razón social: campos opcionales.
@@ -60,6 +64,9 @@ y ~1000 minoristas.
 - [x] Módulo 2 (parte A): Clientes (con sucursales, zonas, límites, comisión), Precios (listas × productos, por
   paquete sin IVA) y Mi cuenta (cambio de contraseña). Datos base (zonas Norte/Oeste/Sur/CABA, listas, productos)
   se crean solos en `prisma/seed.ts` si faltan.
+- [x] Módulo 2 (parte A2): precio especial por cliente y producto, cargado a mano en la ficha del cliente
+  (recuadro "Precios especiales"; vale para todas las sucursales). Lógica en `src/lib/precios.ts`.
+  Se decidió NO hacer hoja masiva, aumentos automáticos, historial ni precios en %: el dueño prefiere manual y simple.
 - [ ] Módulo 2 (parte B): importar la planilla de clientes (CSV) con vista previa y confirmación.
 - [ ] Módulo 3: Pedidos.
 - [ ] Módulo 4: Cuenta corriente.

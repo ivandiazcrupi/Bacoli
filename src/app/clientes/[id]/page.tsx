@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { exigirOficina } from "@/lib/session";
 import { actualizarCliente, cambiarActivoCliente, cambiarActivoSucursal } from "../actions";
 import { ClienteForm, type DatosCliente } from "../ClienteForm";
+import { PreciosEspeciales } from "../PreciosEspeciales";
 import { SucursalForm } from "../SucursalForm";
 
 export default async function FichaCliente({ params }: { params: Promise<{ id: string }> }) {
@@ -13,15 +14,33 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
   const { id } = await params;
   const cliente = await db.cliente.findUnique({
     where: { id },
-    include: { puntos: { include: { zona: true }, orderBy: { direccion: "asc" } } },
+    include: {
+      puntos: { include: { zona: true }, orderBy: { direccion: "asc" } },
+      preciosEspeciales: true,
+      listaPrecios: { include: { precios: true } },
+    },
   });
   if (!cliente) notFound();
 
-  const [listas, zonas, barrios] = await Promise.all([
+  const [listas, zonas, barrios, productos] = await Promise.all([
     db.listaPrecios.findMany({ orderBy: { nombre: "asc" } }),
     db.zona.findMany({ orderBy: { orden: "asc" } }),
     db.puntoEntrega.findMany({ distinct: ["barrio"], select: { barrio: true }, orderBy: { barrio: "asc" } }),
+    db.producto.findMany({ where: { activo: true }, orderBy: { nombre: "asc" } }),
   ]);
+  const filasPrecios = productos.map((p) => ({
+    productoId: p.id,
+    nombre: p.nombre,
+    especial: (() => {
+      const e = cliente.preciosEspeciales.find((x) => x.productoId === p.id);
+      return e ? String(e.precio).replace(".", ",") : "";
+    })(),
+    precioLista: (() => {
+      const l = cliente.listaPrecios?.precios.find((x) => x.productoId === p.id);
+      return l ? Number(l.precio) : null;
+    })(),
+    descuentoPct: Number(cliente.descuentoPct),
+  }));
   const listaBarrios = barrios.map((b) => b.barrio);
 
   const inicial: DatosCliente = {
@@ -60,6 +79,11 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">Datos</h2>
           <ClienteForm accion={actualizarCliente.bind(null, cliente.id)} inicial={inicial} listas={listas} textoBoton="Guardar cambios" />
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold">Precios especiales</h2>
+          <PreciosEspeciales clienteId={cliente.id} filas={filasPrecios} nombreLista={cliente.listaPrecios?.nombre ?? null} />
         </section>
 
         <section className="space-y-3">
