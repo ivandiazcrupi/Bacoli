@@ -16,13 +16,13 @@ async function datosBase() {
   if ((await db.producto.count()) === 0) {
     await db.producto.createMany({
       data: [
-        { nombre: "Prepizza tomate", sku: "PPT01", unidad: "paquete", descripcion: "Prepizza de tomate x 2 un" },
-        { nombre: "Prepizza cebolla", sku: "PPC02", unidad: "paquete", descripcion: "Prepizza de cebolla x 2 un" },
-        { nombre: "Pizzeta tomate", sku: "PZT03", unidad: "paquete", descripcion: "Pizzeta de tomate x 6 un" },
-        { nombre: "Focaccia oliva", sku: "FOO04", unidad: "unidad", descripcion: "Focaccia de oliva" },
-        { nombre: "Pizza congelada muzzarella", sku: "PCM05", unidad: "unidad", descripcion: "Pizza congelada de muzzarella" },
-        { nombre: "Pizza congelada jamón", sku: "PCJ06", unidad: "unidad", descripcion: "Pizza congelada de jamón" },
-        { nombre: "Pizza congelada fugazzeta", sku: "PCF07", unidad: "unidad", descripcion: "Pizza congelada fugazzeta" },
+        { nombre: "PREPIZZA TOMATE", sku: "PPT01", orden: 1, unidad: "paquete", descripcion: "Prepizza de tomate x 2 un" },
+        { nombre: "PREPIZZA CEBOLLA", sku: "PPC02", orden: 2, unidad: "paquete", descripcion: "Prepizza de cebolla x 2 un" },
+        { nombre: "PIZZETA TOMATE", sku: "PZT03", orden: 3, unidad: "paquete", descripcion: "Pizzeta de tomate x 6 un" },
+        { nombre: "FOCACCIA OLIVA", sku: "FOO04", orden: 4, unidad: "unidad", descripcion: "Focaccia de oliva" },
+        { nombre: "PIZZA MUZZARELLA", sku: "PCM05", orden: 5, unidad: "unidad", descripcion: "Pizza congelada de muzzarella" },
+        { nombre: "PIZZA JAMÓN", sku: "PCJ06", orden: 6, unidad: "unidad", descripcion: "Pizza congelada de jamón" },
+        { nombre: "PIZZA FUGAZZETA", sku: "PCF07", orden: 7, unidad: "unidad", descripcion: "Pizza congelada fugazzeta" },
       ],
     });
   }

@@ -1,31 +1,41 @@
 import { Cabecera } from "@/components/Cabecera";
 import { db } from "@/lib/db";
 import { exigirOficina } from "@/lib/session";
-import { AgregarLista, AgregarProducto, EditarProducto, GrillaPrecios } from "./Formularios";
+import { AgregarLista, AgregarProducto, EditarProducto, GrillaPrecios, SelectorLista } from "./Formularios";
 
 // Sin centavos si es entero ("3.500"); con dos decimales si no ("3.200,50").
 const formato = (n: number) => new Intl.NumberFormat("es-AR", { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 }).format(n);
 
-export default async function Precios() {
+export default async function Precios({ searchParams }: { searchParams: Promise<{ lista?: string }> }) {
   const usuario = await exigirOficina();
-  const [listas, productos, precios] = await Promise.all([
+  const { lista: pedida } = await searchParams;
+  const [listas, productos] = await Promise.all([
     db.listaPrecios.findMany({ where: { activa: true }, orderBy: { nombre: "asc" } }),
-    db.producto.findMany({ where: { activo: true }, orderBy: [{ sku: "asc" }, { nombre: "asc" }] }),
-    db.precio.findMany(),
+    db.producto.findMany({ where: { activo: true }, orderBy: [{ orden: "asc" }, { nombre: "asc" }] }),
   ]);
+  const lista = listas.find((l) => l.id === pedida) ?? listas.find((l) => l.nombre === "Mayorista") ?? listas[0];
+  const precios = lista ? await db.precio.findMany({ where: { listaId: lista.id } }) : [];
   const mapa: Record<string, string> = {};
-  for (const p of precios) mapa[`${p.listaId}_${p.productoId}`] = formato(Number(p.precio));
+  for (const p of precios) mapa[p.productoId] = formato(Number(p.precio));
 
   return (
     <>
       <Cabecera usuario={usuario} />
-      <main className="mx-auto max-w-3xl space-y-10 px-4 py-6">
+      <main className="mx-auto max-w-xl space-y-10 px-4 py-6">
         <section className="space-y-4">
-          <div>
-            <h1 className="text-2xl font-bold">Precios</h1>
-            <p className="text-sm text-stone-600">Una columna por lista. Cada cliente usa la lista que tiene asignada en su ficha.</p>
-          </div>
-          <GrillaPrecios listas={listas} productos={productos} precios={mapa} />
+          <h1 className="text-2xl font-bold">Precios</h1>
+          {lista ? (
+            <>
+              <SelectorLista listas={listas} actual={lista.id} />
+              <GrillaPrecios lista={lista} productos={productos} precios={mapa} />
+            </>
+          ) : (
+            <p className="rounded-lg border border-dashed border-stone-300 p-4 text-stone-600">Todavía no hay listas de precios. Creá una abajo.</p>
+          )}
+          <details className="pt-2">
+            <summary className="cursor-pointer text-sm font-medium">+ Nueva lista de precios</summary>
+            <div className="mt-3"><AgregarLista listas={listas} /></div>
+          </details>
         </section>
 
         <section className="space-y-3">
@@ -35,8 +45,8 @@ export default async function Precios() {
               <li key={p.id}>
                 <details className="group">
                   <summary className="flex cursor-pointer items-center justify-between gap-3 py-3">
-                    <span>
-                      <span className="block font-medium">{p.nombre}</span>
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium">{p.nombre}</span>
                       <span className="block text-xs text-stone-500">{p.sku ?? "Sin código"} · por {p.unidad}{p.ean ? ` · EAN ${p.ean}` : ""}</span>
                     </span>
                     <span className="text-sm text-stone-500 group-open:hidden">Editar</span>
@@ -46,16 +56,9 @@ export default async function Precios() {
               </li>
             ))}
           </ul>
-          <details className="py-1">
+          <details>
             <summary className="cursor-pointer text-sm font-medium">+ Agregar producto</summary>
             <div className="mt-3"><AgregarProducto /></div>
-          </details>
-        </section>
-
-        <section className="space-y-2">
-          <details>
-            <summary className="cursor-pointer text-sm font-medium">+ Agregar lista de precios</summary>
-            <div className="mt-3"><AgregarLista /></div>
           </details>
         </section>
       </main>

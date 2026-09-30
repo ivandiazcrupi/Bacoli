@@ -27,7 +27,7 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
     db.listaPrecios.findMany({ where: { OR: [{ activa: true }, { id: cliente.listaPreciosId ?? "" }] }, orderBy: { nombre: "asc" } }),
     db.zona.findMany({ orderBy: { orden: "asc" } }),
     db.puntoEntrega.findMany({ distinct: ["barrio"], select: { barrio: true }, orderBy: { barrio: "asc" } }),
-    db.producto.findMany({ where: { activo: true }, orderBy: { nombre: "asc" } }),
+    db.producto.findMany({ where: { activo: true }, orderBy: [{ orden: "asc" }, { nombre: "asc" }] }),
   ]);
   const filasPrecios: FilaPrecio[] = productos.map((p) => {
     const propio = cliente.preciosEspeciales.find((x) => x.productoId === p.id);

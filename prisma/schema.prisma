@@ -58,6 +58,7 @@ model Producto {
   ean         String? // código de barras (opcional)
   descripcion String? // texto para el remito
   unidad      String           @default("paquete") // unidad de venta: "paquete" o "unidad"
+  orden       Int              @default(0) // posición en las listas (1, 2, 3…)
   activo      Boolean          @default(true)
   precios     Precio[]
   especiales  PrecioEspecial[]

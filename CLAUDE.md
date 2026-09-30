@@ -29,9 +29,10 @@ Si hay duda, preguntar. Probar siempre antes de subir.
 
 ## Reglas del negocio (acordadas con el dueño)
 - **Cada producto tiene su unidad de venta** (campo `unidad`: "paquete" o "unidad"), y todo (pedidos, precios, remito) se
-  cuenta en esa unidad. Catálogo inicial (código SKU): PPT01 prepizza tomate y PPC02 prepizza cebolla (paquete de 2),
-  PZT03 pizzeta tomate (paquete de 6), FOO04 focaccia oliva (unidad), PCM05 pizza congelada muzzarella, PCJ06 jamón y
-  PCF07 fugazzeta (unidad). Cada producto guarda además EAN (opcional) y descripción para el remito.
+  cuenta en esa unidad. **Nombres de producto SIEMPRE EN MAYÚSCULA** (se fuerza al guardar) y ordenados por el campo `orden`
+  (1 al 7, el número del código). Catálogo (SKU): PPT01 PREPIZZA TOMATE y PPC02 PREPIZZA CEBOLLA (paquete de 2), PZT03 PIZZETA
+  TOMATE (paquete de 6), FOO04 FOCACCIA OLIVA, PCM05 PIZZA MUZZARELLA, PCJ06 PIZZA JAMÓN y PCF07 PIZZA FUGAZZETA (por unidad).
+  Cada producto guarda además EAN (opcional) y descripción para el remito.
 - **Precios SIN IVA.** Clientes facturados: se suma IVA 10,5%.
 - **Tipos de cliente:** minorista y mayorista. **Distribuidor NO es un tipo de cliente: es una lista de precios** (el
   producto es el mismo, cambia el precio). Los precios minoristas viven en la tienda online (Empretienda): no se cargan
@@ -95,8 +96,9 @@ y ~1000 minoristas.
   vista previa, propuesta de zona por barrio (corregible; no deja importar con barrios sin zona), confirmación,
   y no duplica clientes ya cargados (mismo nombre). Lógica en `src/lib/importar-clientes.ts`.
 - [x] Módulo 2 (parte C): búsqueda por varias palabras. Marcas se probó y se **quitó** (ver reglas): reemplazado por listas.
-- [x] Módulo 2 (parte D): Precios rediseñada (bloque por producto, una casilla con $ por lista), productos con código SKU,
-  EAN, descripción y unidad; listas VACALIN y Distribuidor; Importar es un botón en Clientes.
+- [x] Módulo 2 (parte D): Precios = **una lista a la vez** (desplegable de lista; a la izquierda nombre y código, a la derecha
+  el precio con $), productos con SKU, EAN, descripción, unidad y orden; crear lista nueva puede copiar los precios de otra;
+  listas VACALIN y Distribuidor; Importar es un botón en Clientes.
 - [ ] Módulo 3: Pedidos.
 - [ ] Módulo 4: Cuenta corriente.
 - [ ] Módulo 5: Hoja de ruta + vista del repartidor. Debe incluir: paradas de cobranza/muestra (sin pedido) y el cobro de
