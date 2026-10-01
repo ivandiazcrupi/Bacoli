@@ -453,7 +453,7 @@ export function HojaDia({ fecha, filasIniciales, salidas, vehiculosLibres, repar
   return (
     <DndContext id="hoja-de-ruta" sensors={sensores} collisionDetection={colision} onDragStart={() => setArrastrando(true)} onDragCancel={() => setArrastrando(false)} onDragEnd={alSoltar}>
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+      <div className="grid items-center gap-3 text-sm sm:grid-cols-[1fr_auto_1fr]">
         {/* Sumar un vehículo a la salida de este día: chico, un solo desplegable; al elegirlo se abre su cuadro */}
         {!cerrado ? (
           <select
@@ -472,16 +472,18 @@ export function HojaDia({ fecha, filasIniciales, salidas, vehiculosLibres, repar
             {esDueno && <button type="button" onClick={reabrir} className="rounded-md border border-stone-400 bg-white px-3 py-2 font-medium shadow-sm">Reabrir día</button>}
           </div>
         )}
-        {filas.length > 0 && <button type="button" onClick={imprimirTodos} className="rounded-md border border-stone-400 bg-white px-3 py-2 font-medium shadow-sm">Imprimir todos los remitos</button>}
+        <h2 className="text-center text-sm font-bold uppercase tracking-wide text-stone-800">
+          {sinVehiculo.length > 0 && <>Sin ubicar <span className="font-medium normal-case tracking-normal text-stone-600">· {sinVehiculo.length} {sinVehiculo.length === 1 ? "pedido" : "pedidos"}</span></>}
+        </h2>
+        <div className="sm:justify-self-end">
+          {filas.length > 0 && <button type="button" onClick={imprimirTodos} className="rounded-md border border-stone-400 bg-white px-3 py-2 font-medium shadow-sm">Imprimir todos los remitos</button>}
+        </div>
       </div>
       {error && <p className="rounded-lg border border-rojo-600 bg-rojo-50 p-3 text-sm text-rojo-700" role="alert">{error}</p>}
 
       {/* Pedidos del día que todavía no están en ningún vehículo: la misma información que en la hoja PEDIDOS */}
       {(sinVehiculo.length > 0 || arrastrando) && (
         <Zona id="sin" bloqueada={cerrado} clase="space-y-2 rounded-xl p-1">
-          <h2 className="px-1 text-sm font-bold uppercase tracking-wide text-stone-800">
-            Sin ubicar <span className="font-medium normal-case tracking-normal text-stone-600">· {sinVehiculo.length} {sinVehiculo.length === 1 ? "pedido" : "pedidos"}</span>
-          </h2>
           {sinVehiculo.length > 0 ? (
             <>
               <div className={`hidden gap-x-4 px-5 text-center text-xs font-semibold uppercase tracking-wide text-stone-600 lg:grid ${COLUMNAS_UBICAR}`}>
