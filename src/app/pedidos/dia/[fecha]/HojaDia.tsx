@@ -38,8 +38,9 @@ export type Fila = {
 export type SalidaInfo = { id: string; nombre: string; patente: string; capacidad: number | null; repartidorId: string };
 export type Opcion = { id: string; nombre: string };
 
-const COLUMNAS = "44px 140px 210px 190px 120px minmax(240px,1fr) 110px 100px 120px 120px 230px 110px 140px 170px";
-const ENCABEZADOS = ["N°", "Barrio", "Cliente", "Dirección", "Teléfono", "Pedido", "Monto", "Comprobante", "N° factura", "Entrega", "Cobro", "Remito", "Cuenta corriente", "Ubicar / día"];
+// Todo entra a lo ancho (sin deslizar): columnas justas y todo centrado.
+const COLUMNAS = "34px 88px minmax(0,150px) minmax(0,140px) 96px minmax(150px,1fr) 92px 104px 52px 118px 108px";
+const ENCABEZADOS = ["N°", "Barrio", "Cliente", "Dirección", "Teléfono", "Pedido", "Monto", "Comprobante", "Entrega", "Cobro", "Ubicación"];
 const MEDIOS: { valor: string; texto: string }[] = [
   { valor: "EFECTIVO", texto: "Efectivo" },
   { valor: "TRANSFERENCIA", texto: "Transferencia" },
@@ -59,123 +60,140 @@ type Acciones = {
   dias: { fecha: string; texto: string }[];
 };
 
-// Dos desplegables por pedido: uno para ubicarlo en un vehículo (o dejarlo sin ubicar) y otro para pasarlo de día (o devolverlo a Pedidos).
+const estiloSelect = (clase: string) => `${clase} rounded-md border border-stone-400 bg-white px-1.5 text-sm font-medium shadow-sm disabled:opacity-40`;
+
+function SelectorUbicar({ f, salidas, bloqueada, acc, clase }: { f: Fila; salidas: SalidaInfo[]; bloqueada: boolean; acc: Acciones; clase: string }) {
+  return (
+    <select aria-label="Ubicar en un vehículo" disabled={bloqueada || f.estado === "ENTREGADO"} value="" onChange={(e) => e.target.value && acc.mover(f, e.target.value)} className={estiloSelect(clase)}>
+      <option value="" disabled hidden>Ubicar en…</option>
+      {f.salidaId !== null && <option value="sin">Sin ubicar</option>}
+      {salidas.filter((x) => x.id !== f.salidaId).map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}
+    </select>
+  );
+}
+
+function SelectorDia({ f, bloqueada, acc, clase }: { f: Fila; bloqueada: boolean; acc: Acciones; clase: string }) {
+  return (
+    <select aria-label="Pasar a otro día" disabled={bloqueada || f.estado === "ENTREGADO"} value="" onChange={(e) => e.target.value && acc.mover(f, e.target.value)} className={estiloSelect(clase)}>
+      <option value="" disabled hidden>Pasar al día…</option>
+      {acc.dias.map((d) => <option key={d.fecha} value={`dia:${d.fecha}`}>{d.texto}</option>)}
+      <option value="pedidos">Volver a Pedidos</option>
+    </select>
+  );
+}
+
+// Los dos desplegables juntos (tarjetas del celular).
 function Selectores({ f, salidas, bloqueada, acc, clase }: { f: Fila; salidas: SalidaInfo[]; bloqueada: boolean; acc: Acciones; clase: string }) {
-  const estilo = `${clase} rounded-md border border-stone-400 bg-white px-2 text-sm font-medium shadow-sm disabled:opacity-40`;
-  const apagado = bloqueada || f.estado === "ENTREGADO";
   return (
     <>
-      <select aria-label="Ubicar en un vehículo" disabled={apagado} value="" onChange={(e) => e.target.value && acc.mover(f, e.target.value)} className={estilo}>
-        <option value="" disabled hidden>Ubicar en…</option>
-        {f.salidaId !== null && <option value="sin">Sin ubicar</option>}
-        {salidas.filter((x) => x.id !== f.salidaId).map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}
-      </select>
-      <select aria-label="Pasar a otro día" disabled={apagado} value="" onChange={(e) => e.target.value && acc.mover(f, e.target.value)} className={estilo}>
-        <option value="" disabled hidden>Pasar al día…</option>
-        {acc.dias.map((d) => <option key={d.fecha} value={`dia:${d.fecha}`}>{d.texto}</option>)}
-        <option value="pedidos">Volver a Pedidos</option>
-      </select>
+      <SelectorUbicar f={f} salidas={salidas} bloqueada={bloqueada} acc={acc} clase={clase} />
+      <SelectorDia f={f} bloqueada={bloqueada} acc={acc} clase={clase} />
     </>
   );
 }
 
 function FilaHoja({ f, n, bloqueada, acc, salidas }: { f: Fila; n: number; bloqueada: boolean; acc: Acciones; salidas: SalidaInfo[] }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: f.id, disabled: bloqueada });
-  const [eligiendo, setEligiendo] = useState(false);
-  const fondo = f.estado === "ENTREGADO" ? "border-verde-600 bg-verde-50" : f.estado === "NO_ENTREGADO" ? "border-rojo-600 bg-rojo-50" : "border-stone-300 bg-white";
-  const boton = "h-9 rounded-md border px-2 text-sm font-medium disabled:opacity-40";
+  const entregado = f.estado === "ENTREGADO";
+  const noEntregado = f.estado === "NO_ENTREGADO";
+  const falta = entregado && (f.conFactura ? !f.numeroFactura : !f.remito); // ya entregado y sin su número de comprobante
+  const marca = "flex h-6 w-9 items-center justify-center rounded border text-sm font-bold disabled:opacity-40";
 
   return (
     <div
       ref={setNodeRef}
       role="row"
       style={{ gridTemplateColumns: COLUMNAS, transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
-      className={`grid items-start gap-x-3 rounded-lg border px-2 py-2 text-sm ${fondo}`}
+      className="grid items-center gap-x-2 rounded-lg border border-stone-300 bg-white px-2 py-2 text-center text-sm"
     >
-      <div role="cell">
-        <button type="button" disabled={bloqueada} aria-label={`Mover el pedido ${n}`} className="flex h-8 w-8 cursor-grab items-center justify-center rounded-full bg-stone-800 text-xs font-semibold text-white disabled:cursor-default" {...attributes} {...listeners}>{n}</button>
+      <div role="cell" className="flex justify-center">
+        <button type="button" disabled={bloqueada} aria-label={`Mover el pedido ${n}`} className="flex h-7 w-7 cursor-grab items-center justify-center rounded-full bg-stone-800 text-xs font-semibold text-white disabled:cursor-default" {...attributes} {...listeners}>{n}</button>
       </div>
-      <div role="cell" className="pt-1.5 font-medium">{f.barrio}</div>
-      <div role="cell" className="pt-1.5 font-semibold leading-snug">{f.cliente}</div>
-      <div role="cell" className="pt-1.5 leading-snug"><a href={mapa(f)} target="_blank" rel="noreferrer" className="hover:underline">{f.direccion}</a>
-        {f.comentario && <p className="text-xs font-medium text-rojo-700">{f.comentario}</p>}</div>
-      <div role="cell" className="pt-1.5 tabular-nums">
-        {f.telefono ? (
-          <>
-            <span className="block">{f.telefono}</span>
-            {enlaceWhatsApp(f.telefono) && <a href={enlaceWhatsApp(f.telefono)!} target="_blank" rel="noreferrer" className="text-xs font-medium text-verde-800 underline">WhatsApp</a>}
-          </>
-        ) : (
-          <span className="text-stone-400">—</span>
-        )}
-      </div>
-      <div role="cell" className="space-y-0.5 pt-1.5">
-        {f.items.map((i, k) => (
-          <p key={k} className="flex gap-2 leading-snug"><span className="min-w-6 shrink-0 text-right font-semibold tabular-nums">{i.cantidad}</span><span>{i.nombre}</span></p>
-        ))}
-      </div>
-      <div role="cell" className="pt-1.5 text-right font-semibold tabular-nums">{formatoPesos(f.monto)}</div>
-      <div role="cell" className="pt-1.5"><span className={`rounded px-2 py-0.5 text-xs font-semibold ${f.conFactura ? "bg-stone-800 text-white" : "bg-stone-200 text-stone-700"}`}>{f.conFactura ? "FACTURA" : "REMITO"}</span></div>
-      <div role="cell">
-        {f.conFactura ? (
-          <input
-            aria-label={`Número de factura de ${f.cliente}`}
-            defaultValue={f.numeroFactura}
-            disabled={bloqueada}
-            onBlur={(e) => e.target.value.trim() !== f.numeroFactura && acc.factura(f, e.target.value)}
-            className={`h-9 w-full rounded-md border bg-white px-2 tabular-nums disabled:bg-crema-100 ${f.estado === "ENTREGADO" && !f.numeroFactura ? "border-rojo-600 ring-1 ring-rojo-600" : "border-stone-300"}`}
-          />
-        ) : (
-          <span className="block pt-1.5 text-stone-400">—</span>
-        )}
-      </div>
-      <div role="cell" className="space-y-1">
-        <div className="flex gap-1">
-          <button type="button" disabled={bloqueada} aria-pressed={f.estado === "ENTREGADO"} aria-label="Entregado" onClick={() => acc.entrega(f, f.estado === "ENTREGADO" ? "PENDIENTE" : "ENTREGADO")} className={`${boton} w-14 text-lg ${f.estado === "ENTREGADO" ? "border-verde-700 bg-verde-700 text-white" : "border-stone-300 bg-white text-verde-700"}`}>✓</button>
-          <button type="button" disabled={bloqueada} aria-pressed={f.estado === "NO_ENTREGADO"} aria-label="No entregado" onClick={() => acc.entrega(f, f.estado === "NO_ENTREGADO" ? "PENDIENTE" : "NO_ENTREGADO")} className={`${boton} w-14 text-lg ${f.estado === "NO_ENTREGADO" ? "border-rojo-700 bg-rojo-700 text-white" : "border-stone-300 bg-white text-rojo-700"}`}>✗</button>
-        </div>
-        {f.estado !== "NO_ENTREGADO" && <Link href={`/pedidos/${f.id}`} className="block text-xs text-stone-500 underline">Entrega parcial</Link>}
-      </div>
-      <div role="cell">
-        {f.estado !== "ENTREGADO" ? (
-          <span className="block pt-1.5 text-stone-400">—</span>
-        ) : f.cobro === "COBRADO" ? (
-          <div className="flex items-center justify-between gap-2 rounded-md bg-verde-100 px-2 py-1.5 font-medium text-verde-800">
-            <span>Cobrado · {textoMedio(f.medioCobro)}</span>
-            {!bloqueada && <button type="button" onClick={() => acc.deshacer(f)} aria-label="Deshacer el cobro" className="text-verde-800 underline">✕</button>}
-          </div>
-        ) : f.cobro === "CUENTA_CORRIENTE" ? (
-          <div className="flex items-center justify-between gap-2 rounded-md bg-crema-200 px-2 py-1.5 font-medium text-verde-900">
-            <span>Cuenta corriente</span>
-            {!bloqueada && <button type="button" onClick={() => acc.deshacer(f)} aria-label="Deshacer" className="text-verde-900 underline">✕</button>}
-          </div>
-        ) : eligiendo ? (
-          <div className="flex flex-wrap gap-1">
-            {MEDIOS.map((m) => (
-              <button key={m.valor} type="button" onClick={() => { setEligiendo(false); acc.cobrar(f, m.valor); }} className="h-8 rounded-md border border-verde-700 bg-white px-2 text-xs font-medium text-verde-800">{m.texto}</button>
-            ))}
-            <button type="button" onClick={() => setEligiendo(false)} aria-label="Cancelar" className="h-8 px-1 text-stone-500">✕</button>
-          </div>
-        ) : (
-          <div className="flex flex-wrap gap-1">
-            <button type="button" disabled={bloqueada} onClick={() => setEligiendo(true)} className={`${boton} border-verde-700 bg-white text-verde-800`}>Cobrado</button>
-            <button type="button" disabled={bloqueada} onClick={() => acc.cuentaCorriente(f)} className={`${boton} border-verde-700 bg-white text-verde-900`}>Cuenta corriente</button>
-          </div>
-        )}
-      </div>
-      <div role="cell">
-        <BotonRemito pedidoId={f.id} numero={f.remito} clase={`h-9 rounded-md border px-2 text-sm font-medium ${f.remito ? "border-stone-800 bg-white text-stone-900" : f.estado === "ENTREGADO" && !f.conFactura ? "border-rojo-600 bg-rojo-50 text-rojo-800 ring-1 ring-rojo-600" : "border-stone-300 bg-white text-stone-700"}`} />
-      </div>
-      <div role="cell">
-        <Link href={`/clientes/${f.clienteId}/cuenta`} className="inline-flex h-9 items-center gap-1.5 rounded-md border border-stone-300 bg-white px-2 text-sm font-medium hover:bg-crema-100">
-          Abrir{f.tieneDeuda && <span className="h-2 w-2 rounded-full bg-rojo-600" title="Este cliente tiene deuda" aria-label="Tiene deuda" />}
+      <div role="cell" className="font-semibold">{f.barrio}</div>
+      <div role="cell" className="leading-snug">
+        <p className="font-semibold">{f.cliente}</p>
+        <Link href={`/clientes/${f.clienteId}/cuenta`} className="inline-flex items-center gap-1 text-[10px] text-stone-500 underline hover:text-verde-800">
+          Cuenta corriente{f.tieneDeuda && <span className="h-1.5 w-1.5 rounded-full bg-rojo-600" title="Este cliente tiene deuda" aria-label="Tiene deuda" />}
         </Link>
       </div>
-      <div role="cell" className="space-y-1"><Selectores f={f} salidas={salidas} bloqueada={bloqueada} acc={acc} clase="h-8 w-full" /></div>
+      <div role="cell" className="leading-snug">
+        <a href={mapa(f)} target="_blank" rel="noreferrer" className="hover:underline">{f.direccion}</a>
+        {f.comentario && <p className="text-xs font-medium text-rojo-700">{f.comentario}</p>}
+      </div>
+      <div role="cell" className="tabular-nums">
+        {f.telefono ? (enlaceWhatsApp(f.telefono) ? <a href={enlaceWhatsApp(f.telefono)!} target="_blank" rel="noreferrer" className="hover:text-verde-800 hover:underline">{f.telefono}</a> : f.telefono) : <span className="text-stone-400">—</span>}
+      </div>
+      <div role="cell" className="inline-grid justify-center justify-self-center gap-x-2 gap-y-0.5 text-left [grid-template-columns:auto_auto]">
+        {f.items.map((i, k) => (
+          <span key={k} className="contents"><span className="text-right font-semibold tabular-nums">{i.cantidad}</span><span className="leading-snug">{i.nombre}</span></span>
+        ))}
+      </div>
+      <div role="cell" className="font-semibold tabular-nums">{formatoPesos(f.monto)}</div>
+
+      {/* Comprobante: el N° de factura (chico) o el remito */}
+      <div role="cell">
+        {f.conFactura ? (
+          <>
+            <span className="block text-[10px] uppercase leading-none text-stone-500">Factura</span>
+            <input
+              aria-label={`Número de factura de ${f.cliente}`}
+              placeholder="N°"
+              defaultValue={f.numeroFactura}
+              disabled={bloqueada}
+              onBlur={(e) => e.target.value.trim() !== f.numeroFactura && acc.factura(f, e.target.value)}
+              className={`mt-0.5 h-6 w-full rounded border bg-white px-1 text-center text-xs tabular-nums disabled:bg-crema-100 ${falta ? "border-rojo-600" : "border-stone-300"}`}
+            />
+          </>
+        ) : (
+          <BotonRemito pedidoId={f.id} numero={f.remito} clase={`h-7 w-full rounded border bg-white px-1 text-xs font-medium ${falta ? "border-rojo-600 text-rojo-800" : "border-stone-400 text-stone-800"}`} />
+        )}
+      </div>
+
+      {/* Entrega: tilde arriba, cruz abajo */}
+      <div role="cell" className="flex flex-col items-center gap-1">
+        <button type="button" disabled={bloqueada} aria-pressed={entregado} aria-label="Entregado" onClick={() => acc.entrega(f, entregado ? "PENDIENTE" : "ENTREGADO")} className={`${marca} ${entregado ? "border-verde-700 bg-verde-700 text-white" : "border-stone-300 bg-white text-stone-500 hover:border-verde-700"}`}>✓</button>
+        <button type="button" disabled={bloqueada} aria-pressed={noEntregado} aria-label="No entregado" onClick={() => acc.entrega(f, noEntregado ? "PENDIENTE" : "NO_ENTREGADO")} className={`${marca} ${noEntregado ? "border-rojo-700 bg-rojo-700 text-white" : "border-stone-300 bg-white text-stone-500 hover:border-rojo-700"}`}>✗</button>
+        {!noEntregado && <Link href={`/pedidos/${f.id}`} className="text-[10px] leading-none text-stone-500 underline">parcial</Link>}
+      </div>
+
+      {/* Cobro: un solo desplegable (cobrado en qué medio, o cuenta corriente) */}
+      <div role="cell">
+        {!entregado ? (
+          <span className="text-stone-400">—</span>
+        ) : f.cobro ? (
+          <span className="inline-flex items-center justify-center gap-1.5 text-xs font-medium">
+            {f.cobro === "COBRADO" ? `Cobrado · ${textoMedio(f.medioCobro)}` : "Cuenta corriente"}
+            {!bloqueada && <button type="button" onClick={() => acc.deshacer(f)} aria-label="Deshacer el cobro" className="text-stone-500 underline">✕</button>}
+          </span>
+        ) : (
+          <select
+            aria-label="Cobro"
+            disabled={bloqueada}
+            value=""
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === "CUENTA_CORRIENTE") acc.cuentaCorriente(f);
+              else if (v) acc.cobrar(f, v);
+            }}
+            className={estiloSelect("h-8 w-full text-xs")}
+          >
+            <option value="" disabled hidden>Cobro…</option>
+            <optgroup label="Cobrado en">
+              {MEDIOS.map((m) => <option key={m.valor} value={m.valor}>{m.texto}</option>)}
+            </optgroup>
+            <option value="CUENTA_CORRIENTE">Cuenta corriente</option>
+          </select>
+        )}
+      </div>
+
+      {/* Ubicación: sacarlo de la ruta (vuelve a "Sin ubicar") o pasarlo de día */}
+      <div role="cell" className="flex flex-col gap-1">
+        <button type="button" disabled={bloqueada || entregado} onClick={() => acc.mover(f, "sin")} className="h-7 rounded border border-stone-400 bg-white px-1 text-xs font-medium hover:bg-crema-100 disabled:opacity-40">↑ Sin ubicar</button>
+        <SelectorDia f={f} bloqueada={bloqueada} acc={acc} clase="h-7 w-full text-xs" />
+      </div>
     </div>
   );
 }
-
 
 // Cuadro que recibe pedidos arrastrados (un vehículo, o "sin" = sin ubicar).
 function Zona({ id, bloqueada, clase, children }: { id: string; bloqueada: boolean; clase: string; children: React.ReactNode }) {
@@ -210,7 +228,12 @@ function FilaUbicar({ f, salidas, bloqueada, acc }: { f: Fila; salidas: SalidaIn
         <span className="text-sm font-semibold tabular-nums">{formatoPesos(f.monto)}</span>
         <span><span className={`inline-block rounded px-2 py-0.5 text-xs font-bold tracking-wide ${f.conFactura ? "bg-verde-800 text-white" : "bg-crema-200 text-verde-900"}`}>{f.conFactura ? "FACTURA" : "REMITO"}</span></span>
         <Link href={`/pedidos/${f.id}`} className="text-sm font-semibold text-verde-800 underline-offset-4 hover:underline">Abrir ›</Link>
-        <Selectores f={f} salidas={salidas} bloqueada={bloqueada} acc={acc} clase="h-9 w-full" />
+        {salidas.length === 1 ? (
+          <button type="button" disabled={bloqueada} onClick={() => acc.mover(f, salidas[0].id)} className="h-9 rounded-md border border-stone-400 bg-white px-1 text-sm font-medium shadow-sm hover:bg-crema-100 disabled:opacity-40">↓ {salidas[0].nombre}</button>
+        ) : (
+          <SelectorUbicar f={f} salidas={salidas} bloqueada={bloqueada} acc={acc} clase="h-9 w-full" />
+        )}
+        <SelectorDia f={f} bloqueada={bloqueada} acc={acc} clase="h-9 w-full" />
       </div>
     </div>
   );
@@ -222,7 +245,7 @@ const mapa = (f: Fila) => `https://www.google.com/maps/search/?api=1&query=${enc
 // El mismo pedido, en el celular: una tarjeta con botones grandes (dirección a Google Maps, teléfono que llama).
 function FilaTarjeta({ f, n, bloqueada, acc, salidas }: { f: Fila; n: number; bloqueada: boolean; acc: Acciones; salidas: SalidaInfo[] }) {
   const [eligiendo, setEligiendo] = useState(false);
-  const fondo = f.estado === "ENTREGADO" ? "border-verde-600 bg-verde-50" : f.estado === "NO_ENTREGADO" ? "border-rojo-600 bg-rojo-50" : "border-stone-300 bg-white";
+  const fondo = "border-stone-300 bg-white";
   const grande = "h-12 rounded-lg border px-3 text-base font-semibold disabled:opacity-40";
   return (
     <article className={`space-y-3 rounded-xl border p-3 ${fondo}`}>
@@ -434,13 +457,13 @@ export function HojaDia({ fecha, filasIniciales, salidas, vehiculosLibres, repar
 
   const tabla = (grupo: Fila[], salida: SalidaInfo) => (
     <>
-      <div className="space-y-3 p-3 lg:hidden">
+      <div className="space-y-3 p-3 xl:hidden">
         {grupo.map((f, n) => <FilaTarjeta key={f.id} f={f} n={n + 1} bloqueada={cerrado} acc={acc} salidas={salidas} />)}
       </div>
-      <div className="hidden overflow-x-auto p-3 lg:block">
-        <div role="table" className="min-w-[2050px] space-y-2">
-          <div role="row" style={{ gridTemplateColumns: COLUMNAS }} className="grid gap-x-3 rounded-md bg-verde-800 px-2 py-2.5 text-xs font-semibold uppercase tracking-wide text-white">
-            {ENCABEZADOS.map((h) => <div key={h} role="columnheader" className={h === "Monto" ? "text-right" : ""}>{h}</div>)}
+      <div className="hidden p-3 xl:block">
+        <div role="table" className="space-y-1.5">
+          <div role="row" style={{ gridTemplateColumns: COLUMNAS }} className="grid gap-x-2 rounded-md bg-verde-800 px-2 py-2 text-center text-xs font-semibold uppercase tracking-wide text-white">
+            {ENCABEZADOS.map((h) => <div key={h} role="columnheader">{h}</div>)}
           </div>
           <SortableContext items={grupo.map((f) => f.id)} strategy={verticalListSortingStrategy}>
             {grupo.map((f, n) => <FilaHoja key={f.id} f={f} n={n + 1} bloqueada={cerrado} acc={acc} salidas={salidas} />)}
