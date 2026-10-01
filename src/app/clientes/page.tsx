@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { Cabecera } from "@/components/Cabecera";
+import { cabeceraTabla } from "@/components/campos";
 import { db } from "@/lib/db";
 import { titulo } from "@/lib/mayusculas";
 import { enlaceWhatsApp } from "@/lib/telefonos";
@@ -69,8 +70,8 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
         {clientes.length === 0 ? (
           <p className="rounded-lg border border-dashed border-stone-300 p-4 text-stone-600">No hay clientes con esos filtros.</p>
         ) : (
-          <div className="space-y-1.5">
-            <div className={`hidden gap-x-4 px-4 text-xs font-semibold uppercase tracking-wide text-stone-500 lg:grid ${COLUMNAS}`}>
+          <div className="space-y-2">
+            <div className={`hidden gap-x-4 rounded-t-xl px-4 py-3 lg:grid ${cabeceraTabla} ${COLUMNAS}`}>
               <span>Barrio</span><span>Nombre</span><span>Dirección</span><span>Teléfono</span><span>Estado</span><span />
             </div>
             {clientes.map((c) => <FilaCliente key={c.id} c={c} />)}
@@ -83,7 +84,7 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
 
 // Columnas (PC): barrio, nombre, dirección, teléfono, accesos.
 const COLUMNAS = "lg:grid-cols-[1.2fr_1.6fr_2fr_1.1fr_6.5rem_19rem]";
-const acceso = "rounded-md border border-stone-300 bg-white px-2.5 py-1 text-xs font-medium uppercase hover:border-verde-700 hover:text-verde-800";
+const acceso = "rounded-md border border-stone-400 bg-white px-2.5 py-1 text-xs font-medium uppercase hover:border-verde-700 hover:text-verde-800";
 const accesoEditar = "rounded-md border border-verde-700 bg-white px-2.5 py-1 text-xs font-medium text-verde-800 hover:bg-verde-50";
 
 type Cliente = Prisma.ClienteGetPayload<{ include: { puntos: { include: { zona: true } } } }>;
@@ -118,7 +119,7 @@ function FilaCliente({ c }: { c: Cliente }) {
   );
 
   return (
-    <div className={`divide-y divide-stone-100 rounded-xl border border-stone-200 bg-white ${c.activo ? "" : "opacity-60"}`}>
+    <div className={`divide-y divide-stone-200 rounded-xl border border-stone-300 bg-white shadow-sm ${c.activo ? "" : "opacity-60"}`}>
       {puntos.map((p, i) => (
         <div key={p?.id ?? "sin"}>
           {/* PC: barrio, nombre, dirección, teléfono y accesos en una fila */}

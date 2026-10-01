@@ -190,6 +190,13 @@ y ~1000 minoristas.
   La marca en la cabecera es **BACOLI** en verde y **GESTIÓN** en rojo, con una línea verde debajo. No usar `amber-*`, `green-*` ni `red-*` de Tailwind: usar `verde-*`, `rojo-*`, `crema-*`.
 - **Barrio se escribe a mano** (sin desplegable de sugerencias).
 
+## Estilo "sistema de trabajo": firme y robusto (pedido del dueño)
+- Nada de gris pálido ni "sistemita": **bordes definidos** (`stone-300/400`, no `stone-200`), sombras suaves, campos blancos con borde marcado y foco verde
+  (`estiloCampo`), etiquetas en semibold, **encabezados de tabla en barra verde oscura con letras blancas** (`cabeceraTabla` en `campos.tsx`).
+- **Ficha del cliente:** banner verde oscuro con el nombre grande, etiquetas (activo, N sucursales, lista) y los accesos; cada bloque es una tarjeta con panel lateral crema y
+  barra verde; **Sucursales = una tabla de verdad** (barra verde de títulos, filas con franjas alternadas, botones sólidos: Guardar verde, Desactivar con borde, Eliminar rojo).
+- La lista de Clientes y los Pedidos del cliente usan la misma barra de encabezado. Pendiente: llevar el mismo estilo a Precios, Pedidos y hoja del día.
+
 ## Desplegables (regla)
 - La opción inicial de un `<select>` ("Elegí la zona", "Elegí un rol"…) va con `disabled hidden`: se ve en el campo cerrado pero **no aparece en la lista desplegada** (antes aparecía como opción inclickeable).
 

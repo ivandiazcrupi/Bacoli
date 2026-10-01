@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Cabecera } from "@/components/Cabecera";
-import { estiloBotonChico } from "@/components/campos";
 import { db } from "@/lib/db";
 import { exigirOficina } from "@/lib/session";
 import { actualizarCliente, cambiarActivoCliente, guardarPreciosEspeciales } from "../actions";
@@ -69,19 +68,23 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
     <>
       <Cabecera usuario={usuario} />
       <main className="mx-auto max-w-[1400px] space-y-6 sm:px-8 px-4 py-6">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl bg-verde-800 p-5 text-white shadow-md">
           <div>
-            <Link href="/clientes" className="text-sm text-stone-600">← Clientes</Link>
-            <h1 className="text-2xl font-bold">{cliente.nombre}</h1>
-            {cliente.listaPrecios && <p className="text-sm text-stone-600">Lista de precios: {cliente.listaPrecios.nombre}</p>}
-            {!cliente.activo && <p className="text-sm text-rojo-700">Cliente desactivado</p>}
+            <Link href="/clientes" className="text-sm text-verde-200 hover:text-white">← Clientes</Link>
+            <h1 className="mt-1 text-3xl font-bold tracking-tight">{cliente.nombre}</h1>
+            <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-wide">
+              <span className={`rounded-full px-3 py-1 ${cliente.activo ? "bg-verde-100 text-verde-900" : "bg-rojo-100 text-rojo-800"}`}>{cliente.activo ? "Cliente activo" : "Cliente desactivado"}</span>
+              <span className="rounded-full bg-crema-200 px-3 py-1 text-verde-900">{cliente.puntos.length} {cliente.puntos.length === 1 ? "sucursal" : "sucursales"}</span>
+              {cliente.listaPrecios && <span className="rounded-full bg-crema-200 px-3 py-1 text-verde-900">Lista {cliente.listaPrecios.nombre}</span>}
+            </div>
           </div>
-          <div className="flex flex-col items-end gap-2">
-          <Link href={`/clientes/${cliente.id}/cuenta`} className={estiloBotonChico}>Cuenta corriente</Link>
-          <form action={cambiarActivoCliente}>
-            <input type="hidden" name="id" value={cliente.id} />
-            <button className={estiloBotonChico}>{cliente.activo ? "Desactivar" : "Activar"}</button>
-          </form>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href={`/clientes/${cliente.id}/cuenta`} className="rounded-md border border-white/60 px-4 py-2 text-sm font-semibold uppercase hover:bg-white hover:text-verde-800">Cuenta corriente</Link>
+            <Link href={`/clientes/${cliente.id}/pedidos`} className="rounded-md border border-white/60 px-4 py-2 text-sm font-semibold uppercase hover:bg-white hover:text-verde-800">Pedidos</Link>
+            <form action={cambiarActivoCliente}>
+              <input type="hidden" name="id" value={cliente.id} />
+              <button className="rounded-md bg-white px-4 py-2 text-sm font-semibold text-verde-800 hover:bg-crema-100">{cliente.activo ? "Desactivar" : "Activar"}</button>
+            </form>
           </div>
         </div>
 
@@ -99,19 +102,21 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
         </section>
         )}
 
-        <section className="space-y-2">
-          <h2 className="pb-2 pt-4 text-center text-3xl font-bold tracking-tight">Sucursales <span className="text-verde-700">({cliente.puntos.length})</span></h2>
-          <EncabezadoSucursales />
-          {cliente.puntos.map((p) => (
-            <FilaSucursal
-              key={p.id}
-              clienteId={cliente.id}
-              zonas={zonas}
-              barrios={listaBarrios}
-              sucursal={{ id: p.id, alias: p.alias ?? "", direccion: p.direccion, barrio: p.barrio, zonaId: p.zonaId, telefono: p.telefono ?? "", comentario: p.comentario ?? "", activo: p.activo }}
-            />
-          ))}
-          <FilaSucursal clienteId={cliente.id} zonas={zonas} barrios={listaBarrios} />
+        <section className="space-y-3">
+          <h2 className="pt-4 text-center text-3xl font-bold tracking-tight">Sucursales <span className="text-verde-700">({cliente.puntos.length})</span></h2>
+          <div className="overflow-hidden rounded-xl border-2 border-stone-300 bg-white shadow-sm">
+            <EncabezadoSucursales />
+            {cliente.puntos.map((p) => (
+              <FilaSucursal
+                key={p.id}
+                clienteId={cliente.id}
+                zonas={zonas}
+                barrios={listaBarrios}
+                sucursal={{ id: p.id, alias: p.alias ?? "", direccion: p.direccion, barrio: p.barrio, zonaId: p.zonaId, telefono: p.telefono ?? "", comentario: p.comentario ?? "", activo: p.activo }}
+              />
+            ))}
+            <FilaSucursal clienteId={cliente.id} zonas={zonas} barrios={listaBarrios} />
+          </div>
         </section>
       </main>
     </>

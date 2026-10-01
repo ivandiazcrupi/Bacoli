@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Cabecera } from "@/components/Cabecera";
+import { cabeceraTabla } from "@/components/campos";
 import { importeVigente } from "@/lib/cuenta";
 import { db } from "@/lib/db";
 import { deFecha, diaMes, nombreDia } from "@/lib/fechas";
@@ -46,7 +47,7 @@ export default async function PedidosDelCliente({ params }: { params: Promise<{ 
           <p className="rounded-lg border border-dashed border-stone-300 p-4 text-stone-600">Este cliente todavía no tiene pedidos.</p>
         ) : (
           <div className="space-y-2">
-            <div className="hidden grid-cols-[8rem_1.6fr_2.4fr_1fr_1fr_1fr] gap-3 px-4 text-xs font-semibold uppercase tracking-wide text-stone-500 lg:grid">
+            <div className={`hidden grid-cols-[8rem_1.6fr_2.4fr_1fr_1fr_1fr] gap-3 rounded-t-xl px-4 py-3 lg:grid ${cabeceraTabla}`}>
               <span>Día</span><span>Sucursal</span><span>Pedido</span><span className="text-right">Monto</span><span>Comprobante</span><span>Estado</span>
             </div>
             {pedidos.map((p) => {
@@ -57,7 +58,7 @@ export default async function PedidosDelCliente({ params }: { params: Promise<{ 
                 <Link
                   key={p.id}
                   href={`/pedidos/${p.id}`}
-                  className="grid items-center gap-x-3 gap-y-1 rounded-xl border border-stone-200 bg-white p-4 hover:border-verde-700 lg:grid-cols-[8rem_1.6fr_2.4fr_1fr_1fr_1fr]"
+                  className="grid items-center gap-x-3 gap-y-1 rounded-xl border border-stone-300 bg-white p-4 shadow-sm hover:border-verde-700 lg:grid-cols-[8rem_1.6fr_2.4fr_1fr_1fr_1fr]"
                 >
                   <span className="text-sm font-medium">{fecha ? `${nombreDia(fecha)} ${diaMes(fecha)}` : <span className="text-stone-500">Sin asignar</span>}</span>
                   <span className="text-sm">{titulo(p.punto.direccion)} <span className="text-stone-500">· {p.punto.barrio}</span></span>

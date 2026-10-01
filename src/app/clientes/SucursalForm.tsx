@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { estiloCampo } from "@/components/campos";
+import { cabeceraTabla, estiloCampo } from "@/components/campos";
 import { titulo } from "@/lib/mayusculas";
 import { cambiarActivoSucursal, eliminarSucursal, guardarSucursal } from "./actions";
 
@@ -12,12 +12,13 @@ type Zona = { id: string; nombre: string };
 const COLUMNAS = "lg:grid-cols-[1.6fr_2fr_1.4fr_1fr_1.2fr_auto]";
 const celda = "min-w-0";
 const campo = `${estiloCampo} mt-0 py-2 text-sm`;
+const boton = "rounded-md px-3 py-2 text-sm font-semibold shadow-sm";
 const etiquetaChica = "mb-0.5 block text-xs font-medium text-stone-500 lg:hidden";
 
 /** Encabezado de las columnas (solo en PC: en el celular cada campo trae su etiqueta). */
 export function EncabezadoSucursales() {
   return (
-    <div className={`hidden gap-2 px-4 text-xs font-semibold uppercase tracking-wide text-stone-500 lg:grid ${COLUMNAS}`}>
+    <div className={`hidden gap-2 px-4 py-3 lg:grid ${cabeceraTabla} ${COLUMNAS}`}>
       <span>Barrio *</span><span>Dirección *</span><span>Zona *</span><span>Teléfono</span><span>Comentario</span><span className="w-[17rem]" />
     </div>
   );
@@ -32,7 +33,7 @@ export function FilaSucursal({ clienteId, sucursal, zonas, barrios }: { clienteI
 
   return (
     <div
-      className={`grid grid-cols-2 items-end gap-2 rounded-xl border p-4 lg:items-center ${COLUMNAS} ${sucursal ? "border-stone-200 bg-white" : "border-dashed border-crema-400 bg-crema-50/40"} ${activa ? "" : "opacity-60"}`}
+      className={`grid grid-cols-2 items-end gap-2 border-t border-stone-300 px-4 py-3 lg:items-center ${COLUMNAS} ${sucursal ? "bg-white even:bg-crema-50" : "border-t-2 border-t-verde-700 bg-crema-100"} ${activa ? "" : "opacity-60"}`}
     >
       <form key={JSON.stringify(estado ?? null)} action={enviar} className="contents">
         {sucursal && <input type="hidden" name="id" value={sucursal.id} />}
@@ -60,11 +61,11 @@ export function FilaSucursal({ clienteId, sucursal, zonas, barrios }: { clienteI
           <input name="comentario" aria-label="Comentario" placeholder={sucursal ? "" : "Ej: recibe hasta las 10 hs"} defaultValue={v("comentario")} className={campo} />
         </label>
         <div className="col-span-2 flex items-center gap-2 lg:col-span-1 lg:w-auto">
-          <button disabled={cargando} className="rounded-lg bg-verde-700 px-4 py-2 text-sm font-semibold text-white hover:bg-verde-800 disabled:opacity-60">
+          <button disabled={cargando} className={`${boton} bg-verde-700 text-white hover:bg-verde-800 disabled:opacity-60`}>
             {cargando ? "…" : sucursal ? "Guardar" : "+ Agregar"}
           </button>
           {sucursal && (
-            <button formAction={cambiarActivoSucursal} formNoValidate className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm">
+            <button formAction={cambiarActivoSucursal} formNoValidate className={`${boton} border border-stone-400 bg-white hover:border-verde-700`}>
               {activa ? "Desactivar" : "Activar"}
             </button>
           )}
@@ -73,7 +74,7 @@ export function FilaSucursal({ clienteId, sucursal, zonas, barrios }: { clienteI
               formAction={borrar}
               formNoValidate
               onClick={(e) => { if (!window.confirm(`¿Eliminar la sucursal ${sucursal.direccion}? No se puede deshacer.`)) e.preventDefault(); }}
-              className="rounded-lg border border-rojo-300 bg-white px-3 py-2 text-sm text-rojo-700 hover:bg-rojo-50"
+              className={`${boton} border border-rojo-600 bg-white text-rojo-700 hover:bg-rojo-50`}
             >
               Eliminar
             </button>

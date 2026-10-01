@@ -140,12 +140,12 @@ export function ClienteForm({ accion, inicial, listas, zonas, barrios = [], text
 
 function Bloque({ titulo, ayuda, children }: { titulo: string; ayuda: string; children: ReactNode }) {
   return (
-    <section className="grid gap-3 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm lg:grid-cols-[14rem_1fr] lg:gap-6">
-      <div>
+    <section className="grid overflow-hidden rounded-xl border border-stone-300 bg-white shadow-sm lg:grid-cols-[15rem_1fr]">
+      <div className="border-b border-stone-300 border-l-4 border-l-verde-700 bg-crema-100 p-5 lg:border-b-0 lg:border-r">
         <h2 className="text-sm font-bold uppercase tracking-wide text-verde-800">{titulo}</h2>
-        <p className="mt-1 text-xs text-stone-500">{ayuda}</p>
+        <p className="mt-1 text-xs leading-snug text-stone-600">{ayuda}</p>
       </div>
-      {children}
+      <div className="p-5">{children}</div>
     </section>
   );
 }
