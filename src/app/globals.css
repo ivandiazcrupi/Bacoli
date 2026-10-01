@@ -17,9 +17,9 @@
 html.intermedio { font-size: 14px; }
 .intermedio body { background: #f1efe3; padding-bottom: 24px; }
 .intermedio *, .intermedio *::before, .intermedio *::after { border-radius: 3px !important; box-shadow: none !important; }
-.intermedio header { background: #fff; border-bottom: 3px solid #026433 !important; }
-.intermedio header > div { padding-top: 0 !important; padding-bottom: 0 !important; }
-.intermedio header nav a:hover { background: #e9ebe2; }
+.intermedio header.bg-white { background: #fff; border-bottom: 3px solid #026433 !important; }
+.intermedio header.bg-white > div { padding-top: 0 !important; padding-bottom: 0 !important; }
+.intermedio header.bg-white nav a:hover { background: #e9ebe2; }
 .intermedio main h1 { font-size: 18px !important; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: #014d27; border-bottom: 2px solid #026433; display: inline-block; padding-bottom: 2px; }
 .intermedio main { padding-top: 1rem !important; padding-bottom: 1rem !important; }
 .intermedio nav[aria-label="Pedidos"] { border-bottom: 2px solid #026433 !important; gap: 2px !important; }
@@ -35,7 +35,6 @@ html.intermedio { font-size: 14px; }
 .intermedio main .flex-wrap.lg\:justify-end a { font-size: 10px !important; padding: .2rem .5rem !important; }
 .intermedio input:not([type="checkbox"]):not([type="radio"]), .intermedio select, .intermedio textarea { border-color: #6b6e66 !important; }
 .intermedio body > p { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: #e3e0cc; border-top: 1px solid #8a8d82; text-align: left !important; padding: .2rem .8rem !important; font-size: 11px !important; color: #222 !important; }
-.intermedio header a, .intermedio header button { white-space: nowrap; }
-.intermedio header a, .intermedio header button { white-space: nowrap; }
+.intermedio header.bg-white a, .intermedio header.bg-white button { white-space: nowrap; }
 .intermedio main > h1.text-4xl, .intermedio main > h1 { color: #1c1917 !important; border: 0 !important; text-transform: none !important; letter-spacing: 0 !important; font-size: 34px !important; display: block; padding: 0; line-height: 1.2; }
 @media (max-width: 640px) { .intermedio main > h1 { font-size: 24px !important; } }

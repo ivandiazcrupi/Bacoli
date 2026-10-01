@@ -1,13 +1,14 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Cabecera } from "@/components/Cabecera";
 import { db } from "@/lib/db";
-import { aFecha, deFecha, diaMes, esFechaValida, lunesDe, nombreDia, sumarDias } from "@/lib/fechas";
+import { aFecha, deFecha, diaMes, esFechaValida, hoy, lunesDe, nombreDia, sumarDias } from "@/lib/fechas";
 import { porReparto } from "@/lib/ruta";
 import { exigirOficina } from "@/lib/session";
-import { aFila, clientesConDeuda, incluirPedido } from "../../filas";
+import { aFila, aFilaBandeja, clientesConDeuda, incluirPedido } from "../../filas";
 import { CONTENEDOR_PEDIDOS, EncabezadoPedidos } from "../../Encabezado";
+import { DiasSemana } from "./DiasSemana";
 import { HojaDia } from "./HojaDia";
+import { Pendientes } from "./Pendientes";
 
 // Hoja de ruta de un día: qué vehículos salen, qué lleva cada uno y en qué orden (con las entregas y cobros de cada pedido).
 export default async function HojaDelDia({ params }: { params: Promise<{ fecha: string }> }) {
@@ -15,12 +16,13 @@ export default async function HojaDelDia({ params }: { params: Promise<{ fecha: 
   const { fecha } = await params;
   if (!esFechaValida(fecha)) notFound();
 
-  const [pedidos, salidas, vehiculos, repartidores, cerrado] = await Promise.all([
+  const [pedidos, salidas, vehiculos, repartidores, cerrado, esperando] = await Promise.all([
     db.pedido.findMany({ where: { fechaEntrega: aFecha(fecha), estado: { not: "CANCELADO" } }, include: { ...incluirPedido, salida: true } }),
     db.salida.findMany({ where: { fecha: aFecha(fecha) }, include: { vehiculo: true }, orderBy: { orden: "asc" } }),
     db.vehiculo.findMany({ where: { activo: true }, orderBy: { orden: "asc" } }),
     db.usuario.findMany({ where: { rol: "REPARTIDOR", activo: true }, orderBy: { nombre: "asc" } }),
     db.diaCerrado.findUnique({ where: { fecha: aFecha(fecha) } }),
+    db.pedido.findMany({ where: { estado: "PENDIENTE", fechaEntrega: null }, include: incluirPedido, orderBy: { creadoEn: "asc" } }),
   ]);
   pedidos.sort(porReparto);
   const debe = await clientesConDeuda(pedidos.map((p) => p.clienteId));
@@ -29,10 +31,12 @@ export default async function HojaDelDia({ params }: { params: Promise<{ fecha: 
 
   const lunes = lunesDe(fecha);
   const domingo = sumarDias(lunes, 6);
-  const [cuentaPedidos, cuentaSalidas] = await Promise.all([
+  const [cuentaPedidos, cuentaSalidas, cerradosSemana] = await Promise.all([
     db.pedido.groupBy({ by: ["fechaEntrega"], where: { estado: { not: "CANCELADO" }, fechaEntrega: { gte: aFecha(lunes), lte: aFecha(domingo) } }, _count: true }),
     db.salida.groupBy({ by: ["fecha"], where: { fecha: { gte: aFecha(lunes), lte: aFecha(domingo) } }, _count: true }),
+    db.diaCerrado.findMany({ where: { fecha: { gte: aFecha(lunes), lte: aFecha(domingo) } } }),
   ]);
+  const cerradosSet = new Set(cerradosSemana.map((d) => deFecha(d.fecha)));
   const nPedidos = new Map(cuentaPedidos.map((c) => [c.fechaEntrega ? deFecha(c.fechaEntrega) : "", c._count]));
   const nSalidas = new Map(cuentaSalidas.map((c) => [deFecha(c.fecha), c._count]));
   const fechasSemana = Array.from({ length: 6 }, (_, n) => sumarDias(lunes, n));
@@ -45,31 +49,22 @@ export default async function HojaDelDia({ params }: { params: Promise<{ fecha: 
       <main className={CONTENEDOR_PEDIDOS}>
         <EncabezadoPedidos activa="ruta" fechaRuta={fecha} />
 
-        {/* Para ir día por día: la semana y sus seis días */}
-        <nav className="flex flex-wrap items-center justify-center gap-2" aria-label="Días de la semana">
-          <Link href={`/pedidos/dia/${mismoDia(-1)}`} className="rounded-md border border-stone-400 bg-white px-3 py-2.5 text-sm shadow-sm hover:border-verde-700" aria-label="Semana anterior">←</Link>
-          <Link href={`/pedidos/semana?semana=${lunes}`} title="Ver el resumen de la semana" className="rounded-md bg-verde-800 px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white hover:bg-verde-700">Semana {diaMes(lunes)}</Link>
-          <Link href={`/pedidos/dia/${mismoDia(1)}`} className="rounded-md border border-stone-400 bg-white px-3 py-2.5 text-sm shadow-sm hover:border-verde-700" aria-label="Semana siguiente">→</Link>
-          <span className="mx-1 hidden h-8 w-px bg-stone-300 sm:block" />
-          {fechasSemana.map((f) => {
-            const activo = f === fecha;
-            return (
-              <Link
-                key={f}
-                href={`/pedidos/dia/${f}`}
-                aria-current={activo ? "page" : undefined}
-                className={`flex min-w-24 flex-col items-center justify-center gap-0.5 rounded-lg border px-3 py-2 text-center shadow-sm transition ${activo ? "border-verde-800 bg-verde-800 text-white" : "border-stone-400 bg-white text-stone-800 hover:border-verde-700"}`}
-              >
-                <span className="text-sm font-bold uppercase leading-none tracking-wide">{nombreDia(f).slice(0, 3)} {Number(f.slice(8))}</span>
-                <span className={`text-[11px] leading-none ${activo ? "text-verde-100" : "text-stone-500"}`}>
-                  {nPedidos.get(f) ?? 0} {(nPedidos.get(f) ?? 0) === 1 ? "pedido" : "pedidos"}{nSalidas.get(f) ? ` · ${nSalidas.get(f)} veh.` : ""}
-                </span>
-              </Link>
-            );
-          })}
-        </nav>
+        {/* Para ir día por día: la semana y sus seis días (reciben los pedidos arrastrados desde Pendientes) */}
+        <DiasSemana
+          fecha={fecha}
+          lunesTexto={diaMes(lunes)}
+          hrefAnterior={`/pedidos/dia/${mismoDia(-1)}`}
+          hrefSiguiente={`/pedidos/dia/${mismoDia(1)}`}
+          hrefSemana={`/pedidos/semana?semana=${lunes}`}
+          dias={fechasSemana.map((f) => ({ fecha: f, texto: `${nombreDia(f).slice(0, 3)} ${Number(f.slice(8))}`, pedidos: nPedidos.get(f) ?? 0, vehiculos: nSalidas.get(f) ?? 0, cerrado: cerradosSet.has(f) }))}
+        />
 
-        <h2 className="text-center text-2xl font-bold">Hoja de ruta · {nombreDia(fecha)} {diaMes(fecha)}</h2>
+        <Pendientes
+          filas={esperando.map(aFilaBandeja)}
+          dias={fechasSemana.map((f) => ({ fecha: f, letra: nombreDia(f).charAt(0), numero: Number(f.slice(8)), nombre: nombreDia(f), hoy: f === hoy(), cerrado: cerradosSet.has(f) }))}
+        />
+
+        <h2 className="text-center text-lg font-bold uppercase tracking-wide">Hoja de ruta · {nombreDia(fecha)} {diaMes(fecha)}</h2>
 
         <HojaDia
           fecha={fecha}

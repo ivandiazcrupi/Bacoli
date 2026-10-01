@@ -299,8 +299,6 @@ export function HojaDia({ fecha, filasIniciales, salidas, vehiculosLibres, repar
   const router = useRouter();
   const [filas, setFilas] = useState(filasIniciales);
   const [error, setError] = useState<string | null>(null);
-  const [nuevoVehiculo, setNuevoVehiculo] = useState("");
-  const [nuevoRepartidor, setNuevoRepartidor] = useState("");
   const [, empezar] = useTransition();
   useEffect(() => setFilas(filasIniciales), [filasIniciales]);
 
@@ -383,13 +381,8 @@ export function HojaDia({ fecha, filasIniciales, salidas, vehiculosLibres, repar
     router.refresh();
   };
   const reabrir = () => llamar(() => reabrirDia(fecha));
-  const sumarVehiculo = () => {
-    if (!nuevoVehiculo) return;
-    llamar(async () => {
-      const r = await agregarSalida(fecha, nuevoVehiculo, nuevoRepartidor || null);
-      if (r.ok) { setNuevoVehiculo(""); setNuevoRepartidor(""); }
-      return r;
-    });
+  const sumarVehiculo = (vehiculoId: string) => {
+    if (vehiculoId) llamar(() => agregarSalida(fecha, vehiculoId, null));
   };
 
   const tabla = (grupo: Fila[], salida: SalidaInfo) => (
@@ -440,25 +433,20 @@ export function HojaDia({ fecha, filasIniciales, salidas, vehiculosLibres, repar
       </div>
       {error && <p className="rounded-lg border border-rojo-600 bg-rojo-50 p-3 text-sm text-rojo-700" role="alert">{error}</p>}
 
-      {/* Sumar un vehículo a la salida de este día */}
+      {/* Sumar un vehículo a la salida de este día: chico, un solo desplegable; al elegirlo se abre su cuadro */}
       {!cerrado && (
-        <div className="flex flex-wrap items-end gap-3 rounded-xl border border-stone-300 bg-crema-100 p-4">
-          <label className="text-sm font-semibold text-stone-700">
-            Sumar vehículo al día
-            <select value={nuevoVehiculo} onChange={(e) => setNuevoVehiculo(e.target.value)} className="mt-1 block h-11 w-56 rounded-md border border-stone-400 bg-white px-3 text-base font-normal shadow-sm">
-              <option value="">{vehiculosLibres.length ? "Elegí el vehículo" : "No quedan vehículos libres"}</option>
-              {vehiculosLibres.map((v) => <option key={v.id} value={v.id}>{v.nombre}</option>)}
-            </select>
-          </label>
-          <label className="text-sm font-semibold text-stone-700">
-            Repartidor
-            <select value={nuevoRepartidor} onChange={(e) => setNuevoRepartidor(e.target.value)} className="mt-1 block h-11 w-56 rounded-md border border-stone-400 bg-white px-3 text-base font-normal shadow-sm">
-              <option value="">Sin asignar</option>
-              {repartidores.map((r) => <option key={r.id} value={r.id}>{r.nombre}</option>)}
-            </select>
-          </label>
-          <button type="button" onClick={sumarVehiculo} disabled={!nuevoVehiculo} className="h-11 rounded-md bg-verde-700 px-5 text-sm font-bold uppercase tracking-wide text-white hover:bg-verde-800 disabled:opacity-40">+ Sumar</button>
-          <Link href="/pedidos/vehiculos" className="ml-auto text-sm font-medium text-verde-800 underline">Cargar o editar vehículos</Link>
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <select
+            aria-label="Sumar un vehículo al día"
+            value=""
+            disabled={vehiculosLibres.length === 0}
+            onChange={(e) => sumarVehiculo(e.target.value)}
+            className="h-9 w-52 rounded-md border border-verde-700 bg-white px-2 text-sm font-semibold text-verde-800 shadow-sm disabled:border-stone-300 disabled:text-stone-500"
+          >
+            <option value="">{vehiculosLibres.length ? "+ Sumar vehículo" : "No quedan vehículos libres"}</option>
+            {vehiculosLibres.map((v) => <option key={v.id} value={v.id}>{v.nombre}</option>)}
+          </select>
+          <Link href="/pedidos/vehiculos" className="font-medium text-verde-800 underline">Cargar o editar vehículos</Link>
         </div>
       )}
 
