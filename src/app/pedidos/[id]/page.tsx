@@ -59,13 +59,13 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
           <Link href={fecha ? `/pedidos/dia/${fecha}` : "/pedidos"} className="rounded-md border border-stone-400 bg-white px-3 py-2 text-sm font-medium shadow-sm hover:bg-crema-100">← {fecha ? "Hoja de ruta" : "Pedidos"}</Link>
         </div>
 
-        <section aria-label="Datos del pedido" className={`grid grid-cols-2 divide-x divide-stone-300 overflow-hidden rounded-xl border border-stone-300 bg-white shadow-sm ${web ? "sm:grid-cols-5" : "sm:grid-cols-4"}`}>
+        <section aria-label="Datos del pedido" className={`grid grid-cols-2 divide-x divide-stone-300 overflow-hidden rounded-xl border border-stone-300 bg-white shadow-sm sm:grid-cols-4`}>
           {celda("Estado", <span className={COLOR[pedido.estado]}>{ETIQUETA[pedido.estado]}</span>)}
           {celda("Día", fecha ? `${nombreDia(fecha)} ${diaMes(fecha)}` : "Sin día")}
           {web && celda("Pedido de la tienda", `N° ${pedido.webOrden}`)}
           {web && celda("Pago", pedido.webPago === "PAGO_MP" ? "Mercado Pago" : <span className="text-rojo-700">Pendiente</span>)}
           {!web && celda("Comprobante", pedido.conFactura ? "Factura" : "Remito")}
-          {celda(
+          {!web && celda(
             pedido.conFactura ? "N° de factura" : "N° de remito",
             pedido.conFactura
               ? (pedido.numeroFactura ? pedido.numeroFactura : <span className="text-rojo-700">Sin cargar</span>)
@@ -76,7 +76,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
         {pedido.estado !== "CANCELADO" ? (
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2">
-              <BotonRemito pedidoId={pedido.id} numero={pedido.remitoNumero ? `Imprimir remito ${formatoRemito(pedido.remitoNumero)}` : null} textoSinNumero="Emitir remito" clase={boton} />
+              {!web && <BotonRemito pedidoId={pedido.id} numero={pedido.remitoNumero ? `Imprimir remito ${formatoRemito(pedido.remitoNumero)}` : null} textoSinNumero="Emitir remito" clase={boton} />}
               {abierto && (
                 <form action={marcarNoEntregado}>
                   <input type="hidden" name="id" value={pedido.id} />

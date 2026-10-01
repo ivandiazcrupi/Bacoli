@@ -27,7 +27,7 @@ export async function marcarEntrega(pedidoId: string, valor: "ENTREGADO" | "NO_E
   if ("error" in r) return { ok: false, error: r.error };
   const { pedido } = r;
   if (pedido.estado === "CANCELADO") return { ok: false, error: "El pedido está cancelado." };
-  if (valor !== "ENTREGADO" && pedido.cobro === "COBRADO") return { ok: false, error: "Primero deshacé el cobro." };
+  if (valor !== "ENTREGADO" && pedido.cobro === "COBRADO" && pedido.webPago !== "PAGO_MP") return { ok: false, error: "Primero deshacé el cobro." };
 
   await db.$transaction(async (tx) => {
     await tx.pedido.update({ where: { id: pedidoId }, data: { estado: valor, ...(valor !== "ENTREGADO" ? { cobro: null, medioCobro: null, montoCobrado: null } : {}) } });
@@ -130,7 +130,7 @@ export async function cerrarDia(fecha: string): Promise<Resultado & { faltan?: n
   const faltan = pedidos.filter((p) => p.estado === "PENDIENTE" || (p.estado === "ENTREGADO" && p.cobro === null)).length;
   if (faltan > 0) return { ok: false, faltan, error: `Faltan ${faltan} ${faltan === 1 ? "pedido" : "pedidos"} por marcar (entrega o cobro).` };
   // Toda venta entregada lleva un número: el de la factura si lleva factura, o el del remito.
-  const sinNumero = pedidos.filter((p) => p.estado === "ENTREGADO" && (p.conFactura ? !p.numeroFactura : p.remitoNumero === null)).length;
+  const sinNumero = pedidos.filter((p) => p.estado === "ENTREGADO" && p.clienteId && (p.conFactura ? !p.numeroFactura : p.remitoNumero === null)).length;
   if (sinNumero > 0) return { ok: false, faltan: sinNumero, error: `Faltan ${sinNumero} ${sinNumero === 1 ? "pedido" : "pedidos"} sin número de factura o de remito.` };
 
   await db.$transaction(async (tx) => {

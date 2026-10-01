@@ -15,7 +15,7 @@ export default async function RemitoPedido({ params, searchParams }: { params: P
     db.pedido.findUnique({ where: { id }, include: { cliente: true, punto: true, items: { include: { producto: true } } } }),
     db.empresa.findUnique({ where: { id: "principal" } }),
   ]);
-  if (!pedido) notFound();
+  if (!pedido || pedido.webOrden) notFound();
 
   if (pedido.remitoNumero === null) {
     return (

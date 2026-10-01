@@ -66,6 +66,7 @@ export function aFila(p: PedidoCompleto, debe: Set<string>): Fila {
     salidaId: p.salidaId,
     bultos: bultosDe(p.items),
     webOrden: p.webOrden,
+    pagoMp: p.webPago === "PAGO_MP",
   };
 }
 
