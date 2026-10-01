@@ -186,7 +186,6 @@ function FilaHoja({ f, n, bloqueada, acc, salidas }: { f: Fila; n: number; bloqu
       {/* Entrega: desplegable; el borde es verde si se entregó y rojo si no */}
       <div role="cell" className="flex flex-col items-center gap-1">
         <SelectorEntrega f={f} bloqueada={bloqueada} acc={acc} />
-        {!noEntregado && <Link href={`/pedidos/${f.id}`} className="text-[10px] leading-none text-stone-500 underline">entrega parcial</Link>}
       </div>
 
       {/* Cobro: un solo desplegable (cobrado en qué medio, o cuenta corriente) */}
@@ -203,21 +202,10 @@ function FilaHoja({ f, n, bloqueada, acc, salidas }: { f: Fila; n: number; bloqu
             onDeshacer={bloqueada ? undefined : () => acc.deshacer(f)}
           />
         ) : (
-          <select
-            aria-label="Cobro"
-            disabled={bloqueada}
-            value=""
-            onChange={(e) => {
-              const v = e.target.value;
-              if (v === "CUENTA_CORRIENTE") acc.cuentaCorriente(f);
-              else if (v) acc.cobrar(f, v);
-            }}
-            className={estiloSelect("h-11 w-full text-xs")}
-          >
-            <option value="" disabled hidden>Cobro…</option>
-            {MEDIOS_COBRO.map((m) => <option key={m.valor} value={m.valor}>{m.texto}</option>)}
-            {!f.webOrden && <option value="CUENTA_CORRIENTE">Cuenta corriente</option>}
-          </select>
+          <div role="group" aria-label="Cobro" className="flex w-full flex-col gap-1">
+            {MEDIOS_COBRO.map((m) => <button key={m.valor} type="button" disabled={bloqueada} onClick={() => acc.cobrar(f, m.valor)} className="h-7 w-full rounded-md border border-stone-300 bg-white text-xs font-semibold text-stone-700 hover:border-verde-700 hover:text-verde-800 disabled:opacity-40">{m.texto}</button>)}
+            {!f.webOrden && <button type="button" disabled={bloqueada} onClick={() => acc.cuentaCorriente(f)} className="h-7 w-full rounded-md border border-stone-300 bg-white text-xs font-semibold text-stone-700 hover:border-crema-600 hover:bg-crema-100 disabled:opacity-40">Cuenta corriente</button>}
+          </div>
         )}
       </div>
 
@@ -322,7 +310,6 @@ function FilaTarjeta({ f, n, bloqueada, acc, salidas }: { f: Fila; n: number; bl
       <p className="flex items-baseline justify-between text-lg font-bold"><span className="text-sm font-medium text-stone-600">Monto</span><span className="tabular-nums">{formatoPesos(f.monto)}</span></p>
 
       <SelectorEntrega f={f} bloqueada={bloqueada} acc={acc} grande />
-      {f.estado !== "NO_ENTREGADO" && <Link href={`/pedidos/${f.id}`} className="block text-sm text-stone-600 underline">Entrega parcial</Link>}
 
       {f.pagoMp && <div className="rounded-lg border border-verde-700 bg-verde-50 px-3 py-3 text-center font-semibold text-verde-800">Cobrado · Mercado Pago</div>}
       {f.estado === "ENTREGADO" && !f.pagoMp && (
