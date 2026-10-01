@@ -1,14 +1,13 @@
 import { notFound } from "next/navigation";
 import { Cabecera } from "@/components/Cabecera";
 import { db } from "@/lib/db";
-import { aFecha, deFecha, diaMes, esFechaValida, hoy, lunesDe, nombreDia, sumarDias } from "@/lib/fechas";
+import { aFecha, deFecha, diaMes, esFechaValida, lunesDe, nombreDia, sumarDias } from "@/lib/fechas";
 import { porReparto } from "@/lib/ruta";
 import { exigirOficina } from "@/lib/session";
-import { aFila, aFilaBandeja, clientesConDeuda, incluirPedido } from "../../filas";
+import { aFila, clientesConDeuda, incluirPedido } from "../../filas";
 import { CONTENEDOR_PEDIDOS, EncabezadoPedidos } from "../../Encabezado";
 import { DiasSemana } from "./DiasSemana";
 import { HojaDia } from "./HojaDia";
-import { Pendientes } from "./Pendientes";
 
 // Hoja de ruta de un día: qué vehículos salen, qué lleva cada uno y en qué orden (con las entregas y cobros de cada pedido).
 export default async function HojaDelDia({ params }: { params: Promise<{ fecha: string }> }) {
@@ -16,13 +15,12 @@ export default async function HojaDelDia({ params }: { params: Promise<{ fecha: 
   const { fecha } = await params;
   if (!esFechaValida(fecha)) notFound();
 
-  const [pedidos, salidas, vehiculos, repartidores, cerrado, esperando] = await Promise.all([
+  const [pedidos, salidas, vehiculos, repartidores, cerrado] = await Promise.all([
     db.pedido.findMany({ where: { fechaEntrega: aFecha(fecha), estado: { not: "CANCELADO" } }, include: { ...incluirPedido, salida: true } }),
     db.salida.findMany({ where: { fecha: aFecha(fecha) }, include: { vehiculo: true }, orderBy: { orden: "asc" } }),
     db.vehiculo.findMany({ where: { activo: true }, orderBy: { orden: "asc" } }),
     db.usuario.findMany({ where: { rol: "REPARTIDOR", activo: true }, orderBy: { nombre: "asc" } }),
     db.diaCerrado.findUnique({ where: { fecha: aFecha(fecha) } }),
-    db.pedido.findMany({ where: { estado: "PENDIENTE", fechaEntrega: null }, include: incluirPedido, orderBy: { creadoEn: "asc" } }),
   ]);
   pedidos.sort(porReparto);
   const debe = await clientesConDeuda(pedidos.map((p) => p.clienteId));
@@ -49,7 +47,7 @@ export default async function HojaDelDia({ params }: { params: Promise<{ fecha: 
       <main className={CONTENEDOR_PEDIDOS}>
         <EncabezadoPedidos activa="ruta" fechaRuta={fecha} />
 
-        {/* Para ir día por día: la semana y sus seis días (reciben los pedidos arrastrados desde Pendientes) */}
+        {/* Para ir día por día: la semana y sus seis días  */}
         <DiasSemana
           fecha={fecha}
           lunesTexto={diaMes(lunes)}
@@ -57,11 +55,6 @@ export default async function HojaDelDia({ params }: { params: Promise<{ fecha: 
           hrefSiguiente={`/pedidos/dia/${mismoDia(1)}`}
           hrefSemana={`/pedidos/semana?semana=${lunes}`}
           dias={fechasSemana.map((f) => ({ fecha: f, texto: `${nombreDia(f).slice(0, 3)} ${Number(f.slice(8))}`, pedidos: nPedidos.get(f) ?? 0, vehiculos: nSalidas.get(f) ?? 0, cerrado: cerradosSet.has(f) }))}
-        />
-
-        <Pendientes
-          filas={esperando.map(aFilaBandeja)}
-          dias={fechasSemana.map((f) => ({ fecha: f, letra: nombreDia(f).charAt(0), numero: Number(f.slice(8)), nombre: nombreDia(f), hoy: f === hoy(), cerrado: cerradosSet.has(f) }))}
         />
 
         <h2 className="text-center text-lg font-bold uppercase tracking-wide">Hoja de ruta · {nombreDia(fecha)} {diaMes(fecha)}</h2>

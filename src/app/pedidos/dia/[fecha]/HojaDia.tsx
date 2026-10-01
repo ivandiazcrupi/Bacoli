@@ -12,7 +12,7 @@ import { BotonRemito } from "../../BotonRemito";
 import { asignarADia } from "../../actions";
 import { agregarSalida, asignarAVehiculo, cambiarRepartidor, devolverAPedidos, ordenarSalida, quitarSalida } from "../../ruta/actions";
 import { emitirRemitosDia } from "../../remito/actions";
-import { cerrarDia, dejarEnCuentaCorriente, deshacerCobro, guardarNumeroFactura, marcarEntrega, reabrirDia, registrarCobro, type Resultado } from "../actions";
+import { dejarEnCuentaCorriente, deshacerCobro, guardarNumeroFactura, marcarEntrega, reabrirDia, registrarCobro, type Resultado } from "../actions";
 
 export type Fila = {
   id: string;
@@ -38,6 +38,7 @@ export type Fila = {
 export type SalidaInfo = { id: string; nombre: string; patente: string; capacidad: number | null; repartidorId: string };
 export type Opcion = { id: string; nombre: string };
 
+const COLUMNAS_UBICAR = "lg:grid-cols-[1fr_1.5fr_1.4fr_1fr_2fr_7rem_5.5rem_4.5rem_16rem]";
 const COLUMNAS = "44px 140px 210px 190px 120px minmax(240px,1fr) 110px 100px 120px 120px 230px 110px 140px 170px";
 const ENCABEZADOS = ["N°", "Barrio", "Cliente", "Dirección", "Teléfono", "Pedido", "Monto", "Comprobante", "N° factura", "Entrega", "Cobro", "Remito", "Cuenta corriente", "Mover a"];
 const MEDIOS: { valor: string; texto: string }[] = [
@@ -69,7 +70,7 @@ function SelectorMover({ f, salidas, bloqueada, acc, clase }: { f: Fila; salidas
       className={`${clase} rounded-md border border-stone-400 bg-white px-2 text-sm font-medium shadow-sm disabled:opacity-40`}
     >
       <option value="">Mover a…</option>
-      {f.salidaId !== null && <option value="sin">Sin vehículo</option>}
+      {f.salidaId !== null && <option value="sin">Sin ubicar</option>}
       {salidas.filter((x) => x.id !== f.salidaId).map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}
       <option value="pedidos">Devolver a Pedidos</option>
       <optgroup label="Pasar a otro día">
@@ -277,7 +278,7 @@ function Medidor({ bultos, capacidad }: { bultos: number; capacidad: number | nu
       </p>
       {capacidad !== null && (
         <div className="mt-1 h-2.5 overflow-hidden rounded-full bg-white/25">
-          <div className={`h-full ${pasado ? "bg-rojo-500" : pct >= 90 ? "bg-crema-300" : "bg-verde-300"}`} style={{ width: `${pct}%` }} />
+          <div className={`h-full ${pasado ? "bg-rojo-500" : "bg-white/70"}`} style={{ width: `${pct}%` }} />
         </div>
       )}
     </div>
@@ -355,20 +356,7 @@ export function HojaDia({ fecha, filasIniciales, salidas, vehiculosLibres, repar
   };
 
   const sinVehiculo = filas.filter((f) => f.salidaId === null);
-  const sinEntrega = filas.filter((f) => f.estado === "PENDIENTE").length;
-  const sinCobro = filas.filter((f) => f.estado === "ENTREGADO" && f.cobro === null).length;
-  const sinNumero = filas.filter((f) => f.estado === "ENTREGADO" && (f.conFactura ? !f.numeroFactura : !f.remito)).length;
-  const completo = filas.length > 0 && sinVehiculo.length === 0 && sinEntrega === 0 && sinCobro === 0 && sinNumero === 0;
-  const verdes = filas.filter((f) => f.estado === "ENTREGADO").length;
-  const rojos = filas.filter((f) => f.estado === "NO_ENTREGADO").length;
 
-  const cerrar = () => {
-    if (!window.confirm("Al cerrar el día, los pedidos en rojo (no entregados) vuelven a “Pedidos” y el día queda de solo lectura. ¿Cerrar el día?")) return;
-    llamar(async () => {
-      const r = await cerrarDia(fecha);
-      return { ok: r.ok, error: r.error };
-    });
-  };
   const imprimirTodos = async () => {
     const ventana = window.open("", "_blank");
     const r = await emitirRemitosDia(fecha);
@@ -407,73 +395,64 @@ export function HojaDia({ fecha, filasIniciales, salidas, vehiculosLibres, repar
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 rounded-xl border border-stone-300 bg-white p-4 text-sm shadow-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <p className="text-stone-700">
-          {filas.length} {filas.length === 1 ? "pedido" : "pedidos"} · <span className="font-semibold text-verde-700">{verdes} {verdes === 1 ? "entregado" : "entregados"}</span> · <span className="font-semibold text-rojo-700">{rojos} {rojos === 1 ? "no entregado" : "no entregados"}</span>
-          {!cerrado && !completo && filas.length > 0 && (
-            <span className="text-stone-600"> · falta {[
-              sinVehiculo.length > 0 && `repartir ${sinVehiculo.length} ${sinVehiculo.length === 1 ? "pedido" : "pedidos"} en vehículos`,
-              sinEntrega > 0 && `marcar ${sinEntrega} ${sinEntrega === 1 ? "entrega" : "entregas"}`,
-              sinCobro > 0 && `${sinCobro} ${sinCobro === 1 ? "cobro" : "cobros"}`,
-              sinNumero > 0 && `${sinNumero} ${sinNumero === 1 ? "número" : "números"} de factura o remito`,
-            ].filter(Boolean).join(", ")}</span>
-          )}
-        </p>
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-          {filas.length > 0 && <button type="button" onClick={imprimirTodos} className="rounded-md border border-stone-400 bg-white px-3 py-3 font-medium shadow-sm sm:py-2">Imprimir todos los remitos</button>}
-          {cerrado ? (
-            <div className="flex items-center gap-3">
-              <span className="rounded-md bg-stone-800 px-3 py-1.5 font-semibold text-white">Día cerrado</span>
-              {esDueno && <button type="button" onClick={reabrir} className="rounded-md border border-stone-400 bg-white px-3 py-2 font-medium shadow-sm">Reabrir día</button>}
-            </div>
-          ) : (
-            <button type="button" onClick={cerrar} disabled={!completo} className="rounded-md bg-stone-800 px-4 py-3 font-semibold text-white disabled:opacity-40 sm:py-2">Cerrar día</button>
-          )}
-        </div>
-      </div>
-      {error && <p className="rounded-lg border border-rojo-600 bg-rojo-50 p-3 text-sm text-rojo-700" role="alert">{error}</p>}
-
-      {/* Sumar un vehículo a la salida de este día: chico, un solo desplegable; al elegirlo se abre su cuadro */}
-      {!cerrado && (
-        <div className="flex flex-wrap items-center gap-3 text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+        {/* Sumar un vehículo a la salida de este día: chico, un solo desplegable; al elegirlo se abre su cuadro */}
+        {!cerrado ? (
           <select
             aria-label="Sumar un vehículo al día"
             value=""
             disabled={vehiculosLibres.length === 0}
             onChange={(e) => sumarVehiculo(e.target.value)}
-            className="h-9 w-52 rounded-md border border-verde-700 bg-white px-2 text-sm font-semibold text-verde-800 shadow-sm disabled:border-stone-300 disabled:text-stone-500"
+            className="h-9 w-52 rounded-md border border-stone-400 bg-white px-2 text-sm font-semibold shadow-sm disabled:text-stone-500"
           >
             <option value="">{vehiculosLibres.length ? "+ Sumar vehículo" : "No quedan vehículos libres"}</option>
             {vehiculosLibres.map((v) => <option key={v.id} value={v.id}>{v.nombre}</option>)}
           </select>
-          <Link href="/pedidos/vehiculos" className="font-medium text-verde-800 underline">Cargar o editar vehículos</Link>
-        </div>
-      )}
+        ) : (
+          <div className="flex items-center gap-3">
+            <span className="rounded-md bg-stone-800 px-3 py-1.5 font-semibold text-white">Día cerrado</span>
+            {esDueno && <button type="button" onClick={reabrir} className="rounded-md border border-stone-400 bg-white px-3 py-2 font-medium shadow-sm">Reabrir día</button>}
+          </div>
+        )}
+        {filas.length > 0 && <button type="button" onClick={imprimirTodos} className="rounded-md border border-stone-400 bg-white px-3 py-2 font-medium shadow-sm">Imprimir todos los remitos</button>}
+      </div>
+      {error && <p className="rounded-lg border border-rojo-600 bg-rojo-50 p-3 text-sm text-rojo-700" role="alert">{error}</p>}
 
-      {/* Pedidos del día que todavía no están en ningún vehículo */}
+      {/* Pedidos del día que todavía no están en ningún vehículo: la misma información que en la hoja PEDIDOS */}
       {sinVehiculo.length > 0 && (
-        <section className="overflow-hidden rounded-xl border-2 border-rojo-600 bg-white shadow-sm">
-          <h2 className="flex items-center justify-between bg-rojo-700 px-4 py-3 text-sm font-bold uppercase tracking-wide text-white">
-            <span>Sin vehículo</span><span>{sinVehiculo.length} {sinVehiculo.length === 1 ? "pedido" : "pedidos"}</span>
+        <section aria-label="Sin ubicar" className="space-y-2">
+          <h2 className="flex items-center justify-between rounded-md bg-verde-800 px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white">
+            <span>Sin ubicar</span><span>{sinVehiculo.length} {sinVehiculo.length === 1 ? "pedido" : "pedidos"}</span>
           </h2>
-          <ul className="divide-y divide-stone-300">
-            {sinVehiculo.map((f) => (
-              <li key={f.id} className="grid items-center gap-x-4 gap-y-2 px-4 py-3 lg:grid-cols-[1.1fr_1.7fr_2.4fr_5rem_7rem_auto]">
+          <div className={`hidden gap-x-4 border-b border-stone-400 px-5 pb-1 text-center text-xs font-semibold uppercase tracking-wide text-stone-700 lg:grid ${COLUMNAS_UBICAR}`}>
+            {["Barrio", "Cliente", "Dirección", "Teléfono", "Pedido", "Monto", "Factura", "", "Ubicar en"].map((h, i) => <span key={i}>{h}</span>)}
+          </div>
+          {sinVehiculo.map((f) => (
+            <div key={f.id} className="rounded-xl border border-stone-300 bg-white px-5 py-3.5 shadow-sm">
+              <div className={`grid items-center gap-x-4 gap-y-2 text-center ${COLUMNAS_UBICAR}`}>
                 <span className="text-sm font-semibold">{f.barrio}</span>
-                <span className="text-sm leading-snug"><b>{f.cliente}</b>{f.comentario && <span className="block text-xs font-medium text-rojo-700">{f.comentario}</span>}</span>
-                <span className="text-sm leading-snug text-stone-700">{f.items.map((i) => `${i.cantidad} ${i.nombre}`).join(" · ")}</span>
-                <span className="text-sm tabular-nums"><b>{f.bultos}</b> paquetes</span>
-                <span className="text-sm font-semibold tabular-nums lg:text-right">{formatoPesos(f.monto)}</span>
-                <span className="flex flex-wrap items-center gap-1.5">
+                <span className="text-sm font-semibold leading-snug">{f.cliente}</span>
+                <span className="text-sm leading-snug">
+                  {f.direccion}
+                  {f.comentario && <span className="mt-0.5 block text-xs font-medium text-rojo-700">{f.comentario}</span>}
+                </span>
+                <span className="text-sm tabular-nums">{f.telefono ? (enlaceWhatsApp(f.telefono) ? <a href={enlaceWhatsApp(f.telefono)!} target="_blank" rel="noreferrer" className="hover:text-verde-800 hover:underline">{f.telefono}</a> : f.telefono) : <span className="text-stone-400">—</span>}</span>
+                <span className="inline-grid justify-center justify-self-center gap-x-2 gap-y-0.5 text-left text-sm [grid-template-columns:auto_auto]">
+                  {f.items.map((i, k) => <span key={k} className="contents"><span className="text-right font-semibold tabular-nums">{i.cantidad}</span><span className="leading-snug">{i.nombre}</span></span>)}
+                </span>
+                <span className="text-sm font-semibold tabular-nums">{formatoPesos(f.monto)}</span>
+                <span><span className={`inline-block rounded px-2 py-0.5 text-xs font-bold tracking-wide ${f.conFactura ? "bg-verde-800 text-white" : "bg-crema-200 text-verde-900"}`}>{f.conFactura ? "FACTURA" : "REMITO"}</span></span>
+                <Link href={`/pedidos/${f.id}`} className="text-sm font-semibold text-verde-800 underline-offset-4 hover:underline">Abrir ›</Link>
+                <span className="flex flex-wrap items-center justify-center gap-1.5">
                   {salidas.map((x) => (
-                    <button key={x.id} type="button" disabled={cerrado} onClick={() => acc.mover(f, x.id)} className="h-9 rounded-md border border-verde-700 bg-white px-3 text-sm font-semibold text-verde-800 shadow-sm hover:bg-verde-50 disabled:opacity-40">→ {x.nombre}</button>
+                    <button key={x.id} type="button" disabled={cerrado} onClick={() => acc.mover(f, x.id)} className="h-9 rounded-md border border-stone-400 bg-white px-3 text-sm font-semibold shadow-sm hover:border-verde-700 hover:bg-verde-700 hover:text-white disabled:opacity-40">→ {x.nombre}</button>
                   ))}
                   {salidas.length === 0 && <span className="text-sm text-stone-500">Primero sumá un vehículo</span>}
                   <SelectorMover f={f} salidas={[]} bloqueada={cerrado} acc={acc} clase="h-9" />
                 </span>
-              </li>
-            ))}
-          </ul>
+              </div>
+            </div>
+          ))}
         </section>
       )}
 
@@ -503,11 +482,11 @@ export function HojaDia({ fecha, filasIniciales, salidas, vehiculosLibres, repar
               </label>
               <div className="flex flex-wrap items-center gap-2">
                 {grupo.length > 0 && <a href={urlRuta(grupo)} target="_blank" rel="noreferrer" className="rounded-md border border-white/60 px-4 py-2 text-sm font-semibold hover:bg-white hover:text-verde-800">Ver ruta en Google Maps</a>}
-                {!cerrado && <button type="button" onClick={() => { if (window.confirm(`¿Sacar ${sa.nombre} del día? Sus pedidos quedan “sin vehículo”.`)) llamar(() => quitarSalida(sa.id)); }} className="rounded-md bg-white px-4 py-2 text-sm font-semibold text-rojo-700 hover:bg-rojo-50">Sacar del día</button>}
+                {!cerrado && <button type="button" onClick={() => { if (window.confirm(`¿Sacar ${sa.nombre} del día? Sus pedidos quedan “sin ubicar”.`)) llamar(() => quitarSalida(sa.id)); }} className="rounded-md bg-white px-4 py-2 text-sm font-semibold text-stone-800 hover:bg-crema-100">Sacar del día</button>}
               </div>
             </header>
             {grupo.length === 0 ? (
-              <p className="p-6 text-center text-sm text-stone-600">Todavía no tiene pedidos. Sumalos desde “Sin vehículo”.</p>
+              <p className="p-6 text-center text-sm text-stone-600">Todavía no tiene pedidos. Sumalos desde “Sin ubicar”.</p>
             ) : tabla(grupo, sa)}
           </section>
         );
