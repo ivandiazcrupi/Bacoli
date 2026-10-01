@@ -73,25 +73,26 @@ html.clasico { font-size: 13px; }
    marca, pero con esquinas casi rectas, sin sombras, letra de 14 px, espacios más justos, bordes firmes, títulos
    sobrios (sin barra) y la barra de estado abajo. Se borra este bloque y listo.
    ===================================================================================================== */
-html.intermedio { font-size: 14px; }
-.intermedio body { background: #f1efe3; padding-bottom: 24px; }
-.intermedio *, .intermedio *::before, .intermedio *::after { border-radius: 3px !important; box-shadow: none !important; }
-.intermedio header { background: #fff; border-bottom: 3px solid #026433 !important; }
+html.intermedio { font-size: 14.5px; }
+.intermedio body { background: #f6f4ea; padding-bottom: 24px; }
+.intermedio *, .intermedio *::before, .intermedio *::after { border-radius: 6px !important; }
+.intermedio [class*="shadow"], .intermedio main > div > div[class*="border"] { box-shadow: 0 1px 3px rgba(0,0,0,.08) !important; }
+.intermedio header { background: #fff; border-bottom: 2px solid #026433 !important; box-shadow: 0 2px 6px rgba(0,0,0,.06); }
 .intermedio header > div { padding-top: 0 !important; padding-bottom: 0 !important; }
 .intermedio header nav a:hover { background: #e9ebe2; }
 .intermedio main h1 { font-size: 18px !important; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: #014d27; border-bottom: 2px solid #026433; display: inline-block; padding-bottom: 2px; }
 .intermedio main { padding-top: 1rem !important; padding-bottom: 1rem !important; }
 .intermedio nav[aria-label="Pedidos"] { border-bottom: 2px solid #026433 !important; gap: 2px !important; }
-.intermedio nav[aria-label="Pedidos"] a { border-radius: 3px 3px 0 0 !important; padding: .4rem 1.1rem !important; }
-.intermedio [class*="border-stone-200"], .intermedio [class*="border-stone-300"] { border-color: #8a8d82 !important; }
-.intermedio [class*="py-4"] { padding-top: .6rem !important; padding-bottom: .6rem !important; }
-.intermedio [class*="py-3.5"], .intermedio [class*="py-3"] { padding-top: .4rem !important; padding-bottom: .4rem !important; }
+.intermedio nav[aria-label="Pedidos"] a { border-radius: 8px 8px 0 0 !important; padding: .5rem 1.2rem !important; }
+.intermedio [class*="border-stone-200"], .intermedio [class*="border-stone-300"] { border-color: #b3b5aa !important; }
+.intermedio [class*="py-4"] { padding-top: .75rem !important; padding-bottom: .75rem !important; }
+.intermedio [class*="py-3.5"], .intermedio [class*="py-3"] { padding-top: .5rem !important; padding-bottom: .5rem !important; }
 .intermedio [class*="p-5"] { padding: .9rem !important; }
 .intermedio [class*="space-y-5"] > * + * { margin-top: .7rem !important; }
-.intermedio main td, .intermedio main th { padding-top: .3rem !important; padding-bottom: .3rem !important; }
+.intermedio main td, .intermedio main th { padding-top: .4rem !important; padding-bottom: .4rem !important; }
 .intermedio main a, .intermedio main button { white-space: nowrap; }
 .intermedio main .flex-wrap.lg\:justify-end { flex-wrap: nowrap !important; gap: 4px !important; }
 .intermedio main .flex-wrap.lg\:justify-end a { font-size: 10px !important; padding: .2rem .5rem !important; }
-.intermedio input:not([type="checkbox"]):not([type="radio"]), .intermedio select, .intermedio textarea { border-color: #6b6e66 !important; }
+.intermedio input:not([type="checkbox"]):not([type="radio"]), .intermedio select, .intermedio textarea { border-color: #8a8d82 !important; }
 .intermedio body > p { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: #e3e0cc; border-top: 1px solid #8a8d82; text-align: left !important; padding: .2rem .8rem !important; font-size: 11px !important; color: #222 !important; }
 .intermedio header a, .intermedio header button { white-space: nowrap; }
