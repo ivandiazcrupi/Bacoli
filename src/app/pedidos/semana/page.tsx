@@ -42,7 +42,7 @@ export default async function Semana({ searchParams }: { searchParams: Promise<{
         </nav>
 
         <div className="overflow-hidden rounded-xl border border-stone-300 bg-white shadow-sm">
-          <div className={`hidden gap-x-4 px-5 py-3.5 text-center lg:grid ${cabeceraTabla} ${COLUMNAS}`}>
+          <div className={`hidden gap-x-4 px-5 py-3 text-center lg:grid ${cabeceraTabla} ${COLUMNAS}`}>
             <span>Día</span><span>Pedidos</span><span>Paquetes</span><span>Facturación</span><span>Entregas</span><span>Vehículos</span><span />
           </div>
           {fechas.map((f) => {
@@ -57,9 +57,9 @@ export default async function Semana({ searchParams }: { searchParams: Promise<{
               <Link
                 key={f}
                 href={`/pedidos/dia/${f}`}
-                className={`grid items-center gap-x-4 gap-y-1 border-t border-stone-300 px-5 py-6 text-center text-lg first:border-t-0 hover:bg-crema-100 ${COLUMNAS} ${esHoy ? "bg-crema-50 shadow-[inset_4px_0_0_0_#026433]" : "bg-white"}`}
+                className={`grid items-center gap-x-4 gap-y-1 border-t border-stone-300 px-5 py-5 text-center text-[15px] first:border-t-0 hover:bg-crema-100 ${COLUMNAS} ${esHoy ? "bg-crema-50 shadow-[inset_4px_0_0_0_#026433]" : "bg-white"}`}
               >
-                <span className="text-xl font-bold">{nombreDia(f)} <span className="font-medium text-stone-600">{diaMes(f)}</span>{esHoy && <span className="ml-1 text-xs font-semibold text-verde-800">hoy</span>}</span>
+                <span className="text-base font-bold">{nombreDia(f)} <span className="font-medium text-stone-600">{diaMes(f)}</span>{esHoy && <span className="ml-1 text-xs font-semibold text-verde-800">hoy</span>}</span>
                 <span className="tabular-nums"><span className="text-xs text-stone-500 lg:hidden">Pedidos: </span>{delDia.length}</span>
                 <span className="tabular-nums"><span className="text-xs text-stone-500 lg:hidden">Paquetes: </span>{paquetes}</span>
                 <span className="font-semibold tabular-nums"><span className="text-xs font-normal text-stone-500 lg:hidden">Facturación: </span>{vacio ? "—" : formatoPesos(monto)}</span>
