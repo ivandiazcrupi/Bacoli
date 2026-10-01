@@ -29,7 +29,7 @@ export default async function HojaDelDia({ params }: { params: Promise<{ fecha: 
       <Cabecera usuario={usuario} />
       <main className="mx-auto max-w-[1900px] space-y-4 px-4 py-6">
         <div className="flex flex-wrap items-center gap-3">
-          <Link href={`/pedidos?semana=${lunes}`} className="text-sm text-stone-600">← Semana</Link>
+          <Link href={`/pedidos/ruta?semana=${lunes}`} className="text-sm text-stone-600">← Hoja de ruta</Link>
           <Link href={`/pedidos/dia/${sumarDias(fecha, -1)}`} className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm" aria-label="Día anterior">←</Link>
           <h1 className="text-2xl font-bold">{nombreDia(fecha)} {diaMes(fecha)}</h1>
           <Link href={`/pedidos/dia/${sumarDias(fecha, 1)}`} className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm" aria-label="Día siguiente">→</Link>

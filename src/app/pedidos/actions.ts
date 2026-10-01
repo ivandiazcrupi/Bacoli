@@ -126,7 +126,7 @@ export async function crearPedido(_: EstadoPedidoForm, formData: FormData): Prom
     });
     await sincronizarCuentaPedido(tx, pedido.id, usuario.id);
   });
-  revalidatePath("/pedidos");
+  revalidatePath("/pedidos", "layout");
   return { ok: `Pedido de ${cliente.nombre} cargado. Está en "Sin asignar".` };
 }
 
@@ -147,7 +147,7 @@ export async function actualizarPedido(pedidoId: string, _: EstadoPedidoForm, fo
     });
     await sincronizarCuentaPedido(tx, pedidoId, usuario.id);
   });
-  revalidatePath("/pedidos");
+  revalidatePath("/pedidos", "layout");
   revalidatePath(`/pedidos/${pedidoId}`);
   redirect(`/pedidos/${pedidoId}`);
 }
@@ -188,7 +188,7 @@ export async function asignarADia(pedidoId: string, fecha: string): Promise<{ ok
 }
 
 const refrescar = (id: string) => {
-  revalidatePath("/pedidos");
+  revalidatePath("/pedidos", "layout");
   revalidatePath(`/pedidos/${id}`);
 };
 

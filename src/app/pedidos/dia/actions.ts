@@ -134,7 +134,7 @@ export async function cerrarDia(fecha: string): Promise<Resultado & { faltan?: n
       await sincronizarCuentaPedido(tx, p.id, usuario.id);
     }
   });
-  revalidatePath("/pedidos");
+  revalidatePath("/pedidos", "layout");
   return { ok: true };
 }
 
@@ -143,6 +143,6 @@ export async function reabrirDia(fecha: string): Promise<Resultado> {
   if (usuario.rol !== "DUENO") return { ok: false, error: "Solo un dueño puede reabrir un día cerrado." };
   if (!esFechaValida(fecha)) return { ok: false, error: "Fecha inválida." };
   await db.diaCerrado.deleteMany({ where: { fecha: aFecha(fecha) } });
-  revalidatePath("/pedidos");
+  revalidatePath("/pedidos", "layout");
   return { ok: true };
 }
