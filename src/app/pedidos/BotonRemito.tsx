@@ -5,7 +5,7 @@ import { useState } from "react";
 import { emitirRemito } from "./remito/actions";
 
 // Emite el remito (si todavía no tiene número) y lo abre en otra pestaña, listo para imprimir.
-export function BotonRemito({ pedidoId, numero, clase }: { pedidoId: string; numero: string | null; clase: string }) {
+export function BotonRemito({ pedidoId, numero, clase, textoSinNumero = "Remito" }: { pedidoId: string; numero: string | null; clase: string; textoSinNumero?: string }) {
   const router = useRouter();
   const [trabajando, setTrabajando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +27,7 @@ export function BotonRemito({ pedidoId, numero, clase }: { pedidoId: string; num
 
   return (
     <span className="inline-flex flex-col gap-1">
-      <button type="button" onClick={abrir} disabled={trabajando} className={clase}>{trabajando ? "…" : numero ?? "Remito"}</button>
+      <button type="button" onClick={abrir} disabled={trabajando} className={clase}>{trabajando ? "…" : numero ?? textoSinNumero}</button>
       {error && <span className="text-xs text-rojo-700" role="alert">{error}</span>}
     </span>
   );

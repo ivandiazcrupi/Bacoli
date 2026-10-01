@@ -4,7 +4,7 @@ import { titulo } from "@/lib/mayusculas";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { Prisma } from "@prisma/client";
-import { IVA_PCT, sincronizarCuentaPedido, saldoCliente, importeVigente } from "@/lib/cuenta";
+import { IVA_PCT, anotarEntregaEnCuenta, sincronizarCuentaPedido, saldoCliente, importeVigente } from "@/lib/cuenta";
 import { db } from "@/lib/db";
 import { aFecha, esFechaValida } from "@/lib/fechas";
 import { formatoPesos, leerMonto } from "@/lib/numeros";
@@ -215,6 +215,7 @@ export async function marcarEntregado(pedidoId: string, _: EstadoPedidoForm, for
   await db.$transaction(async (tx) => {
     for (const e of entregas) await tx.pedidoItem.update({ where: { id: e.id }, data: { cantidadEntregada: e.entregada } });
     await tx.pedido.update({ where: { id: pedidoId }, data: { estado: "ENTREGADO" } });
+    if (pedido.estado !== "ENTREGADO") await anotarEntregaEnCuenta(tx, pedidoId, pedido.clienteId, usuario.id);
     await sincronizarCuentaPedido(tx, pedidoId, usuario.id);
   });
   refrescar(pedidoId);

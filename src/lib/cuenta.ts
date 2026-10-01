@@ -38,6 +38,11 @@ export async function sincronizarCuentaPedido(tx: Prisma.TransactionClient, pedi
   await tx.movimientoCuenta.create({ data: { clienteId: pedido.clienteId, pedidoId, tipo, monto: diferencia, nota, usuarioId } });
 }
 
+/** Deja anotado en la cuenta corriente el día que se entregó el pedido (línea sin importe; el ajuste, si lo hay, va aparte). */
+export async function anotarEntregaEnCuenta(tx: Prisma.TransactionClient, pedidoId: string, clienteId: string, usuarioId: string | null) {
+  await tx.movimientoCuenta.create({ data: { clienteId, pedidoId, tipo: "AJUSTE_PEDIDO", monto: 0, nota: "Pedido entregado", usuarioId } });
+}
+
 export async function saldoCliente(tx: Prisma.TransactionClient, clienteId: string) {
   const r = await tx.movimientoCuenta.aggregate({ where: { clienteId }, _sum: { monto: true } });
   return redondear2(Number(r._sum.monto ?? 0));

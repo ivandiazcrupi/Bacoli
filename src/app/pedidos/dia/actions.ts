@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { MedioPago } from "@prisma/client";
-import { importeVigente, sincronizarCuentaPedido } from "@/lib/cuenta";
+import { anotarEntregaEnCuenta, importeVigente, sincronizarCuentaPedido } from "@/lib/cuenta";
 import { db } from "@/lib/db";
 import { aFecha, diaMes, esFechaValida } from "@/lib/fechas";
 import { exigirOficina } from "@/lib/session";
@@ -34,6 +34,7 @@ export async function marcarEntrega(pedidoId: string, valor: "ENTREGADO" | "NO_E
     // Entregado completo: lo entregado es lo pedido. Si volvió a pendiente o a no entregado, se borra lo entregado.
     await tx.pedidoItem.updateMany({ where: { pedidoId }, data: { cantidadEntregada: null } });
     if (valor === "ENTREGADO") for (const i of pedido.items) await tx.pedidoItem.update({ where: { id: i.id }, data: { cantidadEntregada: i.cantidad } });
+    if (valor === "ENTREGADO" && pedido.estado !== "ENTREGADO") await anotarEntregaEnCuenta(tx, pedidoId, pedido.clienteId, usuario.id);
     await sincronizarCuentaPedido(tx, pedidoId, usuario.id);
   });
   return { ok: true };
