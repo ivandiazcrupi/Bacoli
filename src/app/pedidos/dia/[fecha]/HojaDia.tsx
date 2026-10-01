@@ -10,7 +10,7 @@ import { formatoPesos } from "@/lib/numeros";
 import { enlaceWhatsApp } from "@/lib/telefonos";
 import { BotonRemito } from "../../BotonRemito";
 import { asignarADia } from "../../actions";
-import { agregarSalida, asignarAVehiculo, cambiarRepartidor, devolverAPedidos, ordenarSalida, quitarSalida } from "../../ruta/actions";
+import { agregarSalida, asignarAVehiculo, devolverAPedidos, ordenarSalida, quitarSalida } from "../../ruta/actions";
 import { emitirRemitosDia } from "../../remito/actions";
 import { dejarEnCuentaCorriente, deshacerCobro, guardarNumeroFactura, marcarEntrega, reabrirDia, registrarCobro, type Resultado } from "../actions";
 
@@ -535,18 +535,6 @@ export function HojaDia({ fecha, filasIniciales, salidas, vehiculosLibres, repar
                 {sa.patente && <p className="text-xs text-verde-200">{sa.patente}</p>}
               </div>
               <Medidor bultos={bultos} capacidad={sa.capacidad} />
-              <label className="text-xs font-semibold text-verde-100">
-                Repartidor
-                <select
-                  disabled={cerrado}
-                  defaultValue={sa.repartidorId}
-                  onChange={(e) => llamar(() => cambiarRepartidor(sa.id, e.target.value || null))}
-                  className="mt-1 block h-10 w-48 rounded-md border border-white/40 bg-white px-2 text-sm font-normal text-stone-900"
-                >
-                  <option value="">Sin asignar</option>
-                  {repartidores.map((r) => <option key={r.id} value={r.id}>{r.nombre}</option>)}
-                </select>
-              </label>
               <div className="flex flex-wrap items-center gap-2">
                 {grupo.length > 0 && <a href={urlRuta(grupo)} target="_blank" rel="noreferrer" className="rounded-md border border-white/60 px-4 py-2 text-sm font-semibold hover:bg-white hover:text-verde-800">Ver ruta en Google Maps</a>}
                 {!cerrado && <button type="button" onClick={() => { if (window.confirm(`¿Sacar ${sa.nombre} del día? Sus pedidos quedan “sin ubicar”.`)) llamar(() => quitarSalida(sa.id)); }} className="rounded-md bg-white px-4 py-2 text-sm font-semibold text-stone-800 hover:bg-crema-100">Sacar del día</button>}
