@@ -327,31 +327,29 @@ function FilaTarjeta({ f, n, bloqueada, acc, salidas }: { f: Fila; n: number; bl
 
 const urlRuta = (filas: Fila[]) => `https://www.google.com/maps/dir/${filas.map((f) => encodeURIComponent(`${f.direccion}, ${f.barrio}`)).join("/")}`;
 
-// Resumen de la vuelta de un vehículo (al final de su cuadro): pedidos, paquetes contra la capacidad y facturación.
+// Resumen de la vuelta de un vehículo (al final de su cuadro): a la izquierda la barra de paquetes contra la capacidad; a la derecha la facturación.
 function ResumenVuelta({ grupo, capacidad }: { grupo: Fila[]; capacidad: number | null }) {
   const paquetes = grupo.reduce((t, f) => t + f.bultos, 0);
   const total = grupo.reduce((t, f) => t + f.monto, 0);
-  const conFactura = grupo.filter((f) => f.conFactura).reduce((t, f) => t + f.monto, 0);
-  const conRemito = total - conFactura;
-  const estado =
-    capacidad === null ? { texto: "Sin tope", aviso: false }
-    : paquetes > capacidad ? { texto: `Te pasaste ${paquetes - capacidad}`, aviso: true }
-    : paquetes === capacidad ? { texto: "Completa", aviso: false }
-    : { texto: `Quedan ${capacidad - paquetes}`, aviso: false };
-  const dato = (titulo: string, valor: React.ReactNode, fuerte?: boolean) => (
-    <div className="text-center">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-600">{titulo}</p>
-      <p className={`tabular-nums ${fuerte ? "text-base font-bold" : "text-sm font-semibold"}`}>{valor}</p>
-    </div>
-  );
+  const pasado = capacidad !== null && paquetes > capacidad;
+  const pct = capacidad ? Math.min(100, Math.round((paquetes / capacidad) * 100)) : 0;
+  const estado = capacidad === null ? "" : pasado ? `Te pasaste ${paquetes - capacidad}` : paquetes === capacidad ? "Completa" : `Quedan ${capacidad - paquetes}`;
   return (
-    <footer aria-label="Resumen de la vuelta" className="grid grid-cols-2 items-center gap-x-4 gap-y-3 border-t border-stone-400 bg-crema-100 px-5 py-3 text-stone-900 sm:grid-cols-3 xl:grid-cols-6">
-      {dato("Pedidos", grupo.length)}
-      {dato("Paquetes", capacidad !== null ? `${paquetes} de ${capacidad}` : paquetes)}
-      {dato("Capacidad", <span className={estado.aviso ? "text-rojo-700" : undefined}>{estado.texto}</span>)}
-      {dato("Con factura", formatoPesos(conFactura))}
-      {dato("Con remito", formatoPesos(conRemito))}
-      {dato("Total de la vuelta", formatoPesos(total), true)}
+    <footer aria-label="Resumen de la vuelta" className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-stone-400 bg-crema-100 px-5 py-3 text-stone-900">
+      <div className="w-64" title={pasado ? "Se pasó de la capacidad (solo avisa, no frena)" : undefined}>
+        <p className="flex items-baseline justify-between gap-2 text-sm font-semibold">
+          <span className="tabular-nums">{capacidad !== null ? `${paquetes} de ${capacidad} paquetes` : `${paquetes} paquetes`}</span>
+          {estado && <span className={`text-xs ${pasado ? "font-bold text-rojo-700" : "font-medium text-stone-600"}`}>{estado}</span>}
+        </p>
+        {capacidad !== null && (
+          <div className="mt-1 h-2 overflow-hidden rounded-full bg-stone-300">
+            <div className={`h-full ${pasado ? "bg-rojo-600" : "bg-stone-700"}`} style={{ width: `${pct}%` }} />
+          </div>
+        )}
+      </div>
+      <p className="text-sm font-semibold uppercase tracking-wide text-stone-600">
+        Facturación <span className="ml-1 text-base font-bold tabular-nums normal-case tracking-normal text-stone-900">{formatoPesos(total)}</span>
+      </p>
     </footer>
   );
 }
