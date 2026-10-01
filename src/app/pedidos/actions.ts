@@ -1,6 +1,6 @@
 "use server";
 
-import { titulo } from "@/lib/mayusculas";
+import { mayus, titulo } from "@/lib/mayusculas";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { Prisma } from "@prisma/client";
@@ -9,6 +9,7 @@ import { db } from "@/lib/db";
 import { aFecha, esFechaValida } from "@/lib/fechas";
 import { formatoPesos, leerMonto } from "@/lib/numeros";
 import { exigirOficina } from "@/lib/session";
+import { importarPedidosWeb, type ResultadoImportacion } from "@/lib/empretienda";
 import { productosParaCliente, type ProductoPedido } from "./datos";
 
 export type Destino = { puntoId: string; clienteId: string; cliente: string; alias: string | null; direccion: string; barrio: string; zona: string };
@@ -152,6 +153,42 @@ export async function actualizarPedido(pedidoId: string, _: EstadoPedidoForm, fo
   redirect(`/pedidos/${pedidoId}`);
 }
 
+/** Modifica un pedido de la tienda online: datos de entrega, cantidades de cada renglón (en 0 se saca), total pagado y nota. */
+export async function actualizarPedidoWeb(pedidoId: string, _: EstadoPedidoForm, formData: FormData): Promise<EstadoPedidoForm> {
+  await exigirOficina();
+  const pedido = await db.pedido.findUnique({ where: { id: pedidoId }, include: { items: true } });
+  if (!pedido || pedido.origen !== "WEB") return { error: "No encontré el pedido de la tienda." };
+  if (pedido.estado !== "PENDIENTE") return { error: "Solo se puede modificar un pedido pendiente. Reabrilo primero." };
+
+  const nombre = mayus(String(formData.get("nombre") ?? ""));
+  if (!nombre) return { error: "Falta el nombre." };
+  const total = leerMonto(String(formData.get("total") ?? ""));
+  if (total === null || total < 0) return { error: "El total tiene que ser un monto válido." };
+  const cantidades = pedido.items.map((i) => ({ id: i.id, cantidad: Number(String(formData.get(`q_${i.id}`) ?? i.cantidad).replace(/\D/g, "") || 0) }));
+  if (cantidades.every((c) => c.cantidad === 0)) return { error: "El pedido tiene que llevar al menos un producto." };
+
+  await db.$transaction(async (tx) => {
+    for (const c of cantidades) {
+      if (c.cantidad === 0) await tx.pedidoItem.delete({ where: { id: c.id } });
+      else await tx.pedidoItem.update({ where: { id: c.id }, data: { cantidad: c.cantidad } });
+    }
+    await tx.pedido.update({
+      where: { id: pedidoId },
+      data: {
+        webNombre: nombre,
+        webBarrio: mayus(String(formData.get("barrio") ?? "")) || null,
+        webDireccion: titulo(String(formData.get("direccion") ?? "").trim()) || null,
+        webTelefono: String(formData.get("telefono") ?? "").trim() || null,
+        webTotal: total,
+        nota: String(formData.get("nota") ?? "").trim() || null,
+      },
+    });
+  });
+  revalidatePath("/pedidos", "layout");
+  revalidatePath(`/pedidos/${pedidoId}`);
+  redirect(`/pedidos/${pedidoId}`);
+}
+
 /** Mueve un pedido a "bandeja" o a un día ("YYYY-MM-DD") y guarda el orden de esa columna (el número de la hoja del día). */
 export async function moverPedido(pedidoId: string, destino: string, ordenIds: string[]): Promise<{ ok: boolean; error?: string }> {
   const usuario = await exigirOficina();
@@ -230,4 +267,12 @@ export async function reabrirPedido(formData: FormData) {
 }
 export async function cancelarPedido(formData: FormData) {
   await cambiarEstado(String(formData.get("id")), { estado: "CANCELADO", fechaEntrega: null }, true);
+}
+
+/** Botón "Traer pedidos ahora": lee la planilla de la tienda online y carga los pedidos nuevos. */
+export async function traerPedidosWeb(): Promise<ResultadoImportacion> {
+  await exigirOficina();
+  const r = await importarPedidosWeb();
+  revalidatePath("/pedidos", "layout");
+  return r;
 }

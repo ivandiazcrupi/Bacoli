@@ -71,7 +71,7 @@ export default async function CuentaCorriente({ params }: { params: Promise<{ id
                     ) : (
                       <span className="text-rojo-700">Remito sin emitir</span>
                     )}
-                    {" · "}{m.pedido.punto.alias ?? titulo(m.pedido.punto.direccion)}
+                    {" · "}{m.pedido.punto?.alias ?? titulo(m.pedido.punto?.direccion)}
                     {" · "}<Link href={`/pedidos/${m.pedidoId}`} className="underline">ver pedido</Link>
                   </p>
                 )}

@@ -5,13 +5,14 @@ import { deFecha, hoy } from "@/lib/fechas";
 import { exigirOficina } from "@/lib/session";
 import { BarraImpresion } from "../../remito/BarraImpresion";
 import { RemitoDoc } from "../../remito/RemitoDoc";
+import { datosRemito } from "../../remito/datos";
 
 export default async function RemitoPedido({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ precios?: string }> }) {
   await exigirOficina();
   const { id } = await params;
   const { precios } = await searchParams;
   const [pedido, empresa] = await Promise.all([
-    db.pedido.findUnique({ where: { id }, include: { cliente: true, punto: true, items: { include: { producto: true }, orderBy: { producto: { orden: "asc" } } } } }),
+    db.pedido.findUnique({ where: { id }, include: { cliente: true, punto: true, items: { include: { producto: true } } } }),
     db.empresa.findUnique({ where: { id: "principal" } }),
   ]);
   if (!pedido) notFound();
@@ -24,7 +25,8 @@ export default async function RemitoPedido({ params, searchParams }: { params: P
       </main>
     );
   }
-  const conPrecios = precios === "1";
+  const datos = datosRemito(pedido);
+  const conPrecios = precios === "1" && !datos.web; // los pedidos de la tienda no llevan precios por renglón
   return (
     <div className="bg-stone-200 print:bg-white">
       <style>{"@page { size: A4; margin: 0 }"}</style>
@@ -39,9 +41,9 @@ export default async function RemitoPedido({ params, searchParams }: { params: P
             conFactura: pedido.conFactura,
             numeroFactura: pedido.numeroFactura,
             nota: pedido.nota,
-            cliente: { nombre: pedido.cliente.nombre, razonSocial: pedido.cliente.razonSocial, cuit: pedido.cliente.cuit },
-            sucursal: { alias: pedido.punto.alias, direccion: pedido.punto.direccion, barrio: pedido.punto.barrio, telefono: pedido.punto.telefono },
-            items: pedido.items.map((i) => ({ sku: i.sku, descripcion: i.producto.descripcion ?? i.nombre, cantidad: i.cantidad, unidad: i.unidad, precioUnitario: Number(i.precioUnitario) })),
+            cliente: datos.cliente,
+            sucursal: datos.sucursal,
+            items: datos.items,
           }}
         />
       </div>

@@ -24,7 +24,7 @@ export default async function HojaDelDia({ params }: { params: Promise<{ fecha: 
     db.diaCerrado.findUnique({ where: { fecha: aFecha(fecha) } }),
   ]);
   pedidos.sort(porReparto);
-  const debe = await clientesConDeuda(pedidos.map((p) => p.clienteId));
+  const debe = await clientesConDeuda(pedidos.flatMap((p) => (p.clienteId ? [p.clienteId] : [])));
   const filas = pedidos.map((p) => aFila(p, debe));
   const salen = new Set(salidas.map((s) => s.vehiculoId));
 

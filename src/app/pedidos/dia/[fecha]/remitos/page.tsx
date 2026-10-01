@@ -4,6 +4,7 @@ import { aFecha, esFechaValida } from "@/lib/fechas";
 import { porReparto } from "@/lib/ruta";
 import { exigirOficina } from "@/lib/session";
 import { BarraImpresion } from "../../../remito/BarraImpresion";
+import { datosRemito } from "../../../remito/datos";
 import { RemitoDoc } from "../../../remito/RemitoDoc";
 
 // Todos los remitos del día, uno por hoja, en el orden del reparto.
@@ -15,7 +16,7 @@ export default async function RemitosDelDia({ params, searchParams }: { params: 
   const [pedidos, empresa] = await Promise.all([
     db.pedido.findMany({
       where: { fechaEntrega: aFecha(fecha), estado: { not: "CANCELADO" }, remitoNumero: { not: null } },
-      include: { cliente: true, punto: true, salida: true, items: { include: { producto: true }, orderBy: { producto: { orden: "asc" } } } },
+      include: { cliente: true, punto: true, salida: true, items: { include: { producto: true } } },
     }),
     db.empresa.findUnique({ where: { id: "principal" } }),
   ]);
@@ -33,16 +34,16 @@ export default async function RemitosDelDia({ params, searchParams }: { params: 
             <div key={p.id} className="[&:not(:last-child)]:break-after-page">
               <RemitoDoc
                 empresa={empresa}
-                conPrecios={conPrecios}
+                conPrecios={conPrecios && !datosRemito(p).web}
                 r={{
                   numero: p.remitoNumero!,
                   fecha,
                   conFactura: p.conFactura,
                   numeroFactura: p.numeroFactura,
                   nota: p.nota,
-                  cliente: { nombre: p.cliente.nombre, razonSocial: p.cliente.razonSocial, cuit: p.cliente.cuit },
-                  sucursal: { alias: p.punto.alias, direccion: p.punto.direccion, barrio: p.punto.barrio, telefono: p.punto.telefono },
-                  items: p.items.map((i) => ({ sku: i.sku, descripcion: i.producto.descripcion ?? i.nombre, cantidad: i.cantidad, unidad: i.unidad, precioUnitario: Number(i.precioUnitario) })),
+                  cliente: datosRemito(p).cliente,
+                  sucursal: datosRemito(p).sucursal,
+                  items: datosRemito(p).items,
                 }}
               />
             </div>

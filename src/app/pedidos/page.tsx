@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { aFecha, deFecha, diaMes, esFechaValida, hoy, lunesDe, nombreDia, sumarDias } from "@/lib/fechas";
 import { exigirOficina } from "@/lib/session";
 import { Bandeja } from "./Bandeja";
+import { TraerPedidosWeb } from "./TraerPedidosWeb";
 import { aFilaBandeja, incluirPedido } from "./filas";
 import { CONTENEDOR_PEDIDOS, EncabezadoPedidos } from "./Encabezado";
 
@@ -53,8 +54,10 @@ export default async function Pedidos({ searchParams }: { searchParams: Promise<
           </nav>
         </div>
 
+        {esWeb && <TraerPedidosWeb />}
+
         {esWeb && pedidos.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-stone-400 p-8 text-center text-stone-600">Los pedidos de la tienda online van a aparecer acá apenas se conecte la web.</p>
+          <p className="rounded-lg border border-dashed border-stone-400 p-8 text-center text-stone-600">Todavía no hay pedidos de la tienda online esperando día. Entran solos cada 15 minutos, o tocá “Traer pedidos ahora”.</p>
         ) : (
           <Bandeja key={`${lunes}-${esWeb}`} filas={pedidos.map(aFilaBandeja)} dias={dias} />
         )}

@@ -9,28 +9,30 @@ export type Renglon = { id: string; nombre: string; sku: string | null; unidad: 
 type Totales = { base: number; iva: number; ivaPct: number; total: number; conFactura: boolean };
 
 const COLUMNAS = "lg:grid-cols-[minmax(0,2fr)_7rem_7rem_8rem_9rem]";
+const COLUMNAS_WEB = "lg:grid-cols-[minmax(0,2fr)_9rem_9rem]"; // la tienda no tiene precio por renglón: vale el total pagado
 
 // Los productos del pedido en una tabla a lo ancho. Si el pedido está abierto, la columna ENTREGADO se edita y abajo está "Confirmar entrega".
-export function TablaPedido({ pedidoId, abierto, entregado, items, totales, nota }: { pedidoId: string; abierto: boolean; entregado: boolean; items: Renglon[]; totales: Totales; nota: string | null }) {
+export function TablaPedido({ pedidoId, abierto, entregado, items, totales, nota, web = false }: { pedidoId: string; abierto: boolean; entregado: boolean; items: Renglon[]; totales: Totales; nota: string | null; web?: boolean }) {
+  const cols = web ? COLUMNAS_WEB : COLUMNAS;
   const [estado, enviar, cargando] = useActionState(marcarEntregado.bind(null, pedidoId), undefined as EstadoPedidoForm);
   const ivaTexto = String(totales.ivaPct).replace(".", ",");
 
   return (
     <form action={enviar} className="space-y-4">
       <div className="overflow-hidden rounded-xl border border-stone-300 bg-white shadow-sm">
-        <div className={`hidden gap-x-4 px-5 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-stone-600 lg:grid ${COLUMNAS}`}>
-          <span>Producto</span><span>Precio</span><span>Pedido</span><span>Entregado</span><span>Subtotal</span>
+        <div className={`hidden gap-x-4 px-5 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-stone-600 lg:grid ${cols}`}>
+          <span>Producto</span>{!web && <span>Precio</span>}<span>Pedido</span><span>Entregado</span>{!web && <span>Subtotal</span>}
         </div>
         {items.map((i) => {
           const entregadaFinal = i.entregada ?? i.cantidad;
           const parcial = entregado && i.entregada !== null && i.entregada !== i.cantidad;
           return (
-            <div key={i.id} className={`grid items-center gap-x-4 gap-y-1 border-t border-stone-400 px-5 py-2.5 text-center ${COLUMNAS}`}>
+            <div key={i.id} className={`grid items-center gap-x-4 gap-y-1 border-t border-stone-400 px-5 py-2.5 text-center ${cols}`}>
               <div>
                 <p className="font-semibold leading-snug">{i.nombre}</p>
                 <p className="text-xs text-stone-500">{i.sku ?? ""} · por {i.unidad}</p>
               </div>
-              <p className="text-sm tabular-nums">{formatoPesos(i.precio)}</p>
+              {!web && <p className="text-sm tabular-nums">{formatoPesos(i.precio)}</p>}
               <p className="font-semibold tabular-nums">{i.cantidad}</p>
               <div>
                 {abierto ? (
@@ -47,7 +49,7 @@ export function TablaPedido({ pedidoId, abierto, entregado, items, totales, nota
                   <span className="text-stone-400">—</span>
                 )}
               </div>
-              <p className="text-sm font-semibold tabular-nums">{formatoPesos((entregado ? entregadaFinal : i.cantidad) * i.precio)}</p>
+              {!web && <p className="text-sm font-semibold tabular-nums">{formatoPesos((entregado ? entregadaFinal : i.cantidad) * i.precio)}</p>}
             </div>
           );
         })}

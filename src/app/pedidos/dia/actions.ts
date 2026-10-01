@@ -31,6 +31,10 @@ export async function marcarEntrega(pedidoId: string, valor: "ENTREGADO" | "NO_E
 
   await db.$transaction(async (tx) => {
     await tx.pedido.update({ where: { id: pedidoId }, data: { estado: valor, ...(valor !== "ENTREGADO" ? { cobro: null, medioCobro: null, montoCobrado: null } : {}) } });
+    // Pedido de la tienda ya pagado con Mercado Pago: al entregarlo queda cobrado (no hay nada más que cobrar).
+    if (valor === "ENTREGADO" && pedido.webPago === "PAGO_MP" && pedido.cobro === null) {
+      await tx.pedido.update({ where: { id: pedidoId }, data: { cobro: "COBRADO", medioCobro: "MERCADO_PAGO", montoCobrado: pedido.webTotal, pagado: true } });
+    }
     // Entregado completo: lo entregado es lo pedido. Si volvió a pendiente o a no entregado, se borra lo entregado.
     await tx.pedidoItem.updateMany({ where: { pedidoId }, data: { cantidadEntregada: null } });
     if (valor === "ENTREGADO") for (const i of pedido.items) await tx.pedidoItem.update({ where: { id: i.id }, data: { cantidadEntregada: i.cantidad } });
@@ -50,7 +54,7 @@ export async function registrarCobro(pedidoId: string, medio: string, monto?: nu
   if (pedido.estado !== "ENTREGADO") return { ok: false, error: "Primero marcá el pedido como entregado." };
   if (pedido.cobro === "COBRADO") return { ok: false, error: "Este pedido ya está cobrado." };
 
-  const debido = importeVigente(pedido.items, Number(pedido.ivaPct), "ENTREGADO");
+  const debido = importeVigente(pedido.items, Number(pedido.ivaPct), "ENTREGADO", pedido.webTotal);
   const cobrado = redondear2(monto ?? debido);
   if (!(cobrado > 0)) return { ok: false, error: "El monto cobrado tiene que ser mayor a 0." };
 
@@ -59,9 +63,11 @@ export async function registrarCobro(pedidoId: string, medio: string, monto?: nu
       where: { id: pedidoId },
       data: { cobro: "COBRADO", medioCobro: medio as MedioPago, montoCobrado: cobrado, pagado: cobrado + 0.005 >= debido },
     });
-    await tx.movimientoCuenta.create({
-      data: { clienteId: pedido.clienteId, pedidoId, tipo: "PAGO", monto: -cobrado, medio: medio as MedioPago, nota: "Cobro del pedido", usuarioId: usuario.id },
-    });
+    if (pedido.clienteId) {
+      await tx.movimientoCuenta.create({
+        data: { clienteId: pedido.clienteId, pedidoId, tipo: "PAGO", monto: -cobrado, medio: medio as MedioPago, nota: "Cobro del pedido", usuarioId: usuario.id },
+      });
+    }
   });
   return { ok: true };
 }
@@ -73,6 +79,7 @@ export async function dejarEnCuentaCorriente(pedidoId: string): Promise<Resultad
   if ("error" in r) return { ok: false, error: r.error };
   if (r.pedido.estado !== "ENTREGADO") return { ok: false, error: "Primero marcá el pedido como entregado." };
   if (r.pedido.cobro === "COBRADO") return { ok: false, error: "Primero deshacé el cobro." };
+  if (!r.pedido.clienteId) return { ok: false, error: "Los pedidos de la tienda online no tienen cuenta corriente." };
   await db.pedido.update({ where: { id: pedidoId }, data: { cobro: "CUENTA_CORRIENTE" } });
   return { ok: true };
 }
@@ -84,7 +91,7 @@ export async function deshacerCobro(pedidoId: string): Promise<Resultado> {
   if ("error" in r) return { ok: false, error: r.error };
   const { pedido } = r;
   await db.$transaction(async (tx) => {
-    if (pedido.cobro === "COBRADO" && pedido.montoCobrado) {
+    if (pedido.cobro === "COBRADO" && pedido.montoCobrado && pedido.clienteId) {
       await tx.movimientoCuenta.create({
         data: { clienteId: pedido.clienteId, pedidoId, tipo: "ANULACION_PAGO", monto: pedido.montoCobrado, medio: pedido.medioCobro, nota: "Cobro anulado", usuarioId: usuario.id },
       });
@@ -101,7 +108,7 @@ export async function guardarNumeroFactura(pedidoId: string, numero: string): Pr
   const limpio = numero.trim();
   if (limpio) {
     const repetido = await db.pedido.findFirst({ where: { numeroFactura: { equals: limpio, mode: "insensitive" }, id: { not: pedidoId } }, include: { cliente: true } });
-    if (repetido) return { ok: false, error: `El N° de factura ${limpio} ya está cargado en un pedido de ${repetido.cliente.nombre}.` };
+    if (repetido) return { ok: false, error: `El N° de factura ${limpio} ya está cargado en un pedido de ${repetido.cliente?.nombre ?? repetido.webNombre ?? "la tienda"}.` };
   }
   await db.pedido.update({ where: { id: pedidoId }, data: { numeroFactura: limpio || null } });
   return { ok: true };

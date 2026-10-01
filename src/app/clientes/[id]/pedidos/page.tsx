@@ -61,7 +61,7 @@ export default async function PedidosDelCliente({ params }: { params: Promise<{ 
                   className="grid items-center gap-x-3 gap-y-1 rounded-xl border border-stone-300 bg-white p-4 shadow-sm hover:border-verde-700 lg:grid-cols-[8rem_1.6fr_2.4fr_1fr_1fr_1fr]"
                 >
                   <span className="text-sm font-medium">{fecha ? `${nombreDia(fecha)} ${diaMes(fecha)}` : <span className="text-stone-500">Sin asignar</span>}</span>
-                  <span className="text-sm">{titulo(p.punto.direccion)} <span className="text-stone-500">· {p.punto.barrio}</span></span>
+                  <span className="text-sm">{titulo(p.punto?.direccion)} <span className="text-stone-500">· {p.punto?.barrio}</span></span>
                   <span className="text-sm">{p.items.map((i) => `${i.cantidad} ${i.nombre}`).join(" · ")}</span>
                   <span className="text-sm font-semibold tabular-nums lg:text-right">{formatoPesos(monto)}</span>
                   <span className="text-sm">

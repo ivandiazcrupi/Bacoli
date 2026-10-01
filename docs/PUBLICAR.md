@@ -33,6 +33,11 @@ Guía en lenguaje simple. Está pensada para retomar el trabajo aunque no recuer
 | `SEED_ADMIN_PASSWORD` | Contraseña del primer dueño | **Temporal.** Se borra después del primer ingreso. |
 | `SEED_ADMIN_RESET` | Restablecer la contraseña del dueño | **Temporal.** Solo para emergencias. Ver abajo. |
 
+| `EMPRETIENDA_CSV_URL` | Enlace de **solo lectura** de la hoja "Minorista" (Archivo → Compartir → Publicar en la web → esa hoja → formato CSV) | Es un secreto: quien lo tenga ve los datos de los clientes de la tienda. Sin esta variable, la tienda online no se conecta. |
+| `EMPRETIENDA_DESDE` | Primer N° de orden de Empretienda que se trae (ej. `13400`) | Obligatoria. Evita cargar los pedidos viejos que ya están en la planilla. |
+
+**Tienda online:** con esas dos variables, el sistema lee la planilla cada 15 minutos (y con el botón "Traer pedidos ahora" de Pedidos → Minoristas (web)) y carga un pedido por cada N° de orden nuevo. No repite ni vuelve a leer los que ya cargó.
+
 Railway suele mostrar `SEED_ADMIN_PASSWORD` como "variable sugerida": no hay que agregarla salvo que se necesite.
 
 ## Primera puesta en marcha (ya hecha, queda como referencia)

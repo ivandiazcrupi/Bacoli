@@ -78,7 +78,10 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
         <div key={f.id} className="rounded-xl border border-stone-300 bg-white px-5 py-3.5 shadow-sm">
           <div className={`hidden items-center gap-x-4 text-center lg:grid ${COLUMNAS}`}>
             <span className="text-sm font-semibold">{f.barrio}</span>
-            <span className="text-sm font-semibold leading-snug">{f.cliente}</span>
+            <span className="text-sm font-semibold leading-snug">
+              {f.cliente}
+              {f.webOrden && <span className="block text-[11px] font-normal text-stone-500">N° {f.webOrden} · {f.pagoMp ? "pagado con Mercado Pago" : <span className="text-rojo-700">pago pendiente</span>}</span>}
+            </span>
             <span className="text-sm leading-snug">
               {f.direccion}
               {f.comentario && <span className="mt-0.5 block text-xs font-medium text-rojo-700">{f.comentario}</span>}
@@ -100,6 +103,7 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
               <div>
                 <p className="font-semibold">{f.barrio}</p>
                 <p className="font-semibold">{f.cliente}</p>
+                {f.webOrden && <p className="text-xs text-stone-500">N° {f.webOrden} · {f.pagoMp ? "pagado con Mercado Pago" : "pago pendiente"}</p>}
                 <p className="text-sm">{f.direccion}</p>
                 {f.comentario && <p className="text-sm font-medium text-rojo-700">{f.comentario}</p>}
                 {f.telefono && <p className="text-sm tabular-nums"><Telefono tel={f.telefono} /></p>}

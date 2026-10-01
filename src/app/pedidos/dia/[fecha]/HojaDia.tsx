@@ -16,7 +16,7 @@ import { dejarEnCuentaCorriente, deshacerCobro, guardarNumeroFactura, marcarEntr
 
 export type Fila = {
   id: string;
-  clienteId: string;
+  clienteId: string | null;
   barrio: string;
   cliente: string;
   direccion: string;
@@ -33,13 +33,14 @@ export type Fila = {
   remito: string | null;
   salidaId: string | null;
   bultos: number;
+  webOrden: string | null; // pedido de la tienda online: sin cuenta corriente
 };
 
 export type SalidaInfo = { id: string; nombre: string; patente: string; capacidad: number | null; repartidorId: string };
 export type Opcion = { id: string; nombre: string };
 
 // Todo entra a lo ancho (sin deslizar): columnas justas y todo centrado.
-const COLUMNAS = "34px 80px minmax(120px,1.2fr) minmax(110px,1fr) 96px minmax(130px,1.4fr) 92px 96px 52px 112px 104px 84px";
+const COLUMNAS = "34px 80px minmax(120px,1.2fr) minmax(110px,1fr) 112px minmax(120px,1.4fr) 92px 96px 52px 112px 104px 84px";
 const ENCABEZADOS = ["N°", "Barrio", "Cliente", "Dirección", "Teléfono", "Pedido", "Monto", "Comprobante", "Entrega", "Cobro", "Ubicación", "Editar pedido"];
 const MEDIOS: { valor: string; texto: string }[] = [
   { valor: "EFECTIVO", texto: "Efectivo" },
@@ -112,12 +113,13 @@ function FilaHoja({ f, n, bloqueada, acc, salidas }: { f: Fila; n: number; bloqu
       <div role="cell" className="font-semibold">{f.barrio}</div>
       <div role="cell" className="leading-snug">
         <p className="font-semibold">{f.cliente}</p>
+        <WebOrden n={f.webOrden} />
       </div>
-      <div role="cell" className="leading-snug">
+      <div role="cell" className="min-w-0 break-words leading-snug">
         <a href={mapa(f)} target="_blank" rel="noreferrer" className="hover:underline">{f.direccion}</a>
         {f.comentario && <p className="text-xs font-medium text-rojo-700">{f.comentario}</p>}
       </div>
-      <div role="cell" className="tabular-nums">
+      <div role="cell" className="whitespace-nowrap tabular-nums">
         {f.telefono ? (enlaceWhatsApp(f.telefono) ? <a href={enlaceWhatsApp(f.telefono)!} target="_blank" rel="noreferrer" className="hover:text-verde-800 hover:underline">{f.telefono}</a> : f.telefono) : <span className="text-stone-400">—</span>}
       </div>
       <div role="cell" className="inline-grid justify-center justify-self-center gap-x-2 gap-y-0.5 text-left [grid-template-columns:auto_auto]">
@@ -178,7 +180,7 @@ function FilaHoja({ f, n, bloqueada, acc, salidas }: { f: Fila; n: number; bloqu
             <optgroup label="Cobrado en">
               {MEDIOS.map((m) => <option key={m.valor} value={m.valor}>{m.texto}</option>)}
             </optgroup>
-            <option value="CUENTA_CORRIENTE">Cuenta corriente</option>
+            {!f.webOrden && <option value="CUENTA_CORRIENTE">Cuenta corriente</option>}
           </select>
         )}
       </div>
@@ -194,6 +196,11 @@ function FilaHoja({ f, n, bloqueada, acc, salidas }: { f: Fila; n: number; bloqu
       </div>
     </div>
   );
+}
+
+// Rótulo chico bajo el nombre en los pedidos de la tienda online.
+function WebOrden({ n }: { n: string | null }) {
+  return n ? <span className="block text-[11px] font-normal text-stone-500">Tienda online · N° {n}</span> : null;
 }
 
 // Cuadro que recibe pedidos arrastrados (un vehículo, o "sin" = sin ubicar).
@@ -217,7 +224,7 @@ function FilaUbicar({ f, salidas, bloqueada, acc }: { f: Fila; salidas: SalidaIn
       <div className={`grid items-center gap-x-4 gap-y-2 text-center ${COLUMNAS_UBICAR}`}>
         <button type="button" disabled={bloqueada} aria-label="Arrastrar el pedido a un vehículo" className="hidden cursor-grab text-lg leading-none text-stone-500 disabled:cursor-default disabled:opacity-30 lg:block" {...attributes} {...listeners}>⋮⋮</button>
         <span className="text-sm font-semibold">{f.barrio}</span>
-        <span className="text-sm font-semibold leading-snug">{f.cliente}</span>
+        <span className="text-sm font-semibold leading-snug">{f.cliente}<WebOrden n={f.webOrden} /></span>
         <span className="text-sm leading-snug">
           {f.direccion}
           {f.comentario && <span className="mt-0.5 block text-xs font-medium text-rojo-700">{f.comentario}</span>}
@@ -254,6 +261,7 @@ function FilaTarjeta({ f, n, bloqueada, acc, salidas }: { f: Fila; n: number; bl
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-stone-800 text-sm font-semibold text-white">{n}</span>
         <div className="min-w-0 flex-1">
           <h3 className="text-lg font-bold leading-snug">{f.cliente}</h3>
+          <WebOrden n={f.webOrden} />
           <p className="text-sm text-stone-600">{f.barrio}</p>
         </div>
         <span className={`shrink-0 rounded px-2 py-0.5 text-xs font-semibold ${f.conFactura ? "bg-stone-800 text-white" : "bg-stone-200 text-stone-700"}`}>{f.conFactura ? "FACTURA" : "REMITO"}</span>
@@ -297,7 +305,7 @@ function FilaTarjeta({ f, n, bloqueada, acc, salidas }: { f: Fila; n: number; bl
           ) : (
             <div className="grid grid-cols-2 gap-2">
               <button type="button" disabled={bloqueada} onClick={() => setEligiendo(true)} className={`${grande} border-verde-700 bg-white text-verde-800`}>Cobrado</button>
-              <button type="button" disabled={bloqueada} onClick={() => acc.cuentaCorriente(f)} className={`${grande} border-verde-700 bg-white text-verde-900`}>Cuenta corriente</button>
+              {!f.webOrden && <button type="button" disabled={bloqueada} onClick={() => acc.cuentaCorriente(f)} className={`${grande} border-verde-700 bg-white text-verde-900`}>Cuenta corriente</button>}
             </div>
           )}
         </div>

@@ -7,8 +7,9 @@ const redondear2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 type Renglon = { cantidad: number; cantidadEntregada: number | null; precioUnitario: Prisma.Decimal | number | string };
 
 /** Lo que el pedido suma hoy a la deuda del cliente (con IVA si lleva factura). */
-export function importeVigente(items: Renglon[], ivaPct: number, estado: EstadoPedido) {
+export function importeVigente(items: Renglon[], ivaPct: number, estado: EstadoPedido, totalFijo?: Prisma.Decimal | number | string | null) {
   if (estado === "CANCELADO" || estado === "NO_ENTREGADO") return 0;
+  if (totalFijo !== undefined && totalFijo !== null) return redondear2(Number(totalFijo)); // pedidos de la tienda: vale lo que pagó el cliente
   const subtotal = items.reduce((suma, i) => {
     const unidades = estado === "ENTREGADO" ? (i.cantidadEntregada ?? i.cantidad) : i.cantidad;
     return suma + unidades * Number(i.precioUnitario);
@@ -23,6 +24,7 @@ export function importeVigente(items: Renglon[], ivaPct: number, estado: EstadoP
  */
 export async function sincronizarCuentaPedido(tx: Prisma.TransactionClient, pedidoId: string, usuarioId: string | null) {
   const pedido = await tx.pedido.findUniqueOrThrow({ where: { id: pedidoId }, include: { items: true } });
+  if (!pedido.clienteId) return; // los pedidos de la tienda online no tienen cuenta corriente
   const vigente = importeVigente(pedido.items, Number(pedido.ivaPct), pedido.estado);
   // Solo cuentan los movimientos del pedido en sí; los cobros (PAGO) son aparte y no cambian lo que el pedido debe.
   const previo = await tx.movimientoCuenta.aggregate({ where: { pedidoId, tipo: { in: ["CARGO_PEDIDO", "AJUSTE_PEDIDO", "ANULACION_PEDIDO"] } }, _sum: { monto: true } });
@@ -39,7 +41,8 @@ export async function sincronizarCuentaPedido(tx: Prisma.TransactionClient, pedi
 }
 
 /** Deja anotado en la cuenta corriente el día que se entregó el pedido (línea sin importe; el ajuste, si lo hay, va aparte). */
-export async function anotarEntregaEnCuenta(tx: Prisma.TransactionClient, pedidoId: string, clienteId: string, usuarioId: string | null) {
+export async function anotarEntregaEnCuenta(tx: Prisma.TransactionClient, pedidoId: string, clienteId: string | null, usuarioId: string | null) {
+  if (!clienteId) return;
   await tx.movimientoCuenta.create({ data: { clienteId, pedidoId, tipo: "AJUSTE_PEDIDO", monto: 0, nota: "Pedido entregado", usuarioId } });
 }
 

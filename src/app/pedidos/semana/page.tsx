@@ -49,7 +49,7 @@ export default async function Semana({ searchParams }: { searchParams: Promise<{
             const delDia = pedidos.filter((p) => p.fechaEntrega && deFecha(p.fechaEntrega) === f);
             const vehiculos = salidas.filter((s) => deFecha(s.fecha) === f).length;
             const paquetes = delDia.reduce((s, p) => s + bultosDe(p.items), 0);
-            const monto = delDia.reduce((s, p) => s + importeVigente(p.items, Number(p.ivaPct), p.estado === "ENTREGADO" ? "ENTREGADO" : "PENDIENTE"), 0);
+            const monto = delDia.reduce((s, p) => s + importeVigente(p.items, Number(p.ivaPct), p.estado === "ENTREGADO" ? "ENTREGADO" : "PENDIENTE", p.webTotal), 0);
             const entregados = delDia.filter((p) => p.estado === "ENTREGADO").length;
             const esHoy = f === hoy();
             const vacio = delDia.length === 0;

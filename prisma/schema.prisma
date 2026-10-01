@@ -180,8 +180,8 @@ enum EstadoCobro {
 // Un pedido. Sin fechaEntrega = está en la bandeja "Sin asignar". El número que se ve es su posición en la hoja del día.
 model Pedido {
   id              String       @id @default(cuid())
-  clienteId       String
-  puntoId         String
+  clienteId       String? // los pedidos de la tienda online (origen WEB) no tienen cliente
+  puntoId         String?
   estado          EstadoPedido @default(PENDIENTE)
   fechaEntrega    DateTime?    @db.Date
   ordenDia        Int          @default(0)
@@ -203,8 +203,17 @@ model Pedido {
   creadoEn        DateTime     @default(now())
   actualizadoEn   DateTime     @updatedAt
 
-  cliente     Cliente            @relation(fields: [clienteId], references: [id])
-  punto       PuntoEntrega       @relation(fields: [puntoId], references: [id])
+  // Pedidos de la tienda online (Empretienda): los datos de entrega viven en el mismo pedido y no pasan por cuenta corriente.
+  webOrden     String?  @unique // N° de orden de Empretienda: evita cargar dos veces el mismo pedido
+  webNombre    String?
+  webDireccion String?
+  webBarrio    String?
+  webTelefono  String?
+  webTotal     Decimal? @db.Decimal(14, 2) // lo que pagó el cliente en la tienda
+  webPago      String? // PAGO_MP (ya pagado con Mercado Pago) o PENDIENTE (todavía no se cruzó la transferencia)
+
+  cliente     Cliente?           @relation(fields: [clienteId], references: [id])
+  punto       PuntoEntrega?      @relation(fields: [puntoId], references: [id])
   salida      Salida?            @relation(fields: [salidaId], references: [id])
   items       PedidoItem[]
   movimientos MovimientoCuenta[]
@@ -217,17 +226,18 @@ model Pedido {
 
 // Renglón del pedido. Guarda una copia del nombre y del precio: un cambio de precio no toca pedidos ya hechos.
 model PedidoItem {
-  id                String   @id @default(cuid())
+  id                String    @id @default(cuid())
   pedidoId          String
-  productoId        String
+  productoId        String? // vacío en los productos de la tienda que no están en el catálogo (ej. el combo)
   nombre            String
   sku               String?
   unidad            String
+  paquetesPor       Int       @default(1) // cuántos paquetes ocupa cada unidad (el combo napolitano = 2)
   cantidad          Int
   cantidadEntregada Int?
-  precioUnitario    Decimal  @db.Decimal(12, 2) // sin IVA
-  pedido            Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
-  producto          Producto @relation(fields: [productoId], references: [id])
+  precioUnitario    Decimal   @db.Decimal(12, 2) // sin IVA
+  pedido            Pedido    @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  producto          Producto? @relation(fields: [productoId], references: [id])
 
   @@index([pedidoId])
 }

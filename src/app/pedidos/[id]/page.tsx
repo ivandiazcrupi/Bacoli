@@ -12,6 +12,7 @@ import { formatoRemito } from "@/lib/remito";
 import { BotonRemito } from "../BotonRemito";
 import { CONTENEDOR_PEDIDOS } from "../Encabezado";
 import { LibroCuenta, columnasDeMovimiento } from "@/components/LibroCuenta";
+import { datosEntrega, ordenarItems } from "../filas";
 import { BotonConAviso, TablaPedido } from "./Acciones";
 
 const ETIQUETA = { PENDIENTE: "Pendiente", ENTREGADO: "Entregado", NO_ENTREGADO: "No entregado", CANCELADO: "Cancelado" } as const;
@@ -24,13 +25,16 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
   const { id } = await params;
   const pedido = await db.pedido.findUnique({
     where: { id },
-    include: { cliente: true, punto: { include: { zona: true } }, items: { orderBy: { producto: { orden: "asc" } } }, movimientos: { orderBy: { fecha: "asc" } } },
+    include: { cliente: true, punto: { include: { zona: true } }, items: { include: { producto: { select: { orden: true } } } }, movimientos: { orderBy: { fecha: "asc" } } },
   });
   if (!pedido) notFound();
 
+  const web = !pedido.clienteId;
+  const entrega = datosEntrega(pedido);
+  const items = ordenarItems(pedido.items);
   const ivaPct = Number(pedido.ivaPct);
-  const pedidoBase = pedido.items.reduce((s, i) => s + i.cantidad * Number(i.precioUnitario), 0);
-  const total = importeVigente(pedido.items, ivaPct, pedido.estado === "ENTREGADO" ? "ENTREGADO" : "PENDIENTE");
+  const pedidoBase = web ? Number(pedido.webTotal ?? 0) : pedido.items.reduce((s, i) => s + i.cantidad * Number(i.precioUnitario), 0);
+  const total = importeVigente(pedido.items, ivaPct, pedido.estado === "ENTREGADO" ? "ENTREGADO" : "PENDIENTE", pedido.webTotal);
   const fecha = pedido.fechaEntrega ? deFecha(pedido.fechaEntrega) : null;
   const abierto = pedido.estado === "PENDIENTE";
   const boton = "h-9 rounded-md border border-stone-400 bg-white px-3 text-sm font-medium shadow-sm hover:bg-crema-100";
@@ -47,16 +51,20 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
       <main className={CONTENEDOR_PEDIDOS}>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">{pedido.cliente.nombre}</h1>
-            <p className="mt-1 text-sm text-stone-600">{[pedido.punto.alias, titulo(pedido.punto.direccion), pedido.punto.barrio].filter(Boolean).join(" · ")} · {pedido.punto.zona.nombre}</p>
+            <h1 className="text-2xl font-bold tracking-tight">{entrega.nombre}</h1>
+            <p className="mt-1 text-sm text-stone-600">
+              {web ? [entrega.barrio, entrega.direccion, entrega.telefono].filter(Boolean).join(" · ") : `${[pedido.punto?.alias, titulo(pedido.punto?.direccion), pedido.punto?.barrio].filter(Boolean).join(" · ")} · ${pedido.punto?.zona.nombre}`}
+            </p>
           </div>
           <Link href={fecha ? `/pedidos/dia/${fecha}` : "/pedidos"} className="rounded-md border border-stone-400 bg-white px-3 py-2 text-sm font-medium shadow-sm hover:bg-crema-100">← {fecha ? "Hoja de ruta" : "Pedidos"}</Link>
         </div>
 
-        <section aria-label="Datos del pedido" className="grid grid-cols-2 divide-x divide-stone-300 overflow-hidden rounded-xl border border-stone-300 bg-white shadow-sm sm:grid-cols-4">
+        <section aria-label="Datos del pedido" className={`grid grid-cols-2 divide-x divide-stone-300 overflow-hidden rounded-xl border border-stone-300 bg-white shadow-sm ${web ? "sm:grid-cols-5" : "sm:grid-cols-4"}`}>
           {celda("Estado", <span className={COLOR[pedido.estado]}>{ETIQUETA[pedido.estado]}</span>)}
           {celda("Día", fecha ? `${nombreDia(fecha)} ${diaMes(fecha)}` : "Sin día")}
-          {celda("Comprobante", pedido.conFactura ? "Factura" : "Remito")}
+          {web && celda("Pedido de la tienda", `N° ${pedido.webOrden}`)}
+          {web && celda("Pago", pedido.webPago === "PAGO_MP" ? "Mercado Pago" : <span className="text-rojo-700">Pendiente</span>)}
+          {!web && celda("Comprobante", pedido.conFactura ? "Factura" : "Remito")}
           {celda(
             pedido.conFactura ? "N° de factura" : "N° de remito",
             pedido.conFactura
@@ -101,23 +109,26 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
           pedidoId={pedido.id}
           abierto={abierto}
           entregado={pedido.estado === "ENTREGADO"}
-          items={pedido.items.map((i) => ({ id: i.id, nombre: i.nombre, sku: i.sku, unidad: i.unidad, precio: Number(i.precioUnitario), cantidad: i.cantidad, entregada: i.cantidadEntregada }))}
+          items={items.map((i) => ({ id: i.id, nombre: i.nombre, sku: i.sku, unidad: i.unidad, precio: Number(i.precioUnitario), cantidad: i.cantidad, entregada: i.cantidadEntregada }))}
           totales={{ base: pedidoBase, iva: total - pedidoBase, ivaPct, total, conFactura: pedido.conFactura }}
+          web={web}
           nota={pedido.nota}
         />
 
+        {!web && (
         <section className="space-y-2">
-          <h2 className="text-center text-xs font-semibold uppercase tracking-wide text-stone-600">Cuenta corriente de este pedido</h2>
-          <LibroCuenta
-            vacio="Sin movimientos."
-            lineas={pedido.movimientos.map((m) => ({
-              id: m.id,
-              fecha: formatoFecha.format(m.fecha),
-              detalle: <span className="font-medium">{m.nota}{m.medio ? ` · ${MEDIO[m.medio]}` : ""}</span>,
-              ...columnasDeMovimiento(m.tipo, Number(m.monto)),
-            }))}
-          />
-        </section>
+            <h2 className="text-center text-xs font-semibold uppercase tracking-wide text-stone-600">Cuenta corriente de este pedido</h2>
+            <LibroCuenta
+              vacio="Sin movimientos."
+              lineas={pedido.movimientos.map((m) => ({
+                id: m.id,
+                fecha: formatoFecha.format(m.fecha),
+                detalle: <span className="font-medium">{m.nota}{m.medio ? ` · ${MEDIO[m.medio]}` : ""}</span>,
+                ...columnasDeMovimiento(m.tipo, Number(m.monto)),
+              }))}
+            />
+          </section>
+        )}
       </main>
     </>
   );
