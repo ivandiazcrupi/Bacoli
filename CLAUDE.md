@@ -173,7 +173,7 @@ y ~1000 minoristas.
 - Pie de las pantallas: **"Desarrollado por IVÁN DÍAZ CRUPI"**. La versión publicada (commit de Railway) se ve en la pantalla **Empresa**.
 
 ## Pantalla de inicio y anchos (pedido del dueño)
-- **Inicio** (`src/app/page.tsx`): un saludo al azar según la hora de Argentina ("Buenos días, equipo. ¿Cómo va?"…) y abajo dos
+- **Inicio** (`src/app/page.tsx`; ver "Aspecto propio"): un saludo al azar según la hora de Argentina ("Buenos días, equipo. ¿Cómo va?"…) y abajo dos
   botones grandes del mismo color, en MAYÚSCULA: **CARGAR PEDIDO** y **CARGAR CLIENTE** (estilo pantalla de bienvenida de Claude); sin números ni resumen (el dueño los sacó). El repartidor solo ve el saludo.
 - El sistema debe **aprovechar el ancho de la PC**: listas en columnas (Clientes: 1/2/3 según ancho), contenedores `max-w-6xl` o más,
   cabecera y hojas hasta `max-w-[1900px]`. No volver a centrar todo en una columna angosta.
@@ -221,12 +221,12 @@ y ~1000 minoristas.
 - Clientes (pantalla): arriba de la lista dice **"N clientes · M sucursales (puntos de entrega) · X activas y Y desactivadas"** (un cliente tiene varias sucursales; los números siguen los filtros). **Aparecen TODOS** (sin límite), **en horizontal y por orden alfabético del nombre del comercio**. **Cada cliente es un cuadrante** (tarjeta) y **cada sucursal es una línea con TODA la información completa** (BARRIO · NOMBRE · DIRECCIÓN · TELÉFONO · accesos CUENTA CORRIENTE y PEDIDOS —en mayúscula, chicos— y **Editar** (mayúscula y minúscula) **a la derecha de todo**) y una columna **ESTADO** por sucursal (**Activa** verde / **Desactivada** gris; queda "Desactivada" también si el cliente entero está desactivado): el nombre y los accesos **se repiten en cada sucursal** (así cada línea se entiende sola); un cliente con 6 sucursales tiene 6 líneas dentro de su cuadrante. **Sin desplegables.** Editar abre la ficha del cliente. Lista compacta (letra y botones chicos). Una sucursal **desactivada** se ve en gris (ej. BUHA tiene una activa y otra desactivada).
   **Comentario de la sucursal** (ej. restricción horaria: "Recibe solo hasta las 10 hs"): se carga **una sola vez en la sucursal** (campo Comentario de la ficha) y **se ve en rojo, debajo de la dirección y alineado justo donde ella empieza** en la lista de Clientes, en Pedidos (Sin asignar) y en la hoja del día —para que el repartidor lo lea—.  **Delante va el BARRIO (no la zona), en negrita igual que el nombre.** El **teléfono es un enlace que abre WhatsApp** para escribirle (sin la palabra "WhatsApp"; si el número no sirve, llama). En el celular cada cuadrante se apila. Filtros (`FiltrosClientes.tsx`): **buscador que filtra mientras se escribe** (sin Enter ni botón) y, debajo, dos **desplegables que se reparten el ancho del buscador**: zona (un cliente aparece en una zona si alguna sucursal está ahí) y estado (**Activos** por defecto, siempre; Desactivados; Todos). Nueva pantalla **`/clientes/[id]/pedidos`**: historial de pedidos del cliente (día, sucursal, pedido, monto, comprobante, estado). **Próximo (lo pidió el dueño como lo último): hoja de informes comerciales**; también a futuro el filtro "hace cuánto no piden", con deuda, con/sin factura y datos incompletos.
 
-## Vista clásica (PRUEBA PILOTO, pedido del dueño)
-- Selector **Moderna | Intermedia | Clásica** en la cabecera (cookie `vista`, acción `elegirVista` en `src/app/actions.ts`). Son **solo capas de CSS**
-  (bloques `.clasico` e `.intermedio` al final de `globals.css`, activadas con la clase en `<html>` desde `layout.tsx`; la **intermedia** = cabecera clara y colores de marca pero esquinas casi rectas, sin sombras, letra 14 px, filas compactas, título sobrio y barra de estado). Detalle de la clásica: letra chica, sin bordes redondeados ni
-  sombras, cabecera verde oscuro, títulos en barra, pestañas cuadradas, barra de estado abajo. **La vista moderna es la de siempre y no se tocó.**
-- Para **volver todo atrás**: borrar los bloques `.clasico`/`.intermedio` de `globals.css`, el selector en `Cabecera.tsx`, `elegirVista` y la clase en `layout.tsx` (o `git revert` del commit "vista clásica").
-- Esperando la opinión del dueño: dejarla, extenderla a más pantallas (Ruta, ficha) o sacarla.
+## Aspecto propio de BACOLI (decisión del dueño)
+- Tras probar tres vistas (moderna / intermedia / clásica) el dueño eligió la **intermedia** y quedó como **el único aspecto** (se sacaron el selector, la cookie `vista` y las otras dos).
+  Vive en el bloque final de `src/app/globals.css` (clase `intermedio` puesta siempre en `<html>` desde `layout.tsx`): cabecera clara con filete verde, esquinas casi rectas, sin sombras,
+  letra de 14 px, filas compactas (una línea por sucursal), bordes firmes, títulos sobrios (verde con subrayado) y barra de estado fija abajo. Para ajustar el estilo general se toca ese bloque.
+  El dueño dijo que "de última lo mejoramos" más adelante. Una versión un punto más moderna (esquinas de 6 px, sombra leve, más aire) se probó y NO la eligió (commit `7330b71`, por si la quiere).
+- **Inicio**: tarjeta con banda verde (fecha + saludo al azar en letra sans, ya no serif), los dos botones grandes CARGAR PEDIDO / CARGAR CLIENTE y tres accesos chicos (Ver pedidos, Semana, Ver clientes).
 
 ## Pendientes conocidos
 - La enumeración `TipoCliente` conserva el valor DISTRIBUIDOR (oculto en pantallas) para no alterar datos existentes.
