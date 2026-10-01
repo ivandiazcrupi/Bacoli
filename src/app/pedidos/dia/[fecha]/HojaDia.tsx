@@ -39,8 +39,8 @@ export type SalidaInfo = { id: string; nombre: string; patente: string; capacida
 export type Opcion = { id: string; nombre: string };
 
 // Todo entra a lo ancho (sin deslizar): columnas justas y todo centrado.
-const COLUMNAS = "34px 88px minmax(0,150px) minmax(0,140px) 96px minmax(150px,1fr) 92px 104px 52px 118px 108px";
-const ENCABEZADOS = ["N°", "Barrio", "Cliente", "Dirección", "Teléfono", "Pedido", "Monto", "Comprobante", "Entrega", "Cobro", "Ubicación"];
+const COLUMNAS = "34px 80px minmax(120px,1.2fr) minmax(110px,1fr) 96px minmax(130px,1.4fr) 92px 96px 52px 112px 104px 84px";
+const ENCABEZADOS = ["N°", "Barrio", "Cliente", "Dirección", "Teléfono", "Pedido", "Monto", "Comprobante", "Entrega", "Cobro", "Ubicación", "Cuenta corriente"];
 const MEDIOS: { valor: string; texto: string }[] = [
   { valor: "EFECTIVO", texto: "Efectivo" },
   { valor: "TRANSFERENCIA", texto: "Transferencia" },
@@ -112,9 +112,6 @@ function FilaHoja({ f, n, bloqueada, acc, salidas }: { f: Fila; n: number; bloqu
       <div role="cell" className="font-semibold">{f.barrio}</div>
       <div role="cell" className="leading-snug">
         <p className="font-semibold">{f.cliente}</p>
-        <Link href={`/clientes/${f.clienteId}/cuenta`} className="inline-flex items-center gap-1 text-[10px] text-stone-500 underline hover:text-verde-800">
-          Cuenta corriente{f.tieneDeuda && <span className="h-1.5 w-1.5 rounded-full bg-rojo-600" title="Este cliente tiene deuda" aria-label="Tiene deuda" />}
-        </Link>
       </div>
       <div role="cell" className="leading-snug">
         <a href={mapa(f)} target="_blank" rel="noreferrer" className="hover:underline">{f.direccion}</a>
@@ -190,6 +187,12 @@ function FilaHoja({ f, n, bloqueada, acc, salidas }: { f: Fila; n: number; bloqu
       <div role="cell" className="flex flex-col gap-1">
         <button type="button" disabled={bloqueada || entregado} onClick={() => acc.mover(f, "sin")} className="h-7 rounded border border-stone-400 bg-white px-1 text-xs font-medium hover:bg-crema-100 disabled:opacity-40">↑ Sin ubicar</button>
         <SelectorDia f={f} bloqueada={bloqueada} acc={acc} clase="h-7 w-full text-xs" />
+      </div>
+
+      <div role="cell">
+        <Link href={`/clientes/${f.clienteId}/cuenta`} className="inline-flex items-center gap-1 text-[11px] text-stone-600 underline hover:text-verde-800">
+          Abrir{f.tieneDeuda && <span className="h-1.5 w-1.5 rounded-full bg-rojo-600" title="Este cliente tiene deuda" aria-label="Tiene deuda" />}
+        </Link>
       </div>
     </div>
   );
