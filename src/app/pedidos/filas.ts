@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { importeVigente } from "@/lib/cuenta";
+import { bultosDe } from "@/lib/ruta";
 import { db } from "@/lib/db";
 import { titulo } from "@/lib/mayusculas";
 import { formatoRemito } from "@/lib/remito";
@@ -48,6 +49,8 @@ export function aFila(p: PedidoCompleto, debe: Set<string>): Fila {
     medioCobro: p.medioCobro,
     tieneDeuda: debe.has(p.clienteId),
     remito: p.remitoNumero ? formatoRemito(p.remitoNumero) : null,
+    salidaId: p.salidaId,
+    bultos: bultosDe(p.items),
   };
 }
 

@@ -114,17 +114,12 @@ y ~1000 minoristas.
 - [x] Módulo 2 (parte D): Precios = **una lista a la vez** (pastillas de lista arriba —Mayorista, Distribuidor, VACALIN— y "+ Nueva lista"; tarjeta ancha con los precios en 2 columnas; abajo **Productos** como desplegable de color con el contador, cada producto con "Editar" y "+ Agregar producto"; rediseño pedido por el dueño: más espacio, minimalista, con vida; a la izquierda nombre y código, a la derecha
   el precio con $), productos con SKU, EAN, descripción, unidad y orden; crear lista nueva puede copiar los precios de otra;
   listas VACALIN y Distribuidor; Importar es un botón en Clientes.
-- [x] Módulo 3 — **Pedidos se partió en DOS pestañas (pedido del dueño, la página era demasiado cargada y no entraba en el ancho)**, con pestañas arriba para ir y volver (`Pestanas.tsx`): **PEDIDOS CARGADOS** (`/pedidos`: solo la lista de pedidos cargados, sin armar rutas; columnas Barrio · Cliente · Pedido · Monto · Día · Estado · Abrir; filtros en pastillas con contador: Pendientes —por defecto—, Sin asignar, Entregados, Todos; tocar un pedido lo abre) y **HOJA DE RUTA** (`/pedidos/ruta`: lo que antes era la página única: "Sin asignar" arriba y los días abajo). La hoja de ruta se va a rediseñar en el próximo paso (vehículos, menos información). Descripción de la hoja de ruta actual: `PaginaPedidos.tsx`, horizontal como su Sheet. **Arriba, "Sin asignar"**:
-  una fila por pedido cargado sin día (barrio, cliente, dirección, teléfono, pedido con nombres, monto, factura/remito), con
-  los botones **Lun Mar Mié…** para asignarlo de un toque (`asignarADia`) o **arrastrando** la fila hasta el día. **Abajo, los días
-  de la semana** (Lun a Sáb; domingo solo si hay algo), cerrados por defecto: **al tocar "Martes" se abre debajo su hoja** (la hoja
-  del día de abajo). El día no se abre solo al asignar (así los días no se mueven). Semana ← →. Un pedido se carga SIN fecha
-  (buscar cliente/sucursal escribiendo, tocar cantidades; precio del cliente automático y editable; remito o factura).
-  **El número (1, 2, 3…) es la posición dentro de la hoja del día** (el orden del reparto); no hay número global de pedido
-  visible. Detalle del pedido: entregar total o parcial, no entregado, reabrir, cancelar, editar. Límites de deuda: se avisa y
-  solo un dueño autoriza (`autorizadoPorId`). Sin "repetir último pedido". (Antes era un tablero de tarjetas en columnas; el
-  dueño pidió esta hoja.) Lógica: `src/app/pedidos/`; arrastre con `@dnd-kit` (`pointerWithin`).
-- [x] Módulo 3 (parte B): **hoja del día** (`/pedidos/dia/AAAA-MM-DD`), pensada para la PC y horizontal como su hoja de
+- [x] Módulo 3 — **Pedidos = 3 pestañas** (`Pestanas.tsx`, se va y se vuelve con un toque), según cómo trabaja el dueño en su planilla (cargar → elegir día → armar la hoja de ruta con vehículos):
+  1. **PEDIDOS** (`/pedidos`, `Bandeja.tsx`): la "hoja PEDIDOS" = **solo los pedidos cargados que esperan día** (PENDIENTE y sin fecha). **Dos listas separadas** con botones: **Mayoristas** y **Minoristas (web)** (`Pedido.origen`; la de web queda vacía hasta conectar Empretienda). Cada pedido es una línea corta (Barrio · Cliente · Pedido · Monto) con los botones **Lun Mar Mié Jue Vie Sáb** de la semana elegida (flechas "Asignar a la semana"): al tocar el día el pedido **se MUEVE** (sale de esta lista y aparece en ese día, como el cortar y pegar de la planilla; `asignarADia`). Siempre **dos pasos, manual** (primero el día, después el vehículo); sin atajo directo al vehículo.
+  2. **SEMANA Y HOJA DE RUTA** (`/pedidos/semana`): un renglón por día con sus vehículos, pedidos, bultos y monto; al entrar a un día se abre su **hoja de ruta**.
+  3. **VEHÍCULOS** (`/pedidos/vehiculos`): el equipo carga sus camionetas/autos (nombre, patente, **capacidad máxima en BULTOS, la define el dueño**; vacía = sin tope), con Guardar/Desactivar/Eliminar (eliminar solo si nunca salió).
+  **Hoja de ruta del día** (`/pedidos/dia/AAAA-MM-DD`): se **suman vehículos al día** (de la lista cargada; `Salida` = vehículo+fecha+repartidor), los pedidos del día quedan "**Sin vehículo**" (franja roja) y se reparten con los botones "→ vehículo"; cada vehículo es un cuadro con su **medidor de carga "N de M bultos"** (rojo "te pasaste", **avisa pero no frena**), el repartidor, "**Ver ruta en Google Maps**" (todas las paradas en orden) y el recorrido numerado que se reordena arrastrando (`ordenRuta`). Cada pedido tiene "Mover a…" (otro vehículo, sin vehículo, devolver a Pedidos, pasar a otro día). Bulto = unidad de venta (paquete o unidad; `bultosDe`). Lógica: `src/app/pedidos/ruta/actions.ts`. El número de remito sigue el orden de la ruta (`porReparto`).
+  Pendiente de esta parte: la tabla de cada vehículo todavía es muy ancha (se desplaza de costado): **rediseñar con menos información por fila**; vista del repartidor (solo su vehículo) en el celular. - [x] Módulo 3 (parte B): **hoja del día** (`/pedidos/dia/AAAA-MM-DD`), pensada para la PC y horizontal como su hoja de
   Google Sheets. Se abre al tocar el día en la página de Pedidos (o directo en su dirección). Una fila por pedido con: N° (posición del reparto; se
   reordena arrastrando el número), barrio, cliente (+sucursal), dirección (**se muestra "Como Título"**, se guarda en mayúscula;
   `titulo()`), teléfono, **pedido con el NOMBRE de cada producto y su cantidad (nunca solo el código: el repartidor se confunde)**,
@@ -132,7 +127,7 @@ y ~1000 minoristas.
   se pinta; "entrega parcial" abre el pedido), **Cobro** (solo si está entregado: "Cobrado" + medio efectivo/transferencia/
   cheque/Mercado Pago/otro, que registra un PAGO y baja la deuda; o "**Cuenta corriente**" — nunca abreviar como "CC") y un botón
   "Abrir" a la cuenta corriente del cliente con una marca chica si tiene deuda (el **monto NO va en la hoja**). **Cerrar el día**
-  exige entrega marcada en todos y cobro marcado en los entregados; al cerrar, los rojos vuelven a "Sin asignar" con una nota;
+  exige que todos los pedidos estén **en un vehículo**, entrega marcada en todos y cobro marcado en los entregados; al cerrar, los rojos vuelven a "Sin asignar" con una nota;
   un día cerrado es de solo lectura (no se mueven pedidos desde/hacia él); solo un dueño lo reabre (`DiaCerrado`).
 - [x] Remito (`src/app/pedidos/remito/`): botón **Remito** en cada fila de la hoja del día y en el detalle del pedido, y **"Imprimir
   todos los remitos"** del día. Número correlativo con letra **R** (`R-000001`, `formatoRemito`), que se asigna **al emitir** (no al
@@ -145,8 +140,7 @@ y ~1000 minoristas.
   autorización de ARCA (CAE) vía un intermediario (Afip SDK, Tusfacturas u otro; tiene costo). Requisitos: CUIT con factura
   electrónica por web service y punto de venta habilitado, condición frente al IVA, contador. **No generar PDF de factura sin
   CAE**: hasta entonces el N° de factura se carga a mano en la hoja. Al conectarla: queda "por revisar" hasta que Miguel confirme.
-- [ ] Módulo 3 (parte C, pendiente): asignar cada día a los 3 vehículos/repartidores (**falta definir con el dueño si van tablas
-  separadas o una columna, y las zonas de cada vehículo**), semanas anteriores (solo lectura, con resumen y Excel), vista del
+- [ ] Módulo 3 (parte C, pendiente): (los vehículos y la hoja de ruta ya están, ver arriba) semanas anteriores (solo lectura, con resumen y Excel), vista del
   repartidor en el celular (tarjetas grandes), cobro parcial (hoy se cobra el total), cierre de semana automático.
 - [ ] Módulo 4: Cuenta corriente (ya existe la pantalla de lectura `/clientes/[id]/cuenta` con saldo total, "Entregado" y "Por entregar" y los movimientos con saldo corrido; falta registrar pagos sueltos, notas de crédito, devoluciones y descuentos).
 - [ ] Módulo 5: Hoja de ruta (asignar cada día a un vehículo/repartidor y ordenar el recorrido, sobre el tablero ya hecho) + vista del repartidor. Debe incluir: paradas de cobranza/muestra (sin pedido) y el cobro de

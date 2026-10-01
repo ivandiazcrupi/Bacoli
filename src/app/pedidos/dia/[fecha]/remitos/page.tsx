@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { aFecha, esFechaValida } from "@/lib/fechas";
+import { porReparto } from "@/lib/ruta";
 import { exigirOficina } from "@/lib/session";
 import { BarraImpresion } from "../../../remito/BarraImpresion";
 import { RemitoDoc } from "../../../remito/RemitoDoc";
@@ -14,11 +15,11 @@ export default async function RemitosDelDia({ params, searchParams }: { params: 
   const [pedidos, empresa] = await Promise.all([
     db.pedido.findMany({
       where: { fechaEntrega: aFecha(fecha), estado: { not: "CANCELADO" }, remitoNumero: { not: null } },
-      include: { cliente: true, punto: true, items: { include: { producto: true }, orderBy: { producto: { orden: "asc" } } } },
-      orderBy: [{ ordenDia: "asc" }, { creadoEn: "asc" }],
+      include: { cliente: true, punto: true, salida: true, items: { include: { producto: true }, orderBy: { producto: { orden: "asc" } } } },
     }),
     db.empresa.findUnique({ where: { id: "principal" } }),
   ]);
+  pedidos.sort(porReparto);
   const conPrecios = precios === "1";
   return (
     <div className="bg-stone-200 print:bg-white">

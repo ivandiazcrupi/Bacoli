@@ -24,6 +24,8 @@ model Usuario {
   activo        Boolean  @default(true)
   creadoEn      DateTime @default(now())
   actualizadoEn DateTime @updatedAt
+
+  salidas Salida[]
 }
 
 enum TipoCliente {
@@ -183,6 +185,9 @@ model Pedido {
   estado          EstadoPedido @default(PENDIENTE)
   fechaEntrega    DateTime?    @db.Date
   ordenDia        Int          @default(0)
+  origen          OrigenPedido @default(MAYORISTA)
+  salidaId        String? // vehículo del día en el que va (null = todavía sin vehículo)
+  ordenRuta       Int          @default(0) // posición dentro del recorrido de ese vehículo
   conFactura      Boolean      @default(false)
   ivaPct          Decimal      @default(0) @db.Decimal(5, 2)
   pagado          Boolean      @default(false)
@@ -200,12 +205,14 @@ model Pedido {
 
   cliente     Cliente            @relation(fields: [clienteId], references: [id])
   punto       PuntoEntrega       @relation(fields: [puntoId], references: [id])
+  salida      Salida?            @relation(fields: [salidaId], references: [id])
   items       PedidoItem[]
   movimientos MovimientoCuenta[]
 
   @@index([fechaEntrega, ordenDia])
   @@index([clienteId])
   @@index([estado])
+  @@index([salidaId])
 }
 
 // Renglón del pedido. Guarda una copia del nombre y del precio: un cambio de precio no toca pedidos ya hechos.
@@ -270,4 +277,40 @@ model Empresa {
 model Numerador {
   id     String @id
   ultimo Int    @default(0)
+}
+
+// De dónde viene el pedido: lo cargan en la oficina (mayoristas) o entra solo desde la tienda online (minoristas).
+enum OrigenPedido {
+  MAYORISTA
+  WEB
+}
+
+// Un vehículo de la empresa (camioneta, auto…). La capacidad máxima la define el dueño, en bultos (paquetes y unidades que lleva).
+model Vehiculo {
+  id        String   @id @default(cuid())
+  nombre    String
+  patente   String?
+  capacidad Int? // bultos máximos; vacío = sin tope
+  activo    Boolean  @default(true)
+  orden     Int      @default(0)
+  creadoEn  DateTime @default(now())
+
+  salidas Salida[]
+}
+
+// Un vehículo que sale un día determinado (con su repartidor). Sus pedidos, ordenados, son el recorrido de esa hoja de ruta.
+model Salida {
+  id           String   @id @default(cuid())
+  fecha        DateTime @db.Date
+  vehiculoId   String
+  repartidorId String?
+  orden        Int      @default(0)
+  creadoEn     DateTime @default(now())
+
+  vehiculo   Vehiculo @relation(fields: [vehiculoId], references: [id])
+  repartidor Usuario? @relation(fields: [repartidorId], references: [id])
+  pedidos    Pedido[]
+
+  @@unique([fecha, vehiculoId])
+  @@index([fecha])
 }

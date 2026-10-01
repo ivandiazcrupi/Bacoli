@@ -117,6 +117,8 @@ export async function cerrarDia(fecha: string): Promise<Resultado & { faltan?: n
 
   const pedidos = await db.pedido.findMany({ where: { fechaEntrega: aFecha(fecha), estado: { not: "CANCELADO" } } });
   if (pedidos.length === 0) return { ok: false, error: "No hay pedidos en este día." };
+  const sinVehiculo = pedidos.filter((p) => p.salidaId === null).length;
+  if (sinVehiculo > 0) return { ok: false, faltan: sinVehiculo, error: `Hay ${sinVehiculo} ${sinVehiculo === 1 ? "pedido" : "pedidos"} sin vehículo. Asignalos a un vehículo (o devolvelos a Pedidos) antes de cerrar el día.` };
   const faltan = pedidos.filter((p) => p.estado === "PENDIENTE" || (p.estado === "ENTREGADO" && p.cobro === null)).length;
   if (faltan > 0) return { ok: false, faltan, error: `Faltan ${faltan} ${faltan === 1 ? "pedido" : "pedidos"} por marcar (entrega o cobro).` };
   // Toda venta entregada lleva un número: el de la factura si lleva factura, o el del remito.
@@ -129,7 +131,7 @@ export async function cerrarDia(fecha: string): Promise<Resultado & { faltan?: n
       // Vuelve a la bandeja como pendiente (y a contar en la cuenta), anotando qué pasó.
       await tx.pedido.update({
         where: { id: p.id },
-        data: { estado: "PENDIENTE", fechaEntrega: null, ordenDia: 999999, nota: [p.nota, `No entregado el ${diaMes(fecha)}`].filter(Boolean).join(" · ") },
+        data: { estado: "PENDIENTE", fechaEntrega: null, salidaId: null, ordenRuta: 0, ordenDia: 999999, nota: [p.nota, `No entregado el ${diaMes(fecha)}`].filter(Boolean).join(" · ") },
       });
       await sincronizarCuentaPedido(tx, p.id, usuario.id);
     }

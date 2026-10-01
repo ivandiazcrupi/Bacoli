@@ -183,7 +183,8 @@ export async function asignarADia(pedidoId: string, fecha: string): Promise<{ ok
   if (pedido.estado === "ENTREGADO") return { ok: false, error: "Un pedido entregado no se puede mover." };
   if (await db.diaCerrado.findUnique({ where: { fecha: aFecha(fecha) } })) return { ok: false, error: "Ese día está cerrado. Un dueño puede reabrirlo." };
   const ultimo = await db.pedido.aggregate({ where: { fechaEntrega: aFecha(fecha) }, _max: { ordenDia: true } });
-  await db.pedido.update({ where: { id: pedidoId }, data: { fechaEntrega: aFecha(fecha), ordenDia: (ultimo._max.ordenDia ?? -1) + 1 } });
+  await db.pedido.update({ where: { id: pedidoId }, data: { fechaEntrega: aFecha(fecha), ordenDia: (ultimo._max.ordenDia ?? -1) + 1, salidaId: null, ordenRuta: 0 } }); // al cambiar de día deja el vehículo
+  revalidatePath("/pedidos", "layout");
   return { ok: true };
 }
 

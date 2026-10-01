@@ -5,6 +5,7 @@ import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { aFecha, esFechaValida } from "@/lib/fechas";
 import { formatoRemito } from "@/lib/remito";
+import { porReparto } from "@/lib/ruta";
 import { exigirOficina } from "@/lib/session";
 
 /** Le da a un pedido el siguiente número de remito, si todavía no tiene. El número no cambia nunca. */
@@ -33,11 +34,10 @@ export async function emitirRemito(pedidoId: string): Promise<{ ok: boolean; num
 export async function emitirRemitosDia(fecha: string): Promise<{ ok: boolean; cantidad: number; error?: string }> {
   await exigirOficina();
   if (!esFechaValida(fecha)) return { ok: false, cantidad: 0, error: "Fecha inválida." };
-  const pedidos = await db.pedido.findMany({
+  const pedidos = (await db.pedido.findMany({
     where: { fechaEntrega: aFecha(fecha), estado: { not: "CANCELADO" } },
-    orderBy: [{ ordenDia: "asc" }, { creadoEn: "asc" }],
-    select: { id: true, remitoNumero: true },
-  });
+    select: { id: true, remitoNumero: true, ordenDia: true, ordenRuta: true, salida: { select: { orden: true } } },
+  })).sort(porReparto);
   if (pedidos.length === 0) return { ok: false, cantidad: 0, error: "No hay pedidos en este día." };
   const faltan = pedidos.filter((p) => p.remitoNumero === null);
   await db.$transaction(async (tx) => {
