@@ -10,7 +10,7 @@ import type { FilaBandeja } from "./filas";
 
 export type DiaBoton = { fecha: string; letra: string; numero: number; nombre: string; hoy: boolean; cerrado: boolean };
 
-const COLUMNAS = "lg:grid-cols-[1fr_1.5fr_1.4fr_1fr_2fr_6.5rem_5.5rem_4.5rem_15rem]";
+const COLUMNAS = "lg:grid-cols-[1fr_1.5fr_1.4fr_1fr_2fr_7rem_5.5rem_4.5rem_16rem]";
 const ENCABEZADOS = ["Barrio", "Cliente", "Dirección", "Teléfono", "Pedido", "Monto", "Factura", "", "Asignar"];
 
 function Comprobante({ conFactura }: { conFactura: boolean }) {
@@ -55,10 +55,10 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
           onClick={() => asignar(f, d.fecha)}
           title={d.cerrado ? `${d.nombre} ${d.numero}: día cerrado` : `Asignar al ${d.nombre.toLowerCase()} ${d.numero}`}
           aria-label={`Asignar al ${d.nombre.toLowerCase()} ${d.numero}`}
-          className={`flex flex-col items-center justify-center rounded-md border leading-none shadow-sm transition hover:border-verde-700 hover:bg-verde-700 hover:text-white disabled:opacity-35 ${grande ? "h-14 w-12" : "h-11 w-9"} ${d.hoy ? "border-verde-700 bg-verde-50 text-verde-800" : "border-stone-400 bg-white text-stone-800"}`}
+          className={`flex flex-col items-center justify-center gap-[3px] rounded-md border shadow-sm transition hover:border-verde-700 hover:bg-verde-700 hover:text-white disabled:opacity-35 ${grande ? "h-14 w-12" : "h-12 w-10"} ${d.hoy ? "border-verde-700 bg-verde-50 text-verde-800" : "border-stone-400 bg-white text-stone-800"}`}
         >
-          <span className={`font-bold ${grande ? "text-lg" : "text-base"}`}>{d.letra}</span>
-          <span className="mt-1 text-[10px] font-medium opacity-70">{d.numero}</span>
+          <span className={`block font-bold leading-none ${grande ? "text-lg" : "text-[15px]"}`}>{d.letra}</span>
+          <span className="block text-[11px] font-medium leading-none opacity-70">{d.numero}</span>
         </button>
       ))}
     </div>
@@ -72,11 +72,11 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
     <div className="space-y-2">
       {error && <p className="rounded-lg border border-rojo-600 bg-rojo-50 p-3 text-sm text-rojo-700" role="alert">{error}</p>}
       <div className={`hidden gap-x-4 rounded-t-xl bg-verde-800 px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-white lg:grid ${COLUMNAS}`}>
-        {ENCABEZADOS.map((h, i) => <span key={i} className={h === "Monto" ? "text-right" : h === "Asignar" ? "text-center" : ""}>{h}</span>)}
+        {ENCABEZADOS.map((h, i) => <span key={i} className="text-center">{h}</span>)}
       </div>
       {filas.map((f) => (
         <div key={f.id} className="rounded-xl border border-stone-300 bg-white px-5 py-3.5 shadow-sm">
-          <div className={`hidden items-center gap-x-4 lg:grid ${COLUMNAS}`}>
+          <div className={`hidden items-center gap-x-4 text-center lg:grid ${COLUMNAS}`}>
             <span className="text-sm font-semibold">{f.barrio}</span>
             <span className="text-sm font-semibold leading-snug">{f.cliente}</span>
             <span className="text-sm leading-snug">
@@ -84,14 +84,14 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
               {f.comentario && <span className="mt-0.5 block text-xs font-medium text-rojo-700">{f.comentario}</span>}
             </span>
             <span className="text-sm tabular-nums"><Telefono tel={f.telefono} /></span>
-            <span className="space-y-0.5 text-sm">
+            <span className="inline-grid justify-center justify-self-center gap-x-2 gap-y-0.5 text-left text-sm [grid-template-columns:auto_auto]">
               {f.items.map((i, k) => (
-                <span key={k} className="flex gap-2 leading-snug"><span className="min-w-6 shrink-0 text-right font-semibold tabular-nums">{i.cantidad}</span><span>{i.nombre}</span></span>
+                <span key={k} className="contents"><span className="text-right font-semibold tabular-nums">{i.cantidad}</span><span className="leading-snug">{i.nombre}</span></span>
               ))}
             </span>
-            <span className="text-right text-sm font-semibold tabular-nums">{formatoPesos(f.monto)}</span>
+            <span className="text-sm font-semibold tabular-nums">{formatoPesos(f.monto)}</span>
             <span><Comprobante conFactura={f.conFactura} /></span>
-            <Link href={`/pedidos/${f.id}`} className="rounded-md border border-stone-400 bg-white px-2 py-1.5 text-center text-sm font-medium shadow-sm hover:border-verde-700 hover:text-verde-800">Abrir</Link>
+            <Link href={`/pedidos/${f.id}`} className="text-sm font-semibold text-verde-800 underline-offset-4 hover:underline">Abrir ›</Link>
             <div className="flex justify-center">{botones(f)}</div>
           </div>
 
@@ -109,7 +109,7 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
             <ul className="space-y-0.5 rounded-lg bg-crema-50 p-2 text-sm">
               {f.items.map((i, k) => <li key={k} className="flex gap-2"><span className="w-7 shrink-0 text-right font-semibold tabular-nums">{i.cantidad}</span><span>{i.nombre}</span></li>)}
             </ul>
-            <p className="flex items-center justify-between"><b className="tabular-nums">{formatoPesos(f.monto)}</b><Link href={`/pedidos/${f.id}`} className="rounded-md border border-stone-400 bg-white px-4 py-2 text-sm font-medium shadow-sm">Abrir</Link></p>
+            <p className="flex items-center justify-between"><b className="tabular-nums">{formatoPesos(f.monto)}</b><Link href={`/pedidos/${f.id}`} className="text-sm font-semibold text-verde-800">Abrir ›</Link></p>
             {botones(f, true)}
           </div>
         </div>
