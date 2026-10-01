@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
-import { DndContext, MouseSensor, TouchSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { DndContext, MouseSensor, TouchSensor, closestCenter, pointerWithin, useDraggable, useDroppable, useSensor, useSensors, type CollisionDetection, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { formatoPesos } from "@/lib/numeros";
@@ -38,9 +38,8 @@ export type Fila = {
 export type SalidaInfo = { id: string; nombre: string; patente: string; capacidad: number | null; repartidorId: string };
 export type Opcion = { id: string; nombre: string };
 
-const COLUMNAS_UBICAR = "lg:grid-cols-[1fr_1.5fr_1.4fr_1fr_2fr_7rem_5.5rem_4.5rem_16rem]";
 const COLUMNAS = "44px 140px 210px 190px 120px minmax(240px,1fr) 110px 100px 120px 120px 230px 110px 140px 170px";
-const ENCABEZADOS = ["N°", "Barrio", "Cliente", "Dirección", "Teléfono", "Pedido", "Monto", "Comprobante", "N° factura", "Entrega", "Cobro", "Remito", "Cuenta corriente", "Mover a"];
+const ENCABEZADOS = ["N°", "Barrio", "Cliente", "Dirección", "Teléfono", "Pedido", "Monto", "Comprobante", "N° factura", "Entrega", "Cobro", "Remito", "Cuenta corriente", "Ubicar / día"];
 const MEDIOS: { valor: string; texto: string }[] = [
   { valor: "EFECTIVO", texto: "Efectivo" },
   { valor: "TRANSFERENCIA", texto: "Transferencia" },
@@ -60,23 +59,23 @@ type Acciones = {
   dias: { fecha: string; texto: string }[];
 };
 
-function SelectorMover({ f, salidas, bloqueada, acc, clase }: { f: Fila; salidas: SalidaInfo[]; bloqueada: boolean; acc: Acciones; clase: string }) {
+// Dos desplegables por pedido: uno para ubicarlo en un vehículo (o dejarlo sin ubicar) y otro para pasarlo de día (o devolverlo a Pedidos).
+function Selectores({ f, salidas, bloqueada, acc, clase }: { f: Fila; salidas: SalidaInfo[]; bloqueada: boolean; acc: Acciones; clase: string }) {
+  const estilo = `${clase} rounded-md border border-stone-400 bg-white px-2 text-sm font-medium shadow-sm disabled:opacity-40`;
+  const apagado = bloqueada || f.estado === "ENTREGADO";
   return (
-    <select
-      aria-label="Mover el pedido"
-      disabled={bloqueada || f.estado === "ENTREGADO"}
-      value=""
-      onChange={(e) => e.target.value && acc.mover(f, e.target.value)}
-      className={`${clase} rounded-md border border-stone-400 bg-white px-2 text-sm font-medium shadow-sm disabled:opacity-40`}
-    >
-      <option value="">Mover a…</option>
-      {f.salidaId !== null && <option value="sin">Sin ubicar</option>}
-      {salidas.filter((x) => x.id !== f.salidaId).map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}
-      <option value="pedidos">Devolver a Pedidos</option>
-      <optgroup label="Pasar a otro día">
+    <>
+      <select aria-label="Ubicar en un vehículo" disabled={apagado} value="" onChange={(e) => e.target.value && acc.mover(f, e.target.value)} className={estilo}>
+        <option value="" disabled hidden>Ubicar en…</option>
+        {f.salidaId !== null && <option value="sin">Sin ubicar</option>}
+        {salidas.filter((x) => x.id !== f.salidaId).map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}
+      </select>
+      <select aria-label="Pasar a otro día" disabled={apagado} value="" onChange={(e) => e.target.value && acc.mover(f, e.target.value)} className={estilo}>
+        <option value="" disabled hidden>Pasar al día…</option>
         {acc.dias.map((d) => <option key={d.fecha} value={`dia:${d.fecha}`}>{d.texto}</option>)}
-      </optgroup>
-    </select>
+        <option value="pedidos">Volver a Pedidos</option>
+      </select>
+    </>
   );
 }
 
@@ -172,11 +171,50 @@ function FilaHoja({ f, n, bloqueada, acc, salidas }: { f: Fila; n: number; bloqu
           Abrir{f.tieneDeuda && <span className="h-2 w-2 rounded-full bg-rojo-600" title="Este cliente tiene deuda" aria-label="Tiene deuda" />}
         </Link>
       </div>
-      <div role="cell"><SelectorMover f={f} salidas={salidas} bloqueada={bloqueada} acc={acc} clase="h-9 w-full" /></div>
+      <div role="cell" className="space-y-1"><Selectores f={f} salidas={salidas} bloqueada={bloqueada} acc={acc} clase="h-8 w-full" /></div>
     </div>
   );
 }
 
+
+// Cuadro que recibe pedidos arrastrados (un vehículo, o "sin" = sin ubicar).
+function Zona({ id, bloqueada, clase, children }: { id: string; bloqueada: boolean; clase: string; children: React.ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({ id: `c:${id}`, disabled: bloqueada });
+  return <section ref={setNodeRef} className={`${clase} ${isOver ? "ring-2 ring-verde-700" : ""}`}>{children}</section>;
+}
+
+const COLUMNAS_UBICAR = "lg:grid-cols-[1.5rem_1fr_1.5fr_1.4fr_1fr_2fr_6.5rem_5rem_4rem_9rem_9rem]";
+
+// Un pedido sin ubicar: la misma información que en la hoja PEDIDOS, en una sola línea, y se arrastra hasta un vehículo.
+function FilaUbicar({ f, salidas, bloqueada, acc }: { f: Fila; salidas: SalidaInfo[]; bloqueada: boolean; acc: Acciones }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: f.id, disabled: bloqueada });
+  const wa = f.telefono ? enlaceWhatsApp(f.telefono) : null;
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 20 : undefined, position: "relative" }}
+      className="rounded-xl border border-stone-300 bg-white px-5 py-3.5 shadow-sm"
+    >
+      <div className={`grid items-center gap-x-4 gap-y-2 text-center ${COLUMNAS_UBICAR}`}>
+        <button type="button" disabled={bloqueada} aria-label="Arrastrar el pedido a un vehículo" className="hidden cursor-grab text-lg leading-none text-stone-500 disabled:cursor-default disabled:opacity-30 lg:block" {...attributes} {...listeners}>⋮⋮</button>
+        <span className="text-sm font-semibold">{f.barrio}</span>
+        <span className="text-sm font-semibold leading-snug">{f.cliente}</span>
+        <span className="text-sm leading-snug">
+          {f.direccion}
+          {f.comentario && <span className="mt-0.5 block text-xs font-medium text-rojo-700">{f.comentario}</span>}
+        </span>
+        <span className="text-sm tabular-nums">{f.telefono ? (wa ? <a href={wa} target="_blank" rel="noreferrer" className="hover:text-verde-800 hover:underline">{f.telefono}</a> : f.telefono) : <span className="text-stone-400">—</span>}</span>
+        <span className="inline-grid justify-center justify-self-center gap-x-2 gap-y-0.5 text-left text-sm [grid-template-columns:auto_auto]">
+          {f.items.map((i, k) => <span key={k} className="contents"><span className="text-right font-semibold tabular-nums">{i.cantidad}</span><span className="leading-snug">{i.nombre}</span></span>)}
+        </span>
+        <span className="text-sm font-semibold tabular-nums">{formatoPesos(f.monto)}</span>
+        <span><span className={`inline-block rounded px-2 py-0.5 text-xs font-bold tracking-wide ${f.conFactura ? "bg-verde-800 text-white" : "bg-crema-200 text-verde-900"}`}>{f.conFactura ? "FACTURA" : "REMITO"}</span></span>
+        <Link href={`/pedidos/${f.id}`} className="text-sm font-semibold text-verde-800 underline-offset-4 hover:underline">Abrir ›</Link>
+        <Selectores f={f} salidas={salidas} bloqueada={bloqueada} acc={acc} clase="h-9 w-full" />
+      </div>
+    </div>
+  );
+}
 
 const digitos = (t: string) => t.replace(/[^\d+]/g, "");
 const mapa = (f: Fila) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${f.direccion}, ${f.barrio}`)}`;
@@ -260,7 +298,7 @@ function FilaTarjeta({ f, n, bloqueada, acc, salidas }: { f: Fila; n: number; bl
           Cuenta corriente{f.tieneDeuda && <span className="h-2.5 w-2.5 rounded-full bg-rojo-600" aria-label="Tiene deuda" />}
         </Link>
       </div>
-      <SelectorMover f={f} salidas={salidas} bloqueada={bloqueada} acc={acc} clase="h-12 w-full" />
+      <div className="grid grid-cols-2 gap-2"><Selectores f={f} salidas={salidas} bloqueada={bloqueada} acc={acc} clase="h-12 w-full" /></div>
     </article>
   );
 }
@@ -300,6 +338,7 @@ export function HojaDia({ fecha, filasIniciales, salidas, vehiculosLibres, repar
   const router = useRouter();
   const [filas, setFilas] = useState(filasIniciales);
   const [error, setError] = useState<string | null>(null);
+  const [arrastrando, setArrastrando] = useState(false);
   const [, empezar] = useTransition();
   useEffect(() => setFilas(filasIniciales), [filasIniciales]);
 
@@ -341,18 +380,38 @@ export function HojaDia({ fecha, filasIniciales, salidas, vehiculosLibres, repar
       if (destino === "pedidos") return guardar(filas.filter((x) => x.id !== f.id), () => devolverAPedidos(f.id));
       if (destino.startsWith("dia:")) return guardar(filas.filter((x) => x.id !== f.id), () => asignarADia(f.id, destino.slice(4)));
       const salidaId = destino === "sin" ? null : destino;
-      guardar(filas.map((x) => (x.id === f.id ? { ...x, salidaId } : x)), () => asignarAVehiculo(f.id, salidaId));
+      guardar([...filas.filter((x) => x.id !== f.id), { ...f, salidaId }], () => asignarAVehiculo(f.id, salidaId)); // queda al final del recorrido
     },
   };
 
-  const alSoltar = (salidaId: string) => (e: DragEndEvent) => {
-    if (!e.over || e.active.id === e.over.id) return;
-    const delVehiculo = filas.filter((f) => f.salidaId === salidaId);
-    const viejo = delVehiculo.findIndex((f) => f.id === e.active.id);
-    const nuevo = delVehiculo.findIndex((f) => f.id === e.over!.id);
-    const orden = arrayMove(delVehiculo, viejo, nuevo);
-    const resto = filas.filter((f) => f.salidaId !== salidaId);
-    guardar([...resto, ...orden], () => ordenarSalida(salidaId, orden.map((f) => f.id)));
+  // Un solo arrastre para todo: de "sin ubicar" a un vehículo, de un vehículo a otro, de vuelta a "sin ubicar", o reordenar el recorrido.
+  const colision: CollisionDetection = (args) => {
+    const dentro = pointerWithin(args);
+    const pedidos = dentro.filter((c) => !String(c.id).startsWith("c:"));
+    if (pedidos.length) return pedidos;
+    return dentro.length ? dentro : closestCenter(args);
+  };
+  const alSoltar = (e: DragEndEvent) => {
+    setArrastrando(false);
+    if (!e.over || cerrado) return;
+    const id = String(e.active.id);
+    const f = filas.find((x) => x.id === id);
+    if (!f) return;
+    const sobre = String(e.over.id);
+    let destino: string | null;
+    if (sobre.startsWith("c:")) {
+      const c = sobre.slice(2);
+      destino = c === "sin" ? null : c;
+    } else {
+      const o = filas.find((x) => x.id === sobre);
+      if (!o) return;
+      destino = o.salidaId;
+    }
+    if (destino !== f.salidaId) return acc.mover(f, destino === null ? "sin" : destino);
+    if (destino === null || sobre.startsWith("c:") || sobre === id) return;
+    const delVehiculo = filas.filter((x) => x.salidaId === destino);
+    const orden = arrayMove(delVehiculo, delVehiculo.findIndex((x) => x.id === id), delVehiculo.findIndex((x) => x.id === sobre));
+    guardar([...filas.filter((x) => x.salidaId !== destino), ...orden], () => ordenarSalida(destino, orden.map((x) => x.id)));
   };
 
   const sinVehiculo = filas.filter((f) => f.salidaId === null);
@@ -383,17 +442,16 @@ export function HojaDia({ fecha, filasIniciales, salidas, vehiculosLibres, repar
           <div role="row" style={{ gridTemplateColumns: COLUMNAS }} className="grid gap-x-3 rounded-md bg-verde-800 px-2 py-2.5 text-xs font-semibold uppercase tracking-wide text-white">
             {ENCABEZADOS.map((h) => <div key={h} role="columnheader" className={h === "Monto" ? "text-right" : ""}>{h}</div>)}
           </div>
-          <DndContext id={`ruta-${salida.id}`} sensors={sensores} collisionDetection={closestCenter} onDragEnd={alSoltar(salida.id)}>
-            <SortableContext items={grupo.map((f) => f.id)} strategy={verticalListSortingStrategy}>
-              {grupo.map((f, n) => <FilaHoja key={f.id} f={f} n={n + 1} bloqueada={cerrado} acc={acc} salidas={salidas} />)}
-            </SortableContext>
-          </DndContext>
+          <SortableContext items={grupo.map((f) => f.id)} strategy={verticalListSortingStrategy}>
+            {grupo.map((f, n) => <FilaHoja key={f.id} f={f} n={n + 1} bloqueada={cerrado} acc={acc} salidas={salidas} />)}
+          </SortableContext>
         </div>
       </div>
     </>
   );
 
   return (
+    <DndContext id="hoja-de-ruta" sensors={sensores} collisionDetection={colision} onDragStart={() => setArrastrando(true)} onDragCancel={() => setArrastrando(false)} onDragEnd={alSoltar}>
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
         {/* Sumar un vehículo a la salida de este día: chico, un solo desplegable; al elegirlo se abre su cuadro */}
@@ -419,41 +477,22 @@ export function HojaDia({ fecha, filasIniciales, salidas, vehiculosLibres, repar
       {error && <p className="rounded-lg border border-rojo-600 bg-rojo-50 p-3 text-sm text-rojo-700" role="alert">{error}</p>}
 
       {/* Pedidos del día que todavía no están en ningún vehículo: la misma información que en la hoja PEDIDOS */}
-      {sinVehiculo.length > 0 && (
-        <section aria-label="Sin ubicar" className="space-y-2">
-          <h2 className="flex items-center justify-between rounded-md bg-verde-800 px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white">
-            <span>Sin ubicar</span><span>{sinVehiculo.length} {sinVehiculo.length === 1 ? "pedido" : "pedidos"}</span>
+      {(sinVehiculo.length > 0 || arrastrando) && (
+        <Zona id="sin" bloqueada={cerrado} clase="space-y-2 rounded-xl p-1">
+          <h2 className="px-1 text-sm font-bold uppercase tracking-wide text-stone-800">
+            Sin ubicar <span className="font-medium normal-case tracking-normal text-stone-600">· {sinVehiculo.length} {sinVehiculo.length === 1 ? "pedido" : "pedidos"}</span>
           </h2>
-          <div className={`hidden gap-x-4 border-b border-stone-400 px-5 pb-1 text-center text-xs font-semibold uppercase tracking-wide text-stone-700 lg:grid ${COLUMNAS_UBICAR}`}>
-            {["Barrio", "Cliente", "Dirección", "Teléfono", "Pedido", "Monto", "Factura", "", "Ubicar en"].map((h, i) => <span key={i}>{h}</span>)}
-          </div>
-          {sinVehiculo.map((f) => (
-            <div key={f.id} className="rounded-xl border border-stone-300 bg-white px-5 py-3.5 shadow-sm">
-              <div className={`grid items-center gap-x-4 gap-y-2 text-center ${COLUMNAS_UBICAR}`}>
-                <span className="text-sm font-semibold">{f.barrio}</span>
-                <span className="text-sm font-semibold leading-snug">{f.cliente}</span>
-                <span className="text-sm leading-snug">
-                  {f.direccion}
-                  {f.comentario && <span className="mt-0.5 block text-xs font-medium text-rojo-700">{f.comentario}</span>}
-                </span>
-                <span className="text-sm tabular-nums">{f.telefono ? (enlaceWhatsApp(f.telefono) ? <a href={enlaceWhatsApp(f.telefono)!} target="_blank" rel="noreferrer" className="hover:text-verde-800 hover:underline">{f.telefono}</a> : f.telefono) : <span className="text-stone-400">—</span>}</span>
-                <span className="inline-grid justify-center justify-self-center gap-x-2 gap-y-0.5 text-left text-sm [grid-template-columns:auto_auto]">
-                  {f.items.map((i, k) => <span key={k} className="contents"><span className="text-right font-semibold tabular-nums">{i.cantidad}</span><span className="leading-snug">{i.nombre}</span></span>)}
-                </span>
-                <span className="text-sm font-semibold tabular-nums">{formatoPesos(f.monto)}</span>
-                <span><span className={`inline-block rounded px-2 py-0.5 text-xs font-bold tracking-wide ${f.conFactura ? "bg-verde-800 text-white" : "bg-crema-200 text-verde-900"}`}>{f.conFactura ? "FACTURA" : "REMITO"}</span></span>
-                <Link href={`/pedidos/${f.id}`} className="text-sm font-semibold text-verde-800 underline-offset-4 hover:underline">Abrir ›</Link>
-                <span className="flex flex-wrap items-center justify-center gap-1.5">
-                  {salidas.map((x) => (
-                    <button key={x.id} type="button" disabled={cerrado} onClick={() => acc.mover(f, x.id)} className="h-9 rounded-md border border-stone-400 bg-white px-3 text-sm font-semibold shadow-sm hover:border-verde-700 hover:bg-verde-700 hover:text-white disabled:opacity-40">→ {x.nombre}</button>
-                  ))}
-                  {salidas.length === 0 && <span className="text-sm text-stone-500">Primero sumá un vehículo</span>}
-                  <SelectorMover f={f} salidas={[]} bloqueada={cerrado} acc={acc} clase="h-9" />
-                </span>
+          {sinVehiculo.length > 0 ? (
+            <>
+              <div className={`hidden gap-x-4 px-5 text-center text-xs font-semibold uppercase tracking-wide text-stone-600 lg:grid ${COLUMNAS_UBICAR}`}>
+                {["", "Barrio", "Cliente", "Dirección", "Teléfono", "Pedido", "Monto", "Factura", "", "Ubicar en", "Día"].map((h, i) => <span key={i}>{h}</span>)}
               </div>
-            </div>
-          ))}
-        </section>
+              {sinVehiculo.map((f) => <FilaUbicar key={f.id} f={f} salidas={salidas} bloqueada={cerrado} acc={acc} />)}
+            </>
+          ) : (
+            <p className="rounded-xl border border-dashed border-stone-400 p-4 text-center text-sm text-stone-600">Soltá acá el pedido para dejarlo sin ubicar.</p>
+          )}
+        </Zona>
       )}
 
       {/* Un cuadro por vehículo: su carga y su recorrido */}
@@ -461,7 +500,7 @@ export function HojaDia({ fecha, filasIniciales, salidas, vehiculosLibres, repar
         const grupo = filas.filter((f) => f.salidaId === sa.id);
         const bultos = grupo.reduce((t, f) => t + f.bultos, 0);
         return (
-          <section key={sa.id} className="overflow-hidden rounded-xl border-2 border-stone-300 bg-white shadow-sm">
+          <Zona key={sa.id} id={sa.id} bloqueada={cerrado} clase="overflow-hidden rounded-xl border-2 border-stone-300 bg-white shadow-sm">
             <header className="flex flex-wrap items-center justify-between gap-4 bg-verde-800 px-5 py-4 text-white">
               <div>
                 <h2 className="text-xl font-bold uppercase tracking-wide">{sa.nombre}</h2>
@@ -486,13 +525,14 @@ export function HojaDia({ fecha, filasIniciales, salidas, vehiculosLibres, repar
               </div>
             </header>
             {grupo.length === 0 ? (
-              <p className="p-6 text-center text-sm text-stone-600">Todavía no tiene pedidos. Sumalos desde “Sin ubicar”.</p>
+              <p className="p-6 text-center text-sm text-stone-600">Todavía no tiene pedidos. Arrastralos desde “Sin ubicar”.</p>
             ) : tabla(grupo, sa)}
-          </section>
+          </Zona>
         );
       })}
 
       {filas.length === 0 && <p className="rounded-lg border border-dashed border-stone-400 p-8 text-center text-stone-600">Todavía no hay pedidos en este día. Asignalos desde Pedidos.</p>}
     </div>
+    </DndContext>
   );
 }
