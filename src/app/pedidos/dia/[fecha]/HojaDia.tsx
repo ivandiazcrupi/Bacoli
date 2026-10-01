@@ -327,21 +327,32 @@ function FilaTarjeta({ f, n, bloqueada, acc, salidas }: { f: Fila; n: number; bl
 
 const urlRuta = (filas: Fila[]) => `https://www.google.com/maps/dir/${filas.map((f) => encodeURIComponent(`${f.direccion}, ${f.barrio}`)).join("/")}`;
 
-function Medidor({ bultos, capacidad }: { bultos: number; capacidad: number | null }) {
-  const pasado = capacidad !== null && bultos > capacidad;
-  const pct = capacidad ? Math.min(100, Math.round((bultos / capacidad) * 100)) : 0;
-  return (
-    <div className="w-56 text-center" title={pasado ? "Se pasó de la capacidad (solo avisa, no frena)" : undefined}>
-      <p className="flex flex-wrap items-center justify-center gap-2 text-sm font-semibold text-stone-800">
-        <span><span className="tabular-nums">{bultos}</span>{capacidad !== null ? <> de <span className="tabular-nums">{capacidad}</span> paquetes</> : " paquetes"}</span>
-        {pasado && <span className="rounded-full bg-rojo-700 px-2.5 py-0.5 text-xs font-bold uppercase text-white">Te pasaste {bultos - capacidad}</span>}
-      </p>
-      {capacidad !== null && (
-        <div className="mt-1 h-2 overflow-hidden rounded-full bg-stone-300">
-          <div className={`h-full ${pasado ? "bg-rojo-600" : "bg-stone-700"}`} style={{ width: `${pct}%` }} />
-        </div>
-      )}
+// Resumen de la vuelta de un vehículo (al final de su cuadro): pedidos, paquetes contra la capacidad y facturación.
+function ResumenVuelta({ grupo, capacidad }: { grupo: Fila[]; capacidad: number | null }) {
+  const paquetes = grupo.reduce((t, f) => t + f.bultos, 0);
+  const total = grupo.reduce((t, f) => t + f.monto, 0);
+  const conFactura = grupo.filter((f) => f.conFactura).reduce((t, f) => t + f.monto, 0);
+  const conRemito = total - conFactura;
+  const estado =
+    capacidad === null ? { texto: "Sin tope", aviso: false }
+    : paquetes > capacidad ? { texto: `Te pasaste ${paquetes - capacidad}`, aviso: true }
+    : paquetes === capacidad ? { texto: "Completa", aviso: false }
+    : { texto: `Quedan ${capacidad - paquetes}`, aviso: false };
+  const dato = (titulo: string, valor: React.ReactNode, fuerte?: boolean) => (
+    <div className="text-center">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-600">{titulo}</p>
+      <p className={`tabular-nums ${fuerte ? "text-base font-bold" : "text-sm font-semibold"}`}>{valor}</p>
     </div>
+  );
+  return (
+    <footer aria-label="Resumen de la vuelta" className="grid grid-cols-2 items-center gap-x-4 gap-y-3 border-t border-stone-400 bg-crema-100 px-5 py-3 text-stone-900 sm:grid-cols-3 xl:grid-cols-6">
+      {dato("Pedidos", grupo.length)}
+      {dato("Paquetes", capacidad !== null ? `${paquetes} de ${capacidad}` : paquetes)}
+      {dato("Capacidad", <span className={estado.aviso ? "text-rojo-700" : undefined}>{estado.texto}</span>)}
+      {dato("Con factura", formatoPesos(conFactura))}
+      {dato("Con remito", formatoPesos(conRemito))}
+      {dato("Total de la vuelta", formatoPesos(total), true)}
+    </footer>
   );
 }
 
@@ -522,16 +533,14 @@ export function HojaDia({ fecha, filasIniciales, salidas, vehiculosLibres, repar
       {/* Un cuadro por vehículo: su carga y su recorrido */}
       {salidas.map((sa) => {
         const grupo = filas.filter((f) => f.salidaId === sa.id);
-        const bultos = grupo.reduce((t, f) => t + f.bultos, 0);
         return (
           <Zona key={sa.id} id={sa.id} bloqueada={cerrado} clase="overflow-hidden rounded-xl border border-stone-400 bg-white shadow-sm">
-            <header className="grid items-center gap-3 border-b border-stone-400 bg-crema-100 px-5 py-3 text-stone-900 sm:grid-cols-[1fr_auto_1fr]">
-              <div className="text-center sm:text-left">
+            <header className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-400 bg-crema-100 px-5 py-3 text-stone-900">
+              <div>
                 <h2 className="text-lg font-bold leading-tight">{sa.nombre}</h2>
                 {sa.patente && <p className="text-xs text-stone-600">{sa.patente}</p>}
               </div>
-              <div className="flex justify-center"><Medidor bultos={bultos} capacidad={sa.capacidad} /></div>
-              <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
+              <div className="flex flex-wrap items-center gap-2">
                 {grupo.length > 0 && <a href={urlRuta(grupo)} target="_blank" rel="noreferrer" className="rounded-md border border-stone-400 bg-white px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-crema-50">Ver ruta en Google Maps</a>}
                 {!cerrado && <button type="button" onClick={() => { if (window.confirm(`¿Sacar ${sa.nombre} del día? Sus pedidos quedan “sin ubicar”.`)) llamar(() => quitarSalida(sa.id)); }} className="rounded-md border border-stone-400 bg-white px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-crema-50">Sacar del día</button>}
               </div>
@@ -539,6 +548,7 @@ export function HojaDia({ fecha, filasIniciales, salidas, vehiculosLibres, repar
             {grupo.length === 0 ? (
               <p className="p-6 text-center text-sm text-stone-600">Todavía no tiene pedidos. Arrastralos desde “Sin ubicar”.</p>
             ) : tabla(grupo, sa)}
+            <ResumenVuelta grupo={grupo} capacidad={sa.capacidad} />
           </Zona>
         );
       })}
