@@ -40,7 +40,7 @@ export type Opcion = { id: string; nombre: string };
 
 // Todo entra a lo ancho (sin deslizar): columnas justas y todo centrado.
 const COLUMNAS = "34px 80px minmax(120px,1.2fr) minmax(110px,1fr) 96px minmax(130px,1.4fr) 92px 96px 52px 112px 104px 84px";
-const ENCABEZADOS = ["N°", "Barrio", "Cliente", "Dirección", "Teléfono", "Pedido", "Monto", "Comprobante", "Entrega", "Cobro", "Ubicación", "Cuenta corriente"];
+const ENCABEZADOS = ["N°", "Barrio", "Cliente", "Dirección", "Teléfono", "Pedido", "Monto", "Comprobante", "Entrega", "Cobro", "Ubicación", "Editar pedido"];
 const MEDIOS: { valor: string; texto: string }[] = [
   { valor: "EFECTIVO", texto: "Efectivo" },
   { valor: "TRANSFERENCIA", texto: "Transferencia" },
@@ -190,9 +190,7 @@ function FilaHoja({ f, n, bloqueada, acc, salidas }: { f: Fila; n: number; bloqu
       </div>
 
       <div role="cell">
-        <Link href={`/clientes/${f.clienteId}/cuenta`} className="inline-flex items-center gap-1 text-[11px] text-stone-600 underline hover:text-verde-800">
-          Abrir{f.tieneDeuda && <span className="h-1.5 w-1.5 rounded-full bg-rojo-600" title="Este cliente tiene deuda" aria-label="Tiene deuda" />}
-        </Link>
+        <Link href={`/pedidos/${f.id}`} className="text-sm font-semibold text-verde-800 underline-offset-4 hover:underline">Abrir ›</Link>
       </div>
     </div>
   );
@@ -320,9 +318,7 @@ function FilaTarjeta({ f, n, bloqueada, acc, salidas }: { f: Fila; n: number; bl
 
       <div className="grid grid-cols-2 gap-2">
         <BotonRemito pedidoId={f.id} numero={f.remito} clase={`h-12 w-full rounded-lg border px-3 text-base font-semibold ${f.remito ? "border-stone-800 bg-white text-stone-900" : f.estado === "ENTREGADO" && !f.conFactura ? "border-rojo-600 bg-rojo-50 text-rojo-800 ring-1 ring-rojo-600" : "border-stone-300 bg-white text-stone-700"}`} />
-        <Link href={`/clientes/${f.clienteId}/cuenta`} className="flex h-12 items-center justify-center gap-2 rounded-lg border border-stone-300 bg-white px-3 text-base font-semibold">
-          Cuenta corriente{f.tieneDeuda && <span className="h-2.5 w-2.5 rounded-full bg-rojo-600" aria-label="Tiene deuda" />}
-        </Link>
+        <Link href={`/pedidos/${f.id}`} className="flex h-12 items-center justify-center rounded-lg border border-stone-300 bg-white px-3 text-base font-semibold">Abrir pedido</Link>
       </div>
       <div className="grid grid-cols-2 gap-2"><Selectores f={f} salidas={salidas} bloqueada={bloqueada} acc={acc} clase="h-12 w-full" /></div>
     </article>
