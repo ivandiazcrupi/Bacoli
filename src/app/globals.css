@@ -37,5 +37,5 @@ html.intermedio { font-size: 14px; }
 .intermedio body > p { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: #e3e0cc; border-top: 1px solid #8a8d82; text-align: left !important; padding: .2rem .8rem !important; font-size: 11px !important; color: #222 !important; }
 .intermedio header a, .intermedio header button { white-space: nowrap; }
 .intermedio header a, .intermedio header button { white-space: nowrap; }
-.intermedio main section h1 { color: #fff !important; border: 0 !important; text-transform: none !important; letter-spacing: 0 !important; font-size: 32px !important; display: block; padding: 0; line-height: 1.2; }
-@media (max-width: 640px) { .intermedio main section h1 { font-size: 24px !important; } }
+.intermedio main > h1.text-4xl, .intermedio main > h1 { color: #1c1917 !important; border: 0 !important; text-transform: none !important; letter-spacing: 0 !important; font-size: 34px !important; display: block; padding: 0; line-height: 1.2; }
+@media (max-width: 640px) { .intermedio main > h1 { font-size: 24px !important; } }

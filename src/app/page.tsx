@@ -28,33 +28,22 @@ export default async function Inicio() {
   return (
     <>
       <Cabecera usuario={usuario} />
-      <main className="mx-auto flex min-h-[calc(100vh-9rem)] w-full max-w-4xl flex-col justify-center px-4 py-8">
-        <section className="overflow-hidden rounded-lg border border-stone-400 bg-white">
-          <div className="border-b-4 border-verde-700 bg-verde-800 px-6 py-8 sm:px-10 sm:py-10">
-            <p className="text-xs font-semibold uppercase tracking-widest text-crema-200">{fechaHoy()}</p>
-            <h1 className="mt-2 text-2xl font-bold leading-tight text-white sm:text-4xl">{saludar(usuario.nombre)}</h1>
-          </div>
+      <main className="mx-auto flex min-h-[calc(100vh-9rem)] w-full max-w-3xl flex-col items-center justify-center gap-6 px-4 py-8 text-center">
+        <p className="text-xs font-semibold uppercase tracking-widest text-stone-500">{fechaHoy()}</p>
+        <h1 className="text-2xl font-bold leading-tight text-stone-900 sm:text-4xl">{saludar(usuario.nombre)}</h1>
 
-          {oficina ? (
-            <div className="space-y-4 p-6 sm:p-10">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Link href="/pedidos/nuevo" className="rounded-lg bg-verde-700 px-6 py-6 text-center text-lg font-bold uppercase tracking-wide text-white hover:bg-verde-800">
-                  Cargar pedido
-                </Link>
-                <Link href="/clientes/nuevo" className="rounded-lg bg-verde-700 px-6 py-6 text-center text-lg font-bold uppercase tracking-wide text-white hover:bg-verde-800">
-                  Cargar cliente
-                </Link>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <Link href="/pedidos" className="rounded-lg border border-stone-400 px-4 py-3 text-center text-sm font-semibold uppercase tracking-wide text-verde-800 hover:bg-crema-100">Ver pedidos</Link>
-                <Link href="/pedidos/semana" className="rounded-lg border border-stone-400 px-4 py-3 text-center text-sm font-semibold uppercase tracking-wide text-verde-800 hover:bg-crema-100">Semana</Link>
-                <Link href="/clientes" className="rounded-lg border border-stone-400 px-4 py-3 text-center text-sm font-semibold uppercase tracking-wide text-verde-800 hover:bg-crema-100">Ver clientes</Link>
-              </div>
-            </div>
-          ) : (
-            <p className="p-6 text-stone-600 sm:p-10">Tu ruta del día va a aparecer acá.</p>
-          )}
-        </section>
+        {oficina ? (
+          <div className="mt-2 grid w-full gap-3 sm:grid-cols-2">
+            <Link href="/pedidos/nuevo" className="rounded-lg bg-verde-700 px-6 py-6 text-center text-lg font-bold uppercase tracking-wide text-white hover:bg-verde-800">
+              Cargar pedido
+            </Link>
+            <Link href="/clientes/nuevo" className="rounded-lg bg-verde-700 px-6 py-6 text-center text-lg font-bold uppercase tracking-wide text-white hover:bg-verde-800">
+              Cargar cliente
+            </Link>
+          </div>
+        ) : (
+          <p className="text-stone-600">Tu ruta del día va a aparecer acá.</p>
+        )}
       </main>
     </>
   );

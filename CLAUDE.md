@@ -226,7 +226,7 @@ y ~1000 minoristas.
   Vive en el bloque final de `src/app/globals.css` (clase `intermedio` puesta siempre en `<html>` desde `layout.tsx`): cabecera clara con filete verde, esquinas casi rectas, sin sombras,
   letra de 14 px, filas compactas (una línea por sucursal), bordes firmes, títulos sobrios (verde con subrayado) y barra de estado fija abajo. Para ajustar el estilo general se toca ese bloque.
   El dueño dijo que "de última lo mejoramos" más adelante. Una versión un punto más moderna (esquinas de 6 px, sombra leve, más aire) se probó y NO la eligió (commit `7330b71`, por si la quiere).
-- **Inicio**: tarjeta con banda verde (fecha + saludo al azar en letra sans, ya no serif), los dos botones grandes CARGAR PEDIDO / CARGAR CLIENTE y tres accesos chicos (Ver pedidos, Semana, Ver clientes).
+- **Inicio**: sin tarjetas ni color de más (pedido del dueño): solo la fecha, el saludo al azar y los dos botones CARGAR PEDIDO / CARGAR CLIENTE. Nada más.
 
 ## Pendientes conocidos
 - La enumeración `TipoCliente` conserva el valor DISTRIBUIDOR (oculto en pantallas) para no alterar datos existentes.
