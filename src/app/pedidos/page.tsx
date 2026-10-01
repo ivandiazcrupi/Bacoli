@@ -24,7 +24,7 @@ export default async function Pedidos({ searchParams }: { searchParams: Promise<
     db.diaCerrado.findMany({ where: { fecha: { gte: aFecha(lunes), lte: aFecha(domingo) } } }),
   ]);
   const cerradosSet = new Set(cerrados.map((d) => deFecha(d.fecha)));
-  const dias = Array.from({ length: 6 }, (_, n) => sumarDias(lunes, n)).map((f) => ({ fecha: f, corta: nombreDia(f).slice(0, 3), hoy: f === hoy(), cerrado: cerradosSet.has(f) }));
+  const dias = Array.from({ length: 6 }, (_, n) => sumarDias(lunes, n)).map((f) => ({ fecha: f, letra: nombreDia(f).charAt(0), numero: Number(f.slice(8)), nombre: nombreDia(f), hoy: f === hoy(), cerrado: cerradosSet.has(f) }));
 
   const enlace = (extra: Record<string, string>) => {
     const v: Record<string, string> = { ...(esWeb ? { lista: "web" } : {}), ...(semana ? { semana } : {}), ...extra };
@@ -36,7 +36,7 @@ export default async function Pedidos({ searchParams }: { searchParams: Promise<
   return (
     <>
       <Cabecera usuario={usuario} />
-      <main className="mx-auto max-w-[1400px] space-y-4 px-4 py-6 sm:px-8">
+      <main className="mx-auto max-w-[1600px] space-y-5 px-4 py-6 sm:px-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-bold">Pedidos</h1>
           <Link href="/pedidos/nuevo" className="whitespace-nowrap rounded-lg bg-verde-700 px-4 py-3 text-sm font-bold uppercase tracking-wide text-white hover:bg-verde-800 sm:px-10">+ Cargar pedido</Link>
@@ -48,12 +48,12 @@ export default async function Pedidos({ searchParams }: { searchParams: Promise<
             <Link href={enlace({ lista: "" })} className={`${pastilla} ${!esWeb ? "bg-verde-700 text-white shadow-sm" : "border border-stone-400 bg-white text-stone-700 hover:border-verde-700"}`}>Mayoristas <span className={!esWeb ? "text-verde-100" : "text-stone-500"}>{cuentaMayoristas}</span></Link>
             <Link href={enlace({ lista: "web" })} className={`${pastilla} ${esWeb ? "bg-verde-700 text-white shadow-sm" : "border border-stone-400 bg-white text-stone-700 hover:border-verde-700"}`}>Minoristas (web) <span className={esWeb ? "text-verde-100" : "text-stone-500"}>{cuentaWeb}</span></Link>
           </div>
-          <nav className="flex flex-wrap items-center gap-2 text-sm" aria-label="Semana en la que se asigna">
-            <span className="text-stone-600">Asignar a la semana:</span>
-            <Link href={enlace({ semana: sumarDias(lunes, -7) })} className="rounded-md border border-stone-400 bg-white px-3 py-2 shadow-sm" aria-label="Semana anterior">←</Link>
-            <span className="min-w-28 text-center font-semibold">{diaMes(lunes)} al {diaMes(domingo)}</span>
-            <Link href={enlace({ semana: sumarDias(lunes, 7) })} className="rounded-md border border-stone-400 bg-white px-3 py-2 shadow-sm" aria-label="Semana siguiente">→</Link>
-            {lunes !== esta && <Link href={enlace({ semana: "" })} className="rounded-md border border-stone-400 bg-white px-3 py-2 shadow-sm">Esta semana</Link>}
+          <nav className="flex flex-wrap items-center gap-3 text-sm" aria-label="Semana en la que se asigna">
+            <span className="text-xs font-semibold uppercase tracking-wide text-stone-600">Asignar a</span>
+            <Link href={enlace({ semana: sumarDias(lunes, -7) })} className="rounded-md border border-stone-400 bg-white px-3 py-2 shadow-sm hover:border-verde-700" aria-label="Semana anterior">←</Link>
+            <span className="min-w-36 rounded-md bg-verde-800 px-4 py-2 text-center text-sm font-bold uppercase tracking-wide text-white">Semana {diaMes(lunes)}</span>
+            <Link href={enlace({ semana: sumarDias(lunes, 7) })} className="rounded-md border border-stone-400 bg-white px-3 py-2 shadow-sm hover:border-verde-700" aria-label="Semana siguiente">→</Link>
+            {lunes !== esta && <Link href={enlace({ semana: "" })} className="rounded-md border border-stone-400 bg-white px-3 py-2 shadow-sm hover:border-verde-700">Esta semana</Link>}
           </nav>
         </div>
 
