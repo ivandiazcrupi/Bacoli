@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { Cabecera } from "@/components/Cabecera";
 import { db } from "@/lib/db";
 import { aFecha, deFecha, diaMes, esFechaValida, lunesDe, nombreDia, sumarDias } from "@/lib/fechas";
+import { titulo } from "@/lib/mayusculas";
 import { porReparto } from "@/lib/ruta";
 import { exigirOficina } from "@/lib/session";
 import { aFila, clientesConDeuda, incluirPedido } from "../../filas";
@@ -62,8 +63,8 @@ export default async function HojaDelDia({ params }: { params: Promise<{ fecha: 
         <HojaDia
           fecha={fecha}
           filasIniciales={filas}
-          salidas={salidas.map((s) => ({ id: s.id, nombre: s.vehiculo.nombre, patente: s.vehiculo.patente ?? "", capacidad: s.vehiculo.capacidad, repartidorId: s.repartidorId ?? "" }))}
-          vehiculosLibres={vehiculos.filter((v) => !salen.has(v.id)).map((v) => ({ id: v.id, nombre: v.nombre }))}
+          salidas={salidas.map((s) => ({ id: s.id, nombre: titulo(s.vehiculo.nombre), patente: s.vehiculo.patente ?? "", capacidad: s.vehiculo.capacidad, repartidorId: s.repartidorId ?? "" }))}
+          vehiculosLibres={vehiculos.filter((v) => !salen.has(v.id)).map((v) => ({ id: v.id, nombre: titulo(v.nombre) }))}
           repartidores={repartidores.map((r) => ({ id: r.id, nombre: r.nombre }))}
           diasSemana={diasSemana}
           cerrado={!!cerrado}

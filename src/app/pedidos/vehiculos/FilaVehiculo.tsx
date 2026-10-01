@@ -1,5 +1,6 @@
 "use client";
 
+import { titulo } from "@/lib/mayusculas";
 import { useActionState } from "react";
 import { cabeceraTabla, estiloCampo } from "@/components/campos";
 import { cambiarActivoVehiculo, eliminarVehiculo, guardarVehiculo } from "../ruta/actions";
@@ -32,7 +33,7 @@ export function FilaVehiculo({ vehiculo }: { vehiculo?: DatosVehiculo }) {
         {vehiculo && <input type="hidden" name="id" value={vehiculo.id} />}
         <label className="col-span-2 min-w-0 lg:col-span-1">
           <span className={etiquetaChica}>Vehículo</span>
-          <input name="nombre" aria-label="Nombre del vehículo" placeholder="Ej: Camioneta 1" autoCapitalize="characters" defaultValue={v("nombre")} required className={`${campo} dato`} />
+          <input name="nombre" aria-label="Nombre del vehículo" placeholder="Ej: Camioneta 1" autoCapitalize="words" defaultValue={titulo(v("nombre"))} required className={campo} />
         </label>
         <label className="min-w-0">
           <span className={etiquetaChica}>Patente</span>

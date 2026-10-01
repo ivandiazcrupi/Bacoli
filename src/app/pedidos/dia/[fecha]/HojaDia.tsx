@@ -335,14 +335,14 @@ function Medidor({ bultos, capacidad }: { bultos: number; capacidad: number | nu
   const pasado = capacidad !== null && bultos > capacidad;
   const pct = capacidad ? Math.min(100, Math.round((bultos / capacidad) * 100)) : 0;
   return (
-    <div className="min-w-52" title={pasado ? "Se pasó de la capacidad (solo avisa, no frena)" : undefined}>
-      <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-white">
+    <div className="w-56 text-center" title={pasado ? "Se pasó de la capacidad (solo avisa, no frena)" : undefined}>
+      <p className="flex flex-wrap items-center justify-center gap-2 text-sm font-semibold text-stone-800">
         <span><span className="tabular-nums">{bultos}</span>{capacidad !== null ? <> de <span className="tabular-nums">{capacidad}</span> paquetes</> : " paquetes"}</span>
-        {pasado && <span className="rounded-full bg-rojo-700 px-2.5 py-0.5 text-xs font-bold uppercase">Te pasaste {bultos - capacidad}</span>}
+        {pasado && <span className="rounded-full bg-rojo-700 px-2.5 py-0.5 text-xs font-bold uppercase text-white">Te pasaste {bultos - capacidad}</span>}
       </p>
       {capacidad !== null && (
-        <div className="mt-1 h-2.5 overflow-hidden rounded-full bg-white/25">
-          <div className={`h-full ${pasado ? "bg-rojo-500" : "bg-white/70"}`} style={{ width: `${pct}%` }} />
+        <div className="mt-1 h-2 overflow-hidden rounded-full bg-stone-300">
+          <div className={`h-full ${pasado ? "bg-rojo-600" : "bg-stone-700"}`} style={{ width: `${pct}%` }} />
         </div>
       )}
     </div>
@@ -465,7 +465,7 @@ export function HojaDia({ fecha, filasIniciales, salidas, vehiculosLibres, repar
       </div>
       <div className="hidden p-3 xl:block">
         <div role="table" className="space-y-1.5">
-          <div role="row" style={{ gridTemplateColumns: COLUMNAS }} className="grid gap-x-2 rounded-md bg-verde-800 px-2 py-2 text-center text-xs font-semibold uppercase tracking-wide text-white">
+          <div role="row" style={{ gridTemplateColumns: COLUMNAS }} className="grid items-center gap-x-2 border-b border-stone-400 px-2 pb-1.5 text-center text-xs font-semibold uppercase tracking-wide text-stone-600">
             {ENCABEZADOS.map((h) => <div key={h} role="columnheader">{h}</div>)}
           </div>
           <SortableContext items={grupo.map((f) => f.id)} strategy={verticalListSortingStrategy}>
@@ -528,16 +528,16 @@ export function HojaDia({ fecha, filasIniciales, salidas, vehiculosLibres, repar
         const grupo = filas.filter((f) => f.salidaId === sa.id);
         const bultos = grupo.reduce((t, f) => t + f.bultos, 0);
         return (
-          <Zona key={sa.id} id={sa.id} bloqueada={cerrado} clase="overflow-hidden rounded-xl border-2 border-stone-300 bg-white shadow-sm">
-            <header className="flex flex-wrap items-center justify-between gap-4 bg-verde-800 px-5 py-4 text-white">
-              <div>
-                <h2 className="text-xl font-bold uppercase tracking-wide">{sa.nombre}</h2>
-                {sa.patente && <p className="text-xs text-verde-200">{sa.patente}</p>}
+          <Zona key={sa.id} id={sa.id} bloqueada={cerrado} clase="overflow-hidden rounded-xl border border-stone-400 bg-white shadow-sm">
+            <header className="grid items-center gap-3 border-b border-stone-400 bg-crema-100 px-5 py-3 text-stone-900 sm:grid-cols-[1fr_auto_1fr]">
+              <div className="text-center sm:text-left">
+                <h2 className="text-lg font-bold leading-tight">{sa.nombre}</h2>
+                {sa.patente && <p className="text-xs text-stone-600">{sa.patente}</p>}
               </div>
-              <Medidor bultos={bultos} capacidad={sa.capacidad} />
-              <div className="flex flex-wrap items-center gap-2">
-                {grupo.length > 0 && <a href={urlRuta(grupo)} target="_blank" rel="noreferrer" className="rounded-md border border-white/60 px-4 py-2 text-sm font-semibold hover:bg-white hover:text-verde-800">Ver ruta en Google Maps</a>}
-                {!cerrado && <button type="button" onClick={() => { if (window.confirm(`¿Sacar ${sa.nombre} del día? Sus pedidos quedan “sin ubicar”.`)) llamar(() => quitarSalida(sa.id)); }} className="rounded-md bg-white px-4 py-2 text-sm font-semibold text-stone-800 hover:bg-crema-100">Sacar del día</button>}
+              <div className="flex justify-center"><Medidor bultos={bultos} capacidad={sa.capacidad} /></div>
+              <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
+                {grupo.length > 0 && <a href={urlRuta(grupo)} target="_blank" rel="noreferrer" className="rounded-md border border-stone-400 bg-white px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-crema-50">Ver ruta en Google Maps</a>}
+                {!cerrado && <button type="button" onClick={() => { if (window.confirm(`¿Sacar ${sa.nombre} del día? Sus pedidos quedan “sin ubicar”.`)) llamar(() => quitarSalida(sa.id)); }} className="rounded-md border border-stone-400 bg-white px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-crema-50">Sacar del día</button>}
               </div>
             </header>
             {grupo.length === 0 ? (

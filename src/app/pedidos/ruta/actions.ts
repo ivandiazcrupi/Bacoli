@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { aFecha, esFechaValida } from "@/lib/fechas";
-import { mayus } from "@/lib/mayusculas";
+import { mayus, titulo } from "@/lib/mayusculas";
 import { exigirOficina } from "@/lib/session";
 import { valoresDe, type EstadoForm } from "../../clientes/validacion";
 
@@ -15,7 +15,7 @@ const refrescar = () => revalidatePath("/pedidos", "layout");
 export async function guardarVehiculo(vehiculoId: string | null, _: EstadoForm, formData: FormData): Promise<EstadoForm> {
   await exigirOficina();
   const valores = valoresDe(formData);
-  const nombre = mayus(String(formData.get("nombre") ?? ""));
+  const nombre = titulo(String(formData.get("nombre") ?? "").replace(/\s+/g, " ").trim()); // "Camioneta 1": minúscula con la primera letra de cada palabra en mayúscula
   if (nombre.length < 2) return { error: "Falta el nombre del vehículo.", valores };
   const patente = mayus(String(formData.get("patente") ?? "")) || null;
   const textoCapacidad = String(formData.get("capacidad") ?? "").replace(/\D/g, "");
