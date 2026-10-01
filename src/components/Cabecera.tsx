@@ -1,11 +1,13 @@
 import Link from "next/link";
 import type { Usuario } from "@prisma/client";
 import { esPersonalDeOficina, puedeGestionarUsuarios } from "@/lib/roles";
-import { salir } from "@/app/actions";
+import { cookies } from "next/headers";
+import { cambiarVista, salir } from "@/app/actions";
 
 // PC: a la izquierda la marca, en el centro el menú (lo importante grande, el resto más discreto) y a la derecha los botones
 // para cargar pedido / cliente. Celular: marca + "Salir" arriba, botones de carga y el menú en una fila que se desliza.
-export function Cabecera({ usuario }: { usuario: Usuario }) {
+export async function Cabecera({ usuario }: { usuario: Usuario }) {
+  const clasica = (await cookies()).get("vista")?.value === "clasica";
   const oficina = esPersonalDeOficina(usuario.rol);
   const principal = "shrink-0 rounded-lg px-2 py-2 text-base font-bold uppercase tracking-wide";
   const secundario = "shrink-0 rounded-lg px-1.5 py-2 text-xs font-medium uppercase tracking-wide text-stone-500 hover:text-stone-900";
@@ -35,6 +37,9 @@ export function Cabecera({ usuario }: { usuario: Usuario }) {
 
         <div className="flex items-center justify-end gap-2">
           <div className="hidden items-center gap-2 lg:flex">{acciones}</div>
+          <form action={cambiarVista} title="Prueba: cambia el aspecto del sistema. Se puede volver con un toque.">
+            <button className="rounded-lg border border-stone-300 px-3 py-2 text-xs font-medium uppercase tracking-wide text-stone-500 hover:text-stone-900">{clasica ? "Vista moderna" : "Vista clásica"}</button>
+          </form>
           <form action={salir} className="flex items-center gap-3 text-sm">
             <button className="rounded-lg border border-stone-300 px-3 py-2 text-xs font-medium uppercase tracking-wide">Salir</button>
           </form>

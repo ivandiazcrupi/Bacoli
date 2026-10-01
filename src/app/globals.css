@@ -7,3 +7,61 @@
    (clase "dato") y además se guarda así (ver src/lib/mayusculas.ts). */
 .dato { text-transform: uppercase; }
 .dato::placeholder { text-transform: none; }
+
+/* =====================================================================================================
+   VISTA CLÁSICA (prueba piloto). Se activa con el botón "Vista clásica" de la cabecera (cookie "vista").
+   Es solo una capa de estilo: sistema de gestión de escritorio, denso y sobrio (letra chica, esquinas rectas,
+   sin sombras, barra de menú oscura, títulos tipo ventana y barra de estado). Si no gusta, se apaga con el mismo
+   botón o se borra este bloque entero: la vista moderna no cambia.
+   ===================================================================================================== */
+html.clasico { font-size: 13px; }
+.clasico body { background: #dde0d6; color: #111; font-family: Tahoma, "Segoe UI", Verdana, Arial, sans-serif; padding-bottom: 26px; }
+.clasico *, .clasico *::before, .clasico *::after { border-radius: 0 !important; box-shadow: none !important; }
+.clasico :focus-visible { outline: 2px solid #026433 !important; outline-offset: 1px; }
+
+/* Barra de menú */
+.clasico header { background: #014d27 !important; border-bottom: 1px solid #00331a !important; color: #fff; }
+.clasico header > div { padding-top: 0 !important; padding-bottom: 0 !important; }
+.clasico header a[href="/"] { padding: .35rem 0 !important; font-size: 15px !important; }
+.clasico header a[href="/"] span { color: #fff !important; }
+.clasico header a[href="/"] span + span { color: #ede6c8 !important; }
+.clasico header nav a { color: #fff !important; font-size: 12px !important; padding: .55rem .8rem !important; }
+.clasico header nav a:hover { background: #026433; }
+.clasico header nav span[aria-hidden] { background: #3f7a5a !important; }
+.clasico header button { background: transparent !important; color: #fff !important; border: 1px solid #8fb7a2 !important; padding: .25rem .6rem !important; font-size: 11px !important; }
+.clasico header a.bg-verde-700 { background: #ede6c8 !important; color: #014d27 !important; padding: .3rem .7rem !important; }
+
+/* Título de cada pantalla: como la barra de una ventana */
+.clasico main h1 { display: inline-block; background: #014d27; color: #fff; padding: .25rem .8rem; font-size: 12px !important; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.clasico main > div > h1 + * , .clasico main h1 + p { margin-left: 0; }
+.clasico main { padding-top: .8rem !important; padding-bottom: .8rem !important; }
+
+/* Pestañas */
+.clasico nav[aria-label="Pedidos"] { border-bottom: 1px solid #6b6e66 !important; gap: 2px !important; }
+.clasico nav[aria-label="Pedidos"] a { background: #c9ccc1 !important; border: 1px solid #6b6e66 !important; color: #222 !important; padding: .35rem 1.1rem !important; font-size: 11px !important; margin-bottom: -1px; }
+.clasico nav[aria-label="Pedidos"] a.bg-white { background: #fff !important; border-bottom-color: #fff !important; color: #014d27 !important; }
+
+/* Tablas, tarjetas y bordes: líneas definidas, nada de aire de más */
+.clasico [class*="border-stone-200"], .clasico [class*="border-stone-300"], .clasico [class*="border-stone-400"] { border-color: #80847a !important; }
+.clasico .bg-crema-50 { background: #f4f5ef !important; }
+.clasico .bg-crema-100 { background: #e9ebe2 !important; }
+.clasico [class*="py-4"] { padding-top: .5rem !important; padding-bottom: .5rem !important; }
+.clasico [class*="py-3.5"], .clasico [class*="py-3"] { padding-top: .35rem !important; padding-bottom: .35rem !important; }
+.clasico [class*="p-5"] { padding: .7rem !important; }
+.clasico [class*="space-y-5"] > * + * { margin-top: .6rem !important; }
+.clasico [class*="space-y-4"] > * + * { margin-top: .5rem !important; }
+.clasico [class*="space-y-2"] > * + * { margin-top: .25rem !important; }
+.clasico .text-2xl, .clasico .text-3xl, .clasico .text-xl { font-size: 15px !important; }
+
+/* Campos y botones: planos, con borde marcado */
+.clasico input:not([type="checkbox"]):not([type="radio"]), .clasico select, .clasico textarea { border: 1px solid #6b6e66 !important; background: #fff !important; padding: .25rem .4rem !important; font-size: 13px !important; height: auto !important; min-height: 24px; margin-top: 2px !important; }
+.clasico button:not([class*="bg-verde"]):not([class*="bg-rojo"]):not([class*="bg-stone-800"]):not([class*="bg-white"]) { background: linear-gradient(#fdfdfb, #dcdfd5); border: 1px solid #6b6e66 !important; color: #111; }
+.clasico button, .clasico a[class*="px-"] { font-size: 12px !important; }
+.clasico label { font-size: 12px !important; }
+
+/* Barra de estado abajo */
+.clasico body > p { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: #c9ccc1; border-top: 1px solid #80847a; text-align: left !important; padding: .2rem .8rem !important; font-size: 11px !important; color: #222 !important; }
+.clasico main a, .clasico main button { white-space: nowrap; }
+.clasico main td, .clasico main th { padding-top: .2rem !important; padding-bottom: .2rem !important; }
+.clasico main .flex-wrap.lg\:justify-end { flex-wrap: nowrap !important; gap: 4px !important; }
+.clasico main .flex-wrap.lg\:justify-end a { font-size: 10px !important; padding: .15rem .45rem !important; }
