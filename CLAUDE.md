@@ -214,6 +214,9 @@ y ~1000 minoristas.
   es un botón en Clientes).
 - **Las cuatro pantallas de Pedidos comparten el mismo ancho y el mismo encabezado** (`Encabezado.tsx`: `CONTENEDOR_PEDIDOS`, título, botón y pestañas) para que al pasar de una a otra nada se mueva.
 
+## Cargar pedido (pedido del dueño)
+- `/pedidos/nuevo` y `/pedidos/[id]/editar` usan el mismo ancho que todo Pedidos (`CONTENEDOR_PEDIDOS`) y el estilo intermedio: **buscador de cliente a todo el ancho** con los resultados en una tabla centrada (BARRIO · CLIENTE · DIRECCIÓN · ZONA); al elegir, una barra con el cliente/sucursal/lista y "Cambiar cliente"; después **una tabla de productos** (PRODUCTO · UNIDAD · PRECIO · CANTIDAD con − / + · SUBTOTAL; la fila con cantidad se pinta crema suave) y abajo tres cuadros: **Comprobante** (Con remito / Con factura +10,5% IVA; el elegido va en gris oscuro), **Nota** y **Totales + Guardar**. Todo centrado, compacto, entra sin scroll en una pantalla de 1366×768. Lógica en `NuevoPedido.tsx` y `FormularioLineas.tsx`. La pantalla de **detalle del pedido** (`/pedidos/[id]`) todavía tiene el estilo angosto anterior: pendiente de pasar al mismo diseño.
+
 ## Pedidos de tienda online (minoristas) — decisión en curso
 - Los minoristas (~25 pedidos/día) vienen de Empretienda y **no se cargan como clientes** (los datos ya viven allá). Hay que hacer un tipo de
   pedido **"Tienda online"**: datos de entrega escritos en el mismo pedido (nombre, dirección, barrio, teléfono, N° de pedido de Empretienda), sin

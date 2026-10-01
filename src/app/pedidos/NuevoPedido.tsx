@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { buscarDestinos, crearPedido, datosNuevoPedido, type DatosPedido, type Destino } from "./actions";
 import { FormularioLineas } from "./FormularioLineas";
 
+const COLUMNAS = "lg:grid-cols-[1fr_1.6fr_2fr_1fr]";
+
 // Paso 1: escribir y elegir el cliente (y su sucursal) de la lista. Paso 2: cargar productos y cantidades.
 export function NuevoPedido({ esDueno }: { esDueno: boolean }) {
   const [q, setQ] = useState("");
@@ -40,11 +42,11 @@ export function NuevoPedido({ esDueno }: { esDueno: boolean }) {
 
   return (
     <div className="space-y-4">
-      {mensaje && <p className="rounded-lg border border-verde-600 bg-verde-50 p-3 text-sm text-verde-700" role="status">{mensaje}</p>}
+      {mensaje && <p className="rounded-lg border border-stone-400 bg-white p-3 text-sm font-medium text-verde-800" role="status">{mensaje}</p>}
 
       {!destino ? (
         <div className="space-y-3">
-          <label className="block text-sm font-medium">
+          <label className="block text-xs font-semibold uppercase tracking-wide text-stone-600">
             ¿Para qué cliente es el pedido?
             <input
               ref={campo}
@@ -52,31 +54,36 @@ export function NuevoPedido({ esDueno }: { esDueno: boolean }) {
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Escribí el cliente, la sucursal o el barrio"
-              className="mt-1 w-full rounded-lg border border-stone-300 bg-white px-3 py-4 text-base"
+              className="mt-1 h-12 w-full rounded-md border border-stone-400 bg-white px-4 text-base font-normal normal-case tracking-normal text-stone-900 shadow-sm focus:border-verde-700 focus:outline-none focus:ring-2 focus:ring-verde-700/25"
             />
           </label>
           {buscando && <p className="text-sm text-stone-500">Buscando…</p>}
           {!buscando && q.trim() && resultados.length === 0 && <p className="text-sm text-stone-600">No encontré ningún cliente con eso.</p>}
-          <ul className="divide-y divide-stone-200 rounded-lg border border-stone-200 bg-white">
-            {resultados.map((d) => (
-              <li key={d.puntoId}>
-                <button type="button" onClick={() => elegir(d)} className="block w-full px-4 py-3 text-left active:bg-crema-100">
-                  <span className="block font-medium">{d.cliente}</span>
-                  <span className="block text-sm text-stone-600">{[d.alias, d.direccion, d.barrio, d.zona].filter(Boolean).join(" · ")}</span>
+          {resultados.length > 0 && (
+            <div className="overflow-hidden rounded-xl border border-stone-300 bg-white shadow-sm">
+              <div className={`hidden gap-x-4 border-b border-stone-400 px-5 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-stone-600 lg:grid ${COLUMNAS}`}>
+                <span>Barrio</span><span>Cliente</span><span>Dirección</span><span>Zona</span>
+              </div>
+              {resultados.map((d) => (
+                <button key={d.puntoId} type="button" onClick={() => elegir(d)} className={`grid w-full items-center gap-x-4 gap-y-0.5 border-t border-stone-300 px-5 py-2.5 text-center first:border-t-0 hover:bg-crema-100 ${COLUMNAS}`}>
+                  <span className="font-semibold">{d.barrio}</span>
+                  <span className="font-semibold">{d.cliente}</span>
+                  <span className="text-sm">{[d.alias, d.direccion].filter(Boolean).join(" · ")}</span>
+                  <span className="text-sm text-stone-600">{d.zona}</span>
                 </button>
-              </li>
-            ))}
-          </ul>
+              ))}
+            </div>
+          )}
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="flex items-start justify-between gap-3 rounded-lg border border-stone-200 bg-white p-4">
-            <div className="min-w-0">
-              <p className="font-semibold">{destino.cliente}</p>
-              <p className="text-sm text-stone-600">{destino.sucursal}</p>
-              <p className="text-xs text-stone-500">{destino.lista ? `Lista ${destino.lista}` : "Sin lista de precios"}</p>
-            </div>
-            <button type="button" onClick={() => setDestino(null)} className="shrink-0 rounded-lg border border-stone-300 px-3 py-2 text-sm">Cambiar</button>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-stone-300 bg-white px-5 py-3 shadow-sm">
+            <p className="min-w-0">
+              <span className="font-bold">{destino.cliente}</span>
+              <span className="text-stone-600"> · {destino.sucursal}</span>
+              <span className="text-sm text-stone-500"> · {destino.lista ? `Lista ${destino.lista}` : "Sin lista de precios"}</span>
+            </p>
+            <button type="button" onClick={() => setDestino(null)} className="shrink-0 rounded-md border border-stone-400 bg-white px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-crema-100">Cambiar cliente</button>
           </div>
           <FormularioLineas
             key={`${destino.puntoId}-${vuelta}`}

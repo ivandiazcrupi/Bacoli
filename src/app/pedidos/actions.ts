@@ -127,7 +127,7 @@ export async function crearPedido(_: EstadoPedidoForm, formData: FormData): Prom
     await sincronizarCuentaPedido(tx, pedido.id, usuario.id);
   });
   revalidatePath("/pedidos", "layout");
-  return { ok: `Pedido de ${cliente.nombre} cargado. Está en "Sin asignar".` };
+  return { ok: `Pedido de ${cliente.nombre} cargado. Quedó en la lista de Pedidos, esperando día.` };
 }
 
 export async function actualizarPedido(pedidoId: string, _: EstadoPedidoForm, formData: FormData): Promise<EstadoPedidoForm> {

@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { exigirOficina } from "@/lib/session";
 import { actualizarPedido } from "../../actions";
 import { productosParaCliente } from "../../datos";
+import { CONTENEDOR_PEDIDOS } from "../../Encabezado";
 import { FormularioLineas, type LineaProducto } from "../../FormularioLineas";
 
 export default async function EditarPedido({ params }: { params: Promise<{ id: string }> }) {
@@ -30,11 +31,13 @@ export default async function EditarPedido({ params }: { params: Promise<{ id: s
   return (
     <>
       <Cabecera usuario={usuario} />
-      <main className="mx-auto max-w-xl space-y-4 px-4 py-6">
-        <div>
-          <Link href={`/pedidos/${id}`} className="text-sm text-stone-600">← Volver al pedido</Link>
-          <h1 className="text-2xl font-bold">{pedido.cliente.nombre}</h1>
-          <p className="text-stone-600">{[pedido.punto.alias, titulo(pedido.punto.direccion)].filter(Boolean).join(" · ")}</p>
+      <main className={CONTENEDOR_PEDIDOS}>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">{pedido.cliente.nombre}</h1>
+            <p className="mt-1 text-sm text-stone-600">{[pedido.punto.alias, titulo(pedido.punto.direccion)].filter(Boolean).join(" · ")}</p>
+          </div>
+          <Link href={`/pedidos/${id}`} className="rounded-md border border-stone-400 bg-white px-3 py-2 text-sm font-medium shadow-sm hover:bg-crema-100">← Volver al pedido</Link>
         </div>
         <FormularioLineas
           accion={actualizarPedido.bind(null, id)}
