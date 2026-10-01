@@ -9,17 +9,17 @@ export type DatosSucursal = { id: string; alias: string; direccion: string; barr
 type Zona = { id: string; nombre: string };
 
 // Columnas de la fila (PC): barrio, dirección, zona, teléfono, comentario y los botones.
-const COLUMNAS = "lg:grid-cols-[1.6fr_2fr_1.4fr_1fr_1.2fr_auto]";
+const COLUMNAS = "lg:grid-cols-[1.5fr_2.3fr_1.3fr_1.4fr_1.5fr_auto]";
 const celda = "min-w-0";
-const campo = `${estiloCampo} mt-0 py-2 text-sm`;
-const boton = "rounded-md px-3 py-2 text-sm font-semibold shadow-sm";
+const campo = `${estiloCampo} mt-0 py-3 text-base`;
+const boton = "rounded-md px-4 py-3 text-sm font-semibold shadow-sm";
 const etiquetaChica = "mb-0.5 block text-xs font-medium text-stone-500 lg:hidden";
 
 /** Encabezado de las columnas (solo en PC: en el celular cada campo trae su etiqueta). */
 export function EncabezadoSucursales() {
   return (
-    <div className={`hidden gap-2 px-4 py-3 lg:grid ${cabeceraTabla} ${COLUMNAS}`}>
-      <span>Barrio *</span><span>Dirección *</span><span>Zona *</span><span>Teléfono</span><span>Comentario</span><span className="w-[17rem]" />
+    <div className={`hidden gap-2 px-5 py-3.5 lg:grid ${cabeceraTabla} ${COLUMNAS}`}>
+      <span>Barrio *</span><span>Dirección *</span><span>Zona *</span><span>Teléfono</span><span>Comentario</span><span className="w-[19.5rem]" />
     </div>
   );
 }
@@ -33,7 +33,7 @@ export function FilaSucursal({ clienteId, sucursal, zonas, barrios }: { clienteI
 
   return (
     <div
-      className={`grid grid-cols-2 items-end gap-2 border-t border-stone-300 px-4 py-3 lg:items-center ${COLUMNAS} ${sucursal ? "bg-white even:bg-crema-50" : "border-t-2 border-t-verde-700 bg-crema-100"} ${activa ? "" : "opacity-60"}`}
+      className={`grid grid-cols-2 items-end gap-3 border-t border-stone-300 px-5 py-4 lg:items-center ${COLUMNAS} ${sucursal ? "bg-white even:bg-crema-50" : "border-t-2 border-t-verde-700 bg-crema-100"} ${activa ? "" : "opacity-60"}`}
     >
       <form key={JSON.stringify(estado ?? null)} action={enviar} className="contents">
         {sucursal && <input type="hidden" name="id" value={sucursal.id} />}
