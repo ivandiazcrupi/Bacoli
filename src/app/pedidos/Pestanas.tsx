@@ -1,15 +1,20 @@
 import Link from "next/link";
+import { hoy, lunesDe, sumarDias } from "@/lib/fechas";
 
-type Pestana = "pedidos" | "semana" | "vehiculos";
+type Pestana = "pedidos" | "semana" | "ruta" | "vehiculos";
 
-// Las vistas de Pedidos: lo cargado que espera día, la semana (los días y sus hojas de ruta) y los vehículos. Se va y se vuelve con un toque.
-export function PestanasPedidos({ activa }: { activa: Pestana }) {
+// Las vistas de Pedidos: lo cargado que espera día, el resumen de la SEMANA, la HOJA DE RUTA (donde se organizan las vueltas) y los vehículos.
+// Se va y se vuelve con un toque. "Hoja de ruta" abre el día indicado (o el de hoy; si es domingo, el lunes).
+export function PestanasPedidos({ activa, fechaRuta }: { activa: Pestana; fechaRuta?: string }) {
   const base = "rounded-t-lg border-x border-t px-6 py-3 text-sm font-bold uppercase tracking-wide";
   const on = "border-stone-300 border-b-white bg-white text-verde-800 -mb-px";
   const off = "border-transparent text-stone-500 hover:text-verde-800";
+  const h = hoy();
+  const dia = fechaRuta ?? (new Date(`${h}T00:00:00Z`).getUTCDay() === 0 ? sumarDias(h, 1) : h);
   const items: { id: Pestana; texto: string; href: string }[] = [
     { id: "pedidos", texto: "Pedidos", href: "/pedidos" },
-    { id: "semana", texto: "Semana y hoja de ruta", href: "/pedidos/semana" },
+    { id: "semana", texto: "Semana", href: `/pedidos/semana?semana=${lunesDe(dia)}` },
+    { id: "ruta", texto: "Hoja de ruta", href: `/pedidos/dia/${dia}` },
     { id: "vehiculos", texto: "Vehículos", href: "/pedidos/vehiculos" },
   ];
   return (

@@ -2,10 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Cabecera } from "@/components/Cabecera";
 import { db } from "@/lib/db";
-import { aFecha, diaMes, esFechaValida, lunesDe, nombreDia, sumarDias } from "@/lib/fechas";
+import { aFecha, deFecha, diaMes, esFechaValida, lunesDe, nombreDia, sumarDias } from "@/lib/fechas";
 import { porReparto } from "@/lib/ruta";
 import { exigirOficina } from "@/lib/session";
 import { aFila, clientesConDeuda, incluirPedido } from "../../filas";
+import { PestanasPedidos } from "../../Pestanas";
 import { HojaDia } from "./HojaDia";
 
 // Hoja de ruta de un día: qué vehículos salen, qué lleva cada uno y en qué orden (con las entregas y cobros de cada pedido).
@@ -27,17 +28,53 @@ export default async function HojaDelDia({ params }: { params: Promise<{ fecha: 
   const salen = new Set(salidas.map((s) => s.vehiculoId));
 
   const lunes = lunesDe(fecha);
-  const diasSemana = Array.from({ length: 6 }, (_, n) => sumarDias(lunes, n)).map((f) => ({ fecha: f, corta: `${nombreDia(f).slice(0, 3)} ${diaMes(f)}` }));
+  const domingo = sumarDias(lunes, 6);
+  const [cuentaPedidos, cuentaSalidas] = await Promise.all([
+    db.pedido.groupBy({ by: ["fechaEntrega"], where: { estado: { not: "CANCELADO" }, fechaEntrega: { gte: aFecha(lunes), lte: aFecha(domingo) } }, _count: true }),
+    db.salida.groupBy({ by: ["fecha"], where: { fecha: { gte: aFecha(lunes), lte: aFecha(domingo) } }, _count: true }),
+  ]);
+  const nPedidos = new Map(cuentaPedidos.map((c) => [c.fechaEntrega ? deFecha(c.fechaEntrega) : "", c._count]));
+  const nSalidas = new Map(cuentaSalidas.map((c) => [deFecha(c.fecha), c._count]));
+  const fechasSemana = Array.from({ length: 6 }, (_, n) => sumarDias(lunes, n));
+  const diasSemana = fechasSemana.map((f) => ({ fecha: f, corta: `${nombreDia(f).slice(0, 3)} ${diaMes(f)}` }));
+  const mismoDia = (semana: number) => sumarDias(fecha, 7 * semana);
+
   return (
     <>
       <Cabecera usuario={usuario} />
-      <main className="mx-auto max-w-[1900px] space-y-4 px-4 py-6 sm:px-8">
-        <div className="flex flex-wrap items-center gap-3">
-          <Link href={`/pedidos/semana?semana=${lunes}`} className="text-sm text-stone-600">← Semana</Link>
-          <Link href={`/pedidos/dia/${sumarDias(fecha, -1)}`} className="rounded-md border border-stone-400 bg-white px-3 py-2 text-sm shadow-sm" aria-label="Día anterior">←</Link>
-          <h1 className="text-2xl font-bold">Hoja de ruta · {nombreDia(fecha)} {diaMes(fecha)}</h1>
-          <Link href={`/pedidos/dia/${sumarDias(fecha, 1)}`} className="rounded-md border border-stone-400 bg-white px-3 py-2 text-sm shadow-sm" aria-label="Día siguiente">→</Link>
+      <main className="mx-auto max-w-[1900px] space-y-5 px-4 py-6 sm:px-8">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-bold">Pedidos</h1>
+          <Link href="/pedidos/nuevo" className="whitespace-nowrap rounded-lg bg-verde-700 px-4 py-3 text-sm font-bold uppercase tracking-wide text-white hover:bg-verde-800 sm:px-10">+ Cargar pedido</Link>
         </div>
+        <PestanasPedidos activa="ruta" fechaRuta={fecha} />
+
+        {/* Para ir día por día: la semana y sus seis días */}
+        <nav className="flex flex-wrap items-center justify-center gap-2" aria-label="Días de la semana">
+          <Link href={`/pedidos/dia/${mismoDia(-1)}`} className="rounded-md border border-stone-400 bg-white px-3 py-2.5 text-sm shadow-sm hover:border-verde-700" aria-label="Semana anterior">←</Link>
+          <Link href={`/pedidos/semana?semana=${lunes}`} title="Ver el resumen de la semana" className="rounded-md bg-verde-800 px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white hover:bg-verde-700">Semana {diaMes(lunes)}</Link>
+          <Link href={`/pedidos/dia/${mismoDia(1)}`} className="rounded-md border border-stone-400 bg-white px-3 py-2.5 text-sm shadow-sm hover:border-verde-700" aria-label="Semana siguiente">→</Link>
+          <span className="mx-1 hidden h-8 w-px bg-stone-300 sm:block" />
+          {fechasSemana.map((f) => {
+            const activo = f === fecha;
+            return (
+              <Link
+                key={f}
+                href={`/pedidos/dia/${f}`}
+                aria-current={activo ? "page" : undefined}
+                className={`flex min-w-24 flex-col items-center justify-center gap-0.5 rounded-lg border px-3 py-2 text-center shadow-sm transition ${activo ? "border-verde-800 bg-verde-800 text-white" : "border-stone-400 bg-white text-stone-800 hover:border-verde-700"}`}
+              >
+                <span className="text-sm font-bold uppercase leading-none tracking-wide">{nombreDia(f).slice(0, 3)} {Number(f.slice(8))}</span>
+                <span className={`text-[11px] leading-none ${activo ? "text-verde-100" : "text-stone-500"}`}>
+                  {nPedidos.get(f) ?? 0} {(nPedidos.get(f) ?? 0) === 1 ? "pedido" : "pedidos"}{nSalidas.get(f) ? ` · ${nSalidas.get(f)} veh.` : ""}
+                </span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        <h2 className="text-center text-2xl font-bold">Hoja de ruta · {nombreDia(fecha)} {diaMes(fecha)}</h2>
+
         <HojaDia
           fecha={fecha}
           filasIniciales={filas}
