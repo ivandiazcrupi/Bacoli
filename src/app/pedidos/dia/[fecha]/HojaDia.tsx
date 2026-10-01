@@ -82,7 +82,7 @@ function SelectorMover({ f, salidas, bloqueada, acc, clase }: { f: Fila; salidas
 function FilaHoja({ f, n, bloqueada, acc, salidas }: { f: Fila; n: number; bloqueada: boolean; acc: Acciones; salidas: SalidaInfo[] }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: f.id, disabled: bloqueada });
   const [eligiendo, setEligiendo] = useState(false);
-  const fondo = f.estado === "ENTREGADO" ? "border-verde-600 bg-verde-50" : f.estado === "NO_ENTREGADO" ? "border-rojo-600 bg-rojo-50" : "border-stone-200 bg-white";
+  const fondo = f.estado === "ENTREGADO" ? "border-verde-600 bg-verde-50" : f.estado === "NO_ENTREGADO" ? "border-rojo-600 bg-rojo-50" : "border-stone-300 bg-white";
   const boton = "h-9 rounded-md border px-2 text-sm font-medium disabled:opacity-40";
 
   return (
@@ -183,7 +183,7 @@ const mapa = (f: Fila) => `https://www.google.com/maps/search/?api=1&query=${enc
 // El mismo pedido, en el celular: una tarjeta con botones grandes (dirección a Google Maps, teléfono que llama).
 function FilaTarjeta({ f, n, bloqueada, acc, salidas }: { f: Fila; n: number; bloqueada: boolean; acc: Acciones; salidas: SalidaInfo[] }) {
   const [eligiendo, setEligiendo] = useState(false);
-  const fondo = f.estado === "ENTREGADO" ? "border-verde-600 bg-verde-50" : f.estado === "NO_ENTREGADO" ? "border-rojo-600 bg-rojo-50" : "border-stone-200 bg-white";
+  const fondo = f.estado === "ENTREGADO" ? "border-verde-600 bg-verde-50" : f.estado === "NO_ENTREGADO" ? "border-rojo-600 bg-rojo-50" : "border-stone-300 bg-white";
   const grande = "h-12 rounded-lg border px-3 text-base font-semibold disabled:opacity-40";
   return (
     <article className={`space-y-3 rounded-xl border p-3 ${fondo}`}>
@@ -272,7 +272,7 @@ function Medidor({ bultos, capacidad }: { bultos: number; capacidad: number | nu
   return (
     <div className="min-w-52" title={pasado ? "Se pasó de la capacidad (solo avisa, no frena)" : undefined}>
       <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-white">
-        <span><span className="tabular-nums">{bultos}</span>{capacidad !== null ? <> de <span className="tabular-nums">{capacidad}</span> bultos</> : " bultos"}</span>
+        <span><span className="tabular-nums">{bultos}</span>{capacidad !== null ? <> de <span className="tabular-nums">{capacidad}</span> paquetes</> : " paquetes"}</span>
         {pasado && <span className="rounded-full bg-rojo-700 px-2.5 py-0.5 text-xs font-bold uppercase">Te pasaste {bultos - capacidad}</span>}
       </p>
       {capacidad !== null && (
@@ -399,7 +399,7 @@ export function HojaDia({ fecha, filasIniciales, salidas, vehiculosLibres, repar
       </div>
       <div className="hidden overflow-x-auto p-3 lg:block">
         <div role="table" className="min-w-[2050px] space-y-2">
-          <div role="row" style={{ gridTemplateColumns: COLUMNAS }} className="grid gap-x-3 px-2 text-xs font-semibold text-stone-500">
+          <div role="row" style={{ gridTemplateColumns: COLUMNAS }} className="grid gap-x-3 rounded-md bg-verde-800 px-2 py-2.5 text-xs font-semibold uppercase tracking-wide text-white">
             {ENCABEZADOS.map((h) => <div key={h} role="columnheader" className={h === "Monto" ? "text-right" : ""}>{h}</div>)}
           </div>
           <DndContext id={`ruta-${salida.id}`} sensors={sensores} collisionDetection={closestCenter} onDragEnd={alSoltar(salida.id)}>
@@ -474,7 +474,7 @@ export function HojaDia({ fecha, filasIniciales, salidas, vehiculosLibres, repar
                 <span className="text-sm font-semibold">{f.barrio}</span>
                 <span className="text-sm leading-snug"><b>{f.cliente}</b>{f.comentario && <span className="block text-xs font-medium text-rojo-700">{f.comentario}</span>}</span>
                 <span className="text-sm leading-snug text-stone-700">{f.items.map((i) => `${i.cantidad} ${i.nombre}`).join(" · ")}</span>
-                <span className="text-sm tabular-nums"><b>{f.bultos}</b> bultos</span>
+                <span className="text-sm tabular-nums"><b>{f.bultos}</b> paquetes</span>
                 <span className="text-sm font-semibold tabular-nums lg:text-right">{formatoPesos(f.monto)}</span>
                 <span className="flex flex-wrap items-center gap-1.5">
                   {salidas.map((x) => (

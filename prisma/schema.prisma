@@ -285,12 +285,12 @@ enum OrigenPedido {
   WEB
 }
 
-// Un vehículo de la empresa (camioneta, auto…). La capacidad máxima la define el dueño, en bultos (paquetes y unidades que lleva).
+// Un vehículo de la empresa (camioneta, auto…). La capacidad máxima la define el dueño, en paquetes (la suma de paquetes y unidades que lleva).
 model Vehiculo {
   id        String   @id @default(cuid())
   nombre    String
   patente   String?
-  capacidad Int? // bultos máximos; vacío = sin tope
+  capacidad Int? // paquetes máximos; vacío = sin tope
   activo    Boolean  @default(true)
   orden     Int      @default(0)
   creadoEn  DateTime @default(now())

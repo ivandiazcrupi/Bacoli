@@ -7,10 +7,10 @@ export function CambiarClave({ id }: { id: string }) {
   const [estado, accion, cargando] = useActionState(restablecerClave.bind(null, id), undefined);
   return (
     <details className="text-sm">
-      <summary className="cursor-pointer rounded-lg border border-stone-300 px-3 py-2">Cambiar contraseña</summary>
+      <summary className="cursor-pointer rounded-md border border-stone-400 bg-white px-3 py-2 font-medium shadow-sm hover:border-verde-700">Cambiar contraseña</summary>
       <form action={accion} className="mt-2 flex flex-wrap items-center gap-2">
-        <input name="nueva" type="text" minLength={4} required autoComplete="off" placeholder="Contraseña nueva" className="rounded-lg border border-stone-300 px-3 py-2" />
-        <button disabled={cargando} className="rounded-lg bg-verde-700 px-3 py-2 font-semibold text-white disabled:opacity-60">Guardar</button>
+        <input name="nueva" type="text" minLength={4} required autoComplete="off" placeholder="Contraseña nueva" className="rounded-md border border-stone-400 px-3 py-2" />
+        <button disabled={cargando} className="rounded-md bg-verde-700 px-3 py-2 font-semibold text-white disabled:opacity-60">Guardar</button>
         {estado?.error && <p className="w-full text-rojo-700">{estado.error}</p>}
         {estado?.ok && <p className="w-full text-verde-700">{estado.ok}</p>}
       </form>

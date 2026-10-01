@@ -10,7 +10,7 @@ import { valoresDe, type EstadoForm } from "../../clientes/validacion";
 export type Resultado = { ok: boolean; error?: string };
 const refrescar = () => revalidatePath("/pedidos", "layout");
 
-// ---------- Vehículos (los carga el equipo; la capacidad máxima, en bultos, la define cada uno) ----------
+// ---------- Vehículos (los carga el equipo; la capacidad máxima, en paquetes, la define cada uno) ----------
 
 export async function guardarVehiculo(vehiculoId: string | null, _: EstadoForm, formData: FormData): Promise<EstadoForm> {
   await exigirOficina();

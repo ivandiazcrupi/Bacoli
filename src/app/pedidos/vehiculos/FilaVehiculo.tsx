@@ -14,7 +14,7 @@ const etiquetaChica = "mb-0.5 block text-xs font-semibold text-stone-600 lg:hidd
 export function EncabezadoVehiculos() {
   return (
     <div className={`hidden gap-3 px-5 py-3.5 lg:grid ${cabeceraTabla} ${COLUMNAS}`}>
-      <span>Vehículo</span><span>Patente</span><span>Capacidad máxima (bultos)</span><span className="w-[23rem]" />
+      <span>Vehículo</span><span>Patente</span><span>Capacidad máxima (paquetes)</span><span className="w-[23rem]" />
     </div>
   );
 }
@@ -39,8 +39,8 @@ export function FilaVehiculo({ vehiculo }: { vehiculo?: DatosVehiculo }) {
           <input name="patente" aria-label="Patente" placeholder="Opcional" autoCapitalize="characters" defaultValue={v("patente")} className={`${campo} dato`} />
         </label>
         <label className="min-w-0">
-          <span className={etiquetaChica}>Capacidad máxima (bultos)</span>
-          <input name="capacidad" aria-label="Capacidad máxima en bultos" inputMode="numeric" placeholder="Sin tope" defaultValue={v("capacidad")} className={campo} />
+          <span className={etiquetaChica}>Capacidad máxima (paquetes)</span>
+          <input name="capacidad" aria-label="Capacidad máxima en paquetes" inputMode="numeric" placeholder="Sin tope" defaultValue={v("capacidad")} className={campo} />
         </label>
         <div className="col-span-2 flex flex-wrap items-center gap-3 lg:col-span-1 lg:w-[23rem] lg:flex-nowrap">
           <button disabled={cargando} className={`${boton} bg-verde-700 text-white hover:bg-verde-800 disabled:opacity-60`}>{cargando ? "…" : vehiculo ? "Guardar" : "+ Agregar"}</button>

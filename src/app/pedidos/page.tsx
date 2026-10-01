@@ -5,7 +5,7 @@ import { aFecha, deFecha, diaMes, esFechaValida, hoy, lunesDe, nombreDia, sumarD
 import { exigirOficina } from "@/lib/session";
 import { Bandeja } from "./Bandeja";
 import { aFilaBandeja, incluirPedido } from "./filas";
-import { PestanasPedidos } from "./Pestanas";
+import { CONTENEDOR_PEDIDOS, EncabezadoPedidos } from "./Encabezado";
 
 // PEDIDOS: todo lo cargado que espera día (como la hoja PEDIDOS de la planilla). Mayoristas y minoristas de la web van en dos listas.
 export default async function Pedidos({ searchParams }: { searchParams: Promise<{ lista?: string; semana?: string }> }) {
@@ -36,12 +36,8 @@ export default async function Pedidos({ searchParams }: { searchParams: Promise<
   return (
     <>
       <Cabecera usuario={usuario} />
-      <main className="mx-auto max-w-[1600px] space-y-5 px-4 py-6 sm:px-8">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold">Pedidos</h1>
-          <Link href="/pedidos/nuevo" className="whitespace-nowrap rounded-lg bg-verde-700 px-4 py-3 text-sm font-bold uppercase tracking-wide text-white hover:bg-verde-800 sm:px-10">+ Cargar pedido</Link>
-        </div>
-        <PestanasPedidos activa="pedidos" />
+      <main className={CONTENEDOR_PEDIDOS}>
+        <EncabezadoPedidos activa="pedidos" />
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-2">

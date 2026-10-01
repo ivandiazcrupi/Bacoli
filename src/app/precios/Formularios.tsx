@@ -14,7 +14,7 @@ export function GrillaPrecios({ lista, productos, precios }: { lista: Lista; pro
     <form key={lista.id + JSON.stringify(estado ?? null)} action={enviar} className="space-y-5">
       <ul>
         {productos.map((p) => (
-          <li key={p.id} className="border-b border-stone-100">
+          <li key={p.id} className="border-b border-stone-300 last:border-b-0">
             <label className="flex items-center justify-between gap-4 py-3">
               <span className="flex min-w-0 items-center gap-3">
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-crema-200 text-xs font-bold text-verde-800">{p.orden}</span>

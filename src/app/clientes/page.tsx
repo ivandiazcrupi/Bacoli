@@ -50,7 +50,7 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
   return (
     <>
       <Cabecera usuario={usuario} />
-      <main className="mx-auto max-w-[1400px] space-y-4 px-4 py-6 sm:px-8">
+      <main className="mx-auto max-w-[1600px] space-y-4 px-4 py-6 sm:px-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-bold">Clientes</h1>
           <div className="flex flex-wrap items-center gap-2">

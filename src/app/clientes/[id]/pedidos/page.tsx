@@ -33,7 +33,7 @@ export default async function PedidosDelCliente({ params }: { params: Promise<{ 
   return (
     <>
       <Cabecera usuario={usuario} />
-      <main className="mx-auto max-w-[1400px] space-y-4 px-4 py-6 sm:px-8">
+      <main className="mx-auto max-w-[1600px] space-y-4 px-4 py-6 sm:px-8">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <Link href={`/clientes/${id}`} className="text-sm text-stone-600">← {cliente.nombre}</Link>

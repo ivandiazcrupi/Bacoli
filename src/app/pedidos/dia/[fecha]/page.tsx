@@ -6,7 +6,7 @@ import { aFecha, deFecha, diaMes, esFechaValida, lunesDe, nombreDia, sumarDias }
 import { porReparto } from "@/lib/ruta";
 import { exigirOficina } from "@/lib/session";
 import { aFila, clientesConDeuda, incluirPedido } from "../../filas";
-import { PestanasPedidos } from "../../Pestanas";
+import { CONTENEDOR_PEDIDOS, EncabezadoPedidos } from "../../Encabezado";
 import { HojaDia } from "./HojaDia";
 
 // Hoja de ruta de un día: qué vehículos salen, qué lleva cada uno y en qué orden (con las entregas y cobros de cada pedido).
@@ -42,12 +42,8 @@ export default async function HojaDelDia({ params }: { params: Promise<{ fecha: 
   return (
     <>
       <Cabecera usuario={usuario} />
-      <main className="mx-auto max-w-[1900px] space-y-5 px-4 py-6 sm:px-8">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold">Pedidos</h1>
-          <Link href="/pedidos/nuevo" className="whitespace-nowrap rounded-lg bg-verde-700 px-4 py-3 text-sm font-bold uppercase tracking-wide text-white hover:bg-verde-800 sm:px-10">+ Cargar pedido</Link>
-        </div>
-        <PestanasPedidos activa="ruta" fechaRuta={fecha} />
+      <main className={CONTENEDOR_PEDIDOS}>
+        <EncabezadoPedidos activa="ruta" fechaRuta={fecha} />
 
         {/* Para ir día por día: la semana y sus seis días */}
         <nav className="flex flex-wrap items-center justify-center gap-2" aria-label="Días de la semana">

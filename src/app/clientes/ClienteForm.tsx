@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState, useState, type ReactNode } from "react";
-import { Campo, Mensajes, estiloCampo, estiloDato } from "@/components/campos";
+import { useActionState, useState } from "react";
+import { Bloque, Campo, Mensajes, estiloCampo, estiloDato } from "@/components/campos";
 import { CONDICION_PAGO } from "@/lib/etiquetas";
 import type { EstadoForm } from "./validacion";
 
@@ -135,17 +135,5 @@ export function ClienteForm({ accion, inicial, listas, zonas, barrios = [], text
         <button disabled={cargando} className="w-full rounded-lg bg-verde-700 px-10 py-3 font-semibold text-white hover:bg-verde-800 disabled:opacity-60 sm:w-auto">{cargando ? "Guardando…" : textoBoton}</button>
       </div>
     </form>
-  );
-}
-
-function Bloque({ titulo, ayuda, children }: { titulo: string; ayuda: string; children: ReactNode }) {
-  return (
-    <section className="grid overflow-hidden rounded-xl border border-stone-300 bg-white shadow-sm lg:grid-cols-[15rem_1fr]">
-      <div className="flex flex-col justify-center border-b border-stone-300 border-l-4 border-l-verde-700 bg-crema-100 p-5 lg:border-b-0 lg:border-r">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-verde-800">{titulo}</h2>
-        <p className="mt-1 text-xs leading-snug text-stone-600">{ayuda}</p>
-      </div>
-      <div className="flex items-center p-5"><div className="w-full">{children}</div></div>
-    </section>
   );
 }

@@ -26,3 +26,16 @@ export function Mensajes({ estado }: { estado?: { error?: string; ok?: string } 
     </>
   );
 }
+
+/** Tarjeta de formulario: panel lateral crema con barra verde (título y ayuda) y los campos a la derecha, centrados de arriba a abajo. */
+export function Bloque({ titulo, ayuda, children }: { titulo: string; ayuda: string; children: ReactNode }) {
+  return (
+    <section className="grid overflow-hidden rounded-xl border border-stone-300 bg-white shadow-sm lg:grid-cols-[15rem_1fr]">
+      <div className="flex flex-col justify-center border-b border-stone-300 border-l-4 border-l-verde-700 bg-crema-100 p-5 lg:border-b-0 lg:border-r">
+        <h2 className="text-sm font-bold uppercase tracking-wide text-verde-800">{titulo}</h2>
+        <p className="mt-1 text-xs leading-snug text-stone-600">{ayuda}</p>
+      </div>
+      <div className="flex items-center p-5"><div className="w-full">{children}</div></div>
+    </section>
+  );
+}

@@ -25,7 +25,7 @@ export default async function Precios({ searchParams }: { searchParams: Promise<
       <main className="relative mx-auto max-w-5xl space-y-8 px-4 py-8 sm:px-8">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Precios</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Precios</h1>
             <p className="mt-1 text-sm text-stone-500">Un precio por producto en cada lista. Cada cliente usa la lista que tiene en su ficha.</p>
           </div>
         </div>
@@ -50,12 +50,12 @@ export default async function Precios({ searchParams }: { searchParams: Promise<
           </div>
 
           {lista ? (
-            <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6">
-              <div className="mb-4 flex items-baseline justify-between gap-3 border-b border-stone-100 pb-4">
-                <h2 className="shrink-0 text-xl font-bold uppercase tracking-wide">Lista {lista.nombre}</h2>
-                <span className="text-right text-xs text-stone-500">Precios sin IVA, por la unidad de venta de cada producto</span>
+            <div className="overflow-hidden rounded-xl border border-stone-300 bg-white shadow-sm">
+              <div className="flex flex-wrap items-baseline justify-between gap-3 bg-verde-800 px-6 py-4 text-white">
+                <h2 className="shrink-0 text-lg font-bold uppercase tracking-wide">Lista {lista.nombre}</h2>
+                <span className="text-right text-xs text-verde-100">Precios sin IVA, por la unidad de venta de cada producto</span>
               </div>
-              <GrillaPrecios lista={lista} productos={productos} precios={mapa} />
+              <div className="p-4 sm:p-6"><GrillaPrecios lista={lista} productos={productos} precios={mapa} /></div>
             </div>
           ) : (
             <p className="rounded-2xl border border-dashed border-stone-300 p-6 text-stone-600">Todavía no hay listas de precios. Creá una con “+ Nueva lista”.</p>
