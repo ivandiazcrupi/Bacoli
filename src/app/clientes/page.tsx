@@ -42,6 +42,10 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
     db.zona.findMany({ orderBy: { orden: "asc" } }),
   ]);
 
+  // Cuántos puntos de entrega hay entre los clientes que se ven (un cliente puede tener varios).
+  const totalPuntos = clientes.reduce((n, c) => n + c.puntos.length, 0);
+  const inactivos = clientes.reduce((n, c) => n + c.puntos.filter((p) => !p.activo || !c.activo).length, 0);
+
   return (
     <>
       <Cabecera usuario={usuario} />
@@ -56,7 +60,11 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
 
         <FiltrosClientes q={q} zona={zona} estado={estado} zonas={zonas.map((z) => ({ id: z.id, nombre: z.nombre }))} />
 
-        <p className="text-sm text-stone-600">{clientes.length} {clientes.length === 1 ? "cliente" : "clientes"}</p>
+        <p className="text-sm text-stone-600">
+          <b className="text-stone-900">{clientes.length}</b> {clientes.length === 1 ? "cliente" : "clientes"} ·{" "}
+          <b className="text-stone-900">{totalPuntos}</b> {totalPuntos === 1 ? "sucursal" : "sucursales"} (puntos de entrega)
+          {inactivos > 0 && <> · {totalPuntos - inactivos} activas y {inactivos} desactivadas</>}
+        </p>
 
         {clientes.length === 0 ? (
           <p className="rounded-lg border border-dashed border-stone-300 p-4 text-stone-600">No hay clientes con esos filtros.</p>
