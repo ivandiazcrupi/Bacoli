@@ -2,32 +2,71 @@
 
 import { useActionState } from "react";
 import { Mensajes, estiloBoton } from "@/components/campos";
+import { formatoPesos } from "@/lib/numeros";
 import { marcarEntregado, type EstadoPedidoForm } from "../actions";
 
-type Renglon = { id: string; nombre: string; unidad: string; cantidad: number; entregada: number | null };
+export type Renglon = { id: string; nombre: string; sku: string | null; unidad: string; precio: number; cantidad: number; entregada: number | null };
+type Totales = { base: number; iva: number; ivaPct: number; total: number; conFactura: boolean };
 
-export function FormularioEntrega({ pedidoId, items }: { pedidoId: string; items: Renglon[] }) {
+const COLUMNAS = "lg:grid-cols-[minmax(0,2fr)_7rem_7rem_8rem_9rem]";
+
+// Los productos del pedido en una tabla a lo ancho. Si el pedido está abierto, la columna ENTREGADO se edita y abajo está "Confirmar entrega".
+export function TablaPedido({ pedidoId, abierto, entregado, items, totales, nota }: { pedidoId: string; abierto: boolean; entregado: boolean; items: Renglon[]; totales: Totales; nota: string | null }) {
   const [estado, enviar, cargando] = useActionState(marcarEntregado.bind(null, pedidoId), undefined as EstadoPedidoForm);
+  const ivaTexto = String(totales.ivaPct).replace(".", ",");
+
   return (
-    <form action={enviar} className="space-y-3 rounded-lg border border-stone-200 bg-white p-4">
-      <h2 className="font-semibold">Marcar como entregado</h2>
-      <p className="text-sm text-stone-600">Si se entregó todo, confirmá. Si faltó algo, cambiá la cantidad entregada.</p>
-      <ul className="divide-y divide-stone-100">
-        {items.map((i) => (
-          <li key={i.id} className="flex items-center justify-between gap-3 py-2">
-            <span className="min-w-0 truncate">{i.nombre} <span className="text-xs text-stone-500">de {i.cantidad}</span></span>
-            <input
-              name={`e_${i.id}`}
-              aria-label={`Entregado de ${i.nombre}`}
-              inputMode="numeric"
-              defaultValue={i.entregada ?? i.cantidad}
-              className="h-11 w-20 rounded-lg border border-stone-300 bg-white text-center text-lg tabular-nums"
-            />
-          </li>
-        ))}
-      </ul>
-      <Mensajes estado={estado} />
-      <button disabled={cargando} className="w-full rounded-lg bg-verde-700 px-4 py-3 font-semibold text-white disabled:opacity-60">{cargando ? "Guardando…" : "Confirmar entrega"}</button>
+    <form action={enviar} className="space-y-4">
+      <div className="overflow-hidden rounded-xl border border-stone-300 bg-white shadow-sm">
+        <div className={`hidden gap-x-4 px-5 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-stone-600 lg:grid ${COLUMNAS}`}>
+          <span>Producto</span><span>Precio</span><span>Pedido</span><span>Entregado</span><span>Subtotal</span>
+        </div>
+        {items.map((i) => {
+          const entregadaFinal = i.entregada ?? i.cantidad;
+          const parcial = entregado && i.entregada !== null && i.entregada !== i.cantidad;
+          return (
+            <div key={i.id} className={`grid items-center gap-x-4 gap-y-1 border-t border-stone-400 px-5 py-2.5 text-center ${COLUMNAS}`}>
+              <div>
+                <p className="font-semibold leading-snug">{i.nombre}</p>
+                <p className="text-xs text-stone-500">{i.sku ?? ""} · por {i.unidad}</p>
+              </div>
+              <p className="text-sm tabular-nums">{formatoPesos(i.precio)}</p>
+              <p className="font-semibold tabular-nums">{i.cantidad}</p>
+              <div>
+                {abierto ? (
+                  <input
+                    name={`e_${i.id}`}
+                    aria-label={`Entregado de ${i.nombre}`}
+                    inputMode="numeric"
+                    defaultValue={i.entregada ?? i.cantidad}
+                    className="h-9 w-20 rounded-md border border-stone-400 bg-white text-center text-base tabular-nums"
+                  />
+                ) : entregado ? (
+                  <p className={`font-semibold tabular-nums ${parcial ? "text-rojo-700" : ""}`}>{entregadaFinal}</p>
+                ) : (
+                  <span className="text-stone-400">—</span>
+                )}
+              </div>
+              <p className="text-sm font-semibold tabular-nums">{formatoPesos((entregado ? entregadaFinal : i.cantidad) * i.precio)}</p>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="grid items-stretch gap-4 lg:grid-cols-[1fr_20rem]">
+        <div className="rounded-xl border border-stone-300 bg-white p-4 shadow-sm">
+          <p className="mb-1 text-center text-xs font-semibold uppercase tracking-wide text-stone-600">Nota</p>
+          <p className="text-center text-sm text-stone-700">{nota || <span className="text-stone-400">Sin nota</span>}</p>
+          {abierto && <p className="mt-3 text-center text-xs text-stone-500">Si se entregó todo, confirmá la entrega. Si faltó algo, cambiá la cantidad entregada.</p>}
+          <Mensajes estado={estado} />
+        </div>
+        <div className="rounded-xl border border-stone-300 bg-white p-4 text-sm shadow-sm">
+          {totales.conFactura && <div className="flex justify-between"><span className="text-stone-600">Subtotal</span><span className="tabular-nums">{formatoPesos(totales.base)}</span></div>}
+          {totales.conFactura && <div className="flex justify-between"><span className="text-stone-600">IVA {ivaTexto}%</span><span className="tabular-nums">{formatoPesos(totales.iva)}</span></div>}
+          <div className={`flex justify-between text-lg font-bold ${totales.conFactura ? "mt-1 border-t border-stone-300 pt-2" : ""}`}><span>Total</span><span className="tabular-nums">{formatoPesos(totales.total)}</span></div>
+          {abierto && <button disabled={cargando} className={`${estiloBoton} mt-3`}>{cargando ? "Guardando…" : "Confirmar entrega"}</button>}
+        </div>
+      </div>
     </form>
   );
 }
