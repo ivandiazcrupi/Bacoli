@@ -10,10 +10,10 @@ export async function salir() {
   redirect("/login");
 }
 
-/** Prueba piloto: cambia entre la vista moderna (la de siempre) y la clásica, de sistema de gestión de escritorio. Se guarda en este navegador. */
-export async function cambiarVista() {
-  const jar = await cookies();
-  const clasica = jar.get("vista")?.value === "clasica";
-  jar.set("vista", clasica ? "moderna" : "clasica", { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
+/** Prueba piloto: elige el aspecto del sistema (moderna = la de siempre, intermedia o clásica). Se guarda en este navegador. */
+export async function elegirVista(formData: FormData) {
+  const v = String(formData.get("vista"));
+  const valor = v === "clasica" || v === "intermedia" ? v : "moderna";
+  (await cookies()).set("vista", valor, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
   revalidatePath("/", "layout");
 }

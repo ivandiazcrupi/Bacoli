@@ -65,3 +65,33 @@ html.clasico { font-size: 13px; }
 .clasico main td, .clasico main th { padding-top: .2rem !important; padding-bottom: .2rem !important; }
 .clasico main .flex-wrap.lg\:justify-end { flex-wrap: nowrap !important; gap: 4px !important; }
 .clasico main .flex-wrap.lg\:justify-end a { font-size: 10px !important; padding: .15rem .45rem !important; }
+.clasico header .selector-vista { background: transparent !important; color: #fff !important; border: 1px solid #8fb7a2 !important; padding: .25rem .5rem !important; font-size: 10px !important; }
+.clasico header .selector-vista[aria-pressed="true"] { background: #ede6c8 !important; color: #014d27 !important; }
+
+/* =====================================================================================================
+   VISTA INTERMEDIA (prueba piloto): entre la moderna y la clásica. Mantiene la cabecera clara y los colores de la
+   marca, pero con esquinas casi rectas, sin sombras, letra de 14 px, espacios más justos, bordes firmes, títulos
+   sobrios (sin barra) y la barra de estado abajo. Se borra este bloque y listo.
+   ===================================================================================================== */
+html.intermedio { font-size: 14px; }
+.intermedio body { background: #f1efe3; padding-bottom: 24px; }
+.intermedio *, .intermedio *::before, .intermedio *::after { border-radius: 3px !important; box-shadow: none !important; }
+.intermedio header { background: #fff; border-bottom: 3px solid #026433 !important; }
+.intermedio header > div { padding-top: 0 !important; padding-bottom: 0 !important; }
+.intermedio header nav a:hover { background: #e9ebe2; }
+.intermedio main h1 { font-size: 18px !important; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: #014d27; border-bottom: 2px solid #026433; display: inline-block; padding-bottom: 2px; }
+.intermedio main { padding-top: 1rem !important; padding-bottom: 1rem !important; }
+.intermedio nav[aria-label="Pedidos"] { border-bottom: 2px solid #026433 !important; gap: 2px !important; }
+.intermedio nav[aria-label="Pedidos"] a { border-radius: 3px 3px 0 0 !important; padding: .4rem 1.1rem !important; }
+.intermedio [class*="border-stone-200"], .intermedio [class*="border-stone-300"] { border-color: #8a8d82 !important; }
+.intermedio [class*="py-4"] { padding-top: .6rem !important; padding-bottom: .6rem !important; }
+.intermedio [class*="py-3.5"], .intermedio [class*="py-3"] { padding-top: .4rem !important; padding-bottom: .4rem !important; }
+.intermedio [class*="p-5"] { padding: .9rem !important; }
+.intermedio [class*="space-y-5"] > * + * { margin-top: .7rem !important; }
+.intermedio main td, .intermedio main th { padding-top: .3rem !important; padding-bottom: .3rem !important; }
+.intermedio main a, .intermedio main button { white-space: nowrap; }
+.intermedio main .flex-wrap.lg\:justify-end { flex-wrap: nowrap !important; gap: 4px !important; }
+.intermedio main .flex-wrap.lg\:justify-end a { font-size: 10px !important; padding: .2rem .5rem !important; }
+.intermedio input:not([type="checkbox"]):not([type="radio"]), .intermedio select, .intermedio textarea { border-color: #6b6e66 !important; }
+.intermedio body > p { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: #e3e0cc; border-top: 1px solid #8a8d82; text-align: left !important; padding: .2rem .8rem !important; font-size: 11px !important; color: #222 !important; }
+.intermedio header a, .intermedio header button { white-space: nowrap; }

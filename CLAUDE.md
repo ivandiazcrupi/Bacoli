@@ -222,10 +222,10 @@ y ~1000 minoristas.
   **Comentario de la sucursal** (ej. restricción horaria: "Recibe solo hasta las 10 hs"): se carga **una sola vez en la sucursal** (campo Comentario de la ficha) y **se ve en rojo, debajo de la dirección y alineado justo donde ella empieza** en la lista de Clientes, en Pedidos (Sin asignar) y en la hoja del día —para que el repartidor lo lea—.  **Delante va el BARRIO (no la zona), en negrita igual que el nombre.** El **teléfono es un enlace que abre WhatsApp** para escribirle (sin la palabra "WhatsApp"; si el número no sirve, llama). En el celular cada cuadrante se apila. Filtros (`FiltrosClientes.tsx`): **buscador que filtra mientras se escribe** (sin Enter ni botón) y, debajo, dos **desplegables que se reparten el ancho del buscador**: zona (un cliente aparece en una zona si alguna sucursal está ahí) y estado (**Activos** por defecto, siempre; Desactivados; Todos). Nueva pantalla **`/clientes/[id]/pedidos`**: historial de pedidos del cliente (día, sucursal, pedido, monto, comprobante, estado). **Próximo (lo pidió el dueño como lo último): hoja de informes comerciales**; también a futuro el filtro "hace cuánto no piden", con deuda, con/sin factura y datos incompletos.
 
 ## Vista clásica (PRUEBA PILOTO, pedido del dueño)
-- Botón **Vista clásica / Vista moderna** en la cabecera (cookie `vista`, acción `cambiarVista` en `src/app/actions.ts`). Es **solo una capa de CSS**
-  (bloque `.clasico` al final de `globals.css`, activada con `className="clasico"` en `<html>` desde `layout.tsx`): letra chica, sin bordes redondeados ni
+- Selector **Moderna | Intermedia | Clásica** en la cabecera (cookie `vista`, acción `elegirVista` en `src/app/actions.ts`). Son **solo capas de CSS**
+  (bloques `.clasico` e `.intermedio` al final de `globals.css`, activadas con la clase en `<html>` desde `layout.tsx`; la **intermedia** = cabecera clara y colores de marca pero esquinas casi rectas, sin sombras, letra 14 px, filas compactas, título sobrio y barra de estado). Detalle de la clásica: letra chica, sin bordes redondeados ni
   sombras, cabecera verde oscuro, títulos en barra, pestañas cuadradas, barra de estado abajo. **La vista moderna es la de siempre y no se tocó.**
-- Para **volver todo atrás**: borrar el bloque `.clasico` de `globals.css`, el botón en `Cabecera.tsx`, `cambiarVista` y la clase en `layout.tsx` (o `git revert` del commit "vista clásica").
+- Para **volver todo atrás**: borrar los bloques `.clasico`/`.intermedio` de `globals.css`, el selector en `Cabecera.tsx`, `elegirVista` y la clase en `layout.tsx` (o `git revert` del commit "vista clásica").
 - Esperando la opinión del dueño: dejarla, extenderla a más pantallas (Ruta, ficha) o sacarla.
 
 ## Pendientes conocidos
