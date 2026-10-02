@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Cabecera } from "@/components/Cabecera";
 import { diasDeAtraso, incluirNc, partidaDe } from "@/lib/cobranza";
+import { importeVigente } from "@/lib/cuenta";
 import { db } from "@/lib/db";
 import { deFecha, hoy } from "@/lib/fechas";
 import { formatoRemito } from "@/lib/remito";
@@ -113,7 +114,7 @@ export default async function CuentaDeCliente({ params }: { params: Promise<{ id
                   <li key={p.id} className="grid grid-cols-[110px_1fr_130px_170px] items-center gap-x-3 px-4 py-2.5 text-center text-stone-600">
                     <span className="tabular-nums">Cargado {fechaCorta(x.cargado)}</span>
                     <span>{p.conFactura ? "Factura" : "Remito"} {x.numero ?? ""}</span>
-                    <span className="tabular-nums line-through">{formatoPesos(Number(p.items.reduce((s, i) => s + i.cantidad * Number(i.precioUnitario), 0)))}</span>
+                    <span className="tabular-nums line-through">{formatoPesos(importeVigente(p.items, Number(p.ivaPct), "PENDIENTE", p.webTotal))}</span>
                     <span className="font-semibold text-rojo-700">{p.estado === "CANCELADO" ? "Cancelado" : "No entregado"}</span>
                   </li>
                 );

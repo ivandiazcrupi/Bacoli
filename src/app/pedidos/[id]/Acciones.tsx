@@ -5,7 +5,7 @@ import { Mensajes, estiloBoton } from "@/components/campos";
 import { formatoPesos } from "@/lib/numeros";
 import { marcarEntregado, type EstadoPedidoForm } from "../actions";
 
-export type Renglon = { id: string; nombre: string; sku: string | null; unidad: string; precio: number; cantidad: number; entregada: number | null };
+export type Renglon = { id: string; nombre: string; sku: string | null; unidad: string; precio: number; cantidad: number; entregada: number | null; sinCargo: number; descuentoPct: number };
 type Totales = { base: number; iva: number; ivaPct: number; total: number; conFactura: boolean };
 
 const COLUMNAS = "lg:grid-cols-[minmax(0,2fr)_7rem_7rem_8rem_9rem]";
@@ -33,7 +33,7 @@ export function TablaPedido({ pedidoId, abierto, entregado, items, totales, nota
                 <p className="text-xs text-stone-500">{i.sku ?? ""} · por {i.unidad}</p>
               </div>
               {!web && <p className="text-sm tabular-nums">{formatoPesos(i.precio)}</p>}
-              <p className="font-semibold tabular-nums">{i.cantidad}</p>
+              <p className="font-semibold tabular-nums">{i.cantidad}{i.sinCargo > 0 && <span className="block text-xs font-normal text-stone-600">+ {i.sinCargo} sin cargo</span>}{i.descuentoPct > 0 && <span className="block text-xs font-normal text-stone-600">bonif. {String(i.descuentoPct).replace(".", ",")}%</span>}</p>
               <div>
                 {abierto ? (
                   <input
@@ -49,7 +49,7 @@ export function TablaPedido({ pedidoId, abierto, entregado, items, totales, nota
                   <span className="text-stone-400">—</span>
                 )}
               </div>
-              {!web && <p className="text-sm font-semibold tabular-nums">{formatoPesos((entregado ? entregadaFinal : i.cantidad) * i.precio)}</p>}
+              {!web && <p className="text-sm font-semibold tabular-nums">{formatoPesos((entregado ? entregadaFinal : i.cantidad) * i.precio * (1 - i.descuentoPct / 100))}</p>}
             </div>
           );
         })}
@@ -58,7 +58,7 @@ export function TablaPedido({ pedidoId, abierto, entregado, items, totales, nota
       <div className="grid items-stretch gap-4 lg:grid-cols-[1fr_20rem]">
         <div className="rounded-xl border border-stone-300 bg-white p-4 shadow-sm">
           <p className="mb-1 text-center text-xs font-semibold uppercase tracking-wide text-stone-600">Nota</p>
-          <p className="text-center text-sm text-stone-700">{nota || <span className="text-stone-400">Sin nota</span>}</p>
+          <p className="text-center text-sm font-medium text-rojo-700">{nota || <span className="text-stone-400">Sin nota</span>}</p>
           {abierto && <p className="mt-3 text-center text-xs text-stone-500">Si se entregó todo, confirmá la entrega. Si faltó algo, cambiá la cantidad entregada.</p>}
           <Mensajes estado={estado} />
         </div>

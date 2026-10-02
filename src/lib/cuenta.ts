@@ -4,7 +4,7 @@ export const IVA_PCT = 10.5;
 
 const redondear2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
-type Renglon = { cantidad: number; cantidadEntregada: number | null; precioUnitario: Prisma.Decimal | number | string };
+type Renglon = { cantidad: number; cantidadEntregada: number | null; precioUnitario: Prisma.Decimal | number | string; descuentoPct?: Prisma.Decimal | number | string | null };
 
 /** Lo que el pedido suma hoy a la deuda del cliente (con IVA si lleva factura). */
 export function importeVigente(items: Renglon[], ivaPct: number, estado: EstadoPedido, totalFijo?: Prisma.Decimal | number | string | null) {
@@ -12,7 +12,7 @@ export function importeVigente(items: Renglon[], ivaPct: number, estado: EstadoP
   if (totalFijo !== undefined && totalFijo !== null) return redondear2(Number(totalFijo)); // pedidos de la tienda: vale lo que pagó el cliente
   const subtotal = items.reduce((suma, i) => {
     const unidades = estado === "ENTREGADO" ? (i.cantidadEntregada ?? i.cantidad) : i.cantidad;
-    return suma + unidades * Number(i.precioUnitario);
+    return suma + unidades * Number(i.precioUnitario) * (1 - Number(i.descuentoPct ?? 0) / 100); // los paquetes sin cargo no suman
   }, 0);
   return redondear2(subtotal * (1 + ivaPct / 100));
 }

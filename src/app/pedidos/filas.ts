@@ -2,7 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { importeVigente } from "@/lib/cuenta";
 import { bultosDe } from "@/lib/ruta";
 import { db } from "@/lib/db";
-import { titulo } from "@/lib/mayusculas";
+import { oracion, titulo } from "@/lib/mayusculas";
 import { formatoRemito } from "@/lib/remito";
 import type { Fila } from "./dia/[fecha]/HojaDia";
 
@@ -21,6 +21,15 @@ export function datosEntrega(p: { cliente: { nombre: string } | null; punto: { a
   }
   return { nombre: p.webNombre ?? "", barrio: p.webBarrio ?? "", direccion: titulo(p.webDireccion), comentario: "", telefono: p.webTelefono ?? "" };
 }
+
+/** Lo que se ve en rojo debajo de la dirección: el comentario de la sucursal y la nota importante del pedido ("Entregar en el vecino"). */
+const avisos = (comentario: string, nota: string | null) => [comentario, oracion(nota)].filter(Boolean).join(" · ");
+
+/** Un renglón para las hojas: cantidad a entregar (cobrada + sin cargo) y, si hay, cuántos van sin cargo. */
+const renglonHoja = (i: { nombre: string; cantidad: number; sinCargo: number }, cantidad: number) => ({
+  nombre: i.sinCargo > 0 ? `${i.nombre} (${i.sinCargo} sin cargo)` : i.nombre,
+  cantidad: cantidad + i.sinCargo,
+});
 
 export type FilaBandeja = {
   id: string;
@@ -52,9 +61,9 @@ export function aFila(p: PedidoCompleto, debe: Set<string>): Fila {
     barrio: d.barrio,
     cliente: d.nombre,
     direccion: d.direccion,
-    comentario: d.comentario,
+    comentario: avisos(d.comentario, p.nota),
     telefono: d.telefono,
-    items: items.map((i) => ({ nombre: i.nombre, cantidad: p.estado === "ENTREGADO" ? (i.cantidadEntregada ?? i.cantidad) : i.cantidad })),
+    items: items.map((i) => renglonHoja(i, p.estado === "ENTREGADO" ? (i.cantidadEntregada ?? i.cantidad) : i.cantidad)),
     monto: importeVigente(p.items, Number(p.ivaPct), p.estado === "ENTREGADO" ? "ENTREGADO" : "PENDIENTE", p.webTotal),
     conFactura: p.conFactura,
     numeroFactura: p.numeroFactura ?? "",
@@ -77,9 +86,9 @@ export function aFilaBandeja(p: PedidoCompleto): FilaBandeja {
     barrio: d.barrio,
     cliente: d.nombre,
     direccion: d.direccion,
-    comentario: d.comentario,
+    comentario: avisos(d.comentario, p.nota),
     telefono: d.telefono,
-    items: ordenarItems(p.items).map((i) => ({ nombre: i.nombre, cantidad: i.cantidad })),
+    items: ordenarItems(p.items).map((i) => renglonHoja(i, i.cantidad)),
     monto: importeVigente(p.items, Number(p.ivaPct), "PENDIENTE", p.webTotal),
     conFactura: p.conFactura,
     webOrden: p.webOrden,

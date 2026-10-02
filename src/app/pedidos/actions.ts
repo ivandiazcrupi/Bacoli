@@ -1,6 +1,6 @@
 "use server";
 
-import { mayus, titulo } from "@/lib/mayusculas";
+import { mayus, oracion, titulo } from "@/lib/mayusculas";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { Prisma } from "@prisma/client";
@@ -62,17 +62,21 @@ export async function datosNuevoPedido(puntoId: string): Promise<DatosPedido | n
   };
 }
 
-type Renglon = { productoId: string; nombre: string; sku: string | null; unidad: string; cantidad: number; precioUnitario: number };
+type Renglon = { productoId: string; nombre: string; sku: string | null; unidad: string; cantidad: number; precioUnitario: number; sinCargo: number; descuentoPct: number };
 
 async function leerRenglones(formData: FormData): Promise<{ renglones: Renglon[] } | { error: string }> {
   const productos = await db.producto.findMany({ where: { activo: true } });
   const renglones: Renglon[] = [];
   for (const p of productos) {
     const cantidad = Number(String(formData.get(`q_${p.id}`) ?? "0").replace(/\D/g, "") || 0);
-    if (cantidad <= 0) continue;
+    const sinCargo = Number(String(formData.get(`sc_${p.id}`) ?? "0").replace(/\D/g, "") || 0);
+    if (cantidad <= 0 && sinCargo <= 0) continue;
+    const descuentoPct = leerMonto(String(formData.get(`bd_${p.id}`) ?? "")) ?? 0;
+    if (descuentoPct < 0 || descuentoPct > 100) return { error: `La bonificación de ${p.nombre} tiene que estar entre 0 y 100 %.` };
     const precio = leerMonto(String(formData.get(`pr_${p.id}`) ?? ""));
-    if (precio === null || precio <= 0) return { error: `Falta el precio de ${p.nombre}. Cargalo en el pedido o en Precios.` };
-    renglones.push({ productoId: p.id, nombre: p.nombre, sku: p.sku, unidad: p.unidad, cantidad, precioUnitario: precio });
+    // Un renglón que es solo "sin cargo" (recambio) no necesita precio.
+    if (cantidad > 0 && (precio === null || precio <= 0)) return { error: `Falta el precio de ${p.nombre}. Cargalo en el pedido o en Precios.` };
+    renglones.push({ productoId: p.id, nombre: p.nombre, sku: p.sku, unidad: p.unidad, cantidad, precioUnitario: precio ?? 0, sinCargo, descuentoPct });
   }
   if (renglones.length === 0) return { error: "Poné la cantidad de al menos un producto." };
   return { renglones };
@@ -88,7 +92,7 @@ export async function crearPedido(_: EstadoPedidoForm, formData: FormData): Prom
 
   const conFactura = formData.get("conFactura") === "1";
   const ivaPct = conFactura ? IVA_PCT : 0;
-  const total = importeVigente(leidos.renglones.map((r) => ({ cantidad: r.cantidad, cantidadEntregada: null, precioUnitario: r.precioUnitario })), ivaPct, "PENDIENTE");
+  const total = importeVigente(leidos.renglones.map((r) => ({ cantidad: r.cantidad, cantidadEntregada: null, precioUnitario: r.precioUnitario, descuentoPct: r.descuentoPct })), ivaPct, "PENDIENTE");
 
   // Límites de deuda del cliente: se avisa y solo un dueño puede autorizar (no se bloquea a "cuenta sin límite").
   const cliente = punto.cliente;
@@ -118,7 +122,7 @@ export async function crearPedido(_: EstadoPedidoForm, formData: FormData): Prom
         puntoId,
         conFactura,
         ivaPct,
-        nota: String(formData.get("nota") ?? "").trim() || null,
+        nota: oracion(String(formData.get("nota") ?? "")) || null,
         ordenDia: (ultimo._max.ordenDia ?? -1) + 1,
         creadoPorId: usuario.id,
         autorizadoPorId,
@@ -144,7 +148,7 @@ export async function actualizarPedido(pedidoId: string, _: EstadoPedidoForm, fo
     await tx.pedidoItem.deleteMany({ where: { pedidoId } });
     await tx.pedido.update({
       where: { id: pedidoId },
-      data: { conFactura, ivaPct: conFactura ? IVA_PCT : 0, nota: String(formData.get("nota") ?? "").trim() || null, items: { create: leidos.renglones } },
+      data: { conFactura, ivaPct: conFactura ? IVA_PCT : 0, nota: oracion(String(formData.get("nota") ?? "")) || null, items: { create: leidos.renglones } },
     });
     await sincronizarCuentaPedido(tx, pedidoId, usuario.id);
   });
@@ -180,7 +184,7 @@ export async function actualizarPedidoWeb(pedidoId: string, _: EstadoPedidoForm,
         webDireccion: titulo(String(formData.get("direccion") ?? "").trim()) || null,
         webTelefono: String(formData.get("telefono") ?? "").trim() || null,
         webTotal: total,
-        nota: String(formData.get("nota") ?? "").trim() || null,
+        nota: oracion(String(formData.get("nota") ?? "")) || null,
       },
     });
   });
@@ -249,7 +253,7 @@ export async function marcarEntregado(pedidoId: string, _: EstadoPedidoForm, for
   if (pedido.conFactura && !pedido.numeroFactura?.trim()) return { error: "Este pedido lleva factura: cargá primero el N° de factura y después confirmá la entrega." };
 
   const entregas = pedido.items.map((i) => ({ id: i.id, cantidad: i.cantidad, entregada: Math.min(i.cantidad, Number(String(formData.get(`e_${i.id}`) ?? i.cantidad).replace(/\D/g, "") || 0)) }));
-  if (entregas.every((e) => e.entregada === 0)) return { error: "No se entregó nada. Si no se pudo entregar, usá \"No entregado\"." };
+  if (entregas.every((e) => e.entregada === 0) && pedido.items.every((i) => i.sinCargo === 0)) return { error: "No se entregó nada. Si no se pudo entregar, usá \"No entregado\"." };
 
   await db.$transaction(async (tx) => {
     for (const e of entregas) await tx.pedidoItem.update({ where: { id: e.id }, data: { cantidadEntregada: e.entregada } });

@@ -6,7 +6,7 @@ import { IVA_PCT } from "@/lib/cuenta";
 import { formatoPesos, leerMonto } from "@/lib/numeros";
 import type { EstadoPedidoForm } from "./actions";
 
-export type LineaProducto = { id: string; nombre: string; sku: string | null; unidad: string; precio: string | null; cantidad: number };
+export type LineaProducto = { id: string; nombre: string; sku: string | null; unidad: string; precio: string | null; cantidad: number; sinCargo?: number; bonificacion?: string };
 
 type Props = {
   accion: (estado: EstadoPedidoForm, formData: FormData) => Promise<EstadoPedidoForm>;
@@ -20,13 +20,15 @@ type Props = {
 };
 
 const boton = "flex h-11 w-11 items-center justify-center rounded-md border border-stone-400 bg-white text-xl font-medium hover:bg-crema-100 lg:h-9 lg:w-9 lg:text-lg";
-const COLUMNAS = "lg:grid-cols-[minmax(0,2fr)_6rem_10rem_11rem_10rem]";
+const COLUMNAS = "lg:grid-cols-[minmax(0,2fr)_5rem_9rem_11rem_6rem_6rem_9rem]";
 
 // Productos con cantidad y precio, en una tabla a lo ancho. Al tocar + / − o escribir el número, el total se calcula al instante.
 export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial, notaInicial, esDueno, textoBoton, alGuardar }: Props) {
   const [estado, enviar, cargando] = useActionState(accion, undefined);
   const [cantidades, setCantidades] = useState<Record<string, string>>(() => Object.fromEntries(productos.map((p) => [p.id, p.cantidad ? String(p.cantidad) : ""])));
   const [precios, setPrecios] = useState<Record<string, string>>(() => Object.fromEntries(productos.map((p) => [p.id, p.precio ?? ""])));
+  const [sinCargos, setSinCargos] = useState<Record<string, string>>(() => Object.fromEntries(productos.map((p) => [p.id, p.sinCargo ? String(p.sinCargo) : ""])));
+  const [bonifs, setBonifs] = useState<Record<string, string>>(() => Object.fromEntries(productos.map((p) => [p.id, p.bonificacion ?? ""])));
   const [conFactura, setConFactura] = useState(conFacturaInicial);
 
   useEffect(() => {
@@ -35,7 +37,9 @@ export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial
 
   const cantidad = (id: string) => Number(cantidades[id]?.replace(/\D/g, "") || 0);
   const cambiar = (id: string, delta: number) => setCantidades((c) => ({ ...c, [id]: String(Math.max(0, cantidad(id) + delta) || "") }));
-  const subtotal = productos.reduce((s, p) => s + cantidad(p.id) * (leerMonto(precios[p.id]) ?? 0), 0);
+  const bonif = (id: string) => Math.min(100, Math.max(0, leerMonto(bonifs[id]) ?? 0));
+  const importe = (id: string) => cantidad(id) * (leerMonto(precios[id]) ?? 0) * (1 - bonif(id) / 100);
+  const subtotal = productos.reduce((s, p) => s + importe(p.id), 0);
   const iva = conFactura ? subtotal * (IVA_PCT / 100) : 0;
   const ivaTexto = String(IVA_PCT).replace(".", ",");
 
@@ -46,14 +50,15 @@ export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial
 
       <div className="overflow-hidden rounded-xl border border-stone-300 bg-white shadow-sm">
         <div className={`hidden gap-x-4 px-5 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-stone-600 lg:grid ${COLUMNAS}`}>
-          <span>Producto</span><span>Unidad</span><span>Precio</span><span>Cantidad</span><span>Subtotal</span>
+          <span>Producto</span><span>Unidad</span><span>Precio</span><span>Cantidad</span><span>Sin cargo</span><span>Bonif. %</span><span>Subtotal</span>
         </div>
         {productos.map((p) => {
+          const sc = Number(sinCargos[p.id]?.replace(/\D/g, "") || 0);
           const q = cantidad(p.id);
           const precio = leerMonto(precios[p.id]) ?? 0;
           const sinPrecio = q > 0 && !precio;
           return (
-            <div key={p.id} className={`grid items-center gap-x-4 gap-y-2 border-t border-stone-400 px-5 py-2.5 text-center ${COLUMNAS} ${q > 0 ? "bg-crema-50" : "bg-white"}`}>
+            <div key={p.id} className={`grid items-center gap-x-4 gap-y-2 border-t border-stone-400 px-5 py-2.5 text-center ${COLUMNAS} ${q > 0 || sc > 0 ? "bg-crema-50" : "bg-white"}`}>
               <div>
                 <p className="font-semibold leading-snug">{p.nombre}</p>
                 <p className="text-xs text-stone-500">{p.sku ?? ""}</p>
@@ -86,8 +91,32 @@ export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial
                 />
                 <button type="button" className={boton} onClick={() => cambiar(p.id, 1)} aria-label={`Más ${p.nombre}`}>+</button>
               </div>
+              <label className="flex items-center justify-center gap-1.5 text-sm text-stone-600 lg:block">
+                <span className="lg:hidden">Sin cargo</span>
+                <input
+                  name={`sc_${p.id}`}
+                  aria-label={`Paquetes sin cargo de ${p.nombre}`}
+                  inputMode="numeric"
+                  value={sinCargos[p.id] ?? ""}
+                  onChange={(e) => setSinCargos((c) => ({ ...c, [p.id]: e.target.value.replace(/\D/g, "") }))}
+                  placeholder="0"
+                  className="h-9 w-16 rounded-md border border-stone-400 bg-white text-center tabular-nums text-stone-900"
+                />
+              </label>
+              <label className="flex items-center justify-center gap-1.5 text-sm text-stone-600 lg:block">
+                <span className="lg:hidden">Bonif. %</span>
+                <input
+                  name={`bd_${p.id}`}
+                  aria-label={`Bonificación en % de ${p.nombre}`}
+                  inputMode="decimal"
+                  value={bonifs[p.id] ?? ""}
+                  onChange={(e) => setBonifs((c) => ({ ...c, [p.id]: e.target.value }))}
+                  placeholder="0"
+                  className="h-9 w-16 rounded-md border border-stone-400 bg-white text-center tabular-nums text-stone-900"
+                />
+              </label>
               <p className="text-sm font-semibold tabular-nums">
-                {sinPrecio ? <span className="text-xs font-medium text-rojo-700">Falta el precio</span> : q > 0 ? formatoPesos(q * precio) : <span className="font-normal text-stone-400">—</span>}
+                {sinPrecio ? <span className="text-xs font-medium text-rojo-700">Falta el precio</span> : q > 0 ? formatoPesos(importe(p.id)) : sc > 0 ? <span className="text-xs font-medium text-stone-600">{sc} sin cargo</span> : <span className="font-normal text-stone-400">—</span>}
               </p>
             </div>
           );
@@ -116,8 +145,8 @@ export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial
         </div>
 
         <label className="flex flex-col rounded-xl border border-stone-300 bg-white p-4 shadow-sm">
-          <span className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-stone-600">Nota (opcional)</span>
-          <input name="nota" defaultValue={notaInicial} className="w-full rounded-md border border-stone-400 bg-white px-3 py-2.5 text-base" />
+          <span className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-stone-600">Nota importante (se ve en rojo en la ruta)</span>
+          <input name="nota" defaultValue={notaInicial} placeholder="Ej.: Entregar en el vecino" className="w-full rounded-md border border-stone-400 bg-white px-3 py-2.5 text-base" />
         </label>
 
         <div className="rounded-xl border border-stone-300 bg-white p-4 text-sm shadow-sm">

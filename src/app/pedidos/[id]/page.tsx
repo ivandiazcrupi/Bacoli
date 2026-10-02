@@ -1,4 +1,4 @@
-import { titulo } from "@/lib/mayusculas";
+import { oracion, titulo } from "@/lib/mayusculas";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Cabecera } from "@/components/Cabecera";
@@ -34,7 +34,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
   const entrega = datosEntrega(pedido);
   const items = ordenarItems(pedido.items);
   const ivaPct = Number(pedido.ivaPct);
-  const pedidoBase = web ? Number(pedido.webTotal ?? 0) : pedido.items.reduce((s, i) => s + i.cantidad * Number(i.precioUnitario), 0);
+  const pedidoBase = web ? Number(pedido.webTotal ?? 0) : pedido.items.reduce((s, i) => s + i.cantidad * Number(i.precioUnitario) * (1 - Number(i.descuentoPct) / 100), 0);
   const total = importeVigente(pedido.items, ivaPct, pedido.estado === "ENTREGADO" ? "ENTREGADO" : "PENDIENTE", pedido.webTotal);
   const fecha = pedido.fechaEntrega ? deFecha(pedido.fechaEntrega) : null;
   const abierto = pedido.estado === "PENDIENTE";
@@ -110,10 +110,10 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
           pedidoId={pedido.id}
           abierto={abierto}
           entregado={pedido.estado === "ENTREGADO"}
-          items={items.map((i) => ({ id: i.id, nombre: i.nombre, sku: i.sku, unidad: i.unidad, precio: Number(i.precioUnitario), cantidad: i.cantidad, entregada: i.cantidadEntregada }))}
+          items={items.map((i) => ({ id: i.id, nombre: i.nombre, sku: i.sku, unidad: i.unidad, precio: Number(i.precioUnitario), cantidad: i.cantidad, entregada: i.cantidadEntregada, sinCargo: i.sinCargo, descuentoPct: Number(i.descuentoPct) }))}
           totales={{ base: pedidoBase, iva: total - pedidoBase, ivaPct, total, conFactura: pedido.conFactura }}
           web={web}
-          nota={pedido.nota}
+          nota={oracion(pedido.nota) || null}
         />
 
         {!web && (
