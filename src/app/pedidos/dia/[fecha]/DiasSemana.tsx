@@ -17,12 +17,9 @@ export function DiasSemana({ fecha, lunesTexto, hrefAnterior, hrefSiguiente, hre
             key={d.fecha}
             href={`/pedidos/dia/${d.fecha}`}
             aria-current={activo ? "page" : undefined}
-            className={`flex min-w-[128px] flex-col items-center justify-center gap-1.5 rounded-lg border px-5 py-3.5 text-center shadow-sm transition ${activo ? "border-verde-800 bg-verde-800 text-white" : "border-stone-400 bg-white text-stone-800 hover:border-verde-700"}`}
+            className={`flex min-w-[120px] items-center justify-center rounded-lg border px-5 py-4 text-center shadow-sm transition ${activo ? "border-verde-800 bg-verde-800 text-white" : "border-stone-400 bg-white text-stone-800 hover:border-verde-700"}`}
           >
-            <span className="text-sm font-bold uppercase leading-none tracking-wide">{d.texto}</span>
-            <span className={`text-xs leading-none ${activo ? "text-verde-100" : "text-stone-500"}`}>
-              {d.pedidos} {d.pedidos === 1 ? "pedido" : "pedidos"}{d.vehiculos ? ` · ${d.vehiculos} veh.` : ""}
-            </span>
+            <span className="text-base font-bold uppercase leading-none tracking-wide">{d.texto}</span>
           </Link>
         );
       })}
