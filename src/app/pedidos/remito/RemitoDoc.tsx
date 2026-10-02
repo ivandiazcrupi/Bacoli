@@ -51,12 +51,12 @@ export function RemitoDoc({ empresa, r, conPrecios }: { empresa: Empresa | null;
           <span className="text-[22pt] font-bold">X</span>
           <span className="px-1 text-[6.5pt] uppercase leading-tight">Documento no válido como factura</span>
         </div>
-        <div className="flex flex-col justify-center gap-1.5 p-2.5">
+        <div className="flex flex-col items-center justify-center gap-1.5 p-2.5 text-center">
           <p className="text-[12pt] font-bold">REMITO N° {formatoRemito(r.numero)}</p>
           <p>Fecha: {diaMes(r.fecha)}/{r.fecha.slice(0, 4)}</p>
-          <p>{empresa?.cuit && `CUIT ${empresa.cuit}`}</p>
-          <p>{empresa?.ingresosBrutos && `Ing. Brutos ${empresa.ingresosBrutos}`}</p>
-          <p>{empresa?.inicioActividades && `Inicio de actividades ${empresa.inicioActividades}`}</p>
+          {empresa?.cuit && <p>CUIT {empresa.cuit}</p>}
+          {empresa?.ingresosBrutos && <p>Ing. Brutos {empresa.ingresosBrutos}</p>}
+          {empresa?.inicioActividades && <p>Inicio de actividades {empresa.inicioActividades}</p>}
         </div>
       </header>
 
