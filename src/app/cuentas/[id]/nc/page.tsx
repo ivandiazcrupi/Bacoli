@@ -15,7 +15,7 @@ export default async function CargarNotaCredito({ params, searchParams }: { para
   if (!cliente) notFound();
 
   const pedidos = await db.pedido.findMany({
-    where: { clienteId: id, estado: { in: ["PENDIENTE", "ENTREGADO"] }, pagado: false },
+    where: { clienteId: id, conFactura: true, estado: { in: ["PENDIENTE", "ENTREGADO"] }, pagado: false },
     include: { items: true, ...incluirNc },
     orderBy: [{ fechaEntrega: "asc" }, { creadoEn: "asc" }],
   });

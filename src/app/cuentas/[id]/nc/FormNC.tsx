@@ -75,7 +75,7 @@ export function FormNC({ clienteId, comprobantes, inicial, nota }: { clienteId: 
       {!nota && (
         <section className="grid gap-4 rounded-xl border border-stone-300 bg-white p-4 shadow-sm sm:grid-cols-3">
           <label className="text-sm font-semibold">N° de la nota de crédito
-            <input value={numero} onChange={(e) => setNumero(e.target.value)} placeholder="0001-00000045 (si es de ARCA)" className={`${campo} font-normal`} />
+            <input value={numero} onChange={(e) => setNumero(e.target.value)} placeholder="0001-00000045" className={`${campo} font-normal`} />
           </label>
           <label className="text-sm font-semibold">Motivo
             <input value={motivo} onChange={(e) => setMotivo(e.target.value)} list="motivos" placeholder="Devolución, error de precio…" className={`${campo} font-normal`} />
@@ -89,9 +89,9 @@ export function FormNC({ clienteId, comprobantes, inicial, nota }: { clienteId: 
       {nota && <p className="rounded-xl border border-stone-300 bg-white p-4 text-sm shadow-sm">Nota de crédito <b>{nota.numero ?? "s/n"}</b> · saldo a aplicar: <b>{formatoPesos(nota.restante)}</b></p>}
 
       <section className="overflow-hidden rounded-xl border border-stone-300 bg-white shadow-sm" aria-label="Comprobantes a los que se aplica">
-        <p className="border-b border-stone-300 bg-crema-100 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-stone-600">Aplicar a (tildá uno o varios)</p>
+        <p className="border-b border-stone-300 bg-crema-100 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-stone-600">Aplicar a facturas (tildá una o varias)</p>
         {comprobantes.length === 0 ? (
-          <p className="p-6 text-center text-stone-600">Este cliente no tiene comprobantes sin pagar. La nota quedará como saldo a favor.</p>
+          <p className="p-6 text-center text-stone-600">Este cliente no tiene facturas sin pagar. La nota quedará como saldo a favor.</p>
         ) : (
           <ul className="divide-y divide-stone-300">
             {comprobantes.map((c) => (

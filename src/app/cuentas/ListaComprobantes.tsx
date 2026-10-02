@@ -85,7 +85,7 @@ export function ListaComprobantes({ filas }: { filas: FilaComprobante[] }) {
             <input type="checkbox" aria-label={`Elegir ${f.numero ?? "comprobante"}`} checked={elegidas.has(f.id)} disabled={!f.entregado || f.pagada || f.cubierta} onChange={() => alternar(f.id)} className="h-4 w-4 accent-[#026433] disabled:opacity-30" />
             <span className="flex items-center justify-center gap-1.5 font-semibold tabular-nums">
               {f.numero ?? <span className="font-normal text-rojo-700">sin número</span>}
-              {!f.pagada && !f.cubierta && <Link href={`/cuentas/${f.clienteId}/nc?factura=${f.id}`} title="Cargar nota de crédito" className="rounded border border-stone-400 px-1 text-[10px] font-semibold text-stone-600 hover:border-verde-700 hover:text-verde-800">NC</Link>}
+              {f.tipo === "FACTURA" && !f.pagada && !f.cubierta && <Link href={`/cuentas/${f.clienteId}/nc?factura=${f.id}`} title="Cargar nota de crédito" className="rounded border border-stone-400 px-1 text-[10px] font-semibold text-stone-600 hover:border-verde-700 hover:text-verde-800">NC</Link>}
             </span>
             <Link href={`/cuentas/${f.clienteId}`} className="text-left hover:underline">{f.cliente}</Link>
             <span className="tabular-nums">{fechaCorta(f.cargado)}</span>

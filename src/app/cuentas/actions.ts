@@ -53,6 +53,7 @@ async function validarAplicaciones(clienteId: string, aplicaciones: Aplicacion[]
     if (!(a.monto > 0)) return "Cada monto aplicado tiene que ser mayor a 0.";
     const p = pedidos.find((x) => x.id === a.pedidoId);
     if (!p || p.clienteId !== clienteId) return "Un comprobante no es de este cliente.";
+    if (!p.conFactura) return "Las notas de crédito se aplican solo a facturas. Para un remito, reabrí el pedido y corregilo.";
     if (p.pagado || (p.estado !== "PENDIENTE" && p.estado !== "ENTREGADO")) return "Solo se aplica a comprobantes sin pagar.";
     const debe = importeVigente(p.items, Number(p.ivaPct), p.estado === "ENTREGADO" ? "ENTREGADO" : "PENDIENTE", p.webTotal) - p.ncAplicaciones.reduce((t, x) => t + Number(x.monto), 0);
     if (a.monto > debe + 0.005) return `El monto aplicado supera lo que debe ese comprobante ($ ${redondear2(debe).toLocaleString("es-AR")}).`;
