@@ -10,7 +10,9 @@ type PedidoCobranza = Prisma.PedidoGetPayload<{ include: { items: true } }>;
 /** Una "partida" de la cuenta: un comprobante (factura o remito) con su monto y su vencimiento. */
 export type Partida = {
   id: string;
-  fecha: string; // día de entrega "AAAA-MM-DD"
+  cargado: string; // día en que se cargó el pedido
+  fecha: string; // día de entrega (previsto o real) "AAAA-MM-DD"
+  entregado: boolean; // false = cargado pero todavía por entregar
   vence: string;
   tipo: "FACTURA" | "REMITO";
   numero: string | null; // N° de factura o de remito (null si todavía no se cargó / emitió)
@@ -20,14 +22,18 @@ export type Partida = {
 };
 
 export function partidaDe(p: PedidoCobranza, condicion: CondicionPago): Partida {
-  const fecha = p.fechaEntrega ? deFecha(p.fechaEntrega) : deFecha(p.creadoEn);
+  const cargado = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Argentina/Buenos_Aires" }).format(p.creadoEn);
+  const fecha = p.fechaEntrega ? deFecha(p.fechaEntrega) : cargado;
+  const entregado = p.estado === "ENTREGADO";
   return {
     id: p.id,
+    cargado,
+    entregado,
     fecha,
     vence: sumarDias(fecha, DIAS[condicion]),
     tipo: p.conFactura ? "FACTURA" : "REMITO",
     numero: p.conFactura ? p.numeroFactura : p.remitoNumero ? formatoRemito(p.remitoNumero) : null,
-    monto: importeVigente(p.items, Number(p.ivaPct), "ENTREGADO", p.webTotal),
+    monto: importeVigente(p.items, Number(p.ivaPct), entregado ? "ENTREGADO" : "PENDIENTE", p.webTotal),
     pagada: p.pagado && p.cobro === "COBRADO",
     medio: p.medioCobro,
   };
