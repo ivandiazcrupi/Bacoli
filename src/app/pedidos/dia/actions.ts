@@ -12,7 +12,7 @@ const MEDIOS: MedioPago[] = ["EFECTIVO", "TRANSFERENCIA", "CHEQUE", "MERCADO_PAG
 const redondear2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
 async function pedidoAbierto(id: string) {
-  const pedido = await db.pedido.findUnique({ where: { id }, include: { items: true } });
+  const pedido = await db.pedido.findUnique({ where: { id }, include: { items: true, ncAplicaciones: { where: { nota: { anuladaEn: null } } } } });
   if (!pedido) return { error: "No encontré el pedido." } as const;
   if (pedido.fechaEntrega && (await db.diaCerrado.findUnique({ where: { fecha: pedido.fechaEntrega } }))) {
     return { error: "Ese día está cerrado. Un dueño puede reabrirlo." } as const;
@@ -55,7 +55,8 @@ export async function registrarCobro(pedidoId: string, medio: string, monto?: nu
   if (pedido.estado !== "ENTREGADO") return { ok: false, error: "Primero marcá el pedido como entregado." };
   if (pedido.cobro === "COBRADO") return { ok: false, error: "Este pedido ya está cobrado." };
 
-  const debido = importeVigente(pedido.items, Number(pedido.ivaPct), "ENTREGADO", pedido.webTotal);
+  const debido = redondear2(importeVigente(pedido.items, Number(pedido.ivaPct), "ENTREGADO", pedido.webTotal) - pedido.ncAplicaciones.reduce((t, a) => t + Number(a.monto), 0));
+  if (debido <= 0) return { ok: false, error: "Este comprobante está cubierto por una nota de crédito: no hay nada que cobrar." };
   const cobrado = redondear2(monto ?? debido);
   if (!(cobrado > 0)) return { ok: false, error: "El monto cobrado tiene que ser mayor a 0." };
 

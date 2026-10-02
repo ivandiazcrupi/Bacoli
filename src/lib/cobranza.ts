@@ -5,7 +5,10 @@ import { formatoRemito } from "@/lib/remito";
 
 const DIAS: Record<CondicionPago, number> = { CONTADO: 0, DIAS_7: 7, DIAS_15: 15, DIAS_30: 30, DIAS_45: 45 };
 
-type PedidoCobranza = Prisma.PedidoGetPayload<{ include: { items: true } }>;
+type PedidoCobranza = Prisma.PedidoGetPayload<{ include: { items: true; ncAplicaciones: true } }>;
+
+/** Para traer junto con el pedido solo las notas de crédito vigentes (no anuladas). */
+export const incluirNc = { ncAplicaciones: { where: { nota: { anuladaEn: null } } } } as const;
 
 /** Una "partida" de la cuenta: un comprobante (factura o remito) con su monto y su vencimiento. */
 export type Partida = {
@@ -16,7 +19,10 @@ export type Partida = {
   vence: string;
   tipo: "FACTURA" | "REMITO";
   numero: string | null; // N° de factura o de remito (null si todavía no se cargó / emitió)
-  monto: number;
+  bruto: number; // lo que dice el pedido
+  nc: number; // notas de crédito aplicadas
+  monto: number; // lo que realmente se debe (bruto − nc)
+  cubierta: boolean; // una NC lo cubre entero
   pagada: boolean;
   medio: string | null;
 };
@@ -25,6 +31,8 @@ export function partidaDe(p: PedidoCobranza, condicion: CondicionPago): Partida 
   const cargado = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Argentina/Buenos_Aires" }).format(p.creadoEn);
   const fecha = p.fechaEntrega ? deFecha(p.fechaEntrega) : cargado;
   const entregado = p.estado === "ENTREGADO";
+  const bruto = importeVigente(p.items, Number(p.ivaPct), entregado ? "ENTREGADO" : "PENDIENTE", p.webTotal);
+  const nc = p.ncAplicaciones.reduce((t, a) => t + Number(a.monto), 0);
   return {
     id: p.id,
     cargado,
@@ -33,7 +41,10 @@ export function partidaDe(p: PedidoCobranza, condicion: CondicionPago): Partida 
     vence: sumarDias(fecha, DIAS[condicion]),
     tipo: p.conFactura ? "FACTURA" : "REMITO",
     numero: p.conFactura ? p.numeroFactura : p.remitoNumero ? formatoRemito(p.remitoNumero) : null,
-    monto: importeVigente(p.items, Number(p.ivaPct), entregado ? "ENTREGADO" : "PENDIENTE", p.webTotal),
+    bruto,
+    nc,
+    monto: Math.max(0, Math.round((bruto - nc) * 100) / 100),
+    cubierta: bruto > 0 && nc + 0.005 >= bruto,
     pagada: p.pagado && p.cobro === "COBRADO",
     medio: p.medioCobro,
   };

@@ -49,6 +49,6 @@ export function LibroCuenta({ lineas, vacio }: { lineas: LineaLibro[]; vacio: st
 
 /** Convierte un movimiento (monto + suma deuda, − la baja) en su línea de debe o haber. Los pagos van al haber; todo lo demás, al debe. */
 export function columnasDeMovimiento(tipo: string, monto: number): { debe: number | null; haber: number | null } {
-  if (tipo === "PAGO" || tipo === "ANULACION_PAGO") return { debe: null, haber: redondear(-monto) };
+  if (tipo === "PAGO" || tipo === "ANULACION_PAGO" || tipo === "NOTA_CREDITO") return { debe: null, haber: redondear(-monto) };
   return { debe: monto, haber: null };
 }

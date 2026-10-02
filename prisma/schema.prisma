@@ -113,6 +113,7 @@ model Cliente {
   preciosEspeciales PrecioEspecial[]
   pedidos           Pedido[]
   movimientos       MovimientoCuenta[]
+  notasCredito      NotaCredito[]
 
   @@index([nombre])
 }
@@ -161,6 +162,7 @@ enum TipoMovimiento {
   ANULACION_PEDIDO
   PAGO
   ANULACION_PAGO
+  NOTA_CREDITO
 }
 
 enum MedioPago {
@@ -213,11 +215,12 @@ model Pedido {
   webTotal     Decimal? @db.Decimal(14, 2) // lo que pagó el cliente en la tienda
   webPago      String? // PAGO_MP (ya pagado con Mercado Pago) o PENDIENTE (todavía no se cruzó la transferencia)
 
-  cliente     Cliente?           @relation(fields: [clienteId], references: [id])
-  punto       PuntoEntrega?      @relation(fields: [puntoId], references: [id])
-  salida      Salida?            @relation(fields: [salidaId], references: [id])
-  items       PedidoItem[]
-  movimientos MovimientoCuenta[]
+  cliente        Cliente?                @relation(fields: [clienteId], references: [id])
+  punto          PuntoEntrega?           @relation(fields: [puntoId], references: [id])
+  salida         Salida?                 @relation(fields: [salidaId], references: [id])
+  items          PedidoItem[]
+  movimientos    MovimientoCuenta[]
+  ncAplicaciones NotaCreditoAplicacion[]
 
   @@index([fechaEntrega, ordenDia])
   @@index([clienteId])
@@ -324,4 +327,35 @@ model Salida {
 
   @@unique([fecha, vehiculoId])
   @@index([fecha])
+}
+
+// Nota de crédito: baja lo que debe el cliente. Puede cubrir varias facturas (o remitos); lo que no se aplica queda como saldo a favor.
+// Nunca se edita ni se borra: si estaba mal se anula (anuladaEn) y se carga otra.
+model NotaCredito {
+  id        String    @id @default(cuid())
+  clienteId String
+  numero    String? // N° de la NC hecha en ARCA (los ajustes sobre remitos no llevan)
+  motivo    String
+  monto     Decimal   @db.Decimal(14, 2)
+  fecha     DateTime  @default(now())
+  usuarioId String?
+  anuladaEn DateTime?
+
+  cliente      Cliente                 @relation(fields: [clienteId], references: [id])
+  aplicaciones NotaCreditoAplicacion[]
+
+  @@index([clienteId])
+}
+
+model NotaCreditoAplicacion {
+  id       String  @id @default(cuid())
+  notaId   String
+  pedidoId String
+  monto    Decimal @db.Decimal(14, 2)
+
+  nota   NotaCredito @relation(fields: [notaId], references: [id])
+  pedido Pedido      @relation(fields: [pedidoId], references: [id])
+
+  @@index([pedidoId])
+  @@index([notaId])
 }

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Cabecera } from "@/components/Cabecera";
 import { cabeceraTabla } from "@/components/campos";
-import { diasDeAtraso, partidaDe } from "@/lib/cobranza";
+import { diasDeAtraso, incluirNc, partidaDe } from "@/lib/cobranza";
 import { db } from "@/lib/db";
 import { hoy } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
@@ -19,7 +19,7 @@ export default async function Cuentas({ searchParams }: { searchParams: Promise<
   const inicioMes = new Date(`${hoyStr.slice(0, 7)}-01T00:00:00Z`);
 
   const [abiertos, pagosMes] = await Promise.all([
-    db.pedido.findMany({ where: { clienteId: { not: null }, estado: { in: ["PENDIENTE", "ENTREGADO"] }, pagado: false }, include: { items: true, cliente: true } }),
+    db.pedido.findMany({ where: { clienteId: { not: null }, estado: { in: ["PENDIENTE", "ENTREGADO"] }, pagado: false }, include: { items: true, cliente: true, ...incluirNc } }),
     db.movimientoCuenta.aggregate({ where: { tipo: { in: ["PAGO", "ANULACION_PAGO"] }, fecha: { gte: inicioMes } }, _sum: { monto: true } }),
   ]);
 
@@ -28,6 +28,7 @@ export default async function Cuentas({ searchParams }: { searchParams: Promise<
   for (const p of abiertos) {
     if (!p.cliente) continue;
     const partida = partidaDe(p, p.cliente.condicionPago);
+    if (partida.cubierta) continue; // una nota de crédito lo cubre entero
     const atraso = partida.entregado ? diasDeAtraso(partida.vence, hoyStr) : 0; // lo que todavía no se entregó no está vencido
     const f = porCliente.get(p.cliente.id) ?? { id: p.cliente.id, nombre: p.cliente.nombre, comprobantes: 0, porEntregar: 0, vencido: 0, total: 0, masViejo: 0 };
     f.comprobantes += 1;

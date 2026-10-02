@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Cabecera } from "@/components/Cabecera";
-import { diasDeAtraso, partidaDe } from "@/lib/cobranza";
+import { diasDeAtraso, incluirNc, partidaDe } from "@/lib/cobranza";
 import { db } from "@/lib/db";
 import { hoy } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
@@ -35,7 +35,7 @@ export async function Listado({ tipo, searchParams, ruta }: { tipo: "FACTURA" | 
       ...(estado === "sin-pagar" ? { pagado: false } : estado === "pagadas" ? { pagado: true } : {}),
       ...(palabras.length ? { AND: palabras.map((w) => ({ cliente: { nombre: { contains: w, mode: "insensitive" as const } } })) } : {}),
     },
-    include: { items: true, cliente: true },
+    include: { items: true, cliente: true, ...incluirNc },
   });
 
   const todas: FilaComprobante[] = pedidos.flatMap((p) => {
@@ -43,12 +43,12 @@ export async function Listado({ tipo, searchParams, ruta }: { tipo: "FACTURA" | 
     const x = partidaDe(p, p.cliente.condicionPago);
     return [{
       id: p.id, clienteId: p.cliente.id, cliente: p.cliente.nombre, tipo, numero: x.numero, cargado: x.cargado, fecha: x.fecha,
-      entregado: x.entregado, monto: x.monto, vence: x.vence, atraso: x.entregado ? diasDeAtraso(x.vence, hoyStr) : 0, pagada: x.pagada, medio: x.medio, obs: p.obsCobro ?? "",
+      entregado: x.entregado, bruto: x.bruto, nc: x.nc, cubierta: x.cubierta, monto: x.monto, vence: x.vence, atraso: x.entregado ? diasDeAtraso(x.vence, hoyStr) : 0, pagada: x.pagada, medio: x.medio, obs: p.obsCobro ?? "",
     }];
   });
   todas.sort((a, b) => clave(a.numero) - clave(b.numero) || a.fecha.localeCompare(b.fecha));
 
-  const sinPagar = todas.filter((f) => !f.pagada);
+  const sinPagar = todas.filter((f) => !f.pagada && !f.cubierta);
   const montoSinPagar = sinPagar.reduce((s, f) => s + f.monto, 0);
   const vencido = sinPagar.filter((f) => f.atraso > 0).reduce((s, f) => s + f.monto, 0);
   const paginas = Math.max(1, Math.ceil(todas.length / POR_PAGINA));
