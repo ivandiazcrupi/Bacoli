@@ -197,6 +197,7 @@ model Pedido {
   cobro           EstadoCobro?
   medioCobro      MedioPago?
   montoCobrado    Decimal?     @db.Decimal(14, 2)
+  obsCobro        String? // observación de la cobranza: N° de cheque, de comprobante de transferencia, etc.
   nota            String?
   autorizadoPorId String?
   creadoPorId     String

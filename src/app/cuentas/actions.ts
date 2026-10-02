@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { db } from "@/lib/db";
 import { exigirOficina } from "@/lib/session";
 import { deshacerCobro, registrarCobro } from "../pedidos/dia/actions";
 
@@ -26,4 +27,12 @@ export async function deshacerPago(pedidoId: string): Promise<Resultado> {
   const r = await deshacerCobro(pedidoId);
   revalidatePath("/cuentas", "layout");
   return r.ok ? { ok: true } : { ok: false, error: r.error ?? "No se pudo deshacer." };
+}
+
+/** Observación de la cobranza (N° de cheque, de comprobante de transferencia, etc.). */
+export async function guardarObservacion(pedidoId: string, texto: string): Promise<Resultado> {
+  await exigirOficina();
+  await db.pedido.update({ where: { id: pedidoId }, data: { obsCobro: texto.trim().slice(0, 200) || null } });
+  revalidatePath("/cuentas", "layout");
+  return { ok: true };
 }

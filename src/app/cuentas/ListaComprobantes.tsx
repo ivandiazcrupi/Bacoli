@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { formatoPesos } from "@/lib/numeros";
-import { deshacerPago, registrarPagos } from "./actions";
+import { deshacerPago, guardarObservacion, registrarPagos } from "./actions";
 
 export type FilaComprobante = {
   id: string;
@@ -20,6 +20,7 @@ export type FilaComprobante = {
   atraso: number;
   pagada: boolean;
   medio: string | null;
+  obs: string;
 };
 
 const MEDIOS = [
@@ -29,7 +30,7 @@ const MEDIOS = [
   { valor: "OTRO", texto: "Otro" },
 ];
 const TEXTO_MEDIO: Record<string, string> = { EFECTIVO: "Efectivo", TRANSFERENCIA: "Transferencia", CHEQUE: "Cheque", MERCADO_PAGO: "Mercado Pago", OTRO: "Otro" };
-const COLUMNAS = "grid-cols-[28px_150px_minmax(160px,1.6fr)_84px_84px_120px_84px_170px]";
+const COLUMNAS = "grid-cols-[28px_150px_minmax(160px,1.6fr)_84px_84px_120px_84px_170px_minmax(160px,1.2fr)]";
 const fechaCorta = (s: string) => `${s.slice(8)}/${s.slice(5, 7)}/${s.slice(2, 4)}`;
 
 // Listado de comprobantes (facturas o remitos) en orden de número: se tildan los pagados, se elige el medio y se registra el pago.
@@ -73,7 +74,7 @@ export function ListaComprobantes({ filas }: { filas: FilaComprobante[] }) {
     <div>
       <div className={`hidden items-center gap-x-3 bg-verde-800 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-white lg:grid ${COLUMNAS}`}>
         <input type="checkbox" aria-label="Elegir todos los de esta página" checked={pagables.length > 0 && elegidas.size === pagables.length} onChange={() => setElegidas(elegidas.size === pagables.length ? new Set() : new Set(pagables.map((f) => f.id)))} className="h-4 w-4 accent-[#ede6c8]" />
-        <span>{filas[0].tipo === "FACTURA" ? "Factura" : "Remito"}</span><span className="text-left">Cliente</span><span>Cargado</span><span>Entrega</span><span>Monto</span><span>Vence</span><span>Estado</span>
+        <span>{filas[0].tipo === "FACTURA" ? "Factura" : "Remito"}</span><span className="text-left">Cliente</span><span>Cargado</span><span>Entrega</span><span>Monto</span><span>Vence</span><span>Estado</span><span>Observación</span>
       </div>
       <ul className="divide-y divide-stone-300">
         {filas.map((f) => (
@@ -94,6 +95,14 @@ export function ListaComprobantes({ filas }: { filas: FilaComprobante[] }) {
             ) : (
               <span className="text-stone-600">Sin pagar</span>
             )}
+            <input
+              aria-label="Observación"
+              placeholder="N° de cheque, comprobante…"
+              defaultValue={f.obs}
+              maxLength={200}
+              onBlur={(e) => e.target.value.trim() !== f.obs && void guardarObservacion(f.id, e.target.value)}
+              className="h-8 w-full rounded border border-stone-300 bg-white px-2 text-left text-xs placeholder:text-stone-400 focus:border-verde-700 focus:outline-none"
+            />
           </li>
         ))}
       </ul>

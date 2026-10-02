@@ -43,7 +43,7 @@ export async function Listado({ tipo, searchParams, ruta }: { tipo: "FACTURA" | 
     const x = partidaDe(p, p.cliente.condicionPago);
     return [{
       id: p.id, clienteId: p.cliente.id, cliente: p.cliente.nombre, tipo, numero: x.numero, cargado: x.cargado, fecha: x.fecha,
-      entregado: x.entregado, monto: x.monto, vence: x.vence, atraso: x.entregado ? diasDeAtraso(x.vence, hoyStr) : 0, pagada: x.pagada, medio: x.medio,
+      entregado: x.entregado, monto: x.monto, vence: x.vence, atraso: x.entregado ? diasDeAtraso(x.vence, hoyStr) : 0, pagada: x.pagada, medio: x.medio, obs: p.obsCobro ?? "",
     }];
   });
   todas.sort((a, b) => clave(a.numero) - clave(b.numero) || a.fecha.localeCompare(b.fecha));
