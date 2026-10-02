@@ -58,9 +58,8 @@ export default async function HojaDelDia({ params }: { params: Promise<{ fecha: 
           dias={fechasSemana.map((f) => ({ fecha: f, texto: `${nombreDia(f).slice(0, 3)} ${Number(f.slice(8))}`, pedidos: nPedidos.get(f) ?? 0, vehiculos: nSalidas.get(f) ?? 0, cerrado: cerradosSet.has(f) }))}
         />
 
-        <h2 className="text-center text-lg font-bold uppercase tracking-wide">Hoja de ruta · {nombreDia(fecha)} {diaMes(fecha)}</h2>
-
         <HojaDia
+          titulo={`Hoja de ruta · ${nombreDia(fecha)} ${diaMes(fecha)}`}
           fecha={fecha}
           filasIniciales={filas}
           salidas={salidas.map((s) => ({ id: s.id, nombre: titulo(s.vehiculo.nombre), patente: s.vehiculo.patente ?? "", capacidad: s.vehiculo.capacidad, repartidorId: s.repartidorId ?? "" }))}
