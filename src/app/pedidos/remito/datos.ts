@@ -22,6 +22,6 @@ export function datosRemito(p: PedidoRemito) {
     web,
     cliente: p.cliente ?? { nombre: p.webNombre ?? "", razonSocial: null, cuit: null },
     sucursal: p.punto ?? { alias: null, direccion: titulo(p.webDireccion), barrio: p.webBarrio ?? "", telefono: p.webTelefono },
-    items: ordenarItems(p.items).map((i) => ({ sku: i.sku, descripcion: i.producto?.descripcion ?? i.nombre, cantidad: i.cantidad, unidad: i.unidad, precioUnitario: Number(i.precioUnitario) })),
+    items: ordenarItems(p.items).map((i) => ({ sku: i.sku, descripcion: i.nombre, cantidad: i.cantidad, unidad: i.unidad, precioUnitario: Number(i.precioUnitario) })),
   };
 }
