@@ -5,10 +5,10 @@ import { formatoRemito } from "@/lib/remito";
 
 const DIAS: Record<CondicionPago, number> = { CONTADO: 0, DIAS_7: 7, DIAS_15: 15, DIAS_30: 30, DIAS_45: 45 };
 
-type PedidoCobranza = Prisma.PedidoGetPayload<{ include: { items: true; ncAplicaciones: true } }>;
+type PedidoCobranza = Prisma.PedidoGetPayload<{ include: { items: true; ncAplicaciones: { include: { nota: true } } } }>;
 
 /** Para traer junto con el pedido solo las notas de crédito vigentes (no anuladas). */
-export const incluirNc = { ncAplicaciones: { where: { nota: { anuladaEn: null } } } } as const;
+export const incluirNc = { ncAplicaciones: { where: { nota: { anuladaEn: null } }, include: { nota: true } } } as const;
 
 /** Una "partida" de la cuenta: un comprobante (factura o remito) con su monto y su vencimiento. */
 export type Partida = {
@@ -23,6 +23,7 @@ export type Partida = {
   nc: number; // notas de crédito aplicadas
   monto: number; // lo que realmente se debe (bruto − nc)
   cubierta: boolean; // una NC lo cubre entero
+  ncNumeros: string[]; // N° de las notas de crédito aplicadas
   pagada: boolean;
   medio: string | null;
 };
@@ -45,6 +46,7 @@ export function partidaDe(p: PedidoCobranza, condicion: CondicionPago): Partida 
     nc,
     monto: Math.max(0, Math.round((bruto - nc) * 100) / 100),
     cubierta: bruto > 0 && nc + 0.005 >= bruto,
+    ncNumeros: [...new Set(p.ncAplicaciones.map((a) => a.nota.numero ?? "s/n"))],
     pagada: p.pagado && p.cobro === "COBRADO",
     medio: p.medioCobro,
   };

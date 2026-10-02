@@ -18,6 +18,7 @@ export type FilaComprobante = {
   bruto: number;
   nc: number;
   cubierta: boolean;
+  ncTexto: string; // "NC 0001-00000045" (vacío si no tiene)
   monto: number;
   vence: string;
   atraso: number;
@@ -33,7 +34,7 @@ const MEDIOS = [
   { valor: "OTRO", texto: "Otro" },
 ];
 const TEXTO_MEDIO: Record<string, string> = { EFECTIVO: "Efectivo", TRANSFERENCIA: "Transferencia", CHEQUE: "Cheque", MERCADO_PAGO: "Mercado Pago", OTRO: "Otro" };
-const COLUMNAS = "grid-cols-[28px_150px_minmax(160px,1.6fr)_84px_84px_150px_84px_170px_minmax(160px,1.2fr)]";
+const COLUMNAS = "grid-cols-[28px_150px_minmax(160px,1.6fr)_84px_84px_150px_84px_215px_minmax(150px,1.2fr)]";
 const fechaCorta = (s: string) => `${s.slice(8)}/${s.slice(5, 7)}/${s.slice(2, 4)}`;
 
 // Listado de comprobantes (facturas o remitos) en orden de número: se tildan los pagados, se elige el medio y se registra el pago.
@@ -90,15 +91,12 @@ export function ListaComprobantes({ filas }: { filas: FilaComprobante[] }) {
             <Link href={`/cuentas/${f.clienteId}`} className="text-left hover:underline">{f.cliente}</Link>
             <span className="tabular-nums">{fechaCorta(f.cargado)}</span>
             <span className="tabular-nums">{f.entregado ? fechaCorta(f.fecha) : <span className="text-stone-400">—</span>}</span>
-            <span className="font-bold tabular-nums">
-              {formatoPesos(f.cubierta ? 0 : f.monto)}
-              {f.nc > 0 && <span className="block text-[10px] font-normal text-stone-500">de {formatoPesos(f.bruto)} · NC −{formatoPesos(f.nc)}</span>}
-            </span>
+            <span className={`font-bold tabular-nums ${f.cubierta ? "text-stone-400 line-through" : ""}`}>{formatoPesos(f.cubierta ? f.bruto : f.monto)}</span>
             <span className="tabular-nums">{f.entregado && !f.pagada ? fechaCorta(f.vence) : <span className="text-stone-400">—</span>}</span>
             {f.pagada ? (
-              <span className="font-semibold text-verde-800">Pagada · {TEXTO_MEDIO[f.medio ?? ""] ?? ""} <button type="button" onClick={() => deshacer(f.id)} className="ml-1 text-xs font-normal text-stone-500 underline hover:text-rojo-700">deshacer</button></span>
+              <span className="whitespace-nowrap font-semibold text-verde-800">Pagada · {TEXTO_MEDIO[f.medio ?? ""] ?? ""} <button type="button" onClick={() => deshacer(f.id)} className="ml-1 text-xs font-normal text-stone-500 underline hover:text-rojo-700">deshacer</button></span>
             ) : f.cubierta ? (
-              <span className="font-semibold text-stone-700">Cubierta por NC</span>
+              <span className="font-semibold text-stone-700">Anulada por NC</span>
             ) : !f.entregado ? (
               <span className="text-stone-600">Por entregar</span>
             ) : f.atraso > 0 ? (
@@ -106,6 +104,9 @@ export function ListaComprobantes({ filas }: { filas: FilaComprobante[] }) {
             ) : (
               <span className="text-stone-600">Sin pagar</span>
             )}
+            {f.ncTexto ? (
+              <span className="flex h-8 w-full items-center truncate rounded border border-stone-200 bg-stone-100 px-2 text-left text-xs font-semibold text-stone-700" title="Se completa solo al aplicar la nota de crédito">{f.ncTexto}{!f.cubierta && f.nc > 0 ? ` (−${formatoPesos(f.nc)})` : ""}</span>
+            ) : (
             <input
               aria-label="Observación"
               placeholder="N° de cheque, comprobante…"
@@ -114,6 +115,7 @@ export function ListaComprobantes({ filas }: { filas: FilaComprobante[] }) {
               onBlur={(e) => e.target.value.trim() !== f.obs && void guardarObservacion(f.id, e.target.value)}
               className="h-8 w-full rounded border border-stone-300 bg-white px-2 text-left text-xs placeholder:text-stone-400 focus:border-verde-700 focus:outline-none"
             />
+            )}
           </li>
         ))}
       </ul>
