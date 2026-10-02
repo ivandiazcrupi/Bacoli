@@ -10,8 +10,9 @@ import { exigirOficina } from "@/lib/session";
 
 /** Le da a un pedido el siguiente número de remito, si todavía no tiene. El número no cambia nunca. */
 async function asignarNumero(tx: Prisma.TransactionClient, pedidoId: string) {
-  const pedido = await tx.pedido.findUniqueOrThrow({ where: { id: pedidoId }, select: { remitoNumero: true, estado: true, webOrden: true } });
+  const pedido = await tx.pedido.findUniqueOrThrow({ where: { id: pedidoId }, select: { remitoNumero: true, estado: true, webOrden: true, conFactura: true } });
   if (pedido.webOrden) throw new Error("Los pedidos de la tienda online no llevan remito.");
+  if (pedido.conFactura && pedido.remitoNumero === null) throw new Error("Los pedidos con factura no llevan remito: se entrega con la factura.");
   if (pedido.remitoNumero !== null) return pedido.remitoNumero;
   if (pedido.estado === "CANCELADO") throw new Error("El pedido está cancelado.");
   // El incremento se hace dentro de la base y bloquea la fila: dos personas a la vez nunca reciben el mismo número.
@@ -36,7 +37,7 @@ export async function emitirRemitosDia(fecha: string): Promise<{ ok: boolean; ca
   await exigirOficina();
   if (!esFechaValida(fecha)) return { ok: false, cantidad: 0, error: "Fecha inválida." };
   const pedidos = (await db.pedido.findMany({
-    where: { fechaEntrega: aFecha(fecha), estado: { not: "CANCELADO" }, webOrden: null },
+    where: { fechaEntrega: aFecha(fecha), estado: { not: "CANCELADO" }, webOrden: null, conFactura: false },
     select: { id: true, remitoNumero: true, ordenDia: true, ordenRuta: true, salida: { select: { orden: true } } },
   })).sort(porReparto);
   if (pedidos.length === 0) return { ok: false, cantidad: 0, error: "No hay pedidos en este día." };

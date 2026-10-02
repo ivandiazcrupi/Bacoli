@@ -15,7 +15,7 @@ export default async function RemitosDelDia({ params, searchParams }: { params: 
   if (!esFechaValida(fecha)) notFound();
   const [pedidos, empresa] = await Promise.all([
     db.pedido.findMany({
-      where: { fechaEntrega: aFecha(fecha), estado: { not: "CANCELADO" }, remitoNumero: { not: null }, webOrden: null },
+      where: { fechaEntrega: aFecha(fecha), estado: { not: "CANCELADO" }, remitoNumero: { not: null }, webOrden: null, conFactura: false },
       include: { cliente: true, punto: true, salida: true, items: { include: { producto: true } } },
     }),
     db.empresa.findUnique({ where: { id: "principal" } }),

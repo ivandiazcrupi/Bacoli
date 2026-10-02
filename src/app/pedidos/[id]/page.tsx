@@ -76,7 +76,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
         {pedido.estado !== "CANCELADO" ? (
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2">
-              {!web && <BotonRemito pedidoId={pedido.id} numero={pedido.remitoNumero ? `Imprimir remito ${formatoRemito(pedido.remitoNumero)}` : null} textoSinNumero="Emitir remito" clase={boton} />}
+              {!web && !pedido.conFactura && <BotonRemito pedidoId={pedido.id} numero={pedido.remitoNumero ? `Imprimir remito ${formatoRemito(pedido.remitoNumero)}` : null} textoSinNumero="Emitir remito" clase={boton} />}
               {abierto && (
                 <form action={marcarNoEntregado}>
                   <input type="hidden" name="id" value={pedido.id} />
