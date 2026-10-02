@@ -200,6 +200,7 @@ model Pedido {
   medioCobro      MedioPago?
   montoCobrado    Decimal?     @db.Decimal(14, 2)
   obsCobro        String? // observación de la cobranza: N° de cheque, de comprobante de transferencia, etc.
+  manual          Boolean      @default(false) // factura cargada directamente en CUENTA, sin pedido (el total va en webTotal)
   nota            String?
   autorizadoPorId String?
   creadoPorId     String

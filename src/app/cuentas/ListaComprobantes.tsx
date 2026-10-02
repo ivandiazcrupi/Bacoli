@@ -33,7 +33,7 @@ const MEDIOS = [
   { valor: "OTRO", texto: "Otro" },
 ];
 const TEXTO_MEDIO: Record<string, string> = { EFECTIVO: "Efectivo", TRANSFERENCIA: "Transferencia", CHEQUE: "Cheque", MERCADO_PAGO: "Mercado Pago", OTRO: "Otro" };
-const COLUMNAS = "grid-cols-[28px_150px_minmax(160px,1.6fr)_84px_84px_120px_84px_170px_minmax(160px,1.2fr)]";
+const COLUMNAS = "grid-cols-[28px_150px_minmax(160px,1.6fr)_84px_84px_150px_84px_170px_minmax(160px,1.2fr)]";
 const fechaCorta = (s: string) => `${s.slice(8)}/${s.slice(5, 7)}/${s.slice(2, 4)}`;
 
 // Listado de comprobantes (facturas o remitos) en orden de número: se tildan los pagados, se elige el medio y se registra el pago.

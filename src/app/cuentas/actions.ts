@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { importeVigente } from "@/lib/cuenta";
+import { importeVigente, sincronizarCuentaPedido } from "@/lib/cuenta";
 import { db } from "@/lib/db";
 import { exigirOficina } from "@/lib/session";
 import { deshacerCobro, registrarCobro } from "../pedidos/dia/actions";
@@ -121,4 +121,37 @@ export async function anularNotaCredito(notaId: string): Promise<Resultado> {
   });
   revalidatePath("/cuentas", "layout");
   return { ok: true };
+}
+
+/** Carga una factura directamente (sin pedido): por ejemplo para reemplazar una que salió mal. Queda entregada y a cobrar. */
+export async function cargarFactura(datos: { clienteId: string; numero: string; fecha: string; total: number; observacion: string }): Promise<Resultado & { clienteId?: string }> {
+  const usuario = await exigirOficina();
+  const numero = datos.numero.trim();
+  const total = redondear2(datos.total);
+  if (!numero) return { ok: false, error: "Cargá el N° de factura." };
+  if (!(total > 0)) return { ok: false, error: "El total tiene que ser mayor a 0." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(datos.fecha)) return { ok: false, error: "Elegí la fecha de la factura." };
+  if (!(await db.cliente.findUnique({ where: { id: datos.clienteId } }))) return { ok: false, error: "Elegí el cliente." };
+  const repetida = await db.pedido.findFirst({ where: { numeroFactura: { equals: numero, mode: "insensitive" } } });
+  if (repetida) return { ok: false, error: `El N° de factura ${numero} ya está cargado.` };
+
+  await db.$transaction(async (tx) => {
+    const p = await tx.pedido.create({
+      data: {
+        clienteId: datos.clienteId,
+        estado: "ENTREGADO",
+        conFactura: true,
+        manual: true,
+        numeroFactura: numero,
+        webTotal: total,
+        obsCobro: datos.observacion.trim().slice(0, 200) || null,
+        nota: "Factura cargada directamente",
+        creadoPorId: usuario.id,
+        creadoEn: new Date(`${datos.fecha}T12:00:00-03:00`),
+      },
+    });
+    await sincronizarCuentaPedido(tx, p.id, usuario.id);
+  });
+  revalidatePath("/cuentas", "layout");
+  return { ok: true, clienteId: datos.clienteId };
 }
