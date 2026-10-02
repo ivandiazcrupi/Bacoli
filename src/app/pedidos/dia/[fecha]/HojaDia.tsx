@@ -516,10 +516,10 @@ export function HojaDia({ titulo, fecha, filasIniciales, salidas, vehiculosLibre
     <div className="space-y-4">
       {/* Título del día y total de paquetes (todo el día: ubicados o no), para saber si nos pasamos de producción */}
       <div className="flex flex-col items-center gap-2 pt-3">
-        <h2 className="text-sm font-bold uppercase tracking-wide">{titulo}</h2>
-        <div className="inline-flex items-baseline gap-2 rounded-md border border-stone-400 bg-white px-4 py-1.5">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-stone-600">Paquetes del día</span>
-          <span className="text-sm font-bold tabular-nums">{filas.reduce((t, f) => t + f.bultos, 0)}</span>
+        <h2 className="text-base font-bold uppercase tracking-wide">{titulo}</h2>
+        <div className="inline-flex items-baseline gap-2 rounded-md border border-stone-400 bg-white px-5 py-2">
+          <span className="text-xs font-medium uppercase tracking-wide text-stone-600">Paquetes del día</span>
+          <span className="text-base font-bold tabular-nums">{filas.reduce((t, f) => t + f.bultos, 0)}</span>
         </div>
       </div>
       <div className="grid items-center gap-3 text-sm sm:grid-cols-[1fr_auto_1fr]">
