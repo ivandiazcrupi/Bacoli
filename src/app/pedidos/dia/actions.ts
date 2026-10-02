@@ -27,6 +27,7 @@ export async function marcarEntrega(pedidoId: string, valor: "ENTREGADO" | "NO_E
   if ("error" in r) return { ok: false, error: r.error };
   const { pedido } = r;
   if (pedido.estado === "CANCELADO") return { ok: false, error: "El pedido está cancelado." };
+  if (valor === "ENTREGADO" && pedido.conFactura && !pedido.numeroFactura?.trim()) return { ok: false, error: "Este pedido lleva factura: cargá primero el N° de factura y después marcalo como entregado." };
   if (valor !== "ENTREGADO" && pedido.cobro === "COBRADO" && pedido.webPago !== "PAGO_MP") return { ok: false, error: "Primero deshacé el cobro." };
 
   await db.$transaction(async (tx) => {

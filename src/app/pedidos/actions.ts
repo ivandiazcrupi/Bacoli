@@ -246,6 +246,8 @@ export async function marcarEntregado(pedidoId: string, _: EstadoPedidoForm, for
   if (!pedido) return { error: "No encontré el pedido." };
   if (pedido.estado === "CANCELADO") return { error: "El pedido está cancelado." };
 
+  if (pedido.conFactura && !pedido.numeroFactura?.trim()) return { error: "Este pedido lleva factura: cargá primero el N° de factura y después confirmá la entrega." };
+
   const entregas = pedido.items.map((i) => ({ id: i.id, cantidad: i.cantidad, entregada: Math.min(i.cantidad, Number(String(formData.get(`e_${i.id}`) ?? i.cantidad).replace(/\D/g, "") || 0)) }));
   if (entregas.every((e) => e.entregada === 0)) return { error: "No se entregó nada. Si no se pudo entregar, usá \"No entregado\"." };
 

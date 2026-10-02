@@ -10,6 +10,7 @@ import { exigirOficina } from "@/lib/session";
 import { cancelarPedido, marcarNoEntregado, reabrirPedido } from "../actions";
 import { formatoRemito } from "@/lib/remito";
 import { BotonRemito } from "../BotonRemito";
+import { NumeroFactura } from "../NumeroFactura";
 import { CONTENEDOR_PEDIDOS } from "../Encabezado";
 import { LibroCuenta, columnasDeMovimiento } from "@/components/LibroCuenta";
 import { datosEntrega, ordenarItems } from "../filas";
@@ -68,7 +69,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
           {!web && celda(
             pedido.conFactura ? "N° de factura" : "N° de remito",
             pedido.conFactura
-              ? (pedido.numeroFactura ? pedido.numeroFactura : <span className="text-rojo-700">Sin cargar</span>)
+              ? <NumeroFactura pedidoId={pedido.id} inicial={pedido.numeroFactura ?? ""} bloqueado={pedido.estado === "CANCELADO"} />
               : (pedido.remitoNumero ? formatoRemito(pedido.remitoNumero) : <span className="text-rojo-700">Sin emitir</span>),
           )}
         </section>
