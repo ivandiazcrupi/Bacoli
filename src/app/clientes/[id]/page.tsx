@@ -79,7 +79,7 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Link href={`/clientes/${cliente.id}/cuenta`} className="rounded-md border border-white/60 px-4 py-2 text-sm font-semibold uppercase hover:bg-white hover:text-verde-800">Cuenta corriente</Link>
+            <Link href={`/cuentas/${cliente.id}`} className="rounded-md border border-white/60 px-4 py-2 text-sm font-semibold uppercase hover:bg-white hover:text-verde-800">Cuenta corriente</Link>
             <Link href={`/clientes/${cliente.id}/pedidos`} className="rounded-md border border-white/60 px-4 py-2 text-sm font-semibold uppercase hover:bg-white hover:text-verde-800">Pedidos</Link>
             <form action={cambiarActivoCliente}>
               <input type="hidden" name="id" value={cliente.id} />

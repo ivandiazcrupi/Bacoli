@@ -112,7 +112,7 @@ function FilaCliente({ c }: { c: Cliente }) {
 
   const accesos = (
     <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-      <Link href={`/clientes/${c.id}/cuenta`} className={acceso}>Cuenta corriente</Link>
+      <Link href={`/cuentas/${c.id}`} className={acceso}>Cuenta corriente</Link>
       <Link href={`/clientes/${c.id}/pedidos`} className={acceso}>Pedidos</Link>
       <Link href={`/clientes/${c.id}`} className={accesoEditar}>Editar</Link>
     </div>

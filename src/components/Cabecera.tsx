@@ -26,6 +26,7 @@ export function Cabecera({ usuario }: { usuario: Usuario }) {
         <nav aria-label="Menú principal" className="order-[98] -mx-4 flex w-[calc(100%+2rem)] items-center gap-3 overflow-x-auto whitespace-nowrap px-4 pb-1 lg:order-none lg:mx-0 lg:w-auto lg:justify-center lg:gap-2 lg:overflow-visible lg:px-0 lg:pb-0">
           {oficina && <Link href="/clientes" className={principal}>Clientes</Link>}
           {oficina && <Link href="/pedidos" className={principal}>Pedidos</Link>}
+          {oficina && <Link href="/cuentas" className={principal}>Cuenta</Link>}
           {oficina && <span aria-hidden className="mx-2 hidden h-5 w-px bg-stone-300 lg:block" />}
           {oficina && <Link href="/precios" className={secundario}>Precios</Link>}
           {puedeGestionarUsuarios(usuario.rol) && <Link href="/usuarios" className={secundario}>Usuarios</Link>}
