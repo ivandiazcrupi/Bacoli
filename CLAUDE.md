@@ -182,6 +182,7 @@ y ~1000 minoristas.
   cabecera y hojas hasta `max-w-[1900px]`. No volver a centrar todo en una columna angosta.
 
 ## Colores de la marca (pedido del dueño)
+- **ACTUALIZACIÓN (pedido del dueño, que los colores no cansen la vista): interfaz en blancos, grises cálidos y negros, como Claude.** Fondo de página gris cálido muy claro (`#f6f5f2`), tarjetas y tablas blancas, **la escala `crema` ahora es un gris cálido** (50 `#faf9f7` … 400 `#c6c2b7`; ya no es amarilla), encabezados de tabla en gris claro con letra gris oscura (`cabeceraTabla`), bordes suaves (`#d3d0c7`), cabecera blanca con línea fina, pastillas/pestañas activas en gris oscuro (`stone-800`), banner del cliente y barra de Precios en blanco/gris. **El color queda solo donde significa algo:** verde = acciones principales (Guardar, Dejar lista, Cargar…) y "entregado/pagado"; rojo = avisos, deuda, "no entregado", borrar; celeste = cuenta corriente. Sin modo oscuro por ahora (decisión del dueño). Lo de abajo sobre crema/verde en fondos y barras queda reemplazado por esto.
 - **Crema `#ede6c8`, verde `#026433`, rojo `#aa0e1d`** (`tailwind.config.ts`: escalas `crema`, `verde`, `rojo`; el 700 del verde y del rojo y el 200 de la crema son los exactos).
   **Verde = marca y acciones** (botones principales, pastilla activa, menú, "entregado/cobrado"); **crema = fondos y detalles suaves** (fondo de página `crema-50`,
   insignias, desplegable de Productos, "cuenta corriente"); **rojo = avisos y lo que borra** (Eliminar, errores, deuda, falta de N° de factura, "no entregado").

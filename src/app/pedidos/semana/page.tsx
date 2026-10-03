@@ -36,7 +36,7 @@ export default async function Semana({ searchParams }: { searchParams: Promise<{
 
         <nav className="flex flex-wrap items-center justify-center gap-2 text-sm" aria-label="Semana">
           <Link href={`/pedidos/semana?semana=${sumarDias(lunes, -7)}`} className="rounded-md border border-stone-400 bg-white px-3 py-2 shadow-sm hover:border-verde-700" aria-label="Semana anterior">←</Link>
-          <span className="min-w-40 rounded-md bg-verde-800 px-5 py-2 text-center text-sm font-bold uppercase tracking-wide text-white">Semana {diaMes(lunes)}</span>
+          <span className="min-w-40 rounded-md border border-stone-300 bg-white px-5 py-2 text-center text-sm font-bold uppercase tracking-wide text-stone-800">Semana {diaMes(lunes)}</span>
           <Link href={`/pedidos/semana?semana=${sumarDias(lunes, 7)}`} className="rounded-md border border-stone-400 bg-white px-3 py-2 shadow-sm hover:border-verde-700" aria-label="Semana siguiente">→</Link>
           {lunes !== esta && <Link href="/pedidos/semana" className="rounded-md border border-stone-400 bg-white px-3 py-2 shadow-sm hover:border-verde-700">Esta semana</Link>}
         </nav>

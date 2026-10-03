@@ -407,7 +407,7 @@ function FilaUbicar({ f, salidas, bloqueada, acc }: { f: Fila; salidas: SalidaIn
           {f.items.map((i, k) => <span key={k} className="contents"><span className="text-right font-semibold tabular-nums">{i.cantidad}</span><span className="leading-snug">{i.nombre}</span></span>)}
         </span>
         <span className="text-sm font-semibold tabular-nums">{formatoPesos(f.monto)}</span>
-        <span><span className={`inline-block rounded px-2 py-0.5 text-xs font-bold tracking-wide ${f.conFactura ? "bg-verde-800 text-white" : "bg-crema-200 text-verde-900"}`}>{f.conFactura ? "FACTURA" : "REMITO"}</span></span>
+        <span><span className={`inline-block rounded px-2 py-0.5 text-xs font-bold tracking-wide ${f.conFactura ? "bg-stone-700 text-white" : "bg-crema-200 text-stone-700"}`}>{f.conFactura ? "FACTURA" : "REMITO"}</span></span>
         <Link href={`/pedidos/${f.id}`} className="text-sm font-semibold text-verde-800 underline-offset-4 hover:underline">Abrir ›</Link>
         {salidas.length === 1 ? (
           <button type="button" disabled={bloqueada} onClick={() => acc.mover(f, salidas[0].id)} className="h-9 rounded-md border border-stone-400 bg-white px-1 text-sm font-medium shadow-sm hover:bg-crema-100 disabled:opacity-40">↓ {salidas[0].nombre}</button>

@@ -6,7 +6,7 @@ export const estiloDato = `${estiloCampo} dato`;
 export const estiloBoton = "w-full rounded-lg bg-verde-700 px-4 py-3 font-semibold text-white disabled:opacity-60";
 export const estiloBotonChico = "rounded-md border border-stone-400 bg-white px-3 py-2 text-sm font-medium shadow-sm hover:border-verde-700 hover:text-verde-800";
 /** Barra de encabezado de las tablas: verde oscuro con letras blancas (Clientes, Sucursales, Pedidos del cliente). */
-export const cabeceraTabla = "bg-verde-800 text-xs font-semibold uppercase tracking-wide text-white";
+export const cabeceraTabla = "border-b border-stone-300 bg-crema-200 text-xs font-semibold uppercase tracking-wide text-stone-700";
 
 export function Campo({ etiqueta, ayuda, children }: { etiqueta: string; ayuda?: string; children: ReactNode }) {
   return (

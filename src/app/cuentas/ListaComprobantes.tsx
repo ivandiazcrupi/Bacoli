@@ -77,7 +77,7 @@ export function ListaComprobantes({ filas }: { filas: FilaComprobante[] }) {
 
   return (
     <div>
-      <div className={`hidden items-center gap-x-3 bg-verde-800 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-white lg:grid ${COLUMNAS}`}>
+      <div className={`hidden items-center gap-x-3 border-b border-stone-300 bg-crema-200 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-stone-700 lg:grid ${COLUMNAS}`}>
         <input type="checkbox" aria-label="Elegir todos los de esta página" checked={pagables.length > 0 && elegidas.size === pagables.length} onChange={() => setElegidas(elegidas.size === pagables.length ? new Set() : new Set(pagables.map((f) => f.id)))} className="h-4 w-4 accent-[#ede6c8]" />
         <span>{filas[0].tipo === "FACTURA" ? "Factura" : "Remito"}</span><span className="text-left">Cliente</span><span>Cargado</span><span>Entrega</span><span>Monto</span><span>Vence</span><span>Estado</span><span>Observación</span>
       </div>

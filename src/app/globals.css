@@ -15,16 +15,17 @@
    estado abajo. Para ajustarlo se toca solo este bloque.
    ===================================================================================================== */
 html.intermedio { font-size: 14px; }
-.intermedio body { background: #f1efe3; padding-bottom: 24px; }
+.intermedio body { background: #f6f5f2; color: #26241f; padding-bottom: 24px; }
 .intermedio *, .intermedio *::before, .intermedio *::after { border-radius: 3px !important; box-shadow: none !important; }
-.intermedio header.bg-white { background: #fff; border-bottom: 3px solid #026433 !important; }
+.intermedio header.bg-white { background: #fff; border-bottom: 1px solid #d6d3ca !important; }
 .intermedio header.bg-white > div { padding-top: 0 !important; padding-bottom: 0 !important; }
-.intermedio header.bg-white nav a:hover { background: #e9ebe2; }
-.intermedio main h1 { font-size: 18px !important; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: #014d27; border-bottom: 2px solid #026433; display: inline-block; padding-bottom: 2px; }
+.intermedio header.bg-white nav a:hover { background: #efede7; }
+.intermedio main h1 { font-size: 18px !important; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: #26241f; border-bottom: 2px solid #26241f; display: inline-block; padding-bottom: 2px; }
 .intermedio main { padding-top: 1rem !important; padding-bottom: 1rem !important; }
-.intermedio nav[aria-label="Pedidos"] { border-bottom: 2px solid #026433 !important; gap: 2px !important; }
+.intermedio nav[aria-label="Pedidos"] { border-bottom: 1px solid #cfcbc1 !important; gap: 2px !important; }
 .intermedio nav[aria-label="Pedidos"] a { border-radius: 3px 3px 0 0 !important; padding: .4rem 1.1rem !important; }
-.intermedio [class*="border-stone-200"], .intermedio [class*="border-stone-300"] { border-color: #8a8d82 !important; }
+.intermedio [class*="border-stone-200"], .intermedio [class*="border-stone-300"] { border-color: #d3d0c7 !important; }
+.intermedio [class*="border-stone-400"] { border-color: #bcb8ad !important; }
 .intermedio [class*="py-4"] { padding-top: .6rem !important; padding-bottom: .6rem !important; }
 .intermedio [class*="py-3.5"], .intermedio [class*="py-3"] { padding-top: .4rem !important; padding-bottom: .4rem !important; }
 .intermedio [class*="p-5"] { padding: .9rem !important; }
@@ -33,8 +34,8 @@ html.intermedio { font-size: 14px; }
 .intermedio main a, .intermedio main button { white-space: nowrap; }
 .intermedio main .flex-wrap.lg\:justify-end { flex-wrap: nowrap !important; gap: 4px !important; }
 .intermedio main .flex-wrap.lg\:justify-end a { font-size: 10px !important; padding: .2rem .5rem !important; }
-.intermedio input:not([type="checkbox"]):not([type="radio"]), .intermedio select, .intermedio textarea { border-color: #6b6e66 !important; }
-.intermedio body > p { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: #e3e0cc; border-top: 1px solid #8a8d82; text-align: left !important; padding: .2rem .8rem !important; font-size: 11px !important; color: #222 !important; }
+.intermedio input:not([type="checkbox"]):not([type="radio"]), .intermedio select, .intermedio textarea { border-color: #a8a49a !important; }
+.intermedio body > p { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: #efede8; border-top: 1px solid #d3d0c7; text-align: left !important; padding: .2rem .8rem !important; font-size: 11px !important; color: #4a473f !important; }
 .intermedio header.bg-white a, .intermedio header.bg-white button { white-space: nowrap; }
 .intermedio main > h1.text-4xl, .intermedio main > h1 { color: #1c1917 !important; border: 0 !important; text-transform: none !important; letter-spacing: 0 !important; font-size: 34px !important; display: block; padding: 0; line-height: 1.2; }
 @media (max-width: 640px) { .intermedio main > h1 { font-size: 24px !important; } }

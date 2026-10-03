@@ -49,13 +49,13 @@ export default async function Pedidos({ searchParams }: { searchParams: Promise<
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-2">
-            <Link href={enlace({ lista: "" })} className={`${pastilla} ${!esWeb ? "bg-verde-700 text-white shadow-sm" : "border border-stone-400 bg-white text-stone-700 hover:border-verde-700"}`}>Mayoristas <span className={!esWeb ? "text-verde-100" : "text-stone-500"}>{cuentaMayoristas}</span></Link>
-            <Link href={enlace({ lista: "web" })} className={`${pastilla} ${esWeb ? "bg-verde-700 text-white shadow-sm" : "border border-stone-400 bg-white text-stone-700 hover:border-verde-700"}`}>Minoristas (web) <span className={esWeb ? "text-verde-100" : "text-stone-500"}>{cuentaWeb}</span></Link>
+            <Link href={enlace({ lista: "" })} className={`${pastilla} ${!esWeb ? "bg-stone-800 text-white" : "border border-stone-400 bg-white text-stone-700 hover:border-verde-700"}`}>Mayoristas <span className={!esWeb ? "text-verde-100" : "text-stone-500"}>{cuentaMayoristas}</span></Link>
+            <Link href={enlace({ lista: "web" })} className={`${pastilla} ${esWeb ? "bg-stone-800 text-white" : "border border-stone-400 bg-white text-stone-700 hover:border-verde-700"}`}>Minoristas (web) <span className={esWeb ? "text-verde-100" : "text-stone-500"}>{cuentaWeb}</span></Link>
           </div>
           <nav className="flex flex-wrap items-center gap-3 text-sm" aria-label="Semana en la que se asigna">
             <span className="text-xs font-semibold uppercase tracking-wide text-stone-600">Asignar a</span>
             <Link href={enlace({ semana: sumarDias(lunes, -7) })} className="rounded-md border border-stone-400 bg-white px-3 py-2 shadow-sm hover:border-verde-700" aria-label="Semana anterior">←</Link>
-            <span className="min-w-36 rounded-md bg-verde-800 px-4 py-2 text-center text-sm font-bold uppercase tracking-wide text-white">Semana {diaMes(lunes)}</span>
+            <span className="min-w-36 rounded-md border border-stone-300 bg-white px-4 py-2 text-center text-sm font-bold uppercase tracking-wide text-stone-800">Semana {diaMes(lunes)}</span>
             <Link href={enlace({ semana: sumarDias(lunes, 7) })} className="rounded-md border border-stone-400 bg-white px-3 py-2 shadow-sm hover:border-verde-700" aria-label="Semana siguiente">→</Link>
             {lunes !== esta && <Link href={enlace({ semana: "" })} className="rounded-md border border-stone-400 bg-white px-3 py-2 shadow-sm hover:border-verde-700">Esta semana</Link>}
           </nav>

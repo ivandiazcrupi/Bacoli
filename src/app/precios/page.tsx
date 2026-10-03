@@ -36,7 +36,7 @@ export default async function Precios({ searchParams }: { searchParams: Promise<
               <Link
                 key={l.id}
                 href={`/precios?lista=${l.id}`}
-                className={`rounded-full px-5 py-2 text-sm font-semibold uppercase tracking-wide transition ${l.id === lista?.id ? "bg-verde-700 text-white shadow-sm" : "border border-stone-300 bg-white text-stone-600 hover:border-verde-600 hover:text-verde-800"}`}
+                className={`rounded-full px-5 py-2 text-sm font-semibold uppercase tracking-wide transition ${l.id === lista?.id ? "bg-stone-800 text-white" : "border border-stone-300 bg-white text-stone-600 hover:border-verde-600 hover:text-verde-800"}`}
               >
                 {l.nombre}
               </Link>
@@ -51,9 +51,9 @@ export default async function Precios({ searchParams }: { searchParams: Promise<
 
           {lista ? (
             <div className="overflow-hidden rounded-xl border border-stone-300 bg-white shadow-sm">
-              <div className="flex flex-wrap items-baseline justify-between gap-3 bg-verde-800 px-6 py-4 text-white">
+              <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-stone-300 bg-crema-100 px-6 py-4 text-stone-900">
                 <h2 className="shrink-0 text-lg font-bold uppercase tracking-wide">Lista {lista.nombre}</h2>
-                <span className="text-right text-xs text-verde-100">Precios sin IVA, por la unidad de venta de cada producto</span>
+                <span className="text-right text-xs text-stone-600">Precios sin IVA, por la unidad de venta de cada producto</span>
               </div>
               <div className="p-4 sm:p-6"><GrillaPrecios lista={lista} productos={productos} precios={mapa} /></div>
             </div>
@@ -65,7 +65,7 @@ export default async function Precios({ searchParams }: { searchParams: Promise<
         <details className="group overflow-hidden rounded-2xl border border-crema-300 bg-crema-50/60">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-6 py-4">
             <span>
-              <span className="block text-lg font-bold">Productos <span className="ml-1 rounded-full bg-verde-700 px-2.5 py-0.5 text-xs font-semibold text-white">{productos.length}</span></span>
+              <span className="block text-lg font-bold">Productos <span className="ml-1 rounded-full bg-stone-700 px-2.5 py-0.5 text-xs font-semibold text-white">{productos.length}</span></span>
               <span className="block text-sm text-stone-600">Ver, editar o agregar productos (nombre, código, unidad, EAN)</span>
             </span>
             <span aria-hidden className="text-2xl text-verde-800 transition group-open:rotate-180">⌄</span>

@@ -14,7 +14,7 @@ const COLUMNAS = "lg:grid-cols-[1fr_1.5fr_1.4fr_1fr_2fr_7rem_5.5rem_4.5rem_16rem
 const ENCABEZADOS = ["Barrio", "Cliente", "Dirección", "Teléfono", "Pedido", "Monto", "Factura", "", "Asignar"];
 
 function Comprobante({ conFactura }: { conFactura: boolean }) {
-  return <span className={`inline-block rounded px-2 py-0.5 text-xs font-bold tracking-wide ${conFactura ? "bg-verde-800 text-white" : "bg-crema-200 text-verde-900"}`}>{conFactura ? "FACTURA" : "REMITO"}</span>;
+  return <span className={`inline-block rounded px-2 py-0.5 text-xs font-bold tracking-wide ${conFactura ? "bg-stone-700 text-white" : "bg-crema-200 text-stone-700"}`}>{conFactura ? "FACTURA" : "REMITO"}</span>;
 }
 
 function Telefono({ tel }: { tel: string }) {
@@ -87,7 +87,7 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
   return (
     <div className="space-y-2">
       {error && <p className="rounded-lg border border-rojo-600 bg-rojo-50 p-3 text-sm text-rojo-700" role="alert">{error}</p>}
-      <div className={`hidden gap-x-4 rounded-t-xl bg-verde-800 px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-white lg:grid ${COLUMNAS}`}>
+      <div className={`hidden gap-x-4 rounded-t-xl border border-stone-300 bg-crema-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-stone-700 lg:grid ${COLUMNAS}`}>
         {ENCABEZADOS.map((h, i) => <span key={i} className="text-center">{h}</span>)}
       </div>
       {filas.map((f) => (
