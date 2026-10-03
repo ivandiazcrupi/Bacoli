@@ -67,6 +67,8 @@ export async function reiniciarDatos(_: EstadoReinicio, formData: FormData): Pro
     await tx.notaCreditoAplicacion.deleteMany({});
     await tx.notaCredito.deleteMany({});
     await tx.movimientoCuenta.deleteMany({});
+    await tx.aplicacionNcArca.deleteMany({});
+    await tx.comprobanteArca.deleteMany({});
     await tx.intentoEntrega.deleteMany({});
     const borrados = await tx.pedido.deleteMany({ where: { id: { notIn: ids } } }); // los renglones se borran con su pedido
     await tx.salida.deleteMany({});

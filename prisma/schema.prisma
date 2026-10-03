@@ -208,12 +208,12 @@ model Pedido {
   actualizadoEn   DateTime     @updatedAt
 
   // Pedidos de la tienda online (Empretienda): los datos de entrega viven en el mismo pedido y no pasan por cuenta corriente.
-  webOrden     String?  @unique // N° de orden de Empretienda: evita cargar dos veces el mismo pedido
+  webOrden     String?   @unique // N° de orden de Empretienda: evita cargar dos veces el mismo pedido
   webNombre    String?
   webDireccion String?
   webBarrio    String?
   webTelefono  String?
-  webTotal     Decimal? @db.Decimal(14, 2) // lo que pagó el cliente en la tienda
+  webTotal     Decimal?  @db.Decimal(14, 2) // lo que pagó el cliente en la tienda
   webPago      String? // PAGO_MP (ya pagado con Mercado Pago) o PENDIENTE (todavía no se cruzó la transferencia)
   webPagoPor   String? // quién confirmó la transferencia (nombre)
   webPagoEn    DateTime? // cuándo
@@ -289,9 +289,9 @@ model DiaListo {
 
 // Datos de la empresa: salen impresos en el remito (y más adelante en la factura). Hay una sola fila.
 model Empresa {
-  id                String  @id @default("principal")
-  razonSocial       String  @default("")
-  nombreComercial   String  @default("BACOLI")
+  id                String    @id @default("principal")
+  razonSocial       String    @default("")
+  nombreComercial   String    @default("BACOLI")
   cuit              String?
   condicionIva      String?
   domicilio         String?
@@ -401,21 +401,44 @@ model IntentoEntrega {
 // Comprobante emitido en ARCA (facturas y notas de crédito), traído del archivo "Mis Comprobantes Emitidos".
 // Por ahora solo se COMPARA con los pedidos (conciliación); no mueve la cuenta corriente.
 model ComprobanteArca {
-  id            String   @id @default(cuid())
+  id            String     @id @default(cuid())
   tipo          Int // código ARCA: 1 Factura A, 3 NC A, 6 Factura B, 8 NC B, 11 Factura C, 13 NC C…
   puntoVenta    Int
   numero        Int
-  fecha         DateTime @db.Date
+  fecha         DateTime   @db.Date
   cuitReceptor  String? // solo dígitos
   razonSocial   String?
-  total         Decimal  @db.Decimal(14, 2)
+  total         Decimal    @db.Decimal(14, 2)
   cae           String?
-  esNotaCredito Boolean  @default(false)
-  importadoEn   DateTime @default(now())
+  esNotaCredito Boolean    @default(false)
+  importadoEn   DateTime   @default(now())
   importadoPor  String?
   puntoId       String? // sucursal a la que va esta factura (la elige una persona; ARCA solo sabe la razón social)
   observacion   String? // dato libre: barrio, aclaración…
+  pagado        Boolean    @default(false) // cobrada (la cobranza de las facturas se lleva sobre lo que dice ARCA)
+  medioCobro    MedioPago?
+  pagadoEn      DateTime?
+  obsCobro      String? // N° de cheque, comprobante de transferencia…
+
+  notasAplicadas    AplicacionNcArca[] @relation("NotaDeCredito") // si esta fila es una nota de crédito: a qué facturas se aplicó
+  creditosRecibidos AplicacionNcArca[] @relation("FacturaCreditada") // si es una factura: qué notas de crédito la bajan
 
   @@unique([tipo, puntoVenta, numero])
   @@index([numero])
+}
+
+// Una nota de crédito de ARCA aplicada (entera o en parte) a una factura de ARCA. Se anula (se borra la fila) si se aplicó mal.
+model AplicacionNcArca {
+  id        String   @id @default(cuid())
+  ncId      String
+  facturaId String
+  monto     Decimal  @db.Decimal(14, 2)
+  creadoEn  DateTime @default(now())
+  creadoPor String?
+
+  nc      ComprobanteArca @relation("NotaDeCredito", fields: [ncId], references: [id], onDelete: Cascade)
+  factura ComprobanteArca @relation("FacturaCreditada", fields: [facturaId], references: [id], onDelete: Cascade)
+
+  @@index([ncId])
+  @@index([facturaId])
 }
