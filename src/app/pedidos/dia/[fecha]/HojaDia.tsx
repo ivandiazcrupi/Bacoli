@@ -60,7 +60,7 @@ export type SalidaInfo = { id: string; nombre: string; patente: string; capacida
 export type Opcion = { id: string; nombre: string };
 
 // Todo entra a lo ancho (sin deslizar): columnas justas y todo centrado.
-const COLUMNAS = "34px 76px minmax(120px,1.2fr) minmax(100px,1fr) 128px minmax(120px,1.4fr) 84px 96px 120px 120px 96px 56px";
+const COLUMNAS = "34px 76px minmax(110px,1.2fr) minmax(110px,1.1fr) 118px minmax(160px,1.5fr) 88px 88px 112px 110px 92px 56px";
 const ENCABEZADOS = ["N°", "Barrio", "Cliente", "Dirección", "Teléfono", "Pedido", "Monto", "Comprobante", "Entrega", "Cobro", "Mover", "Abrir"];
 const MEDIOS: { valor: string; texto: string }[] = [
   { valor: "EFECTIVO", texto: "Efectivo" },
@@ -263,19 +263,19 @@ function FilaHoja({ f, n, bloqueada, fija, acc, salidas }: { f: Fila; n: number;
       ref={setNodeRef}
       role="row"
       style={{ gridTemplateColumns: COLUMNAS, transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
-      className={`grid items-center gap-x-2 rounded-lg border bg-white px-2 py-2 text-center text-sm text-stone-900 ${BORDE_FILA[f.estado]}`}
+      className={`grid items-center gap-x-2 rounded-lg border bg-white px-2 py-2 text-center text-[14px] text-stone-900 ${BORDE_FILA[f.estado]}`}
     >
       <div role="cell" className="flex justify-center">
         <button type="button" disabled={fija} aria-label={`Mover el pedido ${n}`} className="flex h-7 w-7 cursor-grab items-center justify-center rounded-full bg-stone-800 text-xs font-semibold text-white disabled:cursor-default" {...attributes} {...listeners}>{n}</button>
       </div>
-      <div role="cell" className="text-xs font-bold uppercase leading-tight tracking-wide text-stone-700">{f.barrio}</div>
+      <div role="cell" className="text-[12px] font-bold uppercase leading-tight tracking-wide text-stone-800">{f.barrio}</div>
       <div role="cell" className="leading-snug">
         <p className="font-bold">{f.cliente}</p>
         <EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} />
       </div>
       <div role="cell" className="min-w-0 break-words leading-snug">
         <a href={mapa(f)} target="_blank" rel="noreferrer" className="hover:underline">{f.direccion}</a>
-        {f.comentario && <p className="text-xs font-semibold text-rojo-700">{f.comentario}</p>}
+        {f.comentario && <p className="text-[13px] font-semibold text-rojo-700">{f.comentario}</p>}
       </div>
       <div role="cell" className="whitespace-nowrap tabular-nums">
         {f.telefono ? (enlaceWhatsApp(f.telefono) ? <a href={enlaceWhatsApp(f.telefono)!} target="_blank" rel="noreferrer" className="hover:text-verde-800 hover:underline">{f.telefono}</a> : f.telefono) : <span className="text-stone-400">—</span>}
@@ -392,17 +392,17 @@ function FilaUbicar({ f, salidas, bloqueada, acc }: { f: Fila; salidas: SalidaIn
     >
       <div className={`grid items-center gap-x-4 gap-y-2 text-center ${COLUMNAS_UBICAR}`}>
         <button type="button" disabled={bloqueada} aria-label="Arrastrar el pedido a un vehículo" className="hidden cursor-grab text-lg leading-none text-stone-500 disabled:cursor-default disabled:opacity-30 lg:block" {...attributes} {...listeners}>⋮⋮</button>
-        <span className="text-sm font-semibold">{f.barrio}</span>
-        <span className="text-sm font-semibold leading-snug">{f.cliente}<EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} /></span>
-        <span className="text-sm leading-snug">
+        <span className="text-[14px] font-semibold">{f.barrio}</span>
+        <span className="text-[14px] font-semibold leading-snug">{f.cliente}<EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} /></span>
+        <span className="text-[14px] leading-snug">
           {f.direccion}
-          {f.comentario && <span className="mt-0.5 block text-xs font-medium text-rojo-700">{f.comentario}</span>}
+          {f.comentario && <span className="mt-0.5 block text-[13px] font-medium text-rojo-700">{f.comentario}</span>}
         </span>
-        <span className="text-sm tabular-nums">{f.telefono ? (wa ? <a href={wa} target="_blank" rel="noreferrer" className="hover:text-verde-800 hover:underline">{f.telefono}</a> : f.telefono) : <span className="text-stone-400">—</span>}</span>
-        <span className="inline-grid justify-center justify-self-center gap-x-2 gap-y-0.5 text-left text-sm [grid-template-columns:auto_auto]">
+        <span className="text-[14px] tabular-nums">{f.telefono ? (wa ? <a href={wa} target="_blank" rel="noreferrer" className="hover:text-verde-800 hover:underline">{f.telefono}</a> : f.telefono) : <span className="text-stone-400">—</span>}</span>
+        <span className="inline-grid justify-center justify-self-center gap-x-2 gap-y-0.5 text-left text-[14px] [grid-template-columns:auto_auto]">
           {f.items.map((i, k) => <span key={k} className="contents"><span className="text-right font-semibold tabular-nums">{i.cantidad}</span><span className="leading-snug">{i.nombre}</span></span>)}
         </span>
-        <span className="text-sm font-semibold tabular-nums">{formatoPesos(f.monto)}</span>
+        <span className="text-[14px] font-semibold tabular-nums">{formatoPesos(f.monto)}</span>
         <span><span className={`inline-block rounded px-2 py-0.5 text-xs font-bold tracking-wide ${f.conFactura ? "bg-stone-700 text-white" : "bg-crema-200 text-stone-700"}`}>{f.conFactura ? "FACTURA" : "REMITO"}</span></span>
         <Link href={`/pedidos/${f.id}`} className="text-sm font-semibold text-verde-800 underline-offset-4 hover:underline">Abrir ›</Link>
         {salidas.length === 1 ? (

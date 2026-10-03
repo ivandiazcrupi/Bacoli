@@ -190,6 +190,7 @@ y ~1000 minoristas.
 - **Barrio se escribe a mano** (sin desplegable de sugerencias).
 
 ## Estilo "sistema de trabajo": firme y robusto (pedido del dueño)
+- **Legibilidad de los datos del pedido** (pedido del dueño: "no llego a leer bien"): en las filas de Pedidos (mayoristas y minoristas), Sin ubicar y la hoja de ruta, los datos (cliente, dirección, teléfono, pedido, monto) van en **14 px** (antes ~12) y el barrio/comentarios en 12–13 px, con color oscuro; las columnas de la hoja de ruta se reacomodaron para que el pedido entre en una línea por producto a 1366 px.
 - Nada de gris pálido ni "sistemita": **bordes definidos** (`stone-300/400`, no `stone-200`), sombras suaves, campos blancos con borde marcado y foco verde
   (`estiloCampo`), etiquetas en semibold, **encabezados de tabla en barra verde oscura con letras blancas** (`cabeceraTabla` en `campos.tsx`).
 - **Ficha del cliente:** banner verde oscuro con el nombre grande, etiquetas (activo, N sucursales, lista) y los accesos; cada bloque es una tarjeta con panel lateral crema y
