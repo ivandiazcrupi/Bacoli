@@ -43,3 +43,50 @@ export async function guardarEmpresa(_: EstadoEmpresa, formData: FormData): Prom
   revalidatePath("/empresa");
   return { ok: "Datos guardados." };
 }
+
+// ---------- Empezar de cero (para pruebas con el equipo) ----------
+// Deja el sistema como recién armado: sin pedidos, sin cuenta corriente, sin hojas de ruta y con los remitos en R-0001, conservando
+// clientes, sucursales, productos, precios, usuarios, vehículos y datos de la empresa, y los ÚLTIMOS 10 pedidos minoristas, reiniciados.
+// Solo dueños, solo si se bajó una copia de seguridad en los últimos 30 minutos y se escribió BORRAR.
+export type EstadoReinicio = { ok?: string; error?: string } | undefined;
+const CONSERVAR_MINORISTAS = 10;
+const MINUTOS_COPIA = 30;
+
+export async function reiniciarDatos(_: EstadoReinicio, formData: FormData): Promise<EstadoReinicio> {
+  const usuario = await exigirUsuario();
+  if (usuario.rol !== "DUENO") return { error: "Solo un dueño puede hacer esto." };
+  if (String(formData.get("confirmacion") ?? "").trim().toUpperCase() !== "BORRAR") return { error: "Escribí la palabra BORRAR para confirmar." };
+  const empresa = await db.empresa.findUnique({ where: { id: "principal" }, select: { ultimaCopia: true } });
+  if (!empresa?.ultimaCopia || Date.now() - empresa.ultimaCopia.getTime() > MINUTOS_COPIA * 60 * 1000) {
+    return { error: `Primero bajá la copia de seguridad (botón de arriba): tiene que ser de los últimos ${MINUTOS_COPIA} minutos.` };
+  }
+
+  const conservar = await db.pedido.findMany({ where: { origen: "WEB" }, orderBy: [{ creadoEn: "desc" }, { webOrden: "desc" }], take: CONSERVAR_MINORISTAS, select: { id: true, webOrden: true } });
+  const ids = conservar.map((p) => p.id);
+  const eliminados = await db.$transaction(async (tx) => {
+    await tx.notaCreditoAplicacion.deleteMany({});
+    await tx.notaCredito.deleteMany({});
+    await tx.movimientoCuenta.deleteMany({});
+    await tx.intentoEntrega.deleteMany({});
+    const borrados = await tx.pedido.deleteMany({ where: { id: { notIn: ids } } }); // los renglones se borran con su pedido
+    await tx.salida.deleteMany({});
+    await tx.diaCerrado.deleteMany({});
+    await tx.diaListo.deleteMany({});
+    // Los minoristas que quedan arrancan de cero: pendientes, sin día, sin camioneta, sin cobro ni remito. Mercado Pago sigue pagado; las transferencias vuelven a pendientes.
+    await tx.pedido.updateMany({
+      where: { id: { in: ids } },
+      data: { estado: "PENDIENTE", fechaEntrega: null, salidaId: null, ordenRuta: 0, cobro: null, medioCobro: null, montoCobrado: null, pagado: false, remitoNumero: null, remitoEmitidoEn: null, nota: null, obsCobro: null, numeroFactura: null },
+    });
+    await tx.pedido.updateMany({ where: { id: { in: ids }, webPago: { not: "PAGO_MP" } }, data: { webPago: "PENDIENTE", webPagoPor: null, webPagoEn: null } });
+    await tx.pedidoItem.updateMany({ where: { pedidoId: { in: ids } }, data: { cantidadEntregada: null } });
+    // Contadores: remitos otra vez desde R-0001 y los minoristas cargados a mano siguen sin repetir número.
+    await tx.numerador.deleteMany({ where: { id: "REMITO" } });
+    const manuales = conservar.map((p) => Number(/^M-(\d+)$/.exec(p.webOrden ?? "")?.[1] ?? 0));
+    const ultimoManual = Math.max(0, ...manuales);
+    await tx.numerador.deleteMany({ where: { id: "WEB_MANUAL" } });
+    if (ultimoManual > 0) await tx.numerador.create({ data: { id: "WEB_MANUAL", ultimo: ultimoManual } });
+    return borrados.count;
+  }, { timeout: 60000 });
+  revalidatePath("/", "layout");
+  return { ok: `Listo: se borraron ${eliminados} pedidos y quedaron ${ids.length} minoristas para probar. Los remitos arrancan en R-0001.` };
+}
