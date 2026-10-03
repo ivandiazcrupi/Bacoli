@@ -1,5 +1,6 @@
 "use server";
 
+import { webPagado, ERROR_WEB_SIN_PAGO } from "@/lib/webpago";
 import { leerCobro, marcarCobroEnTx } from "@/lib/cobrar";
 import { errorSiHojaFija } from "@/lib/dias";
 import { mayus, oracion, titulo } from "@/lib/mayusculas";
@@ -230,6 +231,7 @@ export async function asignarADia(pedidoId: string, fecha: string): Promise<{ ok
   const pedido = await db.pedido.findUnique({ where: { id: pedidoId } });
   if (!pedido || pedido.estado === "CANCELADO") return { ok: false, error: "No se puede asignar ese pedido." };
   if (pedido.estado === "ENTREGADO") return { ok: false, error: "Un pedido entregado no se puede mover." };
+  if (pedido.webOrden && !webPagado(pedido.webOrden, pedido.webPago)) return { ok: false, error: ERROR_WEB_SIN_PAGO };
   // Ni se le suman pedidos a una hoja lista o cerrada, ni se saca un pedido de ella (para eso está "No entregado").
   const errorDestino = await errorSiHojaFija(aFecha(fecha));
   if (errorDestino) return { ok: false, error: errorDestino };
@@ -278,7 +280,8 @@ export async function marcarEntregado(pedidoId: string, _: EstadoPedidoForm, for
   if (pedido.conFactura && !pedido.numeroFactura?.trim()) return { error: "Este pedido lleva factura: cargá primero el N° de factura y después confirmá la entrega." };
 
   const cobro = leerCobro(String(formData.get("cobro") ?? ""));
-  if (!cobro && pedido.webPago !== "PAGO_MP") return { error: "Elegí cómo se cobra antes de confirmar la entrega." };
+  if (pedido.webOrden && !webPagado(pedido.webOrden, pedido.webPago)) return { error: ERROR_WEB_SIN_PAGO };
+  if (!cobro && !webPagado(pedido.webOrden, pedido.webPago)) return { error: "Elegí cómo se cobra antes de confirmar la entrega." };
 
   const entregas = pedido.items.map((i) => ({ id: i.id, cantidad: i.cantidad, entregada: Math.min(i.cantidad, Number(String(formData.get(`e_${i.id}`) ?? i.cantidad).replace(/\D/g, "") || 0)) }));
   if (entregas.every((e) => e.entregada === 0) && pedido.items.every((i) => i.sinCargo === 0)) return { error: "No se entregó nada. Si no se pudo entregar, usá \"No entregado\"." };
@@ -313,6 +316,19 @@ export async function cancelarPedido(formData: FormData) {
   // Un pedido ya cobrado no se cancela hasta deshacer el cobro (si no, el pago quedaría suelto como saldo a favor).
   if (pedido?.clienteId && pedido.estado === "ENTREGADO" && pedido.cobro === "COBRADO") return;
   await cambiarEstado(id, { estado: "CANCELADO", fechaEntrega: null, salida: { disconnect: true } }, true);
+}
+
+/** Confirma que llegó la transferencia de un pedido de la tienda online: recién ahí puede asignarse a un día y salir. */
+export async function confirmarPagoWeb(pedidoId: string): Promise<{ ok: boolean; error?: string }> {
+  await exigirOficina();
+  const pedido = await db.pedido.findUnique({ where: { id: pedidoId }, select: { webOrden: true, webPago: true, estado: true } });
+  if (!pedido?.webOrden) return { ok: false, error: "Solo los pedidos de la tienda online necesitan confirmar el pago." };
+  if (pedido.estado === "CANCELADO") return { ok: false, error: "El pedido está cancelado." };
+  if (pedido.webPago !== "PENDIENTE") return { ok: true };
+  await db.pedido.update({ where: { id: pedidoId }, data: { webPago: "PAGO_TRANSFERENCIA" } });
+  revalidatePath("/pedidos", "layout");
+  revalidatePath(`/pedidos/${pedidoId}`);
+  return { ok: true };
 }
 
 /** Botón "Traer pedidos ahora": lee la planilla de la tienda online y carga los pedidos nuevos. */

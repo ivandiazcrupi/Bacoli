@@ -13,7 +13,7 @@ const COLUMNAS = "lg:grid-cols-[minmax(0,2fr)_7rem_7rem_8rem_9rem]";
 const COLUMNAS_WEB = "lg:grid-cols-[minmax(0,2fr)_9rem_9rem]"; // la tienda no tiene precio por renglón: vale el total pagado
 
 // Los productos del pedido en una tabla a lo ancho. Si el pedido está abierto, la columna ENTREGADO se edita y abajo está "Confirmar entrega".
-export function TablaPedido({ pedidoId, abierto, entregado, items, totales, nota, web = false, pagoMp = false }: { pedidoId: string; abierto: boolean; entregado: boolean; items: Renglon[]; totales: Totales; nota: string; web?: boolean; pagoMp?: boolean }) {
+export function TablaPedido({ pedidoId, abierto, entregado, items, totales, nota, web = false, pagoMp = false, pagoTexto = null, sinPagoWeb = false }: { pedidoId: string; abierto: boolean; entregado: boolean; items: Renglon[]; totales: Totales; nota: string; web?: boolean; pagoMp?: boolean; pagoTexto?: string | null; sinPagoWeb?: boolean }) {
   const cols = web ? COLUMNAS_WEB : COLUMNAS;
   const [estado, enviar, cargando] = useActionState(marcarEntregado.bind(null, pedidoId), undefined as EstadoPedidoForm);
   const ivaTexto = String(totales.ivaPct).replace(".", ",");
@@ -71,8 +71,9 @@ export function TablaPedido({ pedidoId, abierto, entregado, items, totales, nota
           <div className={`flex justify-between text-lg font-bold ${totales.conFactura ? "mt-1 border-t border-stone-300 pt-2" : ""}`}><span>Total</span><span className="tabular-nums">{formatoPesos(totales.total)}</span></div>
           {abierto && (
             <label className="mt-2 block text-xs font-semibold uppercase tracking-wide text-stone-600">
-              ¿Cómo se cobra? {pagoMp && <span className="font-normal normal-case text-stone-500">(ya pagado con Mercado Pago)</span>}
-              {!pagoMp && (
+              ¿Cómo se cobra? {pagoMp && <span className="font-normal normal-case text-stone-500">(ya pagado · {pagoTexto})</span>}
+              {sinPagoWeb && <span className="mt-1 block text-sm font-semibold normal-case text-rojo-700">Falta confirmar la transferencia: sin pago no sale de fábrica.</span>}
+              {!pagoMp && !sinPagoWeb && (
                 <select name="cobro" required defaultValue="" className="mt-1 h-10 w-full rounded-md border border-stone-400 bg-white px-2 text-sm font-medium normal-case text-stone-900">
                   <option value="" disabled hidden>Elegí una opción…</option>
                   <option value="EFECTIVO">Pago · Efectivo</option>

@@ -1,3 +1,5 @@
+import { webPagado, textoPagoWeb } from "@/lib/webpago";
+import { BotonConfirmarPago } from "./BotonConfirmarPago";
 import { oracion, titulo } from "@/lib/mayusculas";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -63,7 +65,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
           {celda("Estado", <span className={COLOR[pedido.estado]}>{ETIQUETA[pedido.estado]}</span>)}
           {celda("Día", fecha ? `${nombreDia(fecha)} ${diaMes(fecha)}` : "Sin día")}
           {web && celda("Pedido de la tienda", `N° ${pedido.webOrden}`)}
-          {web && celda("Pago", pedido.webPago === "PAGO_MP" ? "Mercado Pago" : <span className="text-rojo-700">Pendiente</span>)}
+          {web && celda("Pago", textoPagoWeb(pedido.webPago) ?? <BotonConfirmarPago pedidoId={pedido.id} />)}
           {!web && celda("Comprobante", pedido.conFactura ? "Factura" : "Remito")}
           {!web && celda(
             pedido.conFactura ? "N° de factura" : "N° de remito",
@@ -112,7 +114,9 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
           items={items.map((i) => ({ id: i.id, nombre: i.nombre, sku: i.sku, unidad: i.unidad, precio: Number(i.precioUnitario), cantidad: i.cantidad, entregada: i.cantidadEntregada, sinCargo: i.sinCargo, motivoSinCargo: i.motivoSinCargo, descuentoPct: Number(i.descuentoPct) }))}
           totales={{ bruto: pedidoBruto, descuento: pedidoBruto - pedidoBase, base: pedidoBase, iva: total - pedidoBase, ivaPct, total, conFactura: pedido.conFactura, sinCargoPaquetes: pedido.items.reduce((t, i) => t + i.sinCargo, 0), sinCargoValor: pedido.items.reduce((t, i) => t + i.sinCargo * Number(i.precioUnitario), 0) }}
           web={web}
-          pagoMp={pedido.webPago === "PAGO_MP"}
+          pagoMp={webPagado(pedido.webOrden, pedido.webPago)}
+          pagoTexto={textoPagoWeb(pedido.webPago)}
+          sinPagoWeb={web && !webPagado(pedido.webOrden, pedido.webPago)}
           nota={oracion(pedido.nota)}
         />
       </main>

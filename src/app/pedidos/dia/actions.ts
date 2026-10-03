@@ -1,5 +1,6 @@
 "use server";
 
+import { webPagado, ERROR_WEB_SIN_PAGO } from "@/lib/webpago";
 import { revalidatePath } from "next/cache";
 import type { MedioPago } from "@prisma/client";
 import { anotarEntregaEnCuenta, importeVigente, sincronizarCuentaPedido } from "@/lib/cuenta";
@@ -38,7 +39,8 @@ export async function marcarEntrega(pedidoId: string, valor: "ENTREGADO" | "PEND
   if (pedido.estado === "CANCELADO") return { ok: false, error: "El pedido está cancelado." };
   if (valor === "ENTREGADO" && pedido.conFactura && !pedido.numeroFactura?.trim()) return { ok: false, error: "Este pedido lleva factura: cargá primero el N° de factura y después marcalo como entregado." };
   const cobro = leerCobro(cobroTexto);
-  if (valor === "ENTREGADO" && !cobro && pedido.webPago !== "PAGO_MP") return { ok: false, error: "Elegí cómo se cobra: Pago o Cuenta corriente." };
+  if (valor === "ENTREGADO" && pedido.webOrden && !webPagado(pedido.webOrden, pedido.webPago)) return { ok: false, error: ERROR_WEB_SIN_PAGO };
+  if (valor === "ENTREGADO" && !cobro && !webPagado(pedido.webOrden, pedido.webPago)) return { ok: false, error: "Elegí cómo se cobra: Pago o Cuenta corriente." };
 
   let error: string | null = null;
   await db.$transaction(async (tx) => {
@@ -265,6 +267,8 @@ export async function dejarListo(fecha: string): Promise<Resultado> {
   if (sinUbicar > 0) problemas.push(`${plural(sinUbicar, "pedido sin ubicar", "pedidos sin ubicar")} en una camioneta`);
   const sinRemito = pedidos.filter((p) => p.clienteId && !p.conFactura && p.remitoNumero === null).length;
   if (sinRemito > 0) problemas.push(`${plural(sinRemito, "pedido sin remito", "pedidos sin remito")} (apretá el botón del remito de cada uno o "Imprimir todos los remitos")`);
+  const sinPago = pedidos.filter((p) => p.webOrden && !webPagado(p.webOrden, p.webPago)).length;
+  if (sinPago > 0) problemas.push(`${plural(sinPago, "pedido de la tienda sin pago confirmado", "pedidos de la tienda sin pago confirmado")}`);
   const sinFactura = pedidos.filter((p) => p.clienteId && p.conFactura && !p.numeroFactura?.trim()).length;
   if (sinFactura > 0) problemas.push(`${plural(sinFactura, "pedido con factura sin número", "pedidos con factura sin número")}`);
   if (problemas.length > 0) return { ok: false, error: `Para dejar lista la hoja falta:\n${problemas.map((x) => `• ${x}`).join("\n")}` };

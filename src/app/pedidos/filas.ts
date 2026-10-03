@@ -1,3 +1,4 @@
+import { webPagado, textoPagoWeb } from "@/lib/webpago";
 import type { Prisma } from "@prisma/client";
 import { importeVigente } from "@/lib/cuenta";
 import { bultosDe } from "@/lib/ruta";
@@ -42,7 +43,8 @@ export type FilaBandeja = {
   monto: number;
   conFactura: boolean;
   webOrden: string | null; // N° de orden de Empretienda (solo pedidos de la tienda)
-  pagoMp: boolean; // pedido de la tienda ya pagado con Mercado Pago
+  pagoMp: boolean; // pedido de la tienda ya pagado (Mercado Pago o transferencia confirmada)
+  pagoTexto: string | null; // cómo pagó: "Mercado Pago" / "Transferencia"
   intento?: string; // "No se entregó el 1/10 · Local cerrado": el último intento que falló, si lo hubo
 };
 
@@ -76,7 +78,8 @@ export function aFila(p: PedidoCompleto, debe: Set<string>): Fila {
     salidaId: p.salidaId,
     bultos: bultosDe(p.items),
     webOrden: p.webOrden,
-    pagoMp: p.webPago === "PAGO_MP",
+    pagoMp: webPagado(p.webOrden, p.webPago),
+    pagoTexto: textoPagoWeb(p.webPago),
   };
 }
 
@@ -93,7 +96,8 @@ export function aFilaBandeja(p: PedidoCompleto, intento = ""): FilaBandeja {
     monto: importeVigente(p.items, Number(p.ivaPct), "PENDIENTE", p.webTotal),
     conFactura: p.conFactura,
     webOrden: p.webOrden,
-    pagoMp: p.webPago === "PAGO_MP",
+    pagoMp: webPagado(p.webOrden, p.webPago),
+    pagoTexto: textoPagoWeb(p.webPago),
     intento,
   };
 }

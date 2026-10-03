@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { formatoPesos } from "@/lib/numeros";
 import { enlaceWhatsApp } from "@/lib/telefonos";
-import { asignarADia } from "./actions";
+import { asignarADia, confirmarPagoWeb } from "./actions";
 import type { FilaBandeja } from "./filas";
 
 export type DiaBoton = { fecha: string; letra: string; numero: number; nombre: string; hoy: boolean; cerrado: boolean };
@@ -45,7 +45,20 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
     });
   };
 
-  const botones = (f: FilaBandeja, grande?: boolean) => (
+  const confirmarPago = (f: FilaBandeja) => {
+    setError(null);
+    empezar(async () => {
+      const r = await confirmarPagoWeb(f.id);
+      if (!r.ok) setError(r.error ?? "No se pudo confirmar el pago.");
+      router.refresh();
+    });
+  };
+
+  const botones = (f: FilaBandeja, grande?: boolean) => f.webOrden && !f.pagoMp ? (
+    <button type="button" onClick={() => confirmarPago(f)} className="rounded-md border border-verde-700 bg-white px-3 py-2 text-sm font-semibold text-verde-800 shadow-sm hover:bg-verde-700 hover:text-white">
+      Confirmar pago (transferencia)
+    </button>
+  ) : (
     <div className="flex gap-1.5" role="group" aria-label="Asignar a un día">
       {dias.map((d) => (
         <button
@@ -80,7 +93,7 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
             <span className="text-sm font-semibold">{f.barrio}</span>
             <span className="text-sm font-semibold leading-snug">
               {f.cliente}
-              {f.webOrden && <span className="block text-[11px] font-normal text-stone-500">N° {f.webOrden} · {f.pagoMp ? "pagado con Mercado Pago" : <span className="text-rojo-700">pago pendiente</span>}</span>}
+              {f.webOrden && <span className="block text-[11px] font-normal text-stone-500">N° {f.webOrden} · {f.pagoMp ? `pagado · ${f.pagoTexto}` : <span className="text-rojo-700">falta confirmar el pago</span>}</span>}
             </span>
             <span className="text-sm leading-snug">
               {f.direccion}
@@ -104,7 +117,7 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
               <div>
                 <p className="font-semibold">{f.barrio}</p>
                 <p className="font-semibold">{f.cliente}</p>
-                {f.webOrden && <p className="text-xs text-stone-500">N° {f.webOrden} · {f.pagoMp ? "pagado con Mercado Pago" : "pago pendiente"}</p>}
+                {f.webOrden && <p className="text-xs text-stone-500">N° {f.webOrden} · {f.pagoMp ? `pagado · ${f.pagoTexto}` : "falta confirmar el pago"}</p>}
                 <p className="text-sm">{f.direccion}</p>
                 {f.comentario && <p className="text-sm font-medium text-rojo-700">{f.comentario}</p>}
                 {f.intento && <p className="text-sm font-semibold text-stone-600">↺ {f.intento}</p>}

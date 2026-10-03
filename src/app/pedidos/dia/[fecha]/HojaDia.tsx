@@ -36,7 +36,8 @@ export type Fila = {
   salidaId: string | null;
   bultos: number;
   webOrden: string | null; // pedido de la tienda online: sin cuenta corriente ni remito
-  pagoMp: boolean; // pedido de la tienda ya pagado con Mercado Pago
+  pagoMp: boolean; // pedido de la tienda ya pagado (Mercado Pago o transferencia confirmada)
+  pagoTexto: string | null;
 };
 
 /** Un pedido que salió ese día y no se entregó: queda su "silueta" en la hoja (con el motivo) aunque se reprograme. */
@@ -182,7 +183,7 @@ function CobroMarcado({ tipo, detalle, onDeshacer }: { tipo: "PAGO" | "CC"; deta
 // Mientras se está entregando (✓ tocado y sin cobro elegido) se muestra la elección; el pedido no queda entregado hasta elegir.
 function CeldaCobro({ f, bloqueada, acc, eligiendoCobro, onElegir, onCancelar }: { f: Fila; bloqueada: boolean; acc: Acciones; eligiendoCobro: boolean; onElegir: (cobro: string) => void; onCancelar: () => void }) {
   const [medio, setMedio] = useState(false);
-  if (f.pagoMp) return <CobroMarcado tipo="PAGO" detalle="Mercado Pago" />;
+  if (f.pagoMp) return <CobroMarcado tipo="PAGO" detalle={f.pagoTexto ?? "Pagado"} />;
   const pidiendo = eligiendoCobro || (f.estado === "ENTREGADO" && !f.cobro); // entregado sin cobro (datos viejos): también se completa acá
   if (!pidiendo) {
     if (f.estado !== "ENTREGADO") return <span className="text-stone-400">—</span>;
@@ -412,7 +413,7 @@ function FilaTarjeta({ f, n, bloqueada, fija, acc, salidas }: { f: Fila; n: numb
 
       <SelectorEntrega f={f} bloqueada={bloqueada} acc={acc} grande eligiendoCobro={flujo.eligiendoCobro} onEntregar={flujo.entregar} onNoEntregar={flujo.abrirMotivo} />
 
-      {f.pagoMp && <div className="rounded-lg border border-verde-700 bg-verde-50 px-3 py-3 text-center font-semibold text-verde-800">✓ Pago · Mercado Pago</div>}
+      {f.pagoMp && <div className="rounded-lg border border-verde-700 bg-verde-50 px-3 py-3 text-center font-semibold text-verde-800">✓ Pago · {f.pagoTexto}</div>}
       {(f.estado === "ENTREGADO" || flujo.eligiendoCobro) && !f.pagoMp && (
         <div className="space-y-2">
           {f.cobro === "COBRADO" && !flujo.eligiendoCobro ? (

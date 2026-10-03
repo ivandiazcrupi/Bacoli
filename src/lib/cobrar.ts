@@ -1,5 +1,6 @@
 import type { MedioPago, Prisma } from "@prisma/client";
 import { importeVigente } from "@/lib/cuenta";
+import { webPagado } from "@/lib/webpago";
 
 const redondear2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
@@ -15,12 +16,12 @@ export function leerCobro(texto: string | null | undefined): CobroAlEntregar | n
 /**
  * Deja el cobro marcado dentro de una transacción (el pedido ya tiene que estar entregado):
  * pago = movimiento de pago en la cuenta y comprobante pagado; cuenta corriente = queda pendiente.
- * Los pedidos de la tienda ya pagados con Mercado Pago se cobran solos.
+ * Los pedidos de la tienda ya pagados (Mercado Pago o transferencia confirmada) se cobran solos.
  */
 export async function marcarCobroEnTx(tx: Prisma.TransactionClient, pedidoId: string, cobro: CobroAlEntregar | null, usuarioId: string): Promise<string | null> {
   const pedido = await tx.pedido.findUniqueOrThrow({ where: { id: pedidoId }, include: { items: true, ncAplicaciones: { where: { nota: { anuladaEn: null } } } } });
-  if (pedido.webPago === "PAGO_MP") {
-    await tx.pedido.update({ where: { id: pedidoId }, data: { cobro: "COBRADO", medioCobro: "MERCADO_PAGO", montoCobrado: pedido.webTotal, pagado: true } });
+  if (webPagado(pedido.webOrden, pedido.webPago)) {
+    await tx.pedido.update({ where: { id: pedidoId }, data: { cobro: "COBRADO", medioCobro: pedido.webPago === "PAGO_MP" ? "MERCADO_PAGO" : "TRANSFERENCIA", montoCobrado: pedido.webTotal, pagado: true } });
     return null;
   }
   if (!cobro) return "Elegí cómo se cobra: Pago o Cuenta corriente.";
