@@ -16,7 +16,7 @@ export default async function EditarPedido({ params }: { params: Promise<{ id: s
   const { id } = await params;
   const pedido = await db.pedido.findUnique({ where: { id }, include: { items: { include: { producto: { select: { orden: true } } } }, cliente: true, punto: true } });
   if (!pedido) notFound();
-  if (pedido.estado !== "PENDIENTE") redirect(`/pedidos/${id}`);
+  if (pedido.estado !== "PENDIENTE" && pedido.estado !== "NO_ENTREGADO") redirect(`/pedidos/${id}`);
 
   // Pedido de la tienda online: sin cliente ni lista de precios, se edita con su propio formulario.
   if (!pedido.clienteId || !pedido.puntoId) {

@@ -100,7 +100,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
           </div>
           {pedido.estado !== "CANCELADO" && (
             <div className="flex flex-wrap items-center gap-2">
-              {abierto && <Link href={`/pedidos/${pedido.id}/editar`} className={`${btn} inline-flex items-center border-stone-400 bg-white text-stone-800 hover:bg-crema-100`}>✎ Editar pedido</Link>}
+              {(abierto || pedido.estado === "NO_ENTREGADO") && <Link href={`/pedidos/${pedido.id}/editar`} className={`${btn} inline-flex items-center border-stone-400 bg-white text-stone-800 hover:bg-crema-100`}>✎ Editar pedido</Link>}
               {!web && pedido.estado === "ENTREGADO" && pedido.cobro === "COBRADO" ? (
                 <button type="button" disabled title="Primero deshacé el cobro (en la hoja de ruta o en CUENTA)" className={`${btn} cursor-not-allowed border-stone-300 bg-white text-stone-400`}>Cancelar pedido</button>
               ) : (

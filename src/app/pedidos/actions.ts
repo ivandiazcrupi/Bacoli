@@ -148,7 +148,8 @@ export async function actualizarPedido(pedidoId: string, _: EstadoPedidoForm, fo
   const usuario = await exigirOficina();
   const pedido = await db.pedido.findUnique({ where: { id: pedidoId } });
   if (!pedido) return { error: "No encontré el pedido." };
-  if (pedido.estado !== "PENDIENTE") return { error: "Solo se puede modificar un pedido pendiente. Reabrilo primero." };
+  // Un pedido "no entregado" (de antes del flujo con silueta) también se puede corregir: al guardar vuelve a pendiente.
+  if (pedido.estado !== "PENDIENTE" && pedido.estado !== "NO_ENTREGADO") return { error: "Solo se puede modificar un pedido pendiente. Reabrilo primero." };
   const hojaFija = await errorSiHojaFija(pedido.fechaEntrega);
   if (hojaFija) return { error: hojaFija };
   const leidos = await leerRenglones(formData);
@@ -159,7 +160,7 @@ export async function actualizarPedido(pedidoId: string, _: EstadoPedidoForm, fo
     await tx.pedidoItem.deleteMany({ where: { pedidoId } });
     await tx.pedido.update({
       where: { id: pedidoId },
-      data: { conFactura, ivaPct: conFactura ? IVA_PCT : 0, nota: oracion(String(formData.get("nota") ?? "")) || null, items: { create: leidos.renglones } },
+      data: { conFactura, ...(pedido.estado === "NO_ENTREGADO" ? { estado: "PENDIENTE" as const } : {}), ivaPct: conFactura ? IVA_PCT : 0, nota: oracion(String(formData.get("nota") ?? "")) || null, items: { create: leidos.renglones } },
     });
     await sincronizarCuentaPedido(tx, pedidoId, usuario.id);
   });
