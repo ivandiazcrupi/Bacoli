@@ -36,8 +36,38 @@ const MEDIOS = [
   { valor: "OTRO", texto: "Otro" },
 ];
 const TEXTO_MEDIO: Record<string, string> = { EFECTIVO: "Efectivo", TRANSFERENCIA: "Transferencia", CHEQUE: "Cheque", MERCADO_PAGO: "Mercado Pago", OTRO: "Otro" };
-const COLUMNAS = "grid-cols-[28px_150px_minmax(160px,1.6fr)_84px_84px_150px_84px_215px_minmax(150px,1.2fr)]";
+const COLUMNAS = "grid-cols-[28px_132px_minmax(150px,1.6fr)_76px_76px_116px_76px_150px_140px_minmax(170px,1.2fr)]";
 const fechaCorta = (s: string) => `${s.slice(8)}/${s.slice(5, 7)}/${s.slice(2, 4)}`;
+
+const pastilla = (clase: string) => `inline-block whitespace-nowrap rounded-full px-3 py-1 text-[13px] font-semibold ${clase}`;
+
+// Observación (N° de cheque, comprobante…): siempre editable. Se guarda al salir del campo o con Enter, y avisa "Guardado".
+function ObsInput({ id, inicial }: { id: string; inicial: string }) {
+  const [valor, setValor] = useState(inicial);
+  const [guardado, setGuardado] = useState(inicial);
+  const [estado, setEstado] = useState<"" | "guardando" | "ok" | "error">("");
+  const guardar = async () => {
+    if (valor.trim() === guardado.trim()) return;
+    setEstado("guardando");
+    const r = await guardarObservacion(id, valor);
+    if (r.ok) { setGuardado(valor); setEstado("ok"); setTimeout(() => setEstado(""), 1800); } else setEstado("error");
+  };
+  return (
+    <span className="relative min-w-0 flex-1">
+      <input
+        aria-label="Observación"
+        placeholder="N° de cheque, comprobante…"
+        value={valor}
+        maxLength={200}
+        onChange={(e) => setValor(e.target.value)}
+        onBlur={guardar}
+        onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+        className="h-9 w-full rounded-md border border-stone-400 bg-white px-2 text-left text-[13px] placeholder:text-stone-400 focus:border-verde-700 focus:outline-none"
+      />
+      {estado && <span className={`absolute -bottom-3.5 right-1 text-[11px] font-semibold ${estado === "error" ? "text-rojo-700" : "text-verde-700"}`}>{estado === "guardando" ? "Guardando…" : estado === "ok" ? "Guardado ✓" : "No se guardó"}</span>}
+    </span>
+  );
+}
 
 // Listado de comprobantes (facturas o remitos) en orden de número: se tildan los pagados, se elige el medio y se registra el pago.
 export function ListaComprobantes({ filas }: { filas: FilaComprobante[] }) {
@@ -80,7 +110,7 @@ export function ListaComprobantes({ filas }: { filas: FilaComprobante[] }) {
     <div>
       <div className={`hidden items-center gap-x-3 border-b border-stone-300 bg-crema-200 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-stone-700 lg:grid ${COLUMNAS}`}>
         <input type="checkbox" aria-label="Elegir todos los de esta página" checked={pagables.length > 0 && elegidas.size === pagables.length} onChange={() => setElegidas(elegidas.size === pagables.length ? new Set() : new Set(pagables.map((f) => f.id)))} className="h-4 w-4 accent-[#ede6c8]" />
-        <span>{filas[0].tipo === "FACTURA" ? "FACTURA" : "REMITO"}</span><span className="text-left">Cliente</span><span>Cargado</span><span>Entrega</span><span>Monto</span><span>Vence</span><span>Estado</span><span>Observación</span>
+        <span>{filas[0].tipo === "FACTURA" ? "FACTURA" : "REMITO"}</span><span className="text-left">Cliente</span><span>Cargado</span><span>Entrega</span><span>Monto</span><span>Vence</span><span>Estado</span><span>{filas[0].tipo === "FACTURA" ? "Nota de crédito" : "Pedido"}</span><span>Observación</span>
       </div>
       <ul className="divide-y divide-stone-300">
         {filas.map((f) => f.hueco ? (
@@ -90,42 +120,45 @@ export function ListaComprobantes({ filas }: { filas: FilaComprobante[] }) {
             <span className="text-left italic">Número sin usar</span>
           </li>
         ) : (
-          <li key={f.id} className={`items-center gap-x-3 gap-y-1 px-4 py-2.5 text-center text-sm lg:grid ${COLUMNAS} ${f.anulado ? "bg-stone-100 text-stone-500" : f.pagada ? "bg-verde-50" : elegidas.has(f.id) ? "bg-crema-50" : ""}`}>
+          <li key={f.id} className={`items-center gap-x-3 gap-y-1 px-4 py-3.5 text-center text-[14px] text-stone-800 lg:grid ${COLUMNAS} ${f.anulado ? "bg-stone-100 text-stone-500" : elegidas.has(f.id) ? "bg-crema-100" : ""}`}>
             <input type="checkbox" aria-label={`Elegir ${f.numero ?? "comprobante"}`} checked={elegidas.has(f.id)} disabled={!f.entregado || f.pagada || f.cubierta || !!f.anulado} onChange={() => alternar(f.id)} className="h-4 w-4 accent-[#026433] disabled:opacity-30" />
-            <span className="flex items-center justify-center gap-1.5 font-semibold tabular-nums">
-              {f.numero ?? <span className="font-normal text-rojo-700">sin número</span>}
-              {f.tipo === "FACTURA" && !f.pagada && !f.cubierta && !f.anulado && <Link href={`/cuentas/${f.clienteId}/nc?factura=${f.id}`} title="Cargar nota de crédito" className="rounded border border-stone-400 px-1 text-[10px] font-semibold text-stone-600 hover:border-verde-700 hover:text-verde-800">NC</Link>}
-            </span>
-            <Link href={`/cuentas/${f.clienteId}`} className="text-left hover:underline">{f.cliente}</Link>
+            <span className="whitespace-nowrap text-[15px] font-bold tabular-nums text-stone-900">{f.numero ?? <span className="text-[14px] font-semibold text-rojo-700">sin número</span>}</span>
+            <Link href={`/cuentas/${f.clienteId}`} className="min-w-0 text-left text-[14px] font-semibold leading-snug text-stone-900 [overflow-wrap:anywhere] hover:underline">{f.cliente}</Link>
             <span className="tabular-nums">{fechaCorta(f.cargado)}</span>
             <span className="tabular-nums">{f.entregado ? fechaCorta(f.fecha) : <span className="text-stone-400">—</span>}</span>
-            <span className={`font-bold tabular-nums ${f.cubierta || f.anulado ? "text-stone-400 line-through" : ""}`}>{formatoPesos(f.cubierta || f.anulado ? f.bruto : f.monto)}</span>
+            <span className={`text-[14px] font-bold tabular-nums ${f.cubierta || f.anulado ? "text-stone-400 line-through" : "text-stone-900"}`}>{formatoPesos(f.cubierta || f.anulado ? f.bruto : f.monto)}</span>
             <span className="tabular-nums">{f.entregado && !f.pagada ? fechaCorta(f.vence) : <span className="text-stone-400">—</span>}</span>
-            {f.anulado ? (
-              <span className="font-semibold text-stone-600">{f.anulado}</span>
-            ) : f.pagada ? (
-              <span className="whitespace-nowrap font-semibold text-verde-800">Pagada · {TEXTO_MEDIO[f.medio ?? ""] ?? ""} <button type="button" onClick={() => deshacer(f.id)} className="ml-1 text-xs font-normal text-stone-500 underline hover:text-rojo-700">deshacer</button></span>
-            ) : f.cubierta ? (
-              <span className="font-semibold text-stone-700">Anulada por NC</span>
-            ) : !f.entregado ? (
-              <span className="text-stone-600">Por entregar</span>
-            ) : f.atraso > 0 ? (
-              <span className="font-semibold text-rojo-700">Vencida {f.atraso} {f.atraso === 1 ? "día" : "días"}</span>
-            ) : (
-              <span className="text-stone-600">Sin pagar</span>
-            )}
-            {f.ncTexto ? (
-              <span className="flex h-8 w-full items-center truncate rounded border border-stone-200 bg-stone-100 px-2 text-left text-xs font-semibold text-stone-700" title="Se completa solo al aplicar la nota de crédito">{f.ncTexto}{!f.cubierta && f.nc > 0 ? ` (−${formatoPesos(f.nc)})` : ""}</span>
-            ) : (
-            <input
-              aria-label="Observación"
-              placeholder="N° de cheque, comprobante…"
-              defaultValue={f.obs}
-              maxLength={200}
-              onBlur={(e) => e.target.value.trim() !== f.obs && void guardarObservacion(f.id, e.target.value)}
-              className="h-8 w-full rounded border border-stone-300 bg-white px-2 text-left text-xs placeholder:text-stone-400 focus:border-verde-700 focus:outline-none"
-            />
-            )}
+            <span className="flex flex-col items-center gap-0.5">
+              {f.anulado ? (
+                <span className={pastilla("bg-stone-200 text-stone-700")}>{f.anulado}</span>
+              ) : f.pagada ? (
+                <>
+                  <span className={pastilla("bg-verde-100 text-verde-800")}>Pagada · {TEXTO_MEDIO[f.medio ?? ""] ?? ""}</span>
+                  <button type="button" onClick={() => deshacer(f.id)} className="text-xs text-stone-500 underline hover:text-rojo-700">deshacer</button>
+                </>
+              ) : f.cubierta ? (
+                <span className={pastilla("bg-stone-200 text-stone-700")}>Anulada por NC</span>
+              ) : !f.entregado ? (
+                <span className={pastilla("border border-stone-300 bg-white text-stone-600")}>Por entregar</span>
+              ) : f.atraso > 0 ? (
+                <span className={pastilla("bg-rojo-50 text-rojo-700 border border-rojo-600")}>Vencida {f.atraso} {f.atraso === 1 ? "día" : "días"}</span>
+              ) : (
+                <span className={pastilla("bg-crema-200 text-stone-800")}>Sin pagar</span>
+              )}
+            </span>
+            <span>
+              {f.tipo === "FACTURA" ? (
+                !f.pagada && !f.cubierta && !f.anulado
+                  ? <Link href={`/cuentas/${f.clienteId}/nc?factura=${f.id}`} className="inline-block rounded-md border border-stone-500 bg-white px-3 py-1.5 text-[13px] font-semibold text-stone-800 hover:bg-stone-800 hover:text-white">+ Nota de crédito</Link>
+                  : <span className="text-stone-300">—</span>
+              ) : (
+                <Link href={`/pedidos/${f.id}`} className="text-[13px] font-semibold text-verde-800 underline-offset-4 hover:underline">Abrir pedido ›</Link>
+              )}
+            </span>
+            <span className="flex min-w-0 flex-col items-stretch gap-1">
+              {f.ncTexto && <span className="truncate rounded bg-stone-200 px-2 py-1 text-xs font-semibold text-stone-700" title="Se completa solo al aplicar la nota de crédito">{f.ncTexto}{!f.cubierta && f.nc > 0 ? ` (−${formatoPesos(f.nc)})` : ""}</span>}
+              <ObsInput id={f.id} inicial={f.obs} />
+            </span>
           </li>
         ))}
       </ul>
