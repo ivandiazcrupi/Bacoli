@@ -2,6 +2,6 @@
 export function EstadoPagoWeb({ webOrden, pagado, medio }: { webOrden: string | null; pagado: boolean; medio: string | null }) {
   if (!webOrden) return null;
   return pagado
-    ? <span className="block text-[12.5px] font-semibold text-verde-700">Pagado · {medio ?? "Transferencia"}</span>
-    : <span className="block text-[12.5px] font-semibold text-rojo-700">Pendiente de pago</span>;
+    ? <span className="block text-[12px] font-semibold text-verde-700">Pagado · {medio ?? "Transferencia"}</span>
+    : <span className="block text-[12px] font-semibold text-rojo-700">Pendiente de pago</span>;
 }

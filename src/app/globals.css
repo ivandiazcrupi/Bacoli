@@ -14,7 +14,7 @@
    esquinas casi rectas, sin sombras, letra de 14 px, espacios justos, bordes firmes, títulos sobrios y barra de
    estado abajo. Para ajustarlo se toca solo este bloque.
    ===================================================================================================== */
-html.intermedio { font-size: 14px; }
+html.intermedio { font-size: 13.5px; }
 .intermedio body { background: #f6f5f2; color: #26241f; padding-bottom: 24px; }
 .intermedio *, .intermedio *::before, .intermedio *::after { border-radius: 3px !important; box-shadow: none !important; }
 .intermedio header.bg-white { background: #fff; border-bottom: 1px solid #d6d3ca !important; }

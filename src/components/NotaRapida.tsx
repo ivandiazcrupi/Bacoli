@@ -16,7 +16,7 @@ export function NotaRapida({ pedidoId, nota, bloqueada = false }: { pedidoId: st
   if (bloqueada) return null;
   if (!editando) {
     return (
-      <button type="button" onClick={() => { setTexto(nota); setError(null); setEditando(true); }} className="mx-auto mt-1 block rounded-full border border-[#e3cf72] bg-[#fdf3c2] px-3 py-0.5 text-[11.5px] font-semibold text-[#6a5a10] hover:bg-[#fbe9a0]">
+      <button type="button" onClick={() => { setTexto(nota); setError(null); setEditando(true); }} className="mx-auto mt-1 block rounded-full border border-[#e3cf72] bg-[#fdf3c2] px-2 py-0 text-[10px] font-semibold leading-4 text-[#6a5a10] hover:bg-[#fbe9a0]">
         {nota ? "✎ Cambiar nota" : "+ Nota"}
       </button>
     );

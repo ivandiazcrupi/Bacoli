@@ -82,7 +82,7 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
           aria-label={`Asignar al ${d.nombre.toLowerCase()} ${d.numero}`}
           className={`flex flex-col items-center justify-center gap-[3px] rounded-md border shadow-sm transition hover:border-verde-700 hover:bg-verde-700 hover:text-white disabled:opacity-35 ${grande ? "h-14 w-12" : "h-12 w-10"} border-stone-400 bg-white text-stone-800`}
         >
-          <span className={`block font-bold leading-none ${grande ? "text-lg" : "text-[13.5px]"}`}>{d.letra}</span>
+          <span className={`block font-bold leading-none ${grande ? "text-lg" : "text-[13px]"}`}>{d.letra}</span>
           <span className="block text-[11px] font-medium leading-none opacity-70">{d.numero}</span>
         </button>
       ))}
@@ -103,26 +103,26 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
       {filas.map((f) => (
         <div key={f.id} className="rounded-xl border border-stone-300 bg-white px-5 py-3.5 shadow-sm">
           <div className={`hidden items-center gap-x-4 text-center lg:grid ${COLUMNAS}`}>
-            <span className="text-[13.5px] font-semibold">{f.barrio}</span>
-            <span className="text-[13.5px] font-semibold leading-snug">
+            <span className="text-[13px] font-semibold">{f.barrio}</span>
+            <span className="text-[13px] font-semibold leading-snug">
               {f.cliente}
               <EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} />
             </span>
-            <span className="text-[13.5px] leading-snug">
+            <span className="text-[13px] leading-snug">
               {f.direccion}
-              {f.comentario && <span className="mt-0.5 block text-[12.5px] font-medium text-rojo-700">{f.comentario}</span>}
+              {f.comentario && <span className="mt-0.5 block text-[12px] font-medium text-rojo-700">{f.comentario}</span>}
               <NotaRapida pedidoId={f.id} nota={f.nota} />
-              {f.intento && <span className="mt-0.5 block text-[12.5px] font-semibold text-stone-600">↺ {f.intento}</span>}
+              {f.intento && <span className="mt-0.5 block text-[12px] font-semibold text-stone-600">↺ {f.intento}</span>}
             </span>
-            <span className="text-[13.5px] tabular-nums"><Telefono tel={f.telefono} /></span>
-            <span className="inline-grid justify-center justify-self-center gap-x-2 gap-y-0.5 text-left text-[13.5px] [grid-template-columns:auto_auto]">
+            <span className="text-[13px] tabular-nums"><Telefono tel={f.telefono} /></span>
+            <span className="inline-grid justify-center justify-self-center gap-x-2 gap-y-0.5 text-left text-[13px] [grid-template-columns:auto_auto]">
               {f.items.map((i, k) => (
                 <span key={k} className="contents"><span className="text-right font-semibold tabular-nums">{i.cantidad}</span><span className="leading-snug">{i.nombre}</span></span>
               ))}
             </span>
-            <span className="text-[13.5px] font-semibold tabular-nums">{formatoPesos(f.monto)}</span>
+            <span className="text-[13px] font-semibold tabular-nums">{formatoPesos(f.monto)}</span>
             <span><Comprobante conFactura={f.conFactura} /></span>
-            <Link href={`/pedidos/${f.id}`} className="text-[13.5px] font-semibold text-verde-800 underline-offset-4 hover:underline">Abrir ›</Link>
+            <Link href={`/pedidos/${f.id}`} className="text-[13px] font-semibold text-verde-800 underline-offset-4 hover:underline">Abrir ›</Link>
             <div className="flex justify-center">{botones(f)}</div>
           </div>
 
@@ -132,18 +132,18 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
                 <p className="font-semibold">{f.barrio}</p>
                 <p className="font-semibold">{f.cliente}</p>
                 <EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} />
-                <p className="text-[13.5px]">{f.direccion}</p>
-                {f.comentario && <p className="text-[13.5px] font-medium text-rojo-700">{f.comentario}</p>}
+                <p className="text-[13px]">{f.direccion}</p>
+                {f.comentario && <p className="text-[13px] font-medium text-rojo-700">{f.comentario}</p>}
                 <NotaRapida pedidoId={f.id} nota={f.nota} />
-                {f.intento && <p className="text-[13.5px] font-semibold text-stone-600">↺ {f.intento}</p>}
-                {f.telefono && <p className="text-[13.5px] tabular-nums"><Telefono tel={f.telefono} /></p>}
+                {f.intento && <p className="text-[13px] font-semibold text-stone-600">↺ {f.intento}</p>}
+                {f.telefono && <p className="text-[13px] tabular-nums"><Telefono tel={f.telefono} /></p>}
               </div>
               <Comprobante conFactura={f.conFactura} />
             </div>
-            <ul className="space-y-0.5 rounded-lg bg-crema-50 p-2 text-[13.5px]">
+            <ul className="space-y-0.5 rounded-lg bg-crema-50 p-2 text-[13px]">
               {f.items.map((i, k) => <li key={k} className="flex gap-2"><span className="w-7 shrink-0 text-right font-semibold tabular-nums">{i.cantidad}</span><span>{i.nombre}</span></li>)}
             </ul>
-            <p className="flex items-center justify-between"><b className="tabular-nums">{formatoPesos(f.monto)}</b><Link href={`/pedidos/${f.id}`} className="text-[13.5px] font-semibold text-verde-800">Abrir ›</Link></p>
+            <p className="flex items-center justify-between"><b className="tabular-nums">{formatoPesos(f.monto)}</b><Link href={`/pedidos/${f.id}`} className="text-[13px] font-semibold text-verde-800">Abrir ›</Link></p>
             {botones(f, true)}
           </div>
         </div>
