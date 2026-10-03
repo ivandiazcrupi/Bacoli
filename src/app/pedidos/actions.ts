@@ -65,7 +65,7 @@ export async function datosNuevoPedido(puntoId: string): Promise<DatosPedido | n
   };
 }
 
-type Renglon = { productoId: string; nombre: string; sku: string | null; unidad: string; cantidad: number; precioUnitario: number; sinCargo: number; descuentoPct: number; motivoSinCargo: string | null };
+type Renglon = { productoId: string | null; paquetesPor?: number; nombre: string; sku: string | null; unidad: string; cantidad: number; precioUnitario: number; sinCargo: number; descuentoPct: number; motivoSinCargo: string | null };
 
 async function leerRenglones(formData: FormData): Promise<{ renglones: Renglon[] } | { error: string }> {
   const productos = await db.producto.findMany({ where: { activo: true } });
@@ -84,6 +84,10 @@ async function leerRenglones(formData: FormData): Promise<{ renglones: Renglon[]
     renglones.push({ productoId: p.id, nombre: p.nombre, sku: p.sku, unidad: p.unidad, cantidad, precioUnitario: precio ?? 0, sinCargo, descuentoPct, motivoSinCargo: sinCargo > 0 ? motivoSinCargo : null });
   }
   if (renglones.length === 0) return { error: "Poné la cantidad de al menos un producto." };
+  // Envío: un renglón aparte (no es un producto: no suma paquetes ni lleva bonificación) que entra en el total, el remito y la cuenta.
+  const envio = leerMonto(String(formData.get("envio") ?? ""));
+  if (envio !== null && envio < 0) return { error: "El envío tiene que ser un monto válido." };
+  if (envio) renglones.push({ productoId: null, paquetesPor: 0, nombre: "ENVÍO", sku: null, unidad: "envío", cantidad: 1, precioUnitario: envio, sinCargo: 0, descuentoPct: 0, motivoSinCargo: null });
   return { renglones };
 }
 

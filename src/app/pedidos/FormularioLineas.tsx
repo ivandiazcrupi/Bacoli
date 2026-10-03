@@ -16,6 +16,7 @@ type Props = {
   productos: LineaProducto[];
   conFacturaInicial: boolean;
   notaInicial: string;
+  envioInicial?: string;
   esDueno: boolean;
   textoBoton: string;
   alGuardar?: (mensaje: string) => void;
@@ -25,7 +26,7 @@ const boton = "flex h-11 w-11 items-center justify-center rounded-md border bord
 const COLUMNAS = "lg:grid-cols-[minmax(0,2fr)_5rem_9rem_11rem_6rem_9rem]";
 
 // Productos con cantidad y precio, en una tabla a lo ancho. Al tocar + / − o escribir el número, el total se calcula al instante.
-export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial, notaInicial, esDueno, textoBoton, alGuardar }: Props) {
+export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial, notaInicial, envioInicial = "", esDueno, textoBoton, alGuardar }: Props) {
   const [estado, enviar, cargando] = useActionState(accion, undefined);
   const [cantidades, setCantidades] = useState<Record<string, string>>(() => Object.fromEntries(productos.map((p) => [p.id, p.cantidad ? String(p.cantidad) : ""])));
   const [precios, setPrecios] = useState<Record<string, string>>(() => Object.fromEntries(productos.map((p) => [p.id, p.precio ?? ""])));
@@ -35,6 +36,7 @@ export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial
   const [errorSc, setErrorSc] = useState<string | null>(null);
   const [bonifs, setBonifs] = useState<Record<string, string>>(() => Object.fromEntries(productos.map((p) => [p.id, p.bonificacion ?? ""])));
   const [conFactura, setConFactura] = useState(conFacturaInicial);
+  const [envio, setEnvio] = useState(envioInicial);
 
   useEffect(() => {
     if (estado?.ok) alGuardar?.(estado.ok);
@@ -69,8 +71,10 @@ export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial
   const bonif = (id: string) => Math.min(100, Math.max(0, leerMonto(bonifs[id]) ?? 0));
   const importe = (id: string) => cantidad(id) * (leerMonto(precios[id]) ?? 0) * (1 - bonif(id) / 100);
   const bruto = productos.reduce((s, p) => s + cantidad(p.id) * (leerMonto(precios[p.id]) ?? 0), 0);
-  const subtotal = productos.reduce((s, p) => s + importe(p.id), 0);
-  const descuento = bruto - subtotal;
+  const montoEnvio = Math.max(0, leerMonto(envio) ?? 0);
+  const subtotalProductos = productos.reduce((s, p) => s + importe(p.id), 0);
+  const subtotal = subtotalProductos + montoEnvio;
+  const descuento = bruto - subtotalProductos;
   const iva = conFactura ? subtotal * (IVA_PCT / 100) : 0;
   const ivaTexto = String(IVA_PCT).replace(".", ",");
 
@@ -183,7 +187,7 @@ export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial
         )}
       </section>
 
-      <div className="grid items-stretch gap-4 lg:grid-cols-[1fr_1fr_20rem]">
+      <div className="grid items-stretch gap-4 lg:grid-cols-[1fr_1fr_11rem_20rem]">
         <div className="rounded-xl border border-stone-300 bg-white p-4 shadow-sm">
           <p className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-stone-600">Comprobante</p>
           <div className="grid grid-cols-2 gap-2" role="group" aria-label="Tipo de comprobante">
@@ -209,10 +213,19 @@ export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial
           <input name="nota" defaultValue={notaInicial} placeholder="Ej.: Entregar en el vecino" className="w-full rounded-md border border-stone-400 bg-white px-3 py-2.5 text-base" />
         </label>
 
+        <label className="flex flex-col rounded-xl border border-stone-300 bg-white p-4 shadow-sm">
+          <span className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-stone-600">Envío (si se cobra)</span>
+          <span className="relative">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" aria-hidden="true">$</span>
+            <input name="envio" inputMode="decimal" value={envio} onChange={(e) => setEnvio(e.target.value)} placeholder="0" aria-label="Monto del envío" className="w-full rounded-md border border-stone-400 bg-white py-2.5 pl-7 pr-3 text-center text-base tabular-nums" />
+          </span>
+        </label>
+
         <div className="rounded-xl border border-stone-300 bg-white p-4 text-sm shadow-sm">
-          {(descuento > 0.004 || conFactura) && <div className="flex justify-between"><span className="text-stone-600">Subtotal</span><span className="tabular-nums">{formatoPesos(bruto)}</span></div>}
+          {(descuento > 0.004 || conFactura || montoEnvio > 0) && <div className="flex justify-between"><span className="text-stone-600">Subtotal</span><span className="tabular-nums">{formatoPesos(bruto)}</span></div>}
           {descuento > 0.004 && <div className="flex justify-between text-rojo-700"><span>Bonificación</span><span className="tabular-nums">−{formatoPesos(descuento)}</span></div>}
-          {descuento > 0.004 && conFactura && <div className="flex justify-between"><span className="text-stone-600">Neto</span><span className="tabular-nums">{formatoPesos(subtotal)}</span></div>}
+          {montoEnvio > 0 && <div className="flex justify-between"><span className="text-stone-600">Envío</span><span className="tabular-nums">{formatoPesos(montoEnvio)}</span></div>}
+          {(descuento > 0.004 || montoEnvio > 0) && conFactura && <div className="flex justify-between"><span className="text-stone-600">Neto</span><span className="tabular-nums">{formatoPesos(subtotal)}</span></div>}
           {conFactura && <div className="flex justify-between"><span className="text-stone-600">IVA {ivaTexto}%</span><span className="tabular-nums">{formatoPesos(iva)}</span></div>}
           <div className="mt-1 flex justify-between border-t border-stone-300 pt-2 text-lg font-bold"><span>Total</span><span className="tabular-nums">{formatoPesos(subtotal + iva)}</span></div>
           {paquetesSc > 0 && <p className="mt-1 border-t border-stone-300 pt-1.5 text-xs text-stone-600">Sin cargo: <b>{paquetesSc}</b> {paquetesSc === 1 ? "paquete" : "paquetes"} · valor {formatoPesos(valorSc)} (no se cobra)</p>}

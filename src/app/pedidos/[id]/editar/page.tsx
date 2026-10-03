@@ -71,6 +71,7 @@ export default async function EditarPedido({ params }: { params: Promise<{ id: s
           productos={lineas}
           conFacturaInicial={pedido.conFactura}
           notaInicial={pedido.nota ?? ""}
+          envioInicial={(() => { const e = pedido.items.find((i) => !i.productoId && i.paquetesPor === 0 && i.nombre === "ENVÍO"); return e ? String(e.precioUnitario).replace(".", ",") : ""; })()}
           esDueno={usuario.rol === "DUENO"}
           textoBoton="Guardar cambios"
         />
