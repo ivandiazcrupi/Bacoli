@@ -36,6 +36,8 @@ export function PagarPartidas({ filas }: { filas: FilaAbierta[] }) {
   const registrar = () => {
     setError(null);
     if (!medio) return setError("Elegí cómo pagó.");
+    const cant = elegidas.size;
+    if (!window.confirm(`¿Confirmás que se pagaron ${cant} ${cant === 1 ? "comprobante" : "comprobantes"} por ${formatoPesos(suma)} con ${MEDIOS.find((m) => m.valor === medio)?.texto.toLowerCase()}?\n\nQuedan marcados como pagados.`)) return;
     empezar(async () => {
       const r = await registrarPagos([...elegidas], medio);
       if (!r.ok) setError(r.error ?? "No se pudo registrar.");

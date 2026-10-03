@@ -19,7 +19,15 @@ export function TablaPedido({ pedidoId, abierto, entregado, items, totales, nota
   const ivaTexto = String(totales.ivaPct).replace(".", ",");
 
   return (
-    <form id="form-entrega" action={enviar} className="space-y-4">
+    <form
+      id="form-entrega"
+      action={enviar}
+      onSubmit={(e) => {
+        const cobro = new FormData(e.currentTarget).get("cobro");
+        if ((cobro === "EFECTIVO" || cobro === "TRANSFERENCIA") && !window.confirm(`¿Confirmás que se COBRÓ ${formatoPesos(totales.total)} en ${cobro === "EFECTIVO" ? "efectivo" : "transferencia"}?`)) e.preventDefault();
+      }}
+      className="space-y-4"
+    >
       <div className="overflow-hidden rounded-xl border border-stone-300 bg-white shadow-sm">
         <div className={`hidden gap-x-4 px-5 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-stone-600 lg:grid ${cols}`}>
           <span>Producto</span>{!web && <span>Precio</span>}<span>Pedido</span><span>Entregado</span>{!web && <span>Subtotal</span>}

@@ -16,7 +16,7 @@ export function NotaRapida({ pedidoId, nota, bloqueada = false }: { pedidoId: st
   if (bloqueada) return null;
   if (!editando) {
     return (
-      <button type="button" onClick={() => { setTexto(nota); setError(null); setEditando(true); }} className="mt-0.5 block text-[12px] font-semibold text-stone-500 underline-offset-2 hover:text-stone-900 hover:underline">
+      <button type="button" onClick={() => { setTexto(nota); setError(null); setEditando(true); }} className="mt-0.5 block text-[11.5px] font-semibold text-stone-500 underline-offset-2 hover:text-stone-900 hover:underline">
         {nota ? "✎ Cambiar nota" : "+ Nota"}
       </button>
     );
@@ -44,9 +44,9 @@ export function NotaRapida({ pedidoId, nota, bloqueada = false }: { pedidoId: st
         onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); guardar(); } if (e.key === "Escape") setEditando(false); }}
         placeholder="Ej.: Recibe hasta las 10 hs"
         aria-label="Nota del pedido"
-        className="h-8 w-full rounded-md border border-stone-500 bg-white px-2 text-left text-[13px] text-stone-900 focus:border-verde-700 focus:outline-none"
+        className="h-8 w-full rounded-md border border-stone-500 bg-white px-2 text-left text-[12.5px] text-stone-900 focus:border-verde-700 focus:outline-none"
       />
-      <span className="flex items-center justify-center gap-2 text-[12px]">
+      <span className="flex items-center justify-center gap-2 text-[11.5px]">
         <button type="button" disabled={guardando} onClick={guardar} className="rounded border border-verde-700 bg-white px-2 py-0.5 font-semibold text-verde-800 hover:bg-verde-700 hover:text-white">{guardando ? "…" : "Guardar"}</button>
         <button type="button" onClick={() => setEditando(false)} className="text-stone-500 underline">Cancelar</button>
         {error && <span className="text-rojo-700">{error}</span>}

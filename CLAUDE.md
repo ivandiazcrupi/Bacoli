@@ -191,13 +191,16 @@ y ~1000 minoristas.
 - **Barrio se escribe a mano** (sin desplegable de sugerencias).
 
 ## Estilo "sistema de trabajo": firme y robusto (pedido del dueño)
-- **Legibilidad de los datos del pedido** (pedido del dueño: "no llego a leer bien"): en las filas de Pedidos (mayoristas y minoristas), Sin ubicar y la hoja de ruta, los datos (cliente, dirección, teléfono, pedido, monto) van en **14 px** (antes ~12) y el barrio/comentarios en 12–13 px, con color oscuro; las columnas de la hoja de ruta se reacomodaron para que el pedido entre en una línea por producto a 1366 px.
+- **Legibilidad de los datos del pedido** (pedido del dueño: "no llego a leer bien"): en las filas de Pedidos (mayoristas y minoristas), Sin ubicar y la hoja de ruta, los datos (cliente, dirección, teléfono, pedido, monto) van en **13,5 px** (se bajó medio punto a pedido del dueño; antes ~12 y luego 14) y el barrio/comentarios en 12–13 px, con color oscuro; las columnas de la hoja de ruta se reacomodaron para que el pedido entre en una línea por producto a 1366 px.
 - Nada de gris pálido ni "sistemita": **bordes definidos** (`stone-300/400`, no `stone-200`), sombras suaves, campos blancos con borde marcado y foco verde
   (`estiloCampo`), etiquetas en semibold, **encabezados de tabla en barra verde oscura con letras blancas** (`cabeceraTabla` en `campos.tsx`).
 - **Ficha del cliente:** banner verde oscuro con el nombre grande, etiquetas (activo, N sucursales, lista) y los accesos; cada bloque es una tarjeta con panel lateral crema y
   barra verde; **Sucursales = una tabla de verdad** (barra verde de títulos, filas con franjas alternadas, botones sólidos: Guardar verde, Desactivar con borde, Eliminar rojo).
 - **Contenido de cada recuadro centrado de arriba a abajo** (verticalmente), no de izquierda a derecha. Las sucursales de la ficha son grandes (campos de letra normal, filas altas) y todas las pantallas usan el mismo ancho (`max-w-[1600px]`).
 - La lista de Clientes y los Pedidos del cliente usan la misma barra de encabezado. Ya aplicado en Pedidos, Usuarios, Empresa, Mi cuenta y Precios (tablas con barra verde; formularios con `Bloque` de `campos.tsx`). Pendiente: afinar la tabla de cada vehículo en la hoja de ruta.
+
+## Confirmar pagos (pedido del dueño)
+- **Todo pago pide un aviso de confirmación** antes de registrarse (porque la fila desaparece de pendientes): "Registrar pago" en Cuenta corriente (lista y cuenta del cliente: cantidad, monto y medio), el cobro Efectivo/Transferencia en la hoja de ruta ("¿Confirmás que se COBRÓ $X de CLIENTE en efectivo?") y "Confirmar entrega" con pago en el detalle del pedido. La cuenta corriente (no es un pago) no pregunta.
 
 ## Desplegables (regla)
 - La opción inicial de un `<select>` ("Elegí la zona", "Elegí un rol"…) va con `disabled hidden`: se ve en el campo cerrado pero **no aparece en la lista desplegada** (antes aparecía como opción inclickeable).

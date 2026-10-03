@@ -39,7 +39,7 @@ const TEXTO_MEDIO: Record<string, string> = { EFECTIVO: "Efectivo", TRANSFERENCI
 const COLUMNAS = "grid-cols-[28px_132px_minmax(150px,1.6fr)_76px_76px_116px_76px_150px_140px_minmax(170px,1.2fr)]";
 const fechaCorta = (s: string) => `${s.slice(8)}/${s.slice(5, 7)}/${s.slice(2, 4)}`;
 
-const pastilla = (clase: string) => `inline-block whitespace-nowrap rounded-full px-3 py-1 text-[13px] font-semibold ${clase}`;
+const pastilla = (clase: string) => `inline-block whitespace-nowrap rounded-full px-3 py-1 text-[12.5px] font-semibold ${clase}`;
 
 // Observación (N° de cheque, comprobante…): siempre editable. Se guarda al salir del campo o con Enter, y avisa "Guardado".
 function ObsInput({ id, inicial }: { id: string; inicial: string }) {
@@ -62,7 +62,7 @@ function ObsInput({ id, inicial }: { id: string; inicial: string }) {
         onChange={(e) => setValor(e.target.value)}
         onBlur={guardar}
         onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
-        className="h-9 w-full rounded-md border border-stone-400 bg-white px-2 text-left text-[13px] placeholder:text-stone-400 focus:border-verde-700 focus:outline-none"
+        className="h-9 w-full rounded-md border border-stone-400 bg-white px-2 text-left text-[12.5px] placeholder:text-stone-400 focus:border-verde-700 focus:outline-none"
       />
       {estado && <span className={`absolute -bottom-3.5 right-1 text-[11px] font-semibold ${estado === "error" ? "text-rojo-700" : "text-verde-700"}`}>{estado === "guardando" ? "Guardando…" : estado === "ok" ? "Guardado ✓" : "No se guardó"}</span>}
     </span>
@@ -88,6 +88,8 @@ export function ListaComprobantes({ filas }: { filas: FilaComprobante[] }) {
   const registrar = () => {
     setError(null);
     if (!medio) return setError("Elegí cómo pagó.");
+    const cant = elegidas.size;
+    if (!window.confirm(`¿Confirmás que se pagaron ${cant} ${cant === 1 ? "comprobante" : "comprobantes"} por ${formatoPesos(suma)} con ${MEDIOS.find((m) => m.valor === medio)?.texto.toLowerCase()}?\n\nQuedan marcados como pagados.`)) return;
     empezar(async () => {
       const r = await registrarPagos([...elegidas], medio);
       if (!r.ok) setError(r.error ?? "No se pudo registrar.");
@@ -120,13 +122,13 @@ export function ListaComprobantes({ filas }: { filas: FilaComprobante[] }) {
             <span className="text-left italic">Número sin usar</span>
           </li>
         ) : (
-          <li key={f.id} className={`items-center gap-x-3 gap-y-1 px-4 py-3.5 text-center text-[14px] text-stone-800 lg:grid ${COLUMNAS} ${f.anulado ? "bg-stone-100 text-stone-500" : elegidas.has(f.id) ? "bg-crema-100" : ""}`}>
+          <li key={f.id} className={`items-center gap-x-3 gap-y-1 px-4 py-3.5 text-center text-[13.5px] text-stone-800 lg:grid ${COLUMNAS} ${f.anulado ? "bg-stone-100 text-stone-500" : elegidas.has(f.id) ? "bg-crema-100" : ""}`}>
             <input type="checkbox" aria-label={`Elegir ${f.numero ?? "comprobante"}`} checked={elegidas.has(f.id)} disabled={!f.entregado || f.pagada || f.cubierta || !!f.anulado} onChange={() => alternar(f.id)} className="h-4 w-4 accent-[#026433] disabled:opacity-30" />
-            <span className="whitespace-nowrap text-[15px] font-bold tabular-nums text-stone-900">{f.numero ?? <span className="text-[14px] font-semibold text-rojo-700">sin número</span>}</span>
-            <Link href={`/cuentas/${f.clienteId}`} className="min-w-0 text-left text-[14px] font-semibold leading-snug text-stone-900 [overflow-wrap:anywhere] hover:underline">{f.cliente}</Link>
+            <span className="whitespace-nowrap text-[14.5px] font-bold tabular-nums text-stone-900">{f.numero ?? <span className="text-[13.5px] font-semibold text-rojo-700">sin número</span>}</span>
+            <Link href={`/cuentas/${f.clienteId}`} className="min-w-0 text-left text-[13.5px] font-semibold leading-snug text-stone-900 [overflow-wrap:anywhere] hover:underline">{f.cliente}</Link>
             <span className="tabular-nums">{fechaCorta(f.cargado)}</span>
             <span className="tabular-nums">{f.entregado ? fechaCorta(f.fecha) : <span className="text-stone-400">—</span>}</span>
-            <span className={`text-[14px] font-bold tabular-nums ${f.cubierta || f.anulado ? "text-stone-400 line-through" : "text-stone-900"}`}>{formatoPesos(f.cubierta || f.anulado ? f.bruto : f.monto)}</span>
+            <span className={`text-[13.5px] font-bold tabular-nums ${f.cubierta || f.anulado ? "text-stone-400 line-through" : "text-stone-900"}`}>{formatoPesos(f.cubierta || f.anulado ? f.bruto : f.monto)}</span>
             <span className="tabular-nums">{f.entregado && !f.pagada ? fechaCorta(f.vence) : <span className="text-stone-400">—</span>}</span>
             <span className="flex flex-col items-center gap-0.5">
               {f.anulado ? (
@@ -149,10 +151,10 @@ export function ListaComprobantes({ filas }: { filas: FilaComprobante[] }) {
             <span>
               {f.tipo === "FACTURA" ? (
                 !f.pagada && !f.cubierta && !f.anulado
-                  ? <Link href={`/cuentas/${f.clienteId}/nc?factura=${f.id}`} className="inline-block rounded-md border border-stone-500 bg-white px-3 py-1.5 text-[13px] font-semibold text-stone-800 hover:bg-stone-800 hover:text-white">+ Nota de crédito</Link>
+                  ? <Link href={`/cuentas/${f.clienteId}/nc?factura=${f.id}`} className="inline-block rounded-md border border-stone-500 bg-white px-3 py-1.5 text-[12.5px] font-semibold text-stone-800 hover:bg-stone-800 hover:text-white">+ Nota de crédito</Link>
                   : <span className="text-stone-300">—</span>
               ) : (
-                <Link href={`/pedidos/${f.id}`} className="text-[13px] font-semibold text-verde-800 underline-offset-4 hover:underline">Abrir pedido ›</Link>
+                <Link href={`/pedidos/${f.id}`} className="text-[12.5px] font-semibold text-verde-800 underline-offset-4 hover:underline">Abrir pedido ›</Link>
               )}
             </span>
             <span className="flex min-w-0 flex-col items-stretch gap-1">
