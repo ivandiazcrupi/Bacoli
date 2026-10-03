@@ -13,10 +13,9 @@ export type DatosRemito = {
   nota: string | null;
   cliente: { nombre: string; razonSocial: string | null; cuit: string | null };
   sucursal: { alias: string | null; direccion: string; barrio: string; telefono: string | null };
-  items: { sku: string | null; descripcion: string; cantidad: number; unidad: string; precioUnitario: number }[];
+  items: { sku: string | null; descripcion: string; cantidad: number; unidad: string; precioUnitario: number; precioLista?: number }[]; // precioUnitario ya viene con la bonificación; precioLista es el precio sin descontar
 };
 
-const LINEAS = 26; // cantidad fija de renglones, todos de la misma altura, como un remito impreso
 
 // Dato con su rótulo chico arriba (todos los cuadros usan el mismo molde).
 const Campo = ({ rotulo, valor, clase = "" }: { rotulo: string; valor: string | null | undefined; clase?: string }) => (
@@ -28,12 +27,13 @@ const Campo = ({ rotulo, valor, clase = "" }: { rotulo: string; valor: string | 
 
 // Remito en A4, solo blanco y negro. Un único tamaño de letra (9 pt) y un solo molde de cuadro: todo parejo.
 // Documento de entrega: no reemplaza a la factura.
-export function RemitoDoc({ empresa, r, conPrecios }: { empresa: Empresa | null; r: DatosRemito; conPrecios: boolean }) {
+export function RemitoDoc({ empresa, r }: { empresa: Empresa | null; r: DatosRemito }) {
   const total = r.items.reduce((s, i) => s + i.cantidad * i.precioUnitario, 0);
-  const vacias = Math.max(0, LINEAS - r.items.length);
+  const bruto = r.items.reduce((s, i) => s + i.cantidad * (i.precioLista ?? i.precioUnitario), 0);
+  const descuento = Math.round((bruto - total) * 100) / 100;
   const celda = "flex h-full items-center border-r border-black px-2";
   const ultima = "flex h-full items-center px-2";
-  const columnas = conPrecios ? "22mm 1fr 20mm 22mm 26mm 28mm" : "26mm 1fr 24mm 28mm";
+  const columnas = "22mm 1fr 20mm 22mm 26mm 28mm";
   const fila = "grid h-[7mm] items-center border-b border-black";
   return (
     <article className="mx-auto flex min-h-[297mm] w-[210mm] flex-col gap-[3mm] rounded-none bg-white p-[10mm] text-[9pt] leading-none text-black print:min-h-0 print:h-[296mm] print:overflow-hidden print:p-[8mm]">
@@ -71,45 +71,44 @@ export function RemitoDoc({ empresa, r, conPrecios }: { empresa: Empresa | null;
         </div>
       </section>
 
-      {/* Detalle: renglones todos iguales */}
+      {/* Detalle: solo se rayan los renglones que se usan; el resto queda en blanco */}
       <section className="flex flex-1 flex-col border border-black">
         <div className={`${fila} text-[7pt] font-bold uppercase tracking-wide`} style={{ gridTemplateColumns: columnas }}>
           <span className={celda}>Código</span>
           <span className={celda}>Descripción</span>
           <span className={`${celda} justify-center`}>Cantidad</span>
-          <span className={`${conPrecios ? celda : ultima} justify-center`}>Unidad</span>
-          {conPrecios && <span className={`${celda} justify-end`}>Precio</span>}
-          {conPrecios && <span className={`${ultima} justify-end`}>Importe</span>}
+          <span className={`${celda} justify-center`}>Unidad</span>
+          <span className={`${celda} justify-end`}>Precio</span>
+          <span className={`${ultima} justify-end`}>Importe</span>
         </div>
         {r.items.map((i, n) => (
           <div key={n} className={fila} style={{ gridTemplateColumns: columnas }}>
             <span className={`${celda} truncate`}>{i.sku ?? ""}</span>
             <span className={`${celda} truncate`}>{i.descripcion}</span>
             <span className={`${celda} justify-center tabular-nums`}>{i.cantidad}</span>
-            <span className={`${conPrecios ? celda : ultima} justify-center`}>{i.unidad === "paquete" ? (i.cantidad === 1 ? "paquete" : "paquetes") : i.cantidad === 1 ? "unidad" : "unidades"}</span>
-            {conPrecios && <span className={`${celda} justify-end tabular-nums`}>{formatoPesos(i.precioUnitario)}</span>}
-            {conPrecios && <span className={`${ultima} justify-end tabular-nums`}>{formatoPesos(i.cantidad * i.precioUnitario)}</span>}
+            <span className={`${celda} justify-center`}>{i.unidad === "paquete" ? (i.cantidad === 1 ? "paquete" : "paquetes") : i.cantidad === 1 ? "unidad" : "unidades"}</span>
+            <span className={`${celda} justify-end tabular-nums`}>{formatoPesos(i.precioUnitario)}</span>
+            <span className={`${ultima} justify-end tabular-nums`}>{formatoPesos(i.cantidad * i.precioUnitario)}</span>
           </div>
         ))}
-        {Array.from({ length: vacias }).map((_, n) => (
-          <div key={`v${n}`} className={fila} style={{ gridTemplateColumns: columnas }}>
-            <span className={`${celda}`} /><span className={`${celda}`} /><span className={`${celda}`} />
-            <span className={`${conPrecios ? celda : ultima}`} />
-            {conPrecios && <span className={`${celda}`} />}
-            {conPrecios && <span className={`${ultima}`} />}
-          </div>
-        ))}
-        {conPrecios && (
-          <div className="mt-auto grid h-[8mm] items-center border-t border-black" style={{ gridTemplateColumns: "1fr 28mm" }}>
-            <span className={`${celda} justify-end text-[7pt] font-bold uppercase tracking-wide`}>Total</span>
-            <span className={`${ultima} justify-end font-bold tabular-nums`}>{formatoPesos(total)}</span>
-          </div>
-        )}
+        <div className="flex-1" />
+
+        {/* Totales: si hay bonificación se ve el descuento; el total va grande */}
+        <div className="ml-auto w-[80mm] border-l border-t border-black">
+          {descuento > 0.004 && (
+            <>
+              <div className="flex h-[6.5mm] items-center justify-between border-b border-black px-3"><span>Subtotal</span><span className="tabular-nums">{formatoPesos(bruto)}</span></div>
+              <div className="flex h-[6.5mm] items-center justify-between border-b border-black px-3"><span>Bonificación</span><span className="tabular-nums">−{formatoPesos(descuento)}</span></div>
+            </>
+          )}
+          <div className="flex h-[12mm] items-center justify-between px-3"><span className="text-[8pt] font-bold uppercase tracking-wide">Total</span><span className="text-[16pt] font-bold tabular-nums">{formatoPesos(total)}</span></div>
+        </div>
       </section>
 
-      {/* Recepción: solo la firma */}
-      <footer className="ml-auto w-[70mm] border border-black">
-        <div className="flex h-[20mm] items-end justify-center pb-1.5 text-[6.5pt] uppercase tracking-wide">Firma</div>
+      {/* Observaciones (a mano) y firma */}
+      <footer className="flex gap-[3mm]">
+        <div className="h-[20mm] flex-1 border border-black p-1.5 text-[6.5pt] uppercase tracking-wide">Observaciones</div>
+        <div className="flex h-[20mm] w-[70mm] items-end justify-center border border-black pb-1.5 text-[6.5pt] uppercase tracking-wide">Firma</div>
       </footer>
     </article>
   );

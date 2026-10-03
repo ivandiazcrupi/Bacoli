@@ -7,10 +7,9 @@ import { BarraImpresion } from "../../remito/BarraImpresion";
 import { RemitoDoc } from "../../remito/RemitoDoc";
 import { datosRemito } from "../../remito/datos";
 
-export default async function RemitoPedido({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ precios?: string }> }) {
+export default async function RemitoPedido({ params }: { params: Promise<{ id: string }> }) {
   await exigirOficina();
   const { id } = await params;
-  const { precios } = await searchParams;
   const [pedido, empresa] = await Promise.all([
     db.pedido.findUnique({ where: { id }, include: { cliente: true, punto: true, items: { include: { producto: true } } } }),
     db.empresa.findUnique({ where: { id: "principal" } }),
@@ -26,15 +25,13 @@ export default async function RemitoPedido({ params, searchParams }: { params: P
     );
   }
   const datos = datosRemito(pedido);
-  const conPrecios = precios === "1" && !datos.web; // los pedidos de la tienda no llevan precios por renglón
   return (
     <div className="bg-stone-200 print:bg-white">
       <style>{"@page { size: A4; margin: 0 }"}</style>
-      <BarraImpresion volver={`/pedidos/${id}`} textoVolver="Volver al pedido" conPrecios={conPrecios} enlacePrecios={`/pedidos/${id}/remito${conPrecios ? "" : "?precios=1"}`} />
+      <BarraImpresion volver={`/pedidos/${id}`} textoVolver="Volver al pedido" />
       <div className="py-6 print:py-0">
         <RemitoDoc
           empresa={empresa}
-          conPrecios={conPrecios}
           r={{
             numero: pedido.remitoNumero,
             fecha: pedido.fechaEntrega ? deFecha(pedido.fechaEntrega) : hoy(),

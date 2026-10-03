@@ -25,8 +25,8 @@ export function datosRemito(p: PedidoRemito) {
     items: ordenarItems(p.items).flatMap((i) => {
       const dto = Number(i.descuentoPct ?? 0);
       const filas = [];
-      if (i.cantidad > 0) filas.push({ sku: i.sku, descripcion: dto > 0 ? `${i.nombre} · bonif. ${String(dto).replace(".", ",")}%` : i.nombre, cantidad: i.cantidad, unidad: i.unidad, precioUnitario: Math.round(Number(i.precioUnitario) * (1 - dto / 100) * 100) / 100 });
-      if (i.sinCargo > 0) filas.push({ sku: i.sku, descripcion: `${i.nombre} · sin cargo`, cantidad: i.sinCargo, unidad: i.unidad, precioUnitario: 0 });
+      if (i.cantidad > 0) filas.push({ sku: i.sku, descripcion: dto > 0 ? `${i.nombre} · bonif. ${String(dto).replace(".", ",")}%` : i.nombre, cantidad: i.cantidad, unidad: i.unidad, precioLista: Number(i.precioUnitario), precioUnitario: Math.round(Number(i.precioUnitario) * (1 - dto / 100) * 100) / 100 });
+      if (i.sinCargo > 0) filas.push({ sku: i.sku, descripcion: `${i.nombre} · sin cargo`, cantidad: i.sinCargo, unidad: i.unidad, precioLista: 0, precioUnitario: 0 });
       return filas;
     }),
   };

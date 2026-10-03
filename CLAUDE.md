@@ -134,7 +134,7 @@ y ~1000 minoristas.
 - [x] Remito (`src/app/pedidos/remito/`): botón **Remito** en cada fila de la hoja del día y en el detalle del pedido, y **"Imprimir
   todos los remitos"** del día. Número correlativo con letra **R** (`R-000001`, `formatoRemito`), que se asigna **al emitir** (no al
   cargar el pedido), desde un contador atómico (`Numerador`), y **no cambia nunca**; los de un día se numeran en el orden del
-  reparto. Sale en A4 listo para imprimir (opción "con precios"), con datos de la empresa (menú **Empresa**, solo dueños: razón
+  reparto. Sale en A4 listo para imprimir **siempre con precios** (decisión del dueño: nunca remito sin precios; solo se rayan los renglones usados, el resto queda en blanco; el total va grande y muestra Subtotal y Bonificación si hay descuento; abajo recuadros "Observaciones" —a mano— y "Firma"), con datos de la empresa (menú **Empresa**, solo dueños: razón
   social, CUIT, domicilio, IVA, y "próximo número de remito", que solo puede subir), firma/aclaración/fecha de recepción y la
   leyenda **"Documento no válido como factura"**. Un remito es un documento de entrega; **no reemplaza a la factura ante ARCA**
   (confirmar el uso con el contador).

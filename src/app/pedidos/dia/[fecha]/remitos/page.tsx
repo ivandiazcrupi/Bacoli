@@ -8,10 +8,9 @@ import { datosRemito } from "../../../remito/datos";
 import { RemitoDoc } from "../../../remito/RemitoDoc";
 
 // Todos los remitos del día, uno por hoja, en el orden del reparto.
-export default async function RemitosDelDia({ params, searchParams }: { params: Promise<{ fecha: string }>; searchParams: Promise<{ precios?: string }> }) {
+export default async function RemitosDelDia({ params }: { params: Promise<{ fecha: string }> }) {
   await exigirOficina();
   const { fecha } = await params;
-  const { precios } = await searchParams;
   if (!esFechaValida(fecha)) notFound();
   const [pedidos, empresa] = await Promise.all([
     db.pedido.findMany({
@@ -21,11 +20,10 @@ export default async function RemitosDelDia({ params, searchParams }: { params: 
     db.empresa.findUnique({ where: { id: "principal" } }),
   ]);
   pedidos.sort(porReparto);
-  const conPrecios = precios === "1";
   return (
     <div className="bg-stone-200 print:bg-white">
       <style>{"@page { size: A4; margin: 0 }"}</style>
-      <BarraImpresion volver={`/pedidos/dia/${fecha}`} textoVolver="Volver a la hoja del día" conPrecios={conPrecios} enlacePrecios={`/pedidos/dia/${fecha}/remitos${conPrecios ? "" : "?precios=1"}`} />
+      <BarraImpresion volver={`/pedidos/dia/${fecha}`} textoVolver="Volver a la hoja del día" />
       {pedidos.length === 0 ? (
         <p className="p-10">No hay remitos emitidos para este día.</p>
       ) : (
@@ -34,7 +32,6 @@ export default async function RemitosDelDia({ params, searchParams }: { params: 
             <div key={p.id} className="[&:not(:last-child)]:break-after-page">
               <RemitoDoc
                 empresa={empresa}
-                conPrecios={conPrecios && !datosRemito(p).web}
                 r={{
                   numero: p.remitoNumero!,
                   fecha,
