@@ -30,6 +30,7 @@ export function NumeroFactura({ pedidoId, inicial: guardado, bloqueado }: { pedi
           });
         }}
         inputMode="numeric"
+        onChange={(e) => { e.target.value = e.target.value.replace(/\D/g, "").slice(0, 4); }}
         className="h-full w-full min-w-0 px-1 text-center text-sm font-semibold tabular-nums outline-none"
         />
       </label>

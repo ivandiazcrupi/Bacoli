@@ -2,15 +2,14 @@
 export const formatoRemito = (n: number) => `R-${String(n).padStart(4, "0")}`;
 
 /**
- * Número de factura con su letra y 4 cifras: "123" → "F-0123". Se escriben solo los números; se ignoran letras, guiones y ceros de más.
- * Devuelve null si está vacío y undefined si no tiene ningún número.
+ * Número de factura con su letra y exactamente 4 cifras: "123" → "F-0123". Solo se aceptan números, hasta 4 cifras
+ * (cuando se llegue a 9999 se amplía). Devuelve null si está vacío y undefined si no es válido.
  */
 export function normalizarFactura(texto: string): string | null | undefined {
-  const t = texto.trim();
+  const t = texto.trim().replace(/^F-/i, "");
   if (!t) return null;
-  const digitos = t.replace(/\D/g, "").replace(/^0+/, "");
-  if (!digitos) return t.replace(/\D/g, "") ? "F-0000" : undefined;
-  return `F-${digitos.padStart(4, "0")}`;
+  if (!/^\d{1,4}$/.test(t)) return undefined;
+  return `F-${t.padStart(4, "0")}`;
 }
 
 /** Lo que se escribe en el casillero de factura (sin la F-). */

@@ -42,7 +42,7 @@ export type SalidaInfo = { id: string; nombre: string; patente: string; capacida
 export type Opcion = { id: string; nombre: string };
 
 // Todo entra a lo ancho (sin deslizar): columnas justas y todo centrado.
-const COLUMNAS = "34px 76px minmax(120px,1.2fr) minmax(100px,1fr) 128px minmax(120px,1.4fr) 84px 96px 112px 128px 96px 56px";
+const COLUMNAS = "34px 76px minmax(120px,1.2fr) minmax(100px,1fr) 128px minmax(120px,1.4fr) 84px 96px 120px 120px 96px 56px";
 const ENCABEZADOS = ["N°", "Barrio", "Cliente", "Dirección", "Teléfono", "Pedido", "Monto", "Comprobante", "Entrega", "Cobro", "Mover", "Abrir"];
 const MEDIOS: { valor: string; texto: string }[] = [
   { valor: "EFECTIVO", texto: "Efectivo" },
@@ -122,7 +122,7 @@ const CELESTE = "border-[#1c8fd1] bg-[#1fa2e0] text-white";
 // Cobro ya marcado: casillero lleno y llamativo (verde fuerte = pago, celeste = cuenta corriente).
 function CobroMarcado({ tipo, detalle, onDeshacer }: { tipo: "PAGO" | "CC"; detalle: string; onDeshacer?: () => void }) {
   return (
-    <div className={`relative flex min-h-[44px] w-full flex-col items-center justify-center rounded-md border px-2 py-1 leading-tight shadow-sm ${tipo === "PAGO" ? "border-verde-800 bg-verde-700 text-white" : CELESTE}`}>
+    <div className={`relative flex h-[60px] w-full flex-col items-center justify-center rounded-md border px-2 leading-tight ${tipo === "PAGO" ? "border-verde-800 bg-verde-700 text-white" : CELESTE}`}>
       <span className="text-xs font-bold uppercase tracking-wide">{tipo === "PAGO" ? "✓ Pago" : "Cuenta corriente"}</span>
       {detalle && <span className="text-[11px] font-medium opacity-90">{detalle}</span>}
       {onDeshacer && <button type="button" onClick={onDeshacer} aria-label="Deshacer el cobro" className="absolute right-1 top-0 text-xs text-white/80 hover:text-white">✕</button>}
@@ -140,9 +140,9 @@ function CeldaCobro({ f, bloqueada, acc }: { f: Fila; bloqueada: boolean; acc: A
   const base = "h-7 w-full rounded-md border text-xs font-semibold transition disabled:opacity-40";
   if (medio) {
     return (
-      <div role="group" aria-label="¿Cómo pagó?" className="flex w-full flex-col gap-1">
+      <div role="group" aria-label="¿Cómo pagó?" className="relative flex w-full flex-col gap-1">
+        <button type="button" onClick={() => setMedio(false)} aria-label="Cancelar" className="absolute -right-1.5 -top-2 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-stone-300 text-[10px] leading-none text-stone-700 hover:bg-stone-400">✕</button>
         {MEDIOS_COBRO.map((m) => <button key={m.valor} type="button" disabled={bloqueada} onClick={() => { setMedio(false); acc.cobrar(f, m.valor); }} className={`${base} border-verde-700 bg-white text-verde-800 hover:bg-verde-700 hover:text-white`}>{m.texto}</button>)}
-        <button type="button" onClick={() => setMedio(false)} className="text-[11px] text-stone-500 underline">cancelar</button>
       </div>
     );
   }
@@ -166,6 +166,7 @@ function CajaComprobante({ f, falta, bloqueada, acc }: { f: Fila; falta: boolean
           aria-label={`Número de factura de ${f.cliente}`}
           placeholder="0000"
           inputMode="numeric"
+          onChange={(e) => { e.target.value = e.target.value.replace(/\D/g, "").slice(0, 4); }}
           defaultValue={soloNumeroFactura(f.numeroFactura)}
           disabled={bloqueada}
           onBlur={(e) => e.target.value.trim() !== soloNumeroFactura(f.numeroFactura) && acc.factura(f, e.target.value)}

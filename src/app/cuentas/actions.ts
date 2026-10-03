@@ -128,6 +128,7 @@ export async function anularNotaCredito(notaId: string): Promise<Resultado> {
 export async function cargarFactura(datos: { clienteId: string; numero: string; fecha: string; total: number; observacion: string }): Promise<Resultado & { clienteId?: string }> {
   const usuario = await exigirOficina();
   const normal = normalizarFactura(datos.numero);
+  if (normal === undefined) return { ok: false, error: "El N° de factura son solo números, hasta 4 cifras (por ejemplo 123 → F-0123)." };
   const numero = normal ?? "";
   const total = redondear2(datos.total);
   if (!numero) return { ok: false, error: "Cargá el N° de factura (solo números, por ejemplo 123 → F-0123)." };

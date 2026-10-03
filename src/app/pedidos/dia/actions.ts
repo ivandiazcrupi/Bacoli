@@ -112,7 +112,7 @@ export async function guardarNumeroFactura(pedidoId: string, numero: string): Pr
   const r = await pedidoAbierto(pedidoId);
   if ("error" in r) return { ok: false, error: r.error };
   const normal = normalizarFactura(numero);
-  if (normal === undefined) return { ok: false, error: "El N° de factura tiene que llevar números (por ejemplo 123 → F-0123)." };
+  if (normal === undefined) return { ok: false, error: "El N° de factura son solo números, hasta 4 cifras (por ejemplo 123 → F-0123)." };
   const limpio = normal ?? "";
   if (limpio) {
     const repetido = await db.pedido.findFirst({ where: { numeroFactura: { equals: limpio, mode: "insensitive" }, id: { not: pedidoId } }, include: { cliente: true } });
