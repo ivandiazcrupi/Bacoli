@@ -14,6 +14,7 @@ import { asignarADia, marcarPagoWeb } from "../../actions";
 import { agregarSalida, asignarAVehiculo, devolverAPedidos, ordenarSalida, quitarSalida } from "../../ruta/actions";
 import { emitirRemitosDia } from "../../remito/actions";
 import { cerrarDia, dejarEnCuentaCorriente, dejarListo, reabrirHoja, deshacerCobro, guardarNumeroFactura, marcarEntrega, reabrirDia, registrarCobro, registrarNoEntrega, type Resultado } from "../actions";
+import { NotaRapida } from "@/components/NotaRapida";
 import { EstadoPagoWeb } from "@/components/EstadoPagoWeb";
 import { ModalMotivo } from "@/components/ModalMotivo";
 
@@ -24,6 +25,7 @@ export type Fila = {
   cliente: string;
   direccion: string;
   comentario: string;
+  nota: string;
   telefono: string;
   items: { nombre: string; cantidad: number }[];
   monto: number;
@@ -276,6 +278,7 @@ function FilaHoja({ f, n, bloqueada, fija, acc, salidas }: { f: Fila; n: number;
       <div role="cell" className="min-w-0 break-words leading-snug">
         <a href={mapa(f)} target="_blank" rel="noreferrer" className="hover:underline">{f.direccion}</a>
         {f.comentario && <p className="text-[13px] font-semibold text-rojo-700">{f.comentario}</p>}
+        <NotaRapida pedidoId={f.id} nota={f.nota} bloqueada={bloqueada} />
       </div>
       <div role="cell" className="whitespace-nowrap tabular-nums">
         {f.telefono ? (enlaceWhatsApp(f.telefono) ? <a href={enlaceWhatsApp(f.telefono)!} target="_blank" rel="noreferrer" className="hover:text-verde-800 hover:underline">{f.telefono}</a> : f.telefono) : <span className="text-stone-400">—</span>}
@@ -397,6 +400,7 @@ function FilaUbicar({ f, salidas, bloqueada, acc }: { f: Fila; salidas: SalidaIn
         <span className="text-[14px] leading-snug">
           {f.direccion}
           {f.comentario && <span className="mt-0.5 block text-[13px] font-medium text-rojo-700">{f.comentario}</span>}
+          <NotaRapida pedidoId={f.id} nota={f.nota} bloqueada={bloqueada} />
         </span>
         <span className="text-[14px] tabular-nums">{f.telefono ? (wa ? <a href={wa} target="_blank" rel="noreferrer" className="hover:text-verde-800 hover:underline">{f.telefono}</a> : f.telefono) : <span className="text-stone-400">—</span>}</span>
         <span className="inline-grid justify-center justify-self-center gap-x-2 gap-y-0.5 text-left text-[14px] [grid-template-columns:auto_auto]">
@@ -440,6 +444,7 @@ function FilaTarjeta({ f, n, bloqueada, fija, acc, salidas }: { f: Fila; n: numb
       <div className="space-y-1">
         <a href={mapa(f)} target="_blank" rel="noreferrer" className="block text-base font-medium underline">{f.direccion}</a>
         {f.comentario && <p className="text-sm font-medium text-rojo-700">{f.comentario}</p>}
+        <NotaRapida pedidoId={f.id} nota={f.nota} bloqueada={bloqueada} />
         {f.telefono && (
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <a href={`tel:${digitos(f.telefono)}`} className="inline-flex h-11 items-center rounded-lg border border-stone-300 bg-white px-3 text-base font-medium">Llamar · {f.telefono}</a>

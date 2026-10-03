@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
+import { NotaRapida } from "@/components/NotaRapida";
 import { EstadoPagoWeb } from "@/components/EstadoPagoWeb";
 import { formatoPesos } from "@/lib/numeros";
 import { enlaceWhatsApp } from "@/lib/telefonos";
@@ -110,6 +111,7 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
             <span className="text-[14px] leading-snug">
               {f.direccion}
               {f.comentario && <span className="mt-0.5 block text-[13px] font-medium text-rojo-700">{f.comentario}</span>}
+              <NotaRapida pedidoId={f.id} nota={f.nota} />
               {f.intento && <span className="mt-0.5 block text-[13px] font-semibold text-stone-600">↺ {f.intento}</span>}
             </span>
             <span className="text-[14px] tabular-nums"><Telefono tel={f.telefono} /></span>
@@ -132,6 +134,7 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
                 <EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} />
                 <p className="text-[14px]">{f.direccion}</p>
                 {f.comentario && <p className="text-[14px] font-medium text-rojo-700">{f.comentario}</p>}
+                <NotaRapida pedidoId={f.id} nota={f.nota} />
                 {f.intento && <p className="text-[14px] font-semibold text-stone-600">↺ {f.intento}</p>}
                 {f.telefono && <p className="text-[14px] tabular-nums"><Telefono tel={f.telefono} /></p>}
               </div>

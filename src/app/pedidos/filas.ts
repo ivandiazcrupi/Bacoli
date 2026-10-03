@@ -38,6 +38,7 @@ export type FilaBandeja = {
   cliente: string;
   direccion: string;
   comentario: string;
+  nota: string; // la nota del pedido sola (se edita rápido desde las listas)
   telefono: string;
   items: { nombre: string; cantidad: number }[];
   monto: number;
@@ -65,6 +66,7 @@ export function aFila(p: PedidoCompleto, debe: Set<string>): Fila {
     cliente: p.webOrden ? `${d.nombre} - ${p.webOrden}` : d.nombre,
     direccion: d.direccion,
     comentario: avisos(d.comentario, p.nota),
+    nota: oracion(p.nota),
     telefono: d.telefono,
     items: items.map((i) => renglonHoja(i, p.estado === "ENTREGADO" ? (i.cantidadEntregada ?? i.cantidad) : i.cantidad)),
     monto: importeVigente(p.items, Number(p.ivaPct), p.estado === "ENTREGADO" ? "ENTREGADO" : "PENDIENTE", p.webTotal),
@@ -91,6 +93,7 @@ export function aFilaBandeja(p: PedidoCompleto, intento = ""): FilaBandeja {
     cliente: p.webOrden ? `${d.nombre} - ${p.webOrden}` : d.nombre,
     direccion: d.direccion,
     comentario: avisos(d.comentario, p.nota),
+    nota: oracion(p.nota),
     telefono: d.telefono,
     items: ordenarItems(p.items).map((i) => renglonHoja(i, i.cantidad)),
     monto: importeVigente(p.items, Number(p.ivaPct), "PENDIENTE", p.webTotal),
