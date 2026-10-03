@@ -567,7 +567,11 @@ function BarraEstado({ estado, esDueno, hayPedidos, resumen, onDejarLista, onVol
   const pasos = ["Armando", "Lista", "Cerrada"];
   const boton = "h-10 rounded-md px-5 text-sm font-semibold shadow-sm";
   return (
-    <section className="mx-auto w-full max-w-3xl rounded-xl border border-stone-300 bg-white px-5 py-4 shadow-sm" aria-label="Estado de la hoja de ruta">
+    <section className="mx-auto grid w-full max-w-3xl grid-cols-[1fr_auto_1fr] items-center gap-4 rounded-xl border border-stone-300 bg-white px-5 py-3 shadow-sm" aria-label="Estado de la hoja de ruta">
+      <div className="justify-self-start">
+        {estado.estado === "LISTA" && <button type="button" onClick={onVolverArmar} className={`${boton} border border-stone-400 bg-white text-stone-800 hover:bg-crema-100`}>← Volver a armar</button>}
+        {estado.estado === "CERRADA" && esDueno && <button type="button" onClick={onReabrirDia} className={`${boton} border border-stone-400 bg-white text-stone-800 hover:bg-crema-100`}>← Reabrir día</button>}
+      </div>
       <ol className="flex items-center justify-center gap-1 text-sm">
         {pasos.map((p, i) => {
           const hecho = i < actual;
@@ -576,40 +580,15 @@ function BarraEstado({ estado, esDueno, hayPedidos, resumen, onDejarLista, onVol
             <li key={p} className="flex items-center gap-1">
               <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${hecho ? "bg-verde-700 text-white" : ahora ? "bg-stone-800 text-white ring-4 ring-stone-800/15" : "border border-stone-300 bg-white text-stone-400"}`}>{hecho ? "✓" : i + 1}</span>
               <span className={`mr-1 font-semibold ${ahora ? "text-stone-900" : hecho ? "text-verde-800" : "text-stone-400"}`}>{p}</span>
-              {i < pasos.length - 1 && <span className={`mx-2 h-0.5 w-12 rounded ${i < actual ? "bg-verde-700" : "bg-stone-300"}`} />}
+              {i < pasos.length - 1 && <span className={`mx-1 h-0.5 w-8 rounded ${i < actual ? "bg-verde-700" : "bg-stone-300"}`} />}
             </li>
           );
         })}
       </ol>
-
-      {estado.estado === "ARMANDO" && (
-        <div className="mt-3 space-y-3 text-center">
-          <p className="text-sm text-stone-700">Estás <b>armando</b> la hoja: todo se puede mover. Cuando esté lista para salir, tocá <b>“Dejar lista”</b>.</p>
-          {hayPedidos && <button type="button" onClick={onDejarLista} className={`${boton} bg-verde-700 text-white hover:bg-verde-800`}>Dejar lista →</button>}
-        </div>
-      )}
-      {estado.estado === "LISTA" && (
-        <div className="mt-3 space-y-3 text-center">
-          <p className="text-sm text-stone-700"><b>Hoja lista</b> · {estado.cuando} · {estado.por}. Ya no se puede mover nada: solo se marcan entregas y cobros.</p>
-          <p className="text-sm font-medium text-stone-600">
-            Entregados <b className="text-verde-800">{resumen.entregados}</b> · Sin marcar <b className="text-stone-900">{resumen.sinMarcar}</b>{resumen.noEntregados > 0 && <> · No entregados <b className="text-rojo-700">{resumen.noEntregados}</b></>}
-          </p>
-          <div className="flex flex-wrap justify-center gap-2">
-            <button type="button" onClick={onVolverArmar} className={`${boton} border border-stone-400 bg-white text-stone-800 hover:bg-crema-100`}>← Volver a armar</button>
-            <button type="button" onClick={onCerrar} className={`${boton} bg-stone-800 text-white hover:bg-stone-700`}>Cerrar día →</button>
-          </div>
-        </div>
-      )}
-      {estado.estado === "CERRADA" && (
-        <div className="mt-3 space-y-3 text-center">
-          <p className="text-sm text-stone-700"><b>Día cerrado</b> · {estado.cuando} · {estado.por}. Solo se puede mirar.</p>
-          {esDueno ? (
-            <button type="button" onClick={onReabrirDia} className={`${boton} border border-stone-400 bg-white text-stone-800 hover:bg-crema-100`}>← Reabrir día</button>
-          ) : (
-            <p className="text-xs text-stone-500">Solo un dueño puede reabrir un día cerrado.</p>
-          )}
-        </div>
-      )}
+      <div className="justify-self-end">
+        {estado.estado === "ARMANDO" && hayPedidos && <button type="button" onClick={onDejarLista} className={`${boton} bg-verde-700 text-white hover:bg-verde-800`}>Dejar lista →</button>}
+        {estado.estado === "LISTA" && <button type="button" onClick={onCerrar} className={`${boton} bg-stone-800 text-white hover:bg-stone-700`}>Cerrar día →</button>}
+      </div>
     </section>
   );
 }
