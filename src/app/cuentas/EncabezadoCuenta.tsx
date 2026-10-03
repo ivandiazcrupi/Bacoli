@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-type Pestana = "facturas" | "remitos" | "clientes";
+type Pestana = "facturas" | "remitos" | "clientes" | "arca";
 
 // Las tres vistas de CUENTA: facturas, remitos y la cuenta de cada cliente.
 export function EncabezadoCuenta({ activa }: { activa: Pestana }) {
@@ -11,6 +11,7 @@ export function EncabezadoCuenta({ activa }: { activa: Pestana }) {
     { id: "facturas", texto: "Facturas", href: "/cuentas" },
     { id: "remitos", texto: "Remitos", href: "/cuentas/remitos" },
     { id: "clientes", texto: "Clientes", href: "/cuentas/clientes" },
+    { id: "arca", texto: "ARCA", href: "/cuentas/arca" },
   ];
   return (
     <>
