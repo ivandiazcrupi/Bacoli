@@ -13,7 +13,7 @@ import { normalizarFactura, soloNumeroFactura } from "@/lib/remito";
 import { asignarADia } from "../../actions";
 import { agregarSalida, asignarAVehiculo, devolverAPedidos, ordenarSalida, quitarSalida } from "../../ruta/actions";
 import { emitirRemitosDia } from "../../remito/actions";
-import { cerrarDia, dejarEnCuentaCorriente, deshacerCobro, guardarNumeroFactura, marcarEntrega, reabrirDia, registrarCobro, registrarNoEntrega, type Resultado } from "../actions";
+import { cerrarDia, dejarEnCuentaCorriente, dejarListo, reabrirHoja, deshacerCobro, guardarNumeroFactura, marcarEntrega, reabrirDia, registrarCobro, registrarNoEntrega, type Resultado } from "../actions";
 import { ModalMotivo } from "@/components/ModalMotivo";
 
 export type Fila = {
@@ -248,8 +248,8 @@ function SelectorMover({ f, salidas, bloqueada, acc }: { f: Fila; salidas: Salid
   );
 }
 
-function FilaHoja({ f, n, bloqueada, acc, salidas }: { f: Fila; n: number; bloqueada: boolean; acc: Acciones; salidas: SalidaInfo[] }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: f.id, disabled: bloqueada });
+function FilaHoja({ f, n, bloqueada, fija, acc, salidas }: { f: Fila; n: number; bloqueada: boolean; fija: boolean; acc: Acciones; salidas: SalidaInfo[] }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: f.id, disabled: fija });
   const entregado = f.estado === "ENTREGADO";
   const falta = entregado && !f.webOrden && (f.conFactura ? !f.numeroFactura : !f.remito); // ya entregado y sin su número de comprobante
   const flujo = useFlujoEntrega(f, acc);
@@ -262,7 +262,7 @@ function FilaHoja({ f, n, bloqueada, acc, salidas }: { f: Fila; n: number; bloqu
       className={`grid items-center gap-x-2 rounded-lg border bg-white px-2 py-2 text-center text-sm text-stone-900 ${BORDE_FILA[f.estado]}`}
     >
       <div role="cell" className="flex justify-center">
-        <button type="button" disabled={bloqueada} aria-label={`Mover el pedido ${n}`} className="flex h-7 w-7 cursor-grab items-center justify-center rounded-full bg-stone-800 text-xs font-semibold text-white disabled:cursor-default" {...attributes} {...listeners}>{n}</button>
+        <button type="button" disabled={fija} aria-label={`Mover el pedido ${n}`} className="flex h-7 w-7 cursor-grab items-center justify-center rounded-full bg-stone-800 text-xs font-semibold text-white disabled:cursor-default" {...attributes} {...listeners}>{n}</button>
       </div>
       <div role="cell" className="text-xs font-bold uppercase leading-tight tracking-wide text-stone-700">{f.barrio}</div>
       <div role="cell" className="leading-snug">
@@ -286,7 +286,7 @@ function FilaHoja({ f, n, bloqueada, acc, salidas }: { f: Fila; n: number; bloqu
       <div role="cell"><CajaComprobante f={f} falta={falta} bloqueada={bloqueada} acc={acc} /></div>
       <div role="cell"><SelectorEntrega f={f} bloqueada={bloqueada} acc={acc} eligiendoCobro={flujo.eligiendoCobro} onEntregar={flujo.entregar} onNoEntregar={flujo.abrirMotivo} /></div>
       <div role="cell"><CeldaCobro f={f} bloqueada={bloqueada} acc={acc} eligiendoCobro={flujo.eligiendoCobro} onElegir={flujo.elegirCobro} onCancelar={flujo.cancelar} /></div>
-      <div role="cell"><SelectorMover f={f} salidas={salidas} bloqueada={bloqueada} acc={acc} /></div>
+      <div role="cell"><SelectorMover f={f} salidas={salidas} bloqueada={fija} acc={acc} /></div>
       <div role="cell">
         <Link href={`/pedidos/${f.id}`} className="text-sm font-semibold text-verde-800 underline-offset-4 hover:underline">Abrir ›</Link>
       </div>
@@ -375,7 +375,7 @@ const digitos = (t: string) => t.replace(/[^\d+]/g, "");
 const mapa = (f: Fila) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${f.direccion}, ${f.barrio}`)}`;
 
 // El mismo pedido, en el celular: una tarjeta con botones grandes (dirección a Google Maps, teléfono que llama).
-function FilaTarjeta({ f, n, bloqueada, acc, salidas }: { f: Fila; n: number; bloqueada: boolean; acc: Acciones; salidas: SalidaInfo[] }) {
+function FilaTarjeta({ f, n, bloqueada, fija, acc, salidas }: { f: Fila; n: number; bloqueada: boolean; fija: boolean; acc: Acciones; salidas: SalidaInfo[] }) {
   const [eligiendo, setEligiendo] = useState(false);
   const flujo = useFlujoEntrega(f, acc);
   const fondo = `bg-white ${BORDE_FILA[f.estado]}`;
@@ -454,7 +454,7 @@ function FilaTarjeta({ f, n, bloqueada, acc, salidas }: { f: Fila; n: number; bl
         {f.webOrden ? <span /> : <BotonRemito pedidoId={f.id} numero={f.remito} clase={`h-12 w-full rounded-lg border px-3 text-base font-semibold ${f.remito ? "border-stone-800 bg-white text-stone-900" : f.estado === "ENTREGADO" && !f.conFactura ? "border-rojo-600 bg-rojo-50 text-rojo-800 ring-1 ring-rojo-600" : "border-stone-300 bg-white text-stone-700"}`} />}
         <Link href={`/pedidos/${f.id}`} className="flex h-12 items-center justify-center rounded-lg border border-stone-300 bg-white px-3 text-base font-semibold">Abrir pedido</Link>
       </div>
-      <div className="grid grid-cols-2 gap-2"><Selectores f={f} salidas={salidas} bloqueada={bloqueada} acc={acc} clase="h-12 w-full" /></div>
+      <div className="grid grid-cols-2 gap-2"><Selectores f={f} salidas={salidas} bloqueada={fija} acc={acc} clase="h-12 w-full" /></div>
       <ModalMotivo abierto={flujo.motivoAbierto} titulo="¿Por qué no se entregó?" ayuda={`${f.cliente}: el pedido vuelve a Pedidos para reprogramarlo.`} textoBoton="No se entregó" enviando={flujo.enviando} error={flujo.error} onCancelar={flujo.cerrarMotivo} onGuardar={flujo.guardarMotivo} />
     </article>
   );
@@ -490,6 +490,7 @@ function ResumenVuelta({ grupo, capacidad }: { grupo: Fila[]; capacidad: number 
 }
 
 type Props = {
+  estadoDia: { estado: "ARMANDO" | "LISTA" | "CERRADA"; por: string; cuando: string };
   hoy: string;
   siluetas: Silueta[];
   titulo: string;
@@ -503,7 +504,70 @@ type Props = {
   esDueno: boolean;
 };
 
-export function HojaDia({ hoy, siluetas, titulo, fecha, filasIniciales, salidas, vehiculosLibres, repartidores, diasSemana, cerrado, esDueno }: Props) {
+// Los tres estados de un día, siempre a la vista: ① Armando → ② Lista → ③ Cerrada, con lo que se puede hacer en cada uno.
+function BarraEstado({ estado, esDueno, hayPedidos, resumen, onDejarLista, onVolverArmar, onCerrar, onReabrirDia }: {
+  estado: Props["estadoDia"];
+  esDueno: boolean;
+  hayPedidos: boolean;
+  resumen: { entregados: number; sinMarcar: number; noEntregados: number };
+  onDejarLista: () => void;
+  onVolverArmar: () => void;
+  onCerrar: () => void;
+  onReabrirDia: () => void;
+}) {
+  const orden = { ARMANDO: 0, LISTA: 1, CERRADA: 2 } as const;
+  const actual = orden[estado.estado];
+  const pasos = ["Armando", "Lista", "Cerrada"];
+  const boton = "h-10 rounded-md px-5 text-sm font-semibold shadow-sm";
+  return (
+    <section className="mx-auto w-full max-w-3xl rounded-xl border border-stone-300 bg-white px-5 py-4 shadow-sm" aria-label="Estado de la hoja de ruta">
+      <ol className="flex items-center justify-center gap-1 text-sm">
+        {pasos.map((p, i) => {
+          const hecho = i < actual;
+          const ahora = i === actual;
+          return (
+            <li key={p} className="flex items-center gap-1">
+              <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${hecho ? "bg-verde-700 text-white" : ahora ? "bg-stone-800 text-white ring-4 ring-stone-800/15" : "border border-stone-300 bg-white text-stone-400"}`}>{hecho ? "✓" : i + 1}</span>
+              <span className={`mr-1 font-semibold ${ahora ? "text-stone-900" : hecho ? "text-verde-800" : "text-stone-400"}`}>{p}</span>
+              {i < pasos.length - 1 && <span className={`mx-2 h-0.5 w-12 rounded ${i < actual ? "bg-verde-700" : "bg-stone-300"}`} />}
+            </li>
+          );
+        })}
+      </ol>
+
+      {estado.estado === "ARMANDO" && (
+        <div className="mt-3 space-y-3 text-center">
+          <p className="text-sm text-stone-700">Estás <b>armando</b> la hoja: todo se puede mover. Cuando esté lista para salir, tocá <b>“Dejar lista”</b>.</p>
+          {hayPedidos && <button type="button" onClick={onDejarLista} className={`${boton} bg-verde-700 text-white hover:bg-verde-800`}>Dejar lista →</button>}
+        </div>
+      )}
+      {estado.estado === "LISTA" && (
+        <div className="mt-3 space-y-3 text-center">
+          <p className="text-sm text-stone-700"><b>Hoja lista</b> · {estado.cuando} · {estado.por}. Ya no se puede mover nada: solo se marcan entregas y cobros.</p>
+          <p className="text-sm font-medium text-stone-600">
+            Entregados <b className="text-verde-800">{resumen.entregados}</b> · Sin marcar <b className="text-stone-900">{resumen.sinMarcar}</b>{resumen.noEntregados > 0 && <> · No entregados <b className="text-rojo-700">{resumen.noEntregados}</b></>}
+          </p>
+          <div className="flex flex-wrap justify-center gap-2">
+            <button type="button" onClick={onVolverArmar} className={`${boton} border border-stone-400 bg-white text-stone-800 hover:bg-crema-100`}>← Volver a armar</button>
+            <button type="button" onClick={onCerrar} className={`${boton} bg-stone-800 text-white hover:bg-stone-700`}>Cerrar día →</button>
+          </div>
+        </div>
+      )}
+      {estado.estado === "CERRADA" && (
+        <div className="mt-3 space-y-3 text-center">
+          <p className="text-sm text-stone-700"><b>Día cerrado</b> · {estado.cuando} · {estado.por}. Solo se puede mirar.</p>
+          {esDueno ? (
+            <button type="button" onClick={onReabrirDia} className={`${boton} border border-stone-400 bg-white text-stone-800 hover:bg-crema-100`}>← Reabrir día</button>
+          ) : (
+            <p className="text-xs text-stone-500">Solo un dueño puede reabrir un día cerrado.</p>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciales, salidas, vehiculosLibres, repartidores, diasSemana, cerrado, esDueno }: Props) {
   const router = useRouter();
   const [filas, setFilas] = useState(filasIniciales);
   const [error, setError] = useState<string | null>(null);
@@ -576,7 +640,7 @@ export function HojaDia({ hoy, siluetas, titulo, fecha, filasIniciales, salidas,
   };
   const alSoltar = (e: DragEndEvent) => {
     setArrastrando(false);
-    if (!e.over || cerrado) return;
+    if (!e.over || fija) return;
     const id = String(e.active.id);
     const f = filas.find((x) => x.id === id);
     if (!f) return;
@@ -615,6 +679,11 @@ export function HojaDia({ hoy, siluetas, titulo, fecha, filasIniciales, salidas,
     if (window.confirm("¿Cerrar el día? Después no se puede mover ni cambiar nada de este día, y solo un dueño lo puede reabrir.")) llamar(() => cerrarDia(fecha));
   };
   const pasado = fecha < hoy;
+  const fija = estadoDia.estado !== "ARMANDO"; // lista o cerrada: la estructura no se mueve
+  const dejarLista = () => llamar(() => dejarListo(fecha));
+  const volverArmar = () => {
+    if (window.confirm("¿Volver a armar la hoja? Se vuelve a poder mover todo. Si ya imprimieron remitos, revisá que sigan siendo los mismos.")) llamar(() => reabrirHoja(fecha));
+  };
   const sumarVehiculo = (vehiculoId: string) => {
     if (vehiculoId) llamar(() => agregarSalida(fecha, vehiculoId, null));
   };
@@ -622,7 +691,7 @@ export function HojaDia({ hoy, siluetas, titulo, fecha, filasIniciales, salidas,
   const tabla = (grupo: Fila[], salida: SalidaInfo) => (
     <>
       <div className="space-y-3 p-3 xl:hidden">
-        {grupo.map((f, n) => <FilaTarjeta key={f.id} f={f} n={n + 1} bloqueada={cerrado} acc={acc} salidas={salidas} />)}
+        {grupo.map((f, n) => <FilaTarjeta key={f.id} f={f} n={n + 1} bloqueada={cerrado} fija={fija} acc={acc} salidas={salidas} />)}
       </div>
       <div className="hidden p-3 xl:block">
         <div role="table" className="space-y-1.5">
@@ -630,7 +699,7 @@ export function HojaDia({ hoy, siluetas, titulo, fecha, filasIniciales, salidas,
             {ENCABEZADOS.map((h) => <div key={h} role="columnheader">{h}</div>)}
           </div>
           <SortableContext items={grupo.map((f) => f.id)} strategy={verticalListSortingStrategy}>
-            {grupo.map((f, n) => <FilaHoja key={f.id} f={f} n={n + 1} bloqueada={cerrado} acc={acc} salidas={salidas} />)}
+            {grupo.map((f, n) => <FilaHoja key={f.id} f={f} n={n + 1} bloqueada={cerrado} fija={fija} acc={acc} salidas={salidas} />)}
           </SortableContext>
         </div>
       </div>
@@ -648,9 +717,19 @@ export function HojaDia({ hoy, siluetas, titulo, fecha, filasIniciales, salidas,
           <span className="text-base font-bold tabular-nums">{filas.reduce((t, f) => t + f.bultos, 0)}</span>
         </div>
       </div>
+      <BarraEstado
+        estado={estadoDia}
+        esDueno={esDueno}
+        hayPedidos={filas.length > 0 || siluetas.length > 0}
+        resumen={{ entregados: filas.filter((f) => f.estado === "ENTREGADO").length, sinMarcar: filas.filter((f) => f.estado !== "ENTREGADO").length, noEntregados: siluetas.length }}
+        onDejarLista={dejarLista}
+        onVolverArmar={volverArmar}
+        onCerrar={cerrar}
+        onReabrirDia={reabrir}
+      />
       <div className="grid items-center gap-3 text-sm sm:grid-cols-[1fr_auto_1fr]">
         {/* Sumar un vehículo a la salida de este día: chico, un solo desplegable; al elegirlo se abre su cuadro */}
-        {!cerrado ? (
+        {!fija ? (
           <select
             aria-label="Sumar un vehículo al día"
             value=""
@@ -662,17 +741,13 @@ export function HojaDia({ hoy, siluetas, titulo, fecha, filasIniciales, salidas,
             {vehiculosLibres.map((v) => <option key={v.id} value={v.id}>{v.nombre}</option>)}
           </select>
         ) : (
-          <div className="flex items-center gap-3">
-            <span className="rounded-md bg-stone-800 px-3 py-1.5 font-semibold text-white">Día cerrado</span>
-            {esDueno && <button type="button" onClick={reabrir} className="rounded-md border border-stone-400 bg-white px-3 py-2 font-medium shadow-sm">Reabrir día</button>}
-          </div>
+          <span />
         )}
         <h2 className="text-center text-sm font-bold uppercase tracking-wide text-stone-800">
           {sinVehiculo.length > 0 && <>Sin ubicar <span className="font-medium normal-case tracking-normal text-stone-600">· {sinVehiculo.length} {sinVehiculo.length === 1 ? "pedido" : "pedidos"}</span></>}
         </h2>
         <div className="flex flex-wrap items-center gap-2 sm:justify-self-end">
           {filas.length > 0 && <button type="button" onClick={imprimirTodos} className="rounded-md border border-stone-400 bg-white px-3 py-2 font-medium shadow-sm">Imprimir todos los remitos</button>}
-          {!cerrado && (filas.length > 0 || siluetas.length > 0) && <button type="button" onClick={cerrar} className="rounded-md bg-stone-800 px-4 py-2 font-semibold text-white shadow-sm hover:bg-stone-700">Cerrar día</button>}
         </div>
       </div>
       {pasado && !cerrado && <p className="rounded-lg border border-stone-400 bg-crema-100 p-3 text-center text-sm font-semibold text-stone-800">Este día ya pasó y falta cerrarlo. No se le pueden sumar pedidos.</p>}
@@ -680,13 +755,13 @@ export function HojaDia({ hoy, siluetas, titulo, fecha, filasIniciales, salidas,
 
       {/* Pedidos del día que todavía no están en ningún vehículo: la misma información que en la hoja PEDIDOS */}
       {(sinVehiculo.length > 0 || arrastrando) && (
-        <Zona id="sin" bloqueada={cerrado} clase="space-y-2 rounded-xl p-1">
+        <Zona id="sin" bloqueada={fija} clase="space-y-2 rounded-xl p-1">
           {sinVehiculo.length > 0 ? (
             <>
               <div className={`hidden gap-x-4 px-5 text-center text-xs font-semibold uppercase tracking-wide text-stone-600 lg:grid ${COLUMNAS_UBICAR}`}>
                 {["", "Barrio", "Cliente", "Dirección", "Teléfono", "Pedido", "Monto", "Factura", "", "Ubicar en", "Día"].map((h, i) => <span key={i}>{h}</span>)}
               </div>
-              {sinVehiculo.map((f) => <FilaUbicar key={f.id} f={f} salidas={salidas} bloqueada={cerrado} acc={acc} />)}
+              {sinVehiculo.map((f) => <FilaUbicar key={f.id} f={f} salidas={salidas} bloqueada={fija} acc={acc} />)}
             </>
           ) : (
             <p className="rounded-xl border border-dashed border-stone-400 p-4 text-center text-sm text-stone-600">Soltá acá el pedido para dejarlo sin ubicar.</p>
@@ -698,7 +773,7 @@ export function HojaDia({ hoy, siluetas, titulo, fecha, filasIniciales, salidas,
       {salidas.map((sa) => {
         const grupo = filas.filter((f) => f.salidaId === sa.id);
         return (
-          <Zona key={sa.id} id={sa.id} bloqueada={cerrado} clase="overflow-hidden rounded-xl border border-stone-400 bg-white shadow-sm">
+          <Zona key={sa.id} id={sa.id} bloqueada={fija} clase="overflow-hidden rounded-xl border border-stone-400 bg-white shadow-sm">
             <header className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-400 bg-crema-100 px-5 py-3 text-stone-900">
               <div>
                 <h2 className="text-lg font-bold leading-tight">{sa.nombre}</h2>
@@ -706,7 +781,7 @@ export function HojaDia({ hoy, siluetas, titulo, fecha, filasIniciales, salidas,
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {grupo.length > 0 && <a href={urlRuta(grupo)} target="_blank" rel="noreferrer" className="rounded-md border border-stone-400 bg-white px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-crema-50">Ver ruta en Google Maps</a>}
-                {!cerrado && <button type="button" onClick={() => { if (window.confirm(`¿Sacar ${sa.nombre} del día? Sus pedidos quedan “sin ubicar”.`)) llamar(() => quitarSalida(sa.id)); }} className="rounded-md border border-stone-400 bg-white px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-crema-50">Sacar del día</button>}
+                {!fija && <button type="button" onClick={() => { if (window.confirm(`¿Sacar ${sa.nombre} del día? Sus pedidos quedan “sin ubicar”.`)) llamar(() => quitarSalida(sa.id)); }} className="rounded-md border border-stone-400 bg-white px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-crema-50">Sacar del día</button>}
               </div>
             </header>
             {grupo.length === 0 ? (

@@ -1,6 +1,7 @@
 "use server";
 
 import { leerCobro, marcarCobroEnTx } from "@/lib/cobrar";
+import { errorSiHojaFija } from "@/lib/dias";
 import { mayus, oracion, titulo } from "@/lib/mayusculas";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -143,6 +144,8 @@ export async function actualizarPedido(pedidoId: string, _: EstadoPedidoForm, fo
   const pedido = await db.pedido.findUnique({ where: { id: pedidoId } });
   if (!pedido) return { error: "No encontré el pedido." };
   if (pedido.estado !== "PENDIENTE") return { error: "Solo se puede modificar un pedido pendiente. Reabrilo primero." };
+  const hojaFija = await errorSiHojaFija(pedido.fechaEntrega);
+  if (hojaFija) return { error: hojaFija };
   const leidos = await leerRenglones(formData);
   if ("error" in leidos) return { error: leidos.error };
 
@@ -227,7 +230,11 @@ export async function asignarADia(pedidoId: string, fecha: string): Promise<{ ok
   const pedido = await db.pedido.findUnique({ where: { id: pedidoId } });
   if (!pedido || pedido.estado === "CANCELADO") return { ok: false, error: "No se puede asignar ese pedido." };
   if (pedido.estado === "ENTREGADO") return { ok: false, error: "Un pedido entregado no se puede mover." };
-  if (await db.diaCerrado.findUnique({ where: { fecha: aFecha(fecha) } })) return { ok: false, error: "Ese día está cerrado. Un dueño puede reabrirlo." };
+  // Ni se le suman pedidos a una hoja lista o cerrada, ni se saca un pedido de ella (para eso está "No entregado").
+  const errorDestino = await errorSiHojaFija(aFecha(fecha));
+  if (errorDestino) return { ok: false, error: errorDestino };
+  const errorOrigen = await errorSiHojaFija(pedido.fechaEntrega);
+  if (errorOrigen) return { ok: false, error: errorOrigen };
   const ultimo = await db.pedido.aggregate({ where: { fechaEntrega: aFecha(fecha) }, _max: { ordenDia: true } });
   await db.$transaction(async (tx) => {
     // al cambiar de día deja el vehículo; un "no entregado" se reactiva (pendiente) y vuelve a contar en la cuenta
@@ -301,7 +308,8 @@ export async function reabrirPedido(formData: FormData) {
 }
 export async function cancelarPedido(formData: FormData) {
   const id = String(formData.get("id"));
-  const pedido = await db.pedido.findUnique({ where: { id }, select: { clienteId: true, cobro: true, estado: true } });
+  const pedido = await db.pedido.findUnique({ where: { id }, select: { clienteId: true, cobro: true, estado: true, fechaEntrega: true } });
+  if (await errorSiHojaFija(pedido?.fechaEntrega)) return; // con la hoja lista o cerrada no se cancela: se usa "No entregado" o se reabre la hoja
   // Un pedido ya cobrado no se cancela hasta deshacer el cobro (si no, el pago quedaría suelto como saldo a favor).
   if (pedido?.clienteId && pedido.estado === "ENTREGADO" && pedido.cobro === "COBRADO") return;
   await cambiarEstado(id, { estado: "CANCELADO", fechaEntrega: null, salida: { disconnect: true } }, true);

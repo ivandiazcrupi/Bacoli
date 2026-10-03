@@ -277,6 +277,14 @@ model DiaCerrado {
   cerradoEn  DateTime @default(now())
 }
 
+// Hoja de ruta "lista" (la que se arma el día anterior para salir a la mañana): la estructura queda inamovible —no se mueven pedidos,
+// camionetas ni orden— pero se siguen marcando entregas y cobros. Cualquiera de oficina puede volver a abrirla.
+model DiaListo {
+  fecha    DateTime @id @db.Date
+  listoPor String
+  listoEn  DateTime @default(now())
+}
+
 // Datos de la empresa: salen impresos en el remito (y más adelante en la factura). Hay una sola fila.
 model Empresa {
   id                String  @id @default("principal")

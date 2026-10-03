@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { aFecha, deFecha, diaMes, esFechaValida, hoy, lunesDe, nombreDia, sumarDias } from "@/lib/fechas";
 import { titulo } from "@/lib/mayusculas";
 import { porReparto } from "@/lib/ruta";
+import { estadoDelDia } from "@/lib/dias";
 import { exigirOficina } from "@/lib/session";
 import { aFila, clientesConDeuda, incluirPedido } from "../../filas";
 import { CONTENEDOR_PEDIDOS, EncabezadoPedidos } from "../../Encabezado";
@@ -25,6 +26,9 @@ export default async function HojaDelDia({ params }: { params: Promise<{ fecha: 
     db.intentoEntrega.findMany({ where: { fecha: aFecha(fecha) }, include: { pedido: { select: { estado: true, fechaEntrega: true } } }, orderBy: [{ orden: "asc" }, { creadoEn: "asc" }] }),
   ]);
   pedidos.sort(porReparto);
+  const est = await estadoDelDia(fecha);
+  const quien = est.por ? (await db.usuario.findUnique({ where: { id: est.por }, select: { nombre: true } }))?.nombre ?? "" : "";
+  const cuando = est.cuando ? new Intl.DateTimeFormat("es-AR", { hour: "2-digit", minute: "2-digit", day: "numeric", month: "numeric", timeZone: "America/Argentina/Buenos_Aires" }).format(est.cuando).replace(",", " ·") : "";
 
   // Qué pasó después con cada pedido que no se entregó este día.
   const destinoDe = (p: { estado: string; fechaEntrega: Date | null }) => {
@@ -73,6 +77,7 @@ export default async function HojaDelDia({ params }: { params: Promise<{ fecha: 
         />
 
         <HojaDia
+          estadoDia={{ estado: est.estado, por: quien, cuando }}
           hoy={hoy()}
           siluetas={siluetas}
           titulo={`Hoja de ruta · ${nombreDia(fecha)} ${diaMes(fecha)}`}

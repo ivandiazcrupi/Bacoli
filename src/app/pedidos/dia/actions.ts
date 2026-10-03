@@ -8,6 +8,7 @@ import { aFecha, diaMes, esFechaValida } from "@/lib/fechas";
 import { titulo } from "@/lib/mayusculas";
 import { datosEntrega, ordenarItems } from "../filas";
 import { leerCobro, marcarCobroEnTx } from "@/lib/cobrar";
+import { estadoDelDia } from "@/lib/dias";
 import { formatoRemito, normalizarFactura } from "@/lib/remito";
 import { exigirOficina } from "@/lib/session";
 
@@ -221,6 +222,8 @@ export async function cerrarDia(fecha: string): Promise<Resultado & { faltan?: n
 
   await db.$transaction(async (tx) => {
     await tx.diaCerrado.create({ data: { fecha: aFecha(fecha), cerradoPor: usuario.id } });
+    // Un día cerrado siempre estuvo lista su hoja.
+    await tx.diaListo.upsert({ where: { fecha: aFecha(fecha) }, update: {}, create: { fecha: aFecha(fecha), listoPor: usuario.id } });
     for (const p of pedidos.filter((x) => x.estado === "NO_ENTREGADO")) {
       // Vuelve a la bandeja como pendiente (y a contar en la cuenta), anotando qué pasó.
       await tx.pedido.update({
@@ -239,6 +242,45 @@ export async function reabrirDia(fecha: string): Promise<Resultado> {
   if (usuario.rol !== "DUENO") return { ok: false, error: "Solo un dueño puede reabrir un día cerrado." };
   if (!esFechaValida(fecha)) return { ok: false, error: "Fecha inválida." };
   await db.diaCerrado.deleteMany({ where: { fecha: aFecha(fecha) } });
+  revalidatePath("/pedidos", "layout");
+  return { ok: true };
+}
+
+/**
+ * Deja lista la hoja de ruta de un día (la que se arma el día anterior): desde ahí no se puede mover nada, solo marcar entregas y cobros.
+ * Antes revisa todo junto y dice qué falta. No emite remitos: eso se hace aparte.
+ */
+export async function dejarListo(fecha: string): Promise<Resultado> {
+  const usuario = await exigirOficina();
+  if (!esFechaValida(fecha)) return { ok: false, error: "Fecha inválida." };
+  const f = aFecha(fecha);
+  const { estado } = await estadoDelDia(f);
+  if (estado !== "ARMANDO") return { ok: false, error: estado === "LISTA" ? "La hoja ya está lista." : "El día ya está cerrado." };
+  const pedidos = await db.pedido.findMany({ where: { fechaEntrega: f, estado: { not: "CANCELADO" } } });
+  if (pedidos.length === 0) return { ok: false, error: "No hay pedidos en este día." };
+
+  const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
+  const problemas: string[] = [];
+  const sinUbicar = pedidos.filter((p) => p.salidaId === null).length;
+  if (sinUbicar > 0) problemas.push(`${plural(sinUbicar, "pedido sin ubicar", "pedidos sin ubicar")} en una camioneta`);
+  const sinRemito = pedidos.filter((p) => p.clienteId && !p.conFactura && p.remitoNumero === null).length;
+  if (sinRemito > 0) problemas.push(`${plural(sinRemito, "pedido sin remito", "pedidos sin remito")} (apretá el botón del remito de cada uno o "Imprimir todos los remitos")`);
+  const sinFactura = pedidos.filter((p) => p.clienteId && p.conFactura && !p.numeroFactura?.trim()).length;
+  if (sinFactura > 0) problemas.push(`${plural(sinFactura, "pedido con factura sin número", "pedidos con factura sin número")}`);
+  if (problemas.length > 0) return { ok: false, error: `Para dejar lista la hoja falta:\n${problemas.map((x) => `• ${x}`).join("\n")}` };
+
+  await db.diaListo.create({ data: { fecha: f, listoPor: usuario.id } });
+  revalidatePath("/pedidos", "layout");
+  return { ok: true };
+}
+
+/** Vuelve la hoja de "lista" a "armando" (cualquiera de oficina; si el día está cerrado, primero lo reabre un dueño). */
+export async function reabrirHoja(fecha: string): Promise<Resultado> {
+  await exigirOficina();
+  if (!esFechaValida(fecha)) return { ok: false, error: "Fecha inválida." };
+  const { estado } = await estadoDelDia(fecha);
+  if (estado === "CERRADA") return { ok: false, error: "El día está cerrado: primero un dueño tiene que reabrir el día." };
+  await db.diaListo.deleteMany({ where: { fecha: aFecha(fecha) } });
   revalidatePath("/pedidos", "layout");
   return { ok: true };
 }

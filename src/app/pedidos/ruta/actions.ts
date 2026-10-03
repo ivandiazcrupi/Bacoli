@@ -56,15 +56,17 @@ export async function eliminarVehiculo(_: EstadoForm, formData: FormData): Promi
 
 // ---------- Hoja de ruta de un día: qué vehículos salen y qué pedidos lleva cada uno ----------
 
+/** El día se puede reorganizar solo mientras no está lista ni cerrada su hoja de ruta. */
 async function diaAbierto(fecha: Date | null) {
   if (!fecha) return true;
-  return !(await db.diaCerrado.findUnique({ where: { fecha } }));
+  const [cerrado, listo] = await Promise.all([db.diaCerrado.findUnique({ where: { fecha } }), db.diaListo.findUnique({ where: { fecha } })]);
+  return !cerrado && !listo;
 }
 
 export async function agregarSalida(fecha: string, vehiculoId: string, repartidorId: string | null): Promise<Resultado> {
   await exigirOficina();
   if (!esFechaValida(fecha)) return { ok: false, error: "Fecha inválida." };
-  if (!(await diaAbierto(aFecha(fecha)))) return { ok: false, error: "Ese día está cerrado. Un dueño puede reabrirlo." };
+  if (!(await diaAbierto(aFecha(fecha)))) return { ok: false, error: "La hoja de ese día está lista o cerrada: hay que reabrirla para moverla." };
   if (fecha < hoy()) return { ok: false, error: "Ese día ya pasó: no se le suman camionetas." };
   const vehiculo = await db.vehiculo.findUnique({ where: { id: vehiculoId } });
   if (!vehiculo || !vehiculo.activo) return { ok: false, error: "Ese vehículo no está disponible." };
@@ -80,7 +82,7 @@ export async function quitarSalida(salidaId: string): Promise<Resultado> {
   await exigirOficina();
   const salida = await db.salida.findUnique({ where: { id: salidaId } });
   if (!salida) return { ok: false, error: "Ese vehículo ya no está en el día." };
-  if (!(await diaAbierto(salida.fecha))) return { ok: false, error: "Ese día está cerrado. Un dueño puede reabrirlo." };
+  if (!(await diaAbierto(salida.fecha))) return { ok: false, error: "La hoja de ese día está lista o cerrada: hay que reabrirla para moverla." };
   await db.$transaction([
     db.pedido.updateMany({ where: { salidaId }, data: { salidaId: null, ordenRuta: 0 } }),
     db.salida.delete({ where: { id: salidaId } }),
@@ -93,7 +95,7 @@ export async function cambiarRepartidor(salidaId: string, repartidorId: string |
   await exigirOficina();
   const salida = await db.salida.findUnique({ where: { id: salidaId } });
   if (!salida) return { ok: false, error: "Ese vehículo ya no está en el día." };
-  if (!(await diaAbierto(salida.fecha))) return { ok: false, error: "Ese día está cerrado. Un dueño puede reabrirlo." };
+  if (!(await diaAbierto(salida.fecha))) return { ok: false, error: "La hoja de ese día está lista o cerrada: hay que reabrirla para moverla." };
   await db.salida.update({ where: { id: salidaId }, data: { repartidorId: repartidorId || null } });
   refrescar();
   return { ok: true };
@@ -105,7 +107,7 @@ export async function asignarAVehiculo(pedidoId: string, salidaId: string | null
   const pedido = await db.pedido.findUnique({ where: { id: pedidoId } });
   if (!pedido || pedido.estado === "CANCELADO") return { ok: false, error: "No se puede mover ese pedido." };
   if (!pedido.fechaEntrega) return { ok: false, error: "Primero asignale un día al pedido." };
-  if (!(await diaAbierto(pedido.fechaEntrega))) return { ok: false, error: "Ese día está cerrado. Un dueño puede reabrirlo." };
+  if (!(await diaAbierto(pedido.fechaEntrega))) return { ok: false, error: "La hoja de ese día está lista o cerrada: hay que reabrirla para moverla." };
   if (salidaId === null) {
     await db.pedido.update({ where: { id: pedidoId }, data: { salidaId: null, ordenRuta: 0 } });
   } else {
@@ -127,7 +129,7 @@ export async function ordenarSalida(salidaId: string, ordenIds: string[]): Promi
   if (ordenIds.length > 300) return { ok: false, error: "Demasiados pedidos." };
   const salida = await db.salida.findUnique({ where: { id: salidaId } });
   if (!salida) return { ok: false, error: "Ese vehículo ya no está en el día." };
-  if (!(await diaAbierto(salida.fecha))) return { ok: false, error: "Ese día está cerrado. Un dueño puede reabrirlo." };
+  if (!(await diaAbierto(salida.fecha))) return { ok: false, error: "La hoja de ese día está lista o cerrada: hay que reabrirla para moverla." };
   await db.$transaction(ordenIds.map((id, i) => db.pedido.updateMany({ where: { id, salidaId }, data: { ordenRuta: i } })));
   return { ok: true };
 }
@@ -138,7 +140,7 @@ export async function devolverAPedidos(pedidoId: string): Promise<Resultado> {
   const pedido = await db.pedido.findUnique({ where: { id: pedidoId } });
   if (!pedido || pedido.estado === "CANCELADO") return { ok: false, error: "No se puede mover ese pedido." };
   if (pedido.estado === "ENTREGADO") return { ok: false, error: "Un pedido entregado no se puede mover." };
-  if (!(await diaAbierto(pedido.fechaEntrega))) return { ok: false, error: "Ese día está cerrado. Un dueño puede reabrirlo." };
+  if (!(await diaAbierto(pedido.fechaEntrega))) return { ok: false, error: "La hoja de ese día está lista o cerrada: hay que reabrirla para moverla." };
   // Un "no entregado" que vuelve a Pedidos se reactiva (pendiente) y vuelve a contar en la cuenta.
   await db.$transaction(async (tx) => {
     await tx.pedido.update({ where: { id: pedidoId }, data: { fechaEntrega: null, salidaId: null, ordenRuta: 0, ...(pedido.estado === "NO_ENTREGADO" ? { estado: "PENDIENTE" } : {}) } });
