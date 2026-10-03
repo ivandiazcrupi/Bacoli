@@ -67,11 +67,15 @@ Hay un bloqueo de 15 minutos tras 5 intentos fallidos con el mismo email. Se lib
 2. Copiar las últimas 15 líneas. Ahí Railway dice el motivo.
 3. Causas comunes: falta una variable, `SESSION_SECRET` con menos de 32 caracteres, o la base todavía no está en línea.
 
-## Backups (PENDIENTE)
-- **Todavía no verificados.** Antes de cargar datos reales hay que:
-  1. entrar a Railway → Postgres → pestaña **Backups** y activarlos si el plan lo permite (la prueba gratis puede no incluirlos),
-  2. si el plan no los ofrece, armar una copia diaria propia.
-- Hasta entonces, **usar solo datos de prueba**.
+## Copias de seguridad
+- **Railway no incluye backups automáticos en el plan actual** (solo en el plan Pro). Por eso el sistema tiene su **copia propia**:
+  **Empresa → Copia de seguridad → "Descargar copia ahora"** (solo dueños). Baja un archivo `bacoli-copia-AAAA-MM-DD_HHMM.json` con TODAS las tablas.
+- **Rutina:** bajarla **todos los días al terminar la jornada** y guardarla en Drive (carpeta "Copias BACOLI"). Si hace más de un día que no se baja,
+  aparece un **punto rojo** al lado de EMPRESA en el menú de los dueños.
+- **Restaurar** (si se pierde la base): crear una base Postgres nueva en Railway, publicar el sistema apuntando a ella (se crean las tablas solas) y, desde una
+  computadora con el proyecto: `DATABASE_URL="<la de la base nueva>" npm run db:restaurar -- bacoli-copia-AAAA-MM-DD_HHMM.json`.
+  Solo restaura en una base **sin pedidos ni clientes** (no pisa trabajo). Probado: una copia restaurada en una base vacía quedó **idéntica** a la original.
+- Con el plan **Pro** de Railway se pueden activar además backups automáticos de la base (cuesta plata: decide el dueño).
 
 ## Seguridad: qué cuidar
 - No compartir capturas de la pestaña **Variables** sin taparla: muestran la clave de la base y de las sesiones.

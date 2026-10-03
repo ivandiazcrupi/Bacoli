@@ -1,12 +1,19 @@
 import Link from "next/link";
 import type { Usuario } from "@prisma/client";
+import { db } from "@/lib/db";
 import { esPersonalDeOficina, puedeGestionarUsuarios } from "@/lib/roles";
 import { salir } from "@/app/actions";
 
 // PC: a la izquierda la marca, en el centro el menú (lo importante grande, el resto más discreto) y a la derecha los botones
 // para cargar pedido / cliente. Celular: marca + "Salir" arriba, botones de carga y el menú en una fila que se desliza.
-export function Cabecera({ usuario }: { usuario: Usuario }) {
+export async function Cabecera({ usuario }: { usuario: Usuario }) {
   const oficina = esPersonalDeOficina(usuario.rol);
+  // Para los dueños: punto rojo en EMPRESA si hace más de un día que no se descarga una copia de seguridad.
+  let copiaVencida = false;
+  if (usuario.rol === "DUENO") {
+    const e = await db.empresa.findUnique({ where: { id: "principal" }, select: { ultimaCopia: true } });
+    copiaVencida = !e?.ultimaCopia || Date.now() - e.ultimaCopia.getTime() > 24 * 3600 * 1000;
+  }
   const principal = "shrink-0 rounded-lg px-2 py-2 text-base font-bold uppercase tracking-wide";
   const secundario = "shrink-0 rounded-lg px-1.5 py-2 text-xs font-medium uppercase tracking-wide text-stone-500 hover:text-stone-900";
   const botonCargar = "rounded-lg px-3 py-2 text-center text-xs font-bold uppercase tracking-wide";
@@ -30,7 +37,7 @@ export function Cabecera({ usuario }: { usuario: Usuario }) {
           {oficina && <span aria-hidden className="mx-2 hidden h-5 w-px bg-stone-300 lg:block" />}
           {oficina && <Link href="/precios" className={secundario}>Precios</Link>}
           {puedeGestionarUsuarios(usuario.rol) && <Link href="/usuarios" className={secundario}>Usuarios</Link>}
-          {puedeGestionarUsuarios(usuario.rol) && <Link href="/empresa" className={secundario}>Empresa</Link>}
+          {puedeGestionarUsuarios(usuario.rol) && <Link href="/empresa" className={secundario}>Empresa{copiaVencida && <span title="Falta descargar la copia de seguridad de hoy" aria-label="Falta la copia de seguridad" className="ml-1 inline-block h-2 w-2 rounded-full bg-rojo-600 align-middle" />}</Link>}
           <Link href="/cuenta" className={secundario}>Mi cuenta</Link>
         </nav>
 

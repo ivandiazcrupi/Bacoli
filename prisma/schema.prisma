@@ -300,6 +300,8 @@ model Empresa {
   ingresosBrutos    String?
   inicioActividades String?
   puntoVenta        String? // para la factura electrónica, más adelante
+  ultimaCopia       DateTime? // la última vez que se descargó una copia de seguridad
+  ultimaCopiaPor    String?
 }
 
 // Contadores correlativos (por ejemplo "REMITO"). Nunca se retrocede.

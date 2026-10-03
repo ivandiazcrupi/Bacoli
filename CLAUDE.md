@@ -203,6 +203,9 @@ y ~1000 minoristas.
 ## Confirmar pagos (pedido del dueño)
 - **Todo pago pide un aviso de confirmación** antes de registrarse (porque la fila desaparece de pendientes): "Registrar pago" en Cuenta corriente (lista y cuenta del cliente: cantidad, monto y medio), el cobro Efectivo/Transferencia en la hoja de ruta ("¿Confirmás que se COBRÓ $X de CLIENTE en efectivo?") y "Confirmar entrega" con pago en el detalle del pedido. La cuenta corriente (no es un pago) no pregunta.
 
+## Copias de seguridad (decisión del dueño)
+- Railway **no** da backups en el plan actual (solo Pro). Copia propia: **Empresa → "Descargar copia ahora"** (`/api/copia`, solo dueños, `src/lib/copia.ts`): un JSON con todas las tablas, hecho en una sola transacción. Hay que bajarla **todos los días**; si pasa más de un día, **punto rojo junto a EMPRESA** en el menú de los dueños (`Empresa.ultimaCopia`). Restaurar: `npm run db:restaurar -- archivo.json` (`scripts/restaurar.ts`, solo en base sin pedidos ni clientes; probado idéntico). Ver `docs/PUBLICAR.md`.
+
 ## Desplegables (regla)
 - La opción inicial de un `<select>` ("Elegí la zona", "Elegí un rol"…) va con `disabled hidden`: se ve en el campo cerrado pero **no aparece en la lista desplegada** (antes aparecía como opción inclickeable).
 
