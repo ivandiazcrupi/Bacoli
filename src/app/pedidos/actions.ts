@@ -231,7 +231,6 @@ export async function asignarADia(pedidoId: string, fecha: string): Promise<{ ok
   const pedido = await db.pedido.findUnique({ where: { id: pedidoId } });
   if (!pedido || pedido.estado === "CANCELADO") return { ok: false, error: "No se puede asignar ese pedido." };
   if (pedido.estado === "ENTREGADO") return { ok: false, error: "Un pedido entregado no se puede mover." };
-  if (pedido.webOrden && !webPagado(pedido.webOrden, pedido.webPago)) return { ok: false, error: ERROR_WEB_SIN_PAGO };
   // Ni se le suman pedidos a una hoja lista o cerrada, ni se saca un pedido de ella (para eso está "No entregado").
   const errorDestino = await errorSiHojaFija(aFecha(fecha));
   if (errorDestino) return { ok: false, error: errorDestino };

@@ -54,11 +54,13 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
     });
   };
 
-  const botones = (f: FilaBandeja, grande?: boolean) => f.webOrden && !f.pagoMp ? (
-    <button type="button" onClick={() => confirmarPago(f)} className="rounded-md border border-verde-700 bg-white px-3 py-2 text-sm font-semibold text-verde-800 shadow-sm hover:bg-verde-700 hover:text-white">
-      Confirmar pago (transferencia)
-    </button>
-  ) : (
+  const botones = (f: FilaBandeja, grande?: boolean) => (
+    <div className="flex flex-col items-center gap-1.5">
+    {f.webOrden && !f.pagoMp && (
+      <button type="button" onClick={() => confirmarPago(f)} className="rounded-md border border-verde-700 bg-white px-2 py-1 text-xs font-semibold text-verde-800 hover:bg-verde-700 hover:text-white">
+        Confirmar pago (transferencia)
+      </button>
+    )}
     <div className="flex gap-1.5" role="group" aria-label="Asignar a un día">
       {dias.map((d) => (
         <button
@@ -74,6 +76,7 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
           <span className="block text-[11px] font-medium leading-none opacity-70">{d.numero}</span>
         </button>
       ))}
+    </div>
     </div>
   );
 
