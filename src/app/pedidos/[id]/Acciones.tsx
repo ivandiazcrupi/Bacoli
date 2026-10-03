@@ -5,8 +5,8 @@ import { Mensajes, estiloBoton } from "@/components/campos";
 import { formatoPesos } from "@/lib/numeros";
 import { marcarEntregado, type EstadoPedidoForm } from "../actions";
 
-export type Renglon = { id: string; nombre: string; sku: string | null; unidad: string; precio: number; cantidad: number; entregada: number | null; sinCargo: number; descuentoPct: number };
-type Totales = { base: number; iva: number; ivaPct: number; total: number; conFactura: boolean };
+export type Renglon = { id: string; nombre: string; sku: string | null; unidad: string; precio: number; cantidad: number; entregada: number | null; sinCargo: number; motivoSinCargo: string | null; descuentoPct: number };
+type Totales = { bruto: number; descuento: number; base: number; iva: number; ivaPct: number; total: number; conFactura: boolean; sinCargoPaquetes: number; sinCargoValor: number };
 
 const COLUMNAS = "lg:grid-cols-[minmax(0,2fr)_7rem_7rem_8rem_9rem]";
 const COLUMNAS_WEB = "lg:grid-cols-[minmax(0,2fr)_9rem_9rem]"; // la tienda no tiene precio por renglón: vale el total pagado
@@ -33,7 +33,7 @@ export function TablaPedido({ pedidoId, abierto, entregado, items, totales, nota
                 <p className="text-xs text-stone-500">{i.sku ?? ""} · por {i.unidad}</p>
               </div>
               {!web && <p className="text-sm tabular-nums">{formatoPesos(i.precio)}</p>}
-              <p className="font-semibold tabular-nums">{i.cantidad}{i.sinCargo > 0 && <span className="block text-xs font-normal text-stone-600">+ {i.sinCargo} sin cargo</span>}{i.descuentoPct > 0 && <span className="block text-xs font-normal text-stone-600">bonif. {String(i.descuentoPct).replace(".", ",")}%</span>}</p>
+              <p className="font-semibold tabular-nums">{i.cantidad}{i.sinCargo > 0 && <span className="block text-xs font-normal text-stone-600">+ {i.sinCargo} sin cargo{i.motivoSinCargo ? ` (${i.motivoSinCargo.toLowerCase()})` : ""}</span>}{i.descuentoPct > 0 && <span className="block text-xs font-normal text-stone-600">bonif. {String(i.descuentoPct).replace(".", ",")}%</span>}</p>
               <div>
                 {abierto ? (
                   <input
@@ -63,9 +63,12 @@ export function TablaPedido({ pedidoId, abierto, entregado, items, totales, nota
           <Mensajes estado={estado} />
         </div>
         <div className="rounded-xl border border-stone-300 bg-white p-4 text-sm shadow-sm">
-          {totales.conFactura && <div className="flex justify-between"><span className="text-stone-600">Subtotal</span><span className="tabular-nums">{formatoPesos(totales.base)}</span></div>}
+          {(totales.conFactura || totales.descuento > 0.004) && <div className="flex justify-between"><span className="text-stone-600">Subtotal</span><span className="tabular-nums">{formatoPesos(totales.bruto)}</span></div>}
+          {totales.descuento > 0.004 && <div className="flex justify-between text-rojo-700"><span>Bonificación</span><span className="tabular-nums">−{formatoPesos(totales.descuento)}</span></div>}
+          {totales.descuento > 0.004 && totales.conFactura && <div className="flex justify-between"><span className="text-stone-600">Neto</span><span className="tabular-nums">{formatoPesos(totales.base)}</span></div>}
           {totales.conFactura && <div className="flex justify-between"><span className="text-stone-600">IVA {ivaTexto}%</span><span className="tabular-nums">{formatoPesos(totales.iva)}</span></div>}
           <div className={`flex justify-between text-lg font-bold ${totales.conFactura ? "mt-1 border-t border-stone-300 pt-2" : ""}`}><span>Total</span><span className="tabular-nums">{formatoPesos(totales.total)}</span></div>
+          {totales.sinCargoPaquetes > 0 && <p className="mt-1 border-t border-stone-300 pt-1.5 text-xs text-stone-600">Sin cargo: <b>{totales.sinCargoPaquetes}</b> {totales.sinCargoPaquetes === 1 ? "paquete" : "paquetes"} · valor {formatoPesos(totales.sinCargoValor)} (no se cobra)</p>}
           {abierto && <button disabled={cargando} className={`${estiloBoton} mt-3`}>{cargando ? "Guardando…" : "Confirmar entrega"}</button>}
         </div>
       </div>

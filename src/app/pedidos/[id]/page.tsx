@@ -35,6 +35,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
   const items = ordenarItems(pedido.items);
   const ivaPct = Number(pedido.ivaPct);
   const pedidoBase = web ? Number(pedido.webTotal ?? 0) : pedido.items.reduce((s, i) => s + i.cantidad * Number(i.precioUnitario) * (1 - Number(i.descuentoPct) / 100), 0);
+  const pedidoBruto = web ? pedidoBase : pedido.items.reduce((s, i) => s + i.cantidad * Number(i.precioUnitario), 0);
   const total = importeVigente(pedido.items, ivaPct, pedido.estado === "ENTREGADO" ? "ENTREGADO" : "PENDIENTE", pedido.webTotal);
   const fecha = pedido.fechaEntrega ? deFecha(pedido.fechaEntrega) : null;
   const abierto = pedido.estado === "PENDIENTE";
@@ -110,8 +111,8 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
           pedidoId={pedido.id}
           abierto={abierto}
           entregado={pedido.estado === "ENTREGADO"}
-          items={items.map((i) => ({ id: i.id, nombre: i.nombre, sku: i.sku, unidad: i.unidad, precio: Number(i.precioUnitario), cantidad: i.cantidad, entregada: i.cantidadEntregada, sinCargo: i.sinCargo, descuentoPct: Number(i.descuentoPct) }))}
-          totales={{ base: pedidoBase, iva: total - pedidoBase, ivaPct, total, conFactura: pedido.conFactura }}
+          items={items.map((i) => ({ id: i.id, nombre: i.nombre, sku: i.sku, unidad: i.unidad, precio: Number(i.precioUnitario), cantidad: i.cantidad, entregada: i.cantidadEntregada, sinCargo: i.sinCargo, motivoSinCargo: i.motivoSinCargo, descuentoPct: Number(i.descuentoPct) }))}
+          totales={{ bruto: pedidoBruto, descuento: pedidoBruto - pedidoBase, base: pedidoBase, iva: total - pedidoBase, ivaPct, total, conFactura: pedido.conFactura, sinCargoPaquetes: pedido.items.reduce((t, i) => t + i.sinCargo, 0), sinCargoValor: pedido.items.reduce((t, i) => t + i.sinCargo * Number(i.precioUnitario), 0) }}
           web={web}
           nota={oracion(pedido.nota) || null}
         />

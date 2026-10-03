@@ -46,11 +46,11 @@ export default async function EditarPedido({ params }: { params: Promise<{ id: s
   const actuales = await productosParaCliente(pedido.clienteId);
   const lineas: LineaProducto[] = actuales.map((p) => {
     const item = pedido.items.find((i) => i.productoId === p.id);
-    return { ...p, precio: item ? String(item.precioUnitario).replace(".", ",") : p.precio, cantidad: item?.cantidad ?? 0, sinCargo: item?.sinCargo ?? 0, bonificacion: item && Number(item.descuentoPct) ? String(item.descuentoPct).replace(".", ",") : "" };
+    return { ...p, precio: item ? String(item.precioUnitario).replace(".", ",") : p.precio, cantidad: item?.cantidad ?? 0, sinCargo: item?.sinCargo ?? 0, motivoSinCargo: item?.motivoSinCargo ?? null, bonificacion: item && Number(item.descuentoPct) ? String(item.descuentoPct).replace(".", ",") : "" };
   });
   for (const item of pedido.items) {
     if (item.productoId && !lineas.some((l) => l.id === item.productoId)) {
-      lineas.push({ id: item.productoId, nombre: item.nombre, sku: item.sku, unidad: item.unidad, precio: String(item.precioUnitario).replace(".", ","), cantidad: item.cantidad, sinCargo: item.sinCargo, bonificacion: Number(item.descuentoPct) ? String(item.descuentoPct).replace(".", ",") : "" });
+      lineas.push({ id: item.productoId, nombre: item.nombre, sku: item.sku, unidad: item.unidad, precio: String(item.precioUnitario).replace(".", ","), cantidad: item.cantidad, sinCargo: item.sinCargo, motivoSinCargo: item.motivoSinCargo, bonificacion: Number(item.descuentoPct) ? String(item.descuentoPct).replace(".", ",") : "" });
     }
   }
 

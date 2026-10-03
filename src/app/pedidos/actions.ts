@@ -62,7 +62,7 @@ export async function datosNuevoPedido(puntoId: string): Promise<DatosPedido | n
   };
 }
 
-type Renglon = { productoId: string; nombre: string; sku: string | null; unidad: string; cantidad: number; precioUnitario: number; sinCargo: number; descuentoPct: number };
+type Renglon = { productoId: string; nombre: string; sku: string | null; unidad: string; cantidad: number; precioUnitario: number; sinCargo: number; descuentoPct: number; motivoSinCargo: string | null };
 
 async function leerRenglones(formData: FormData): Promise<{ renglones: Renglon[] } | { error: string }> {
   const productos = await db.producto.findMany({ where: { activo: true } });
@@ -71,12 +71,14 @@ async function leerRenglones(formData: FormData): Promise<{ renglones: Renglon[]
     const cantidad = Number(String(formData.get(`q_${p.id}`) ?? "0").replace(/\D/g, "") || 0);
     const sinCargo = Number(String(formData.get(`sc_${p.id}`) ?? "0").replace(/\D/g, "") || 0);
     if (cantidad <= 0 && sinCargo <= 0) continue;
+    const motivoSinCargo = String(formData.get(`scm_${p.id}`) ?? "").trim() || null;
+    if (sinCargo > 0 && !motivoSinCargo) return { error: `Falta el motivo de los paquetes sin cargo de ${p.nombre}.` };
     const descuentoPct = leerMonto(String(formData.get(`bd_${p.id}`) ?? "")) ?? 0;
     if (descuentoPct < 0 || descuentoPct > 100) return { error: `La bonificación de ${p.nombre} tiene que estar entre 0 y 100 %.` };
     const precio = leerMonto(String(formData.get(`pr_${p.id}`) ?? ""));
     // Un renglón que es solo "sin cargo" (recambio) no necesita precio.
     if (cantidad > 0 && (precio === null || precio <= 0)) return { error: `Falta el precio de ${p.nombre}. Cargalo en el pedido o en Precios.` };
-    renglones.push({ productoId: p.id, nombre: p.nombre, sku: p.sku, unidad: p.unidad, cantidad, precioUnitario: precio ?? 0, sinCargo, descuentoPct });
+    renglones.push({ productoId: p.id, nombre: p.nombre, sku: p.sku, unidad: p.unidad, cantidad, precioUnitario: precio ?? 0, sinCargo, descuentoPct, motivoSinCargo: sinCargo > 0 ? motivoSinCargo : null });
   }
   if (renglones.length === 0) return { error: "Poné la cantidad de al menos un producto." };
   return { renglones };

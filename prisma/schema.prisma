@@ -243,6 +243,7 @@ model PedidoItem {
   precioUnitario    Decimal   @db.Decimal(12, 2) // sin IVA
   sinCargo          Int       @default(0) // paquetes/unidades que se entregan sin cargo (recambios, regalos): no suman al monto
   descuentoPct      Decimal   @default(0) @db.Decimal(5, 2) // bonificación en % sobre el precio de este renglón
+  motivoSinCargo    String? // Recambio, Bonificación, Muestra u Otro (obligatorio si hay paquetes sin cargo)
   pedido            Pedido    @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
   producto          Producto? @relation(fields: [productoId], references: [id])
 
