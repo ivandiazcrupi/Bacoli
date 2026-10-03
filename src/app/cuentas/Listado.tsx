@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Cabecera } from "@/components/Cabecera";
 import { diasDeAtraso, incluirNc, partidaDe } from "@/lib/cobranza";
 import { db } from "@/lib/db";
+import { cargarFacturas, soloDigitos } from "@/lib/facturas";
+import { SubirArchivo } from "./arca/SubirArchivo";
 import { hoy } from "@/lib/fechas";
 import { formatoRemito } from "@/lib/remito";
 import { formatoPesos } from "@/lib/numeros";
@@ -30,10 +32,10 @@ export async function Listado({ tipo, searchParams, ruta }: { tipo: "FACTURA" | 
   const conAnulados = tipo === "REMITO" && estado === "todas";
   const palabras = q.trim().split(/\s+/).filter(Boolean);
 
-  const pedidos = await db.pedido.findMany({
+  const pedidos = tipo === "FACTURA" ? [] : await db.pedido.findMany({
     where: {
       clienteId: { not: null },
-      conFactura: tipo === "FACTURA",
+      conFactura: false,
       // En REMITOS → Todas también se ven los anulados y no entregados que tienen número, para que la numeración se vea completa.
       ...(conAnulados
         ? { estado: { in: ["PENDIENTE", "ENTREGADO", "CANCELADO", "NO_ENTREGADO"] as ("PENDIENTE" | "ENTREGADO" | "CANCELADO" | "NO_ENTREGADO")[] }, OR: [{ estado: { in: ["PENDIENTE", "ENTREGADO"] as ("PENDIENTE" | "ENTREGADO")[] } }, { remitoNumero: { not: null } }] }
@@ -53,6 +55,29 @@ export async function Listado({ tipo, searchParams, ruta }: { tipo: "FACTURA" | 
     }];
   });
 
+  // FACTURAS: salen de ARCA (facturas y notas de crédito), en las mismas columnas que los remitos.
+  let ncSinAplicar = 0;
+  let escritasSinArca: string[] = [];
+  if (tipo === "FACTURA") {
+    const { filas, controles, puntosDeCuit } = await cargarFacturas();
+    ncSinAplicar = controles.ncSinAplicar.length;
+    escritasSinArca = controles.sinArca.map((p) => p.numeroFactura ?? "");
+    const digitos = soloDigitos(q);
+    for (const f of filas) {
+      const nombreCli = f.cliente ?? f.razonSocial ?? "—";
+      if (palabras.length && !palabras.every((w) => `${nombreCli} ${f.razonSocial ?? ""} ${f.sucursal ?? ""}`.toLowerCase().includes(w.toLowerCase())) && !(digitos && (String(f.numero).includes(digitos) || (f.cuit ?? "").includes(digitos)))) continue;
+      const cubierta = !f.esNc && f.aplicado > 0 && f.saldo <= 0.01;
+      if (estado === "sin-pagar" && (f.esNc ? f.saldo <= 0.01 : f.pagada || cubierta)) continue;
+      if (estado === "pagadas" && (f.esNc || !(f.pagada || cubierta))) continue;
+      todas.push({
+        id: f.id, clienteId: f.clienteId ?? "", cliente: nombreCli, tipo, numero: f.esNc ? `NC ${f.numero}` : `FACTURA ${f.numero}`, cargado: f.fecha, fecha: f.fecha,
+        entregado: true, bruto: f.total, nc: f.aplicado, cubierta, anulado: null, ncTexto: f.creditos.map((c) => `NC ${c.ncNumero}`).join(" · "), monto: f.esNc ? 0 : f.saldo, vence: "", atraso: 0, pagada: f.pagada, medio: f.medio, obs: f.observacion ?? "",
+        arca: true, esNc: f.esNc, cuit: f.cuit, saldo: f.saldo, sucursal: f.sucursal, puntoId: f.puntoId, puntos: puntosDeCuit(f.cuit),
+        aviso: [...f.problemas, ...(!f.esNc && !f.pedidoId ? ["Sin pedido"] : [])].join(" · "), aplicaciones: f.aplicaciones.map((a) => ({ id: a.id, facturaNumero: a.facturaNumero, monto: a.monto })),
+      });
+    }
+  }
+
   // Remitos que se emitieron y el pedido pasó a llevar factura: el número existe, así que se ve (no es un hueco).
   if (tipo === "REMITO" && estado === "todas" && palabras.length === 0) {
     const conFacturaYRemito = await db.pedido.findMany({ where: { clienteId: { not: null }, conFactura: true, remitoNumero: { not: null } }, include: { cliente: true }, orderBy: { remitoNumero: "asc" } });
@@ -63,7 +88,7 @@ export async function Listado({ tipo, searchParams, ruta }: { tipo: "FACTURA" | 
   }
   // Números que no aparecen en ningún pedido (saltos de numeración): se muestran como "Sin usar" para que la numeración se vea completa.
   const huecos: FilaComprobante[] = [];
-  if (estado === "todas" && palabras.length === 0) {
+  if (tipo === "REMITO" && estado === "todas" && palabras.length === 0) {
     const usados = new Set(todas.map((f) => (f.numero ?? "").replace(/\D/g, "")).filter(Boolean).map(Number));
     const nums = [...usados].filter((n) => n < 1_000_000);
     if (nums.length > 0) {
@@ -76,11 +101,11 @@ export async function Listado({ tipo, searchParams, ruta }: { tipo: "FACTURA" | 
       }
     }
   }
-  const sinHuecos = todas.length;
+  const sinHuecos = todas.filter((f) => !f.esNc).length;
   todas.push(...huecos);
-  todas.sort((a, b) => clave(a.numero) - clave(b.numero) || a.fecha.localeCompare(b.fecha));
+  todas.sort((a, b) => tipo === "FACTURA" ? a.fecha.localeCompare(b.fecha) || Number(!!a.esNc) - Number(!!b.esNc) || clave(a.numero) - clave(b.numero) : clave(a.numero) - clave(b.numero) || a.fecha.localeCompare(b.fecha));
 
-  const sinPagar = todas.filter((f) => !f.hueco).filter((f) => !f.pagada && !f.cubierta && !f.anulado);
+  const sinPagar = todas.filter((f) => !f.hueco && !f.esNc).filter((f) => !f.pagada && !f.cubierta && !f.anulado);
   const montoSinPagar = sinPagar.reduce((s, f) => s + f.monto, 0);
   const vencido = sinPagar.filter((f) => f.atraso > 0).reduce((s, f) => s + f.monto, 0);
   const paginas = Math.max(1, Math.ceil(todas.length / POR_PAGINA));
@@ -104,7 +129,7 @@ export async function Listado({ tipo, searchParams, ruta }: { tipo: "FACTURA" | 
         <section aria-label="Resumen" className="grid grid-cols-1 divide-y divide-stone-300 overflow-hidden rounded-xl border border-stone-300 bg-white shadow-sm sm:grid-cols-3 sm:divide-x sm:divide-y-0">
           {celda(`${tipo === "FACTURA" ? "Facturas" : "Remitos"} sin pagar`, sinPagar.length)}
           {celda("Monto sin pagar", formatoPesos(montoSinPagar))}
-          {celda("Vencido", formatoPesos(vencido), vencido > 0 ? "text-rojo-700" : "")}
+          {tipo === "FACTURA" ? celda("NC sin aplicar", ncSinAplicar, ncSinAplicar > 0 ? "text-rojo-700" : "") : celda("Vencido", formatoPesos(vencido), vencido > 0 ? "text-rojo-700" : "")}
         </section>
 
         <form className="flex flex-wrap items-center gap-2">
@@ -123,6 +148,14 @@ export async function Listado({ tipo, searchParams, ruta }: { tipo: "FACTURA" | 
           <ListaComprobantes filas={visibles} />
         </section>
 
+        {tipo === "FACTURA" && escritasSinArca.length > 0 && <p className="text-sm font-semibold text-rojo-700">Números escritos en pedidos que ARCA no tiene: {escritasSinArca.join(", ")}</p>}
+        {tipo === "FACTURA" && (
+          <details className="text-sm">
+            <summary className="cursor-pointer font-semibold text-stone-600 hover:text-stone-900">Subir archivo de ARCA</summary>
+            <p className="mt-2 text-stone-600">Libro IVA Ventas (VENTAS.txt) o el CSV de Mis Comprobantes → Emitidos. No duplica lo ya cargado.</p>
+            <div className="mt-2"><SubirArchivo /></div>
+          </details>
+        )}
         {paginas > 1 && (
           <nav className="flex items-center justify-center gap-3 text-sm" aria-label="Páginas">
             {pagina > 1 && <Link href={hrefPagina(pagina - 1)} className="rounded-md border border-stone-400 bg-white px-3 py-2 font-medium shadow-sm">← Anteriores</Link>}

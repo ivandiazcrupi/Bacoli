@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { Fragment, useState, useTransition } from "react";
 import { formatoPesos } from "@/lib/numeros";
 import { deshacerPago, guardarObservacion, registrarPagos } from "./actions";
+import { aplicarNc, deshacerPagoArca, guardarDatosArca, quitarAplicacionNc, registrarPagosArca } from "./arca/actions";
 
 export type FilaComprobante = {
   id: string;
@@ -27,6 +28,16 @@ export type FilaComprobante = {
   medio: string | null;
   obs: string;
   hueco?: boolean; // número que no aparece en ningún pedido: se ve para que la numeración esté completa
+  // Facturas y notas de crédito que vienen de ARCA (misma lista, mismas columnas):
+  arca?: boolean;
+  esNc?: boolean;
+  cuit?: string | null;
+  saldo?: number;
+  sucursal?: string | null;
+  puntoId?: string | null;
+  puntos?: { id: string; barrio: string; direccion: string }[];
+  aviso?: string;
+  aplicaciones?: { id: string; facturaNumero: number; monto: number }[];
 };
 
 const MEDIOS = [
@@ -42,18 +53,26 @@ const fechaCorta = (s: string) => `${s.slice(8)}/${s.slice(5, 7)}/${s.slice(2, 4
 const pastilla = (clase: string) => `inline-block whitespace-nowrap rounded-full px-3 py-1 text-[12px] font-semibold ${clase}`;
 
 // Observación (N° de cheque, comprobante…): siempre editable. Se guarda al salir del campo o con Enter, y avisa "Guardado".
-function ObsInput({ id, inicial }: { id: string; inicial: string }) {
+function ObsInput({ id, inicial, arca }: { id: string; inicial: string; arca?: { puntoId: string | null; puntos: { id: string; barrio: string; direccion: string }[] } }) {
+  const [punto, setPunto] = useState(arca?.puntoId ?? "");
   const [valor, setValor] = useState(inicial);
   const [guardado, setGuardado] = useState(inicial);
   const [estado, setEstado] = useState<"" | "guardando" | "ok" | "error">("");
   const guardar = async () => {
     if (valor.trim() === guardado.trim()) return;
     setEstado("guardando");
-    const r = await guardarObservacion(id, valor);
+    const r = arca ? await guardarDatosArca(id, punto, valor) : await guardarObservacion(id, valor);
     if (r.ok) { setGuardado(valor); setEstado("ok"); setTimeout(() => setEstado(""), 1800); } else setEstado("error");
   };
+  const cambiarPunto = async (p: string) => { setPunto(p); await guardarDatosArca(id, p, valor); setEstado("ok"); setTimeout(() => setEstado(""), 1800); };
   return (
-    <span className="relative min-w-0 flex-1">
+    <span className="relative flex min-w-0 flex-1 gap-1">
+      {arca && arca.puntos.length > 0 && (
+        <select aria-label="Sucursal" value={punto} onChange={(e) => cambiarPunto(e.target.value)} className="h-9 w-28 shrink-0 rounded-md border border-stone-400 bg-white px-1 text-[12px]">
+          <option value="">Sucursal…</option>
+          {arca.puntos.map((p) => <option key={p.id} value={p.id}>{p.barrio}</option>)}
+        </select>
+      )}
       <input
         aria-label="Observación"
         placeholder="N° de cheque, comprobante…"
@@ -62,7 +81,7 @@ function ObsInput({ id, inicial }: { id: string; inicial: string }) {
         onChange={(e) => setValor(e.target.value)}
         onBlur={guardar}
         onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
-        className="h-9 w-full rounded-md border border-stone-400 bg-white px-2 text-left text-[12px] placeholder:text-stone-400 focus:border-verde-700 focus:outline-none"
+        className="h-9 min-w-0 flex-1 rounded-md border border-stone-400 bg-white px-2 text-left text-[12px] placeholder:text-stone-400 focus:border-verde-700 focus:outline-none"
       />
       {estado && <span className={`absolute -bottom-3.5 right-1 text-[11px] font-semibold ${estado === "error" ? "text-rojo-700" : "text-verde-700"}`}>{estado === "guardando" ? "Guardando…" : estado === "ok" ? "Guardado ✓" : "No se guardó"}</span>}
     </span>
@@ -76,8 +95,10 @@ export function ListaComprobantes({ filas }: { filas: FilaComprobante[] }) {
   const [medio, setMedio] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [trabajando, empezar] = useTransition();
+  const [picker, setPicker] = useState<string | null>(null);
+  const esArca = filas.some((f) => f.arca);
 
-  const pagables = filas.filter((f) => !f.hueco).filter((f) => f.entregado && !f.pagada && !f.cubierta && !f.anulado);
+  const pagables = filas.filter((f) => !f.hueco && !f.esNc).filter((f) => f.entregado && !f.pagada && !f.cubierta && !f.anulado);
   const alternar = (id: string) => setElegidas((a) => {
     const n = new Set(a);
     if (n.has(id)) n.delete(id); else n.add(id);
@@ -91,7 +112,7 @@ export function ListaComprobantes({ filas }: { filas: FilaComprobante[] }) {
     const cant = elegidas.size;
     if (!window.confirm(`¿Confirmás que se pagaron ${cant} ${cant === 1 ? "comprobante" : "comprobantes"} por ${formatoPesos(suma)} con ${MEDIOS.find((m) => m.valor === medio)?.texto.toLowerCase()}?\n\nQuedan marcados como pagados.`)) return;
     empezar(async () => {
-      const r = await registrarPagos([...elegidas], medio);
+      const r = esArca ? await registrarPagosArca([...elegidas], medio, "") : await registrarPagos([...elegidas], medio);
       if (!r.ok) setError(r.error ?? "No se pudo registrar.");
       else { setElegidas(new Set()); setMedio(""); }
       router.refresh();
@@ -100,7 +121,7 @@ export function ListaComprobantes({ filas }: { filas: FilaComprobante[] }) {
   const deshacer = (id: string) => {
     if (!window.confirm("¿Deshacer este pago? El comprobante vuelve a figurar sin pagar.")) return;
     empezar(async () => {
-      const r = await deshacerPago(id);
+      const r = esArca ? await deshacerPagoArca(id) : await deshacerPago(id);
       if (!r.ok) window.alert(r.error);
       router.refresh();
     });
@@ -122,16 +143,25 @@ export function ListaComprobantes({ filas }: { filas: FilaComprobante[] }) {
             <span className="text-left italic">Número sin usar</span>
           </li>
         ) : (
-          <li key={f.id} className={`items-center gap-x-3 gap-y-1 px-4 py-3.5 text-center text-[13px] text-stone-800 lg:grid ${COLUMNAS} ${f.anulado ? "bg-stone-100 text-stone-500" : elegidas.has(f.id) ? "bg-crema-100" : ""}`}>
-            <input type="checkbox" aria-label={`Elegir ${f.numero ?? "comprobante"}`} checked={elegidas.has(f.id)} disabled={!f.entregado || f.pagada || f.cubierta || !!f.anulado} onChange={() => alternar(f.id)} className="h-4 w-4 accent-[#026433] disabled:opacity-30" />
-            <span className="whitespace-nowrap text-[13.5px] font-bold tabular-nums text-stone-900">{f.numero ?? <span className="text-[13px] font-semibold text-rojo-700">sin número</span>}</span>
-            <Link href={`/cuentas/${f.clienteId}`} className="min-w-0 text-left text-[13px] font-semibold leading-snug text-stone-900 [overflow-wrap:anywhere] hover:underline">{f.cliente}</Link>
+          <Fragment key={f.id}>
+          <li className={`items-center gap-x-3 gap-y-1 px-4 py-3.5 text-center text-[13px] text-stone-800 lg:grid ${COLUMNAS} ${f.anulado ? "bg-stone-100 text-stone-500" : elegidas.has(f.id) ? "bg-crema-100" : ""}`}>
+            <input type="checkbox" aria-label={`Elegir ${f.numero ?? "comprobante"}`} checked={elegidas.has(f.id)} disabled={!f.entregado || f.pagada || f.cubierta || !!f.anulado || f.esNc} onChange={() => alternar(f.id)} className="h-4 w-4 accent-[#026433] disabled:opacity-30" />
+            <span className="whitespace-nowrap text-[13.5px] font-bold tabular-nums text-stone-900">{f.esNc && <span className="mr-1.5 rounded bg-stone-700 px-1.5 py-0.5 text-[11px] font-bold text-white">NC</span>}{f.numero ?? <span className="text-[13px] font-semibold text-rojo-700">sin número</span>}</span>
+            <span className="min-w-0 text-left">
+              {f.clienteId ? <Link href={`/cuentas/${f.clienteId}`} className="text-[13px] font-semibold leading-snug text-stone-900 [overflow-wrap:anywhere] hover:underline">{f.cliente}</Link> : <span className="text-[13px] font-semibold italic text-rojo-700" title="El CUIT no está cargado en ningún cliente">{f.cliente}</span>}
+              {f.sucursal && <span className="text-[12px] text-stone-500"> · {f.sucursal}</span>}
+              {f.aviso && <span className="block text-[11.5px] leading-snug text-rojo-700">{f.aviso}</span>}
+            </span>
             <span className="tabular-nums">{fechaCorta(f.cargado)}</span>
-            <span className="tabular-nums">{f.entregado ? fechaCorta(f.fecha) : <span className="text-stone-400">—</span>}</span>
-            <span className={`text-[13px] font-bold tabular-nums ${f.cubierta || f.anulado ? "text-stone-400 line-through" : "text-stone-900"}`}>{formatoPesos(f.cubierta || f.anulado ? f.bruto : f.monto)}</span>
-            <span className="tabular-nums">{f.entregado && !f.pagada ? fechaCorta(f.vence) : <span className="text-stone-400">—</span>}</span>
+            <span className="tabular-nums">{f.entregado && !f.arca ? fechaCorta(f.fecha) : <span className="text-stone-400">—</span>}</span>
+            <span className={`text-[13px] font-bold tabular-nums ${f.cubierta || f.anulado ? "text-stone-400 line-through" : f.esNc ? "text-stone-500" : "text-stone-900"}`}>{f.esNc ? "−" : ""}{formatoPesos(f.cubierta || f.anulado || f.esNc ? f.bruto : f.monto)}</span>
+            <span className="tabular-nums">{f.entregado && !f.pagada && f.vence ? fechaCorta(f.vence) : <span className="text-stone-400">—</span>}</span>
             <span className="flex flex-col items-center gap-0.5">
-              {f.anulado ? (
+              {f.esNc ? (
+                (f.saldo ?? 0) > 0.01
+                  ? <button type="button" onClick={() => setPicker(picker === f.id ? null : f.id)} className={pastilla("border border-rojo-600 bg-rojo-50 text-rojo-700 hover:bg-rojo-100")}>Aplicar a factura…</button>
+                  : <span className={pastilla("bg-stone-200 text-stone-700")}>Aplicada</span>
+              ) : f.anulado ? (
                 <span className={pastilla("bg-stone-200 text-stone-700")}>{f.anulado}</span>
               ) : f.pagada ? (
                 <>
@@ -149,7 +179,11 @@ export function ListaComprobantes({ filas }: { filas: FilaComprobante[] }) {
               )}
             </span>
             <span>
-              {f.tipo === "FACTURA" ? (
+              {f.arca ? (
+                f.esNc
+                  ? <span className="text-[12px] text-stone-600">{(f.aplicaciones ?? []).map((a) => <span key={a.id} className="mr-2 whitespace-nowrap">→ FACTURA {a.facturaNumero} <button type="button" onClick={() => window.confirm("¿Quitar esta aplicación?") && empezar(async () => { const r = await quitarAplicacionNc(a.id); if (!r.ok) setError(r.error ?? "No se pudo."); router.refresh(); })} className="text-stone-400 underline hover:text-rojo-700">quitar</button></span>)}{(f.aplicaciones ?? []).length === 0 && <span className="text-stone-300">—</span>}</span>
+                  : f.ncTexto ? <span className="rounded bg-stone-200 px-2 py-1 text-xs font-semibold text-stone-700">{f.ncTexto}{!f.cubierta && f.nc > 0 ? ` (−${formatoPesos(f.nc)})` : ""}</span> : <span className="text-stone-300">—</span>
+              ) : f.tipo === "FACTURA" ? (
                 !f.pagada && !f.cubierta && !f.anulado
                   ? <Link href={`/cuentas/${f.clienteId}/nc?factura=${f.id}`} className="inline-block rounded-md border border-stone-500 bg-white px-3 py-1.5 text-[12px] font-semibold text-stone-800 hover:bg-stone-800 hover:text-white">+ Nota de crédito</Link>
                   : <span className="text-stone-300">—</span>
@@ -158,10 +192,33 @@ export function ListaComprobantes({ filas }: { filas: FilaComprobante[] }) {
               )}
             </span>
             <span className="flex min-w-0 flex-col items-stretch gap-1">
-              {f.ncTexto && <span className="truncate rounded bg-stone-200 px-2 py-1 text-xs font-semibold text-stone-700" title="Se completa solo al aplicar la nota de crédito">{f.ncTexto}{!f.cubierta && f.nc > 0 ? ` (−${formatoPesos(f.nc)})` : ""}</span>}
-              <ObsInput id={f.id} inicial={f.obs} />
+              {!f.arca && f.ncTexto && <span className="truncate rounded bg-stone-200 px-2 py-1 text-xs font-semibold text-stone-700" title="Se completa solo al aplicar la nota de crédito">{f.ncTexto}{!f.cubierta && f.nc > 0 ? ` (−${formatoPesos(f.nc)})` : ""}</span>}
+              <ObsInput id={f.id} inicial={f.obs} arca={f.arca ? { puntoId: f.puntoId ?? null, puntos: f.puntos ?? [] } : undefined} />
             </span>
           </li>
+          {picker === f.id && f.esNc && (
+            <li className="bg-crema-100 px-4 py-3 text-left text-[13px]">
+              <p className="mb-1 font-semibold text-stone-700">¿A qué factura corresponde la NC {f.numero?.replace("NC ", "")}? <span className="font-normal text-stone-500">(mismo CUIT; primero las del mismo importe)</span></p>
+              {(() => {
+                const candidatas = filas.filter((x) => x.arca && !x.esNc && x.cuit === f.cuit && (x.saldo ?? 0) > 0.01).sort((a, b) => Number(Math.abs((b.saldo ?? 0) - (f.saldo ?? 0)) < 0.01) - Number(Math.abs((a.saldo ?? 0) - (f.saldo ?? 0)) < 0.01) || (b.numero ?? "").localeCompare(a.numero ?? ""));
+                if (candidatas.length === 0) return <p className="text-stone-500">No hay facturas de este CUIT con saldo.</p>;
+                return (
+                  <ul className="max-w-xl">
+                    {candidatas.slice(0, 12).map((c) => (
+                      <li key={c.id} className="flex items-center gap-3 border-b border-stone-200 py-1">
+                        <span className="w-36 whitespace-nowrap font-bold tabular-nums">{c.numero}</span>
+                        <span className="w-16 text-stone-500">{fechaCorta(c.fecha)}</span>
+                        <span className="w-28 text-right tabular-nums">{formatoPesos(c.saldo ?? 0)}</span>
+                        {Math.abs((c.saldo ?? 0) - (f.saldo ?? 0)) < 0.01 && <span className="text-[11px] font-semibold text-verde-700">mismo importe</span>}
+                        <button type="button" disabled={trabajando} onClick={() => window.confirm(`¿Aplicar la ${f.numero} a la ${c.numero} por ${formatoPesos(Math.min(f.saldo ?? 0, c.saldo ?? 0))}?`) && empezar(async () => { const r = await aplicarNc(f.id, c.id); if (!r.ok) setError(r.error ?? "No se pudo."); else setPicker(null); router.refresh(); })} className="ml-auto rounded-md border border-stone-500 bg-white px-3 py-1 text-[12px] font-semibold hover:bg-stone-800 hover:text-white">Aplicar</button>
+                      </li>
+                    ))}
+                  </ul>
+                );
+              })()}
+            </li>
+          )}
+          </Fragment>
         ))}
       </ul>
 
