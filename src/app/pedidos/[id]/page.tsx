@@ -101,7 +101,9 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
           {pedido.estado !== "CANCELADO" && (
             <div className="flex flex-wrap items-center gap-2">
               {(abierto || pedido.estado === "NO_ENTREGADO") && <Link href={`/pedidos/${pedido.id}/editar`} className={`${btn} inline-flex items-center border-stone-400 bg-white text-stone-800 hover:bg-crema-100`}>✎ Editar pedido</Link>}
-              {!web && pedido.estado === "ENTREGADO" && pedido.cobro === "COBRADO" ? (
+              {pedido.clienteId && pedido.conFactura && pedido.numeroFactura?.trim() ? (
+                <Link href={`/cuentas/${pedido.clienteId}/nc?factura=${pedido.id}`} title="Una factura emitida no se cancela: se anula con una nota de crédito" className={`${btn} inline-flex items-center border-rojo-600 bg-white text-rojo-700 hover:bg-rojo-50`}>Anular con nota de crédito</Link>
+              ) : !web && pedido.estado === "ENTREGADO" && pedido.cobro === "COBRADO" ? (
                 <button type="button" disabled title="Primero deshacé el cobro (en la hoja de ruta o en CUENTA)" className={`${btn} cursor-not-allowed border-stone-300 bg-white text-stone-400`}>Cancelar pedido</button>
               ) : (
                 <form action={cancelarPedido}>

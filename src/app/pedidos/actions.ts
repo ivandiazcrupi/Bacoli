@@ -362,7 +362,9 @@ export async function reabrirPedido(formData: FormData) {
 }
 export async function cancelarPedido(formData: FormData) {
   const id = String(formData.get("id"));
-  const pedido = await db.pedido.findUnique({ where: { id }, select: { clienteId: true, cobro: true, estado: true, fechaEntrega: true } });
+  const pedido = await db.pedido.findUnique({ where: { id }, select: { clienteId: true, cobro: true, estado: true, fechaEntrega: true, conFactura: true, numeroFactura: true } });
+  // Una factura ya emitida (con número) no se anula "porque sí": se anula con una nota de crédito (CUENTA CORRIENTE), así no se pierde de la cuenta ni de la numeración.
+  if (pedido?.conFactura && pedido.numeroFactura?.trim()) return;
   if (await errorSiHojaFija(pedido?.fechaEntrega)) return; // con la hoja lista o cerrada no se cancela: se usa "No entregado" o se reabre la hoja
   // Un pedido ya cobrado no se cancela hasta deshacer el cobro (si no, el pago quedaría suelto como saldo a favor).
   if (pedido?.clienteId && pedido.estado === "ENTREGADO" && pedido.cobro === "COBRADO") return;
