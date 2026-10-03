@@ -12,21 +12,18 @@ import { formatoRemito } from "@/lib/remito";
 import { BotonRemito } from "../BotonRemito";
 import { NumeroFactura } from "../NumeroFactura";
 import { CONTENEDOR_PEDIDOS } from "../Encabezado";
-import { LibroCuenta, columnasDeMovimiento } from "@/components/LibroCuenta";
 import { datosEntrega, ordenarItems } from "../filas";
 import { BotonConAviso, TablaPedido } from "./Acciones";
 
 const ETIQUETA = { PENDIENTE: "Pendiente", ENTREGADO: "Entregado", NO_ENTREGADO: "No entregado", CANCELADO: "Cancelado" } as const;
 const COLOR = { PENDIENTE: "text-stone-700", ENTREGADO: "text-verde-700", NO_ENTREGADO: "text-rojo-700", CANCELADO: "text-stone-500" } as const;
-const MEDIO: Record<string, string> = { EFECTIVO: "Efectivo", TRANSFERENCIA: "Transferencia", CHEQUE: "Cheque", MERCADO_PAGO: "Mercado Pago", OTRO: "Otro" };
-const formatoFecha = new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Argentina/Buenos_Aires" });
 
 export default async function DetallePedido({ params }: { params: Promise<{ id: string }> }) {
   const usuario = await exigirOficina();
   const { id } = await params;
   const pedido = await db.pedido.findUnique({
     where: { id },
-    include: { cliente: true, punto: { include: { zona: true } }, items: { include: { producto: { select: { orden: true } } } }, movimientos: { orderBy: { fecha: "asc" } } },
+    include: { cliente: true, punto: { include: { zona: true } }, items: { include: { producto: { select: { orden: true } } } } },
   });
   if (!pedido) notFound();
 
@@ -39,7 +36,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
   const total = importeVigente(pedido.items, ivaPct, pedido.estado === "ENTREGADO" ? "ENTREGADO" : "PENDIENTE", pedido.webTotal);
   const fecha = pedido.fechaEntrega ? deFecha(pedido.fechaEntrega) : null;
   const abierto = pedido.estado === "PENDIENTE";
-  const boton = "h-9 rounded-md border border-stone-400 bg-white px-3 text-sm font-medium shadow-sm hover:bg-crema-100";
+  const btn = "h-10 whitespace-nowrap rounded-md border px-4 text-sm font-semibold shadow-sm";
   const celda = (titulo: string, valor: React.ReactNode) => (
     <div className="min-w-0">
       <p className="border-b border-stone-300 bg-crema-100 px-3 py-1.5 text-center text-xs font-semibold uppercase tracking-wide text-stone-600">{titulo}</p>
@@ -75,37 +72,36 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
           )}
         </section>
 
-        {pedido.estado !== "CANCELADO" ? (
-          <div className="flex flex-wrap items-center justify-between gap-2">
+        {/* Barra de acciones: a la izquierda lo que se hace con la entrega, a la derecha editar o cancelar. */}
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-stone-300 bg-white px-4 py-3 shadow-sm" role="toolbar" aria-label="Acciones del pedido">
+          <div className="flex flex-wrap items-center gap-2">
+            {abierto && <button type="submit" form="form-entrega" className={`${btn} border-verde-700 bg-verde-700 text-white hover:bg-verde-800`}>✓ Confirmar entrega</button>}
+            {!web && !pedido.conFactura && pedido.estado !== "CANCELADO" && (
+              <BotonRemito pedidoId={pedido.id} numero={pedido.remitoNumero ? `Imprimir remito ${formatoRemito(pedido.remitoNumero)}` : null} textoSinNumero="Emitir remito" clase={`${btn} border-stone-400 bg-white text-stone-800 hover:bg-crema-100`} />
+            )}
+            {abierto && (
+              <form action={marcarNoEntregado}>
+                <input type="hidden" name="id" value={pedido.id} />
+                <BotonConAviso texto="✗ No entregado" aviso="¿Marcar como NO entregado? El pedido deja de sumar a la cuenta del cliente." clase={`${btn} border-stone-400 bg-white text-rojo-700 hover:bg-rojo-50`} />
+              </form>
+            )}
+            {!abierto && (
+              <form action={reabrirPedido}>
+                <input type="hidden" name="id" value={pedido.id} />
+                <BotonConAviso texto="↺ Reabrir pedido" aviso="¿Volver el pedido a pendiente?" clase={`${btn} border-stone-400 bg-white text-stone-800 hover:bg-crema-100`} />
+              </form>
+            )}
+          </div>
+          {pedido.estado !== "CANCELADO" && (
             <div className="flex flex-wrap items-center gap-2">
-              {!web && !pedido.conFactura && <BotonRemito pedidoId={pedido.id} numero={pedido.remitoNumero ? `Imprimir remito ${formatoRemito(pedido.remitoNumero)}` : null} textoSinNumero="Emitir remito" clase={boton} />}
-              {abierto && (
-                <form action={marcarNoEntregado}>
-                  <input type="hidden" name="id" value={pedido.id} />
-                  <BotonConAviso texto="No entregado" aviso="¿Marcar como NO entregado? El pedido deja de sumar a la cuenta del cliente." clase={`${boton} text-rojo-700`} />
-                </form>
-              )}
-              {!abierto && (
-                <form action={reabrirPedido}>
-                  <input type="hidden" name="id" value={pedido.id} />
-                  <BotonConAviso texto="Reabrir pedido" aviso="¿Volver el pedido a pendiente?" clase={boton} />
-                </form>
-              )}
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {abierto && <Link href={`/pedidos/${pedido.id}/editar`} className={`${boton} inline-flex items-center`}>Editar pedido</Link>}
+              {abierto && <Link href={`/pedidos/${pedido.id}/editar`} className={`${btn} inline-flex items-center border-stone-400 bg-white text-stone-800 hover:bg-crema-100`}>✎ Editar pedido</Link>}
               <form action={cancelarPedido}>
                 <input type="hidden" name="id" value={pedido.id} />
-                <BotonConAviso texto="Cancelar pedido" aviso="¿Cancelar este pedido? Deja de sumar a la cuenta del cliente." clase={`${boton} text-rojo-700`} />
+                <BotonConAviso texto="Cancelar pedido" aviso="¿Cancelar este pedido? Deja de sumar a la cuenta del cliente." clase={`${btn} border-rojo-600 bg-white text-rojo-700 hover:bg-rojo-50`} />
               </form>
             </div>
-          </div>
-        ) : (
-          <form action={reabrirPedido}>
-            <input type="hidden" name="id" value={pedido.id} />
-            <BotonConAviso texto="Reabrir pedido" aviso="¿Volver el pedido a pendiente?" clase={boton} />
-          </form>
-        )}
+          )}
+        </div>
 
         <TablaPedido
           pedidoId={pedido.id}
@@ -114,23 +110,8 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
           items={items.map((i) => ({ id: i.id, nombre: i.nombre, sku: i.sku, unidad: i.unidad, precio: Number(i.precioUnitario), cantidad: i.cantidad, entregada: i.cantidadEntregada, sinCargo: i.sinCargo, motivoSinCargo: i.motivoSinCargo, descuentoPct: Number(i.descuentoPct) }))}
           totales={{ bruto: pedidoBruto, descuento: pedidoBruto - pedidoBase, base: pedidoBase, iva: total - pedidoBase, ivaPct, total, conFactura: pedido.conFactura, sinCargoPaquetes: pedido.items.reduce((t, i) => t + i.sinCargo, 0), sinCargoValor: pedido.items.reduce((t, i) => t + i.sinCargo * Number(i.precioUnitario), 0) }}
           web={web}
-          nota={oracion(pedido.nota) || null}
+          nota={oracion(pedido.nota)}
         />
-
-        {!web && (
-        <section className="space-y-2">
-            <h2 className="text-center text-xs font-semibold uppercase tracking-wide text-stone-600">Cuenta corriente de este pedido</h2>
-            <LibroCuenta
-              vacio="Sin movimientos."
-              lineas={pedido.movimientos.map((m) => ({
-                id: m.id,
-                fecha: formatoFecha.format(m.fecha),
-                detalle: <span className="font-medium">{m.nota}{m.medio ? ` · ${MEDIO[m.medio]}` : ""}</span>,
-                ...columnasDeMovimiento(m.tipo, Number(m.monto)),
-              }))}
-            />
-          </section>
-        )}
       </main>
     </>
   );

@@ -284,3 +284,12 @@ export async function traerPedidosWeb(): Promise<ResultadoImportacion> {
   revalidatePath("/pedidos", "layout");
   return r;
 }
+
+/** Observación del pedido (se edita desde el resumen). Queda en formato oración y se ve en rojo debajo de la dirección. */
+export async function guardarNotaPedido(pedidoId: string, texto: string): Promise<{ ok: boolean; texto: string }> {
+  await exigirOficina();
+  const nota = oracion(texto);
+  await db.pedido.update({ where: { id: pedidoId }, data: { nota: nota || null } });
+  revalidatePath("/pedidos", "layout");
+  return { ok: true, texto: nota };
+}

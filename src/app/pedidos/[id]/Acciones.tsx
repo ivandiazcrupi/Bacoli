@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { Mensajes, estiloBoton } from "@/components/campos";
 import { formatoPesos } from "@/lib/numeros";
 import { marcarEntregado, type EstadoPedidoForm } from "../actions";
+import { NotaEditable } from "./NotaEditable";
 
 export type Renglon = { id: string; nombre: string; sku: string | null; unidad: string; precio: number; cantidad: number; entregada: number | null; sinCargo: number; motivoSinCargo: string | null; descuentoPct: number };
 type Totales = { bruto: number; descuento: number; base: number; iva: number; ivaPct: number; total: number; conFactura: boolean; sinCargoPaquetes: number; sinCargoValor: number };
@@ -12,17 +13,18 @@ const COLUMNAS = "lg:grid-cols-[minmax(0,2fr)_7rem_7rem_8rem_9rem]";
 const COLUMNAS_WEB = "lg:grid-cols-[minmax(0,2fr)_9rem_9rem]"; // la tienda no tiene precio por renglón: vale el total pagado
 
 // Los productos del pedido en una tabla a lo ancho. Si el pedido está abierto, la columna ENTREGADO se edita y abajo está "Confirmar entrega".
-export function TablaPedido({ pedidoId, abierto, entregado, items, totales, nota, web = false }: { pedidoId: string; abierto: boolean; entregado: boolean; items: Renglon[]; totales: Totales; nota: string | null; web?: boolean }) {
+export function TablaPedido({ pedidoId, abierto, entregado, items, totales, nota, web = false }: { pedidoId: string; abierto: boolean; entregado: boolean; items: Renglon[]; totales: Totales; nota: string; web?: boolean }) {
   const cols = web ? COLUMNAS_WEB : COLUMNAS;
   const [estado, enviar, cargando] = useActionState(marcarEntregado.bind(null, pedidoId), undefined as EstadoPedidoForm);
   const ivaTexto = String(totales.ivaPct).replace(".", ",");
 
   return (
-    <form action={enviar} className="space-y-4">
+    <form id="form-entrega" action={enviar} className="space-y-4">
       <div className="overflow-hidden rounded-xl border border-stone-300 bg-white shadow-sm">
         <div className={`hidden gap-x-4 px-5 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-stone-600 lg:grid ${cols}`}>
           <span>Producto</span>{!web && <span>Precio</span>}<span>Pedido</span><span>Entregado</span>{!web && <span>Subtotal</span>}
         </div>
+        {items.length === 0 && <p className="border-t border-stone-400 px-5 py-4 text-center text-sm text-stone-600">Comprobante cargado directamente: solo tiene el total.</p>}
         {items.map((i) => {
           const entregadaFinal = i.entregada ?? i.cantidad;
           const parcial = entregado && i.entregada !== null && i.entregada !== i.cantidad;
@@ -57,9 +59,8 @@ export function TablaPedido({ pedidoId, abierto, entregado, items, totales, nota
 
       <div className="grid items-stretch gap-4 lg:grid-cols-[1fr_20rem]">
         <div className="rounded-xl border border-stone-300 bg-white p-4 shadow-sm">
-          <p className="mb-1 text-center text-xs font-semibold uppercase tracking-wide text-stone-600">Nota</p>
-          <p className="text-center text-sm font-medium text-rojo-700">{nota || <span className="text-stone-400">Sin nota</span>}</p>
-          {abierto && <p className="mt-3 text-center text-xs text-stone-500">Si se entregó todo, confirmá la entrega. Si faltó algo, cambiá la cantidad entregada.</p>}
+          <p className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-stone-600">Observación</p>
+          <NotaEditable pedidoId={pedidoId} inicial={nota} />
           <Mensajes estado={estado} />
         </div>
         <div className="rounded-xl border border-stone-300 bg-white p-4 text-sm shadow-sm">
@@ -69,7 +70,6 @@ export function TablaPedido({ pedidoId, abierto, entregado, items, totales, nota
           {totales.conFactura && <div className="flex justify-between"><span className="text-stone-600">IVA {ivaTexto}%</span><span className="tabular-nums">{formatoPesos(totales.iva)}</span></div>}
           <div className={`flex justify-between text-lg font-bold ${totales.conFactura ? "mt-1 border-t border-stone-300 pt-2" : ""}`}><span>Total</span><span className="tabular-nums">{formatoPesos(totales.total)}</span></div>
           {totales.sinCargoPaquetes > 0 && <p className="mt-1 border-t border-stone-300 pt-1.5 text-xs text-stone-600">Sin cargo: <b>{totales.sinCargoPaquetes}</b> {totales.sinCargoPaquetes === 1 ? "paquete" : "paquetes"} · valor {formatoPesos(totales.sinCargoValor)} (no se cobra)</p>}
-          {abierto && <button disabled={cargando} className={`${estiloBoton} mt-3`}>{cargando ? "Guardando…" : "Confirmar entrega"}</button>}
         </div>
       </div>
     </form>
