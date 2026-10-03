@@ -53,7 +53,7 @@ export function FormCargar({ clientes, hoy }: { clientes: Cliente[]; hoy: string
         {tipo === "FACTURA" ? (
           <>
             <label className="text-sm font-semibold">N° de factura
-              <input value={numero} onChange={(e) => setNumero(e.target.value)} placeholder="0001-00001234" className={campo} />
+              <input value={numero} onChange={(e) => setNumero(e.target.value)} placeholder="Ej.: 123 (queda F-0123)" className={campo} />
             </label>
             <label className="text-sm font-semibold">Fecha
               <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className={campo} />

@@ -2,18 +2,22 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { soloNumeroFactura } from "@/lib/remito";
 import { guardarNumeroFactura } from "./dia/actions";
 
 // Casillero para cargar a mano el N° de factura de un pedido (se guarda al salir del campo).
-export function NumeroFactura({ pedidoId, inicial, bloqueado }: { pedidoId: string; inicial: string; bloqueado: boolean }) {
+export function NumeroFactura({ pedidoId, inicial: guardado, bloqueado }: { pedidoId: string; inicial: string; bloqueado: boolean }) {
+  const inicial = soloNumeroFactura(guardado);
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [, empezar] = useTransition();
   return (
     <span className="block">
-      <input
+      <label className={`mx-auto flex h-8 w-36 items-center overflow-hidden rounded-md border bg-white ${inicial ? "border-stone-400" : "border-rojo-600"}`}>
+        <span className="flex h-full items-center bg-crema-200 px-2 text-sm font-bold text-stone-800">F-</span>
+        <input
         aria-label="Número de factura"
-        placeholder="Cargar N°"
+        placeholder="0000"
         defaultValue={inicial}
         disabled={bloqueado}
         onBlur={(e) => {
@@ -25,8 +29,10 @@ export function NumeroFactura({ pedidoId, inicial, bloqueado }: { pedidoId: stri
             router.refresh();
           });
         }}
-        className={`h-8 w-40 rounded border bg-white px-2 text-center text-sm tabular-nums ${inicial ? "border-stone-300" : "border-rojo-600"}`}
-      />
+        inputMode="numeric"
+        className="h-full w-full min-w-0 px-1 text-center text-sm font-semibold tabular-nums outline-none"
+        />
+      </label>
       {error && <span className="mt-1 block text-xs font-normal text-rojo-700" role="alert">{error}</span>}
     </span>
   );

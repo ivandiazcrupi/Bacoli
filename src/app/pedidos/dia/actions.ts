@@ -5,6 +5,7 @@ import type { MedioPago } from "@prisma/client";
 import { anotarEntregaEnCuenta, importeVigente, sincronizarCuentaPedido } from "@/lib/cuenta";
 import { db } from "@/lib/db";
 import { aFecha, diaMes, esFechaValida } from "@/lib/fechas";
+import { normalizarFactura } from "@/lib/remito";
 import { exigirOficina } from "@/lib/session";
 
 export type Resultado = { ok: boolean; error?: string };
@@ -28,10 +29,13 @@ export async function marcarEntrega(pedidoId: string, valor: "ENTREGADO" | "NO_E
   const { pedido } = r;
   if (pedido.estado === "CANCELADO") return { ok: false, error: "El pedido está cancelado." };
   if (valor === "ENTREGADO" && pedido.conFactura && !pedido.numeroFactura?.trim()) return { ok: false, error: "Este pedido lleva factura: cargá primero el N° de factura y después marcalo como entregado." };
-  if (valor !== "ENTREGADO" && pedido.cobro === "COBRADO" && pedido.webPago !== "PAGO_MP") return { ok: false, error: "Primero deshacé el cobro." };
 
   await db.$transaction(async (tx) => {
-    await tx.pedido.update({ where: { id: pedidoId }, data: { estado: valor, ...(valor !== "ENTREGADO" ? { cobro: null, medioCobro: null, montoCobrado: null } : {}) } });
+    // Si estaba cobrado y deja de estar entregado, el cobro se deshace solo (queda anotado en la cuenta como anulación del pago).
+    if (valor !== "ENTREGADO" && pedido.cobro === "COBRADO" && pedido.clienteId && pedido.montoCobrado) {
+      await tx.movimientoCuenta.create({ data: { clienteId: pedido.clienteId, pedidoId, tipo: "ANULACION_PAGO", monto: pedido.montoCobrado, medio: pedido.medioCobro, nota: "Cobro anulado", usuarioId: usuario.id } });
+    }
+    await tx.pedido.update({ where: { id: pedidoId }, data: { estado: valor, ...(valor !== "ENTREGADO" ? { cobro: null, medioCobro: null, montoCobrado: null, pagado: false } : {}) } });
     // Pedido de la tienda ya pagado con Mercado Pago: al entregarlo queda cobrado (no hay nada más que cobrar).
     if (valor === "ENTREGADO" && pedido.webPago === "PAGO_MP" && pedido.cobro === null) {
       await tx.pedido.update({ where: { id: pedidoId }, data: { cobro: "COBRADO", medioCobro: "MERCADO_PAGO", montoCobrado: pedido.webTotal, pagado: true } });
@@ -107,7 +111,9 @@ export async function guardarNumeroFactura(pedidoId: string, numero: string): Pr
   await exigirOficina();
   const r = await pedidoAbierto(pedidoId);
   if ("error" in r) return { ok: false, error: r.error };
-  const limpio = numero.trim();
+  const normal = normalizarFactura(numero);
+  if (normal === undefined) return { ok: false, error: "El N° de factura tiene que llevar números (por ejemplo 123 → F-0123)." };
+  const limpio = normal ?? "";
   if (limpio) {
     const repetido = await db.pedido.findFirst({ where: { numeroFactura: { equals: limpio, mode: "insensitive" }, id: { not: pedidoId } }, include: { cliente: true } });
     if (repetido) return { ok: false, error: `El N° de factura ${limpio} ya está cargado en un pedido de ${repetido.cliente?.nombre ?? repetido.webNombre ?? "la tienda"}.` };

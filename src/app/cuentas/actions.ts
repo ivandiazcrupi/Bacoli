@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { importeVigente, sincronizarCuentaPedido } from "@/lib/cuenta";
 import { db } from "@/lib/db";
+import { normalizarFactura } from "@/lib/remito";
 import { exigirOficina } from "@/lib/session";
 import { deshacerCobro, registrarCobro } from "../pedidos/dia/actions";
 
@@ -126,9 +127,10 @@ export async function anularNotaCredito(notaId: string): Promise<Resultado> {
 /** Carga una factura directamente (sin pedido): por ejemplo para reemplazar una que salió mal. Queda entregada y a cobrar. */
 export async function cargarFactura(datos: { clienteId: string; numero: string; fecha: string; total: number; observacion: string }): Promise<Resultado & { clienteId?: string }> {
   const usuario = await exigirOficina();
-  const numero = datos.numero.trim();
+  const normal = normalizarFactura(datos.numero);
+  const numero = normal ?? "";
   const total = redondear2(datos.total);
-  if (!numero) return { ok: false, error: "Cargá el N° de factura." };
+  if (!numero) return { ok: false, error: "Cargá el N° de factura (solo números, por ejemplo 123 → F-0123)." };
   if (!(total > 0)) return { ok: false, error: "El total tiene que ser mayor a 0." };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(datos.fecha)) return { ok: false, error: "Elegí la fecha de la factura." };
   if (!(await db.cliente.findUnique({ where: { id: datos.clienteId } }))) return { ok: false, error: "Elegí el cliente." };

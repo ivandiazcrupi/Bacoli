@@ -239,7 +239,16 @@ const refrescar = (id: string) => {
 async function cambiarEstado(pedidoId: string, cambios: Prisma.PedidoUpdateInput, borrarEntregas = false) {
   const usuario = await exigirOficina();
   await db.$transaction(async (tx) => {
-    await tx.pedido.update({ where: { id: pedidoId }, data: cambios });
+    // Si deja de estar entregado y tenía el cobro marcado, el cobro se deshace solo (con su anulación en la cuenta).
+    const actual = await tx.pedido.findUnique({ where: { id: pedidoId }, select: { cobro: true, medioCobro: true, montoCobrado: true, clienteId: true } });
+    let limpiar: Prisma.PedidoUpdateInput = {};
+    if (cambios.estado && cambios.estado !== "ENTREGADO" && actual?.cobro) {
+      if (actual.cobro === "COBRADO" && actual.clienteId && actual.montoCobrado) {
+        await tx.movimientoCuenta.create({ data: { clienteId: actual.clienteId, pedidoId, tipo: "ANULACION_PAGO", monto: actual.montoCobrado, medio: actual.medioCobro, nota: "Cobro anulado", usuarioId: usuario.id } });
+      }
+      limpiar = { cobro: null, medioCobro: null, montoCobrado: null, pagado: false };
+    }
+    await tx.pedido.update({ where: { id: pedidoId }, data: { ...cambios, ...limpiar } });
     if (borrarEntregas) await tx.pedidoItem.updateMany({ where: { pedidoId }, data: { cantidadEntregada: null } });
     await sincronizarCuentaPedido(tx, pedidoId, usuario.id);
   });
@@ -275,9 +284,9 @@ export async function reabrirPedido(formData: FormData) {
 }
 export async function cancelarPedido(formData: FormData) {
   const id = String(formData.get("id"));
-  const pedido = await db.pedido.findUnique({ where: { id }, select: { clienteId: true, cobro: true } });
+  const pedido = await db.pedido.findUnique({ where: { id }, select: { clienteId: true, cobro: true, estado: true } });
   // Un pedido ya cobrado no se cancela hasta deshacer el cobro (si no, el pago quedaría suelto como saldo a favor).
-  if (pedido?.clienteId && pedido.cobro === "COBRADO") return;
+  if (pedido?.clienteId && pedido.estado === "ENTREGADO" && pedido.cobro === "COBRADO") return;
   await cambiarEstado(id, { estado: "CANCELADO", fechaEntrega: null, salida: { disconnect: true } }, true);
 }
 
