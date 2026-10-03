@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 import type { Prisma } from "@prisma/client";
 import { IVA_PCT, anotarEntregaEnCuenta, sincronizarCuentaPedido, saldoCliente, importeVigente } from "@/lib/cuenta";
 import { db } from "@/lib/db";
-import { aFecha, esFechaValida } from "@/lib/fechas";
+import { aFecha, esFechaValida, hoy } from "@/lib/fechas";
 import { formatoPesos, leerMonto } from "@/lib/numeros";
 import { exigirOficina } from "@/lib/session";
 import { importarPedidosWeb, type ResultadoImportacion } from "@/lib/empretienda";
@@ -200,6 +200,7 @@ export async function actualizarPedidoWeb(pedidoId: string, _: EstadoPedidoForm,
 export async function moverPedido(pedidoId: string, destino: string, ordenIds: string[]): Promise<{ ok: boolean; error?: string }> {
   const usuario = await exigirOficina();
   if (destino !== "bandeja" && !esFechaValida(destino)) return { ok: false, error: "Fecha inválida." };
+  if (destino !== "bandeja" && destino < hoy()) return { ok: false, error: "Ese día ya pasó: no se le suman pedidos." };
   if (!ordenIds.includes(pedidoId) || ordenIds.length > 300) return { ok: false, error: "Pedido inválido." };
   const pedido = await db.pedido.findUnique({ where: { id: pedidoId } });
   if (!pedido || pedido.estado === "CANCELADO") return { ok: false, error: "No se puede mover ese pedido." };
@@ -222,6 +223,7 @@ export async function moverPedido(pedidoId: string, destino: string, ordenIds: s
 export async function asignarADia(pedidoId: string, fecha: string): Promise<{ ok: boolean; error?: string }> {
   const usuario = await exigirOficina();
   if (!esFechaValida(fecha)) return { ok: false, error: "Fecha inválida." };
+  if (fecha < hoy()) return { ok: false, error: "Ese día ya pasó: no se le suman pedidos. Elegí hoy o un día que viene." };
   const pedido = await db.pedido.findUnique({ where: { id: pedidoId } });
   if (!pedido || pedido.estado === "CANCELADO") return { ok: false, error: "No se puede asignar ese pedido." };
   if (pedido.estado === "ENTREGADO") return { ok: false, error: "Un pedido entregado no se puede mover." };

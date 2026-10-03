@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { sincronizarCuentaPedido } from "@/lib/cuenta";
 import { db } from "@/lib/db";
-import { aFecha, esFechaValida } from "@/lib/fechas";
+import { aFecha, esFechaValida, hoy } from "@/lib/fechas";
 import { mayus, titulo } from "@/lib/mayusculas";
 import { exigirOficina } from "@/lib/session";
 import { valoresDe, type EstadoForm } from "../../clientes/validacion";
@@ -65,6 +65,7 @@ export async function agregarSalida(fecha: string, vehiculoId: string, repartido
   await exigirOficina();
   if (!esFechaValida(fecha)) return { ok: false, error: "Fecha inválida." };
   if (!(await diaAbierto(aFecha(fecha)))) return { ok: false, error: "Ese día está cerrado. Un dueño puede reabrirlo." };
+  if (fecha < hoy()) return { ok: false, error: "Ese día ya pasó: no se le suman camionetas." };
   const vehiculo = await db.vehiculo.findUnique({ where: { id: vehiculoId } });
   if (!vehiculo || !vehiculo.activo) return { ok: false, error: "Ese vehículo no está disponible." };
   if (await db.salida.findUnique({ where: { fecha_vehiculoId: { fecha: aFecha(fecha), vehiculoId } } })) return { ok: false, error: "Ese vehículo ya sale ese día." };

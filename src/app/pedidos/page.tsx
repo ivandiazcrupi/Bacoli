@@ -27,7 +27,7 @@ export default async function Pedidos({ searchParams }: { searchParams: Promise<
     db.diaCerrado.findMany({ where: { fecha: { gte: aFecha(lunes), lte: aFecha(domingo) } } }),
   ]);
   const cerradosSet = new Set(cerrados.map((d) => deFecha(d.fecha)));
-  const dias = Array.from({ length: 6 }, (_, n) => sumarDias(lunes, n)).map((f) => ({ fecha: f, letra: nombreDia(f).charAt(0), numero: Number(f.slice(8)), nombre: nombreDia(f), hoy: f === hoy(), cerrado: cerradosSet.has(f) }));
+  const dias = Array.from({ length: 6 }, (_, n) => sumarDias(lunes, n)).map((f) => ({ fecha: f, letra: nombreDia(f).charAt(0), numero: Number(f.slice(8)), nombre: nombreDia(f), hoy: f === hoy(), cerrado: cerradosSet.has(f) || f < hoy() }));
 
   // El último intento de entrega que falló de cada pedido: "No se entregó el 1/10 · motivo".
   const intentos = await db.intentoEntrega.findMany({ where: { pedidoId: { in: pedidos.map((p) => p.id) } }, orderBy: { creadoEn: "desc" } });

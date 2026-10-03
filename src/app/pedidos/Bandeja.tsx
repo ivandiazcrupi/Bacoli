@@ -53,7 +53,7 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
           type="button"
           disabled={d.cerrado}
           onClick={() => asignar(f, d.fecha)}
-          title={d.cerrado ? `${d.nombre} ${d.numero}: día cerrado` : `Asignar al ${d.nombre.toLowerCase()} ${d.numero}`}
+          title={d.cerrado ? `${d.nombre} ${d.numero}: día cerrado o ya pasó` : `Asignar al ${d.nombre.toLowerCase()} ${d.numero}`}
           aria-label={`Asignar al ${d.nombre.toLowerCase()} ${d.numero}`}
           className={`flex flex-col items-center justify-center gap-[3px] rounded-md border shadow-sm transition hover:border-verde-700 hover:bg-verde-700 hover:text-white disabled:opacity-35 ${grande ? "h-14 w-12" : "h-12 w-10"} border-stone-400 bg-white text-stone-800`}
         >

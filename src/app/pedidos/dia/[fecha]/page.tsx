@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { Cabecera } from "@/components/Cabecera";
 import { db } from "@/lib/db";
-import { aFecha, deFecha, diaMes, esFechaValida, lunesDe, nombreDia, sumarDias } from "@/lib/fechas";
+import { aFecha, deFecha, diaMes, esFechaValida, hoy, lunesDe, nombreDia, sumarDias } from "@/lib/fechas";
 import { titulo } from "@/lib/mayusculas";
 import { porReparto } from "@/lib/ruta";
 import { exigirOficina } from "@/lib/session";
@@ -73,6 +73,7 @@ export default async function HojaDelDia({ params }: { params: Promise<{ fecha: 
         />
 
         <HojaDia
+          hoy={hoy()}
           siluetas={siluetas}
           titulo={`Hoja de ruta · ${nombreDia(fecha)} ${diaMes(fecha)}`}
           fecha={fecha}

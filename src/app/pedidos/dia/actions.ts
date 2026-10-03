@@ -202,14 +202,22 @@ export async function cerrarDia(fecha: string): Promise<Resultado & { faltan?: n
   if (await db.diaCerrado.findUnique({ where: { fecha: aFecha(fecha) } })) return { ok: false, error: "El día ya está cerrado." };
 
   const pedidos = await db.pedido.findMany({ where: { fechaEntrega: aFecha(fecha), estado: { not: "CANCELADO" } } });
-  if (pedidos.length === 0) return { ok: false, error: "No hay pedidos en este día." };
-  const sinVehiculo = pedidos.filter((p) => p.salidaId === null).length;
-  if (sinVehiculo > 0) return { ok: false, faltan: sinVehiculo, error: `Hay ${sinVehiculo} ${sinVehiculo === 1 ? "pedido" : "pedidos"} sin vehículo. Asignalos a un vehículo (o devolvelos a Pedidos) antes de cerrar el día.` };
-  const faltan = pedidos.filter((p) => p.estado === "PENDIENTE" || (p.estado === "ENTREGADO" && p.cobro === null)).length;
-  if (faltan > 0) return { ok: false, faltan, error: `Faltan ${faltan} ${faltan === 1 ? "pedido" : "pedidos"} por marcar (entrega o cobro).` };
+  const hayIntentos = (await db.intentoEntrega.count({ where: { fecha: aFecha(fecha) } })) > 0;
+  if (pedidos.length === 0 && !hayIntentos) return { ok: false, error: "No hay pedidos en este día." };
+
+  // Se revisa todo junto y se dice qué falta (en vez de ir de a una cosa).
+  const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
+  const problemas: string[] = [];
+  const sinUbicar = pedidos.filter((p) => p.salidaId === null).length;
+  if (sinUbicar > 0) problemas.push(`${plural(sinUbicar, "pedido sin ubicar", "pedidos sin ubicar")} en una camioneta (ubicalos, pasalos a otro día o devolvelos a Pedidos)`);
+  const sinSaber = pedidos.filter((p) => p.estado === "PENDIENTE").length;
+  if (sinSaber > 0) problemas.push(`${plural(sinSaber, "pedido sin saber si se entregó", "pedidos sin saber si se entregaron")} (marcá entregado con su cobro, o no entregado con su motivo)`);
+  const sinCobro = pedidos.filter((p) => p.estado === "ENTREGADO" && p.cobro === null).length;
+  if (sinCobro > 0) problemas.push(`${plural(sinCobro, "pedido entregado sin cobro", "pedidos entregados sin cobro")} (Pago o Cuenta corriente)`);
   // Toda venta entregada lleva un número: el de la factura si lleva factura, o el del remito.
   const sinNumero = pedidos.filter((p) => p.estado === "ENTREGADO" && p.clienteId && (p.conFactura ? !p.numeroFactura : p.remitoNumero === null)).length;
-  if (sinNumero > 0) return { ok: false, faltan: sinNumero, error: `Faltan ${sinNumero} ${sinNumero === 1 ? "pedido" : "pedidos"} sin número de factura o de remito.` };
+  if (sinNumero > 0) problemas.push(`${plural(sinNumero, "pedido entregado sin número", "pedidos entregados sin número")} de factura o de remito`);
+  if (problemas.length > 0) return { ok: false, faltan: problemas.length, error: `Para cerrar el día falta:\n${problemas.map((x) => `• ${x}`).join("\n")}` };
 
   await db.$transaction(async (tx) => {
     await tx.diaCerrado.create({ data: { fecha: aFecha(fecha), cerradoPor: usuario.id } });

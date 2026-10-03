@@ -13,7 +13,7 @@ import { normalizarFactura, soloNumeroFactura } from "@/lib/remito";
 import { asignarADia } from "../../actions";
 import { agregarSalida, asignarAVehiculo, devolverAPedidos, ordenarSalida, quitarSalida } from "../../ruta/actions";
 import { emitirRemitosDia } from "../../remito/actions";
-import { dejarEnCuentaCorriente, deshacerCobro, guardarNumeroFactura, marcarEntrega, reabrirDia, registrarCobro, registrarNoEntrega, type Resultado } from "../actions";
+import { cerrarDia, dejarEnCuentaCorriente, deshacerCobro, guardarNumeroFactura, marcarEntrega, reabrirDia, registrarCobro, registrarNoEntrega, type Resultado } from "../actions";
 import { ModalMotivo } from "@/components/ModalMotivo";
 
 export type Fila = {
@@ -490,6 +490,7 @@ function ResumenVuelta({ grupo, capacidad }: { grupo: Fila[]; capacidad: number 
 }
 
 type Props = {
+  hoy: string;
   siluetas: Silueta[];
   titulo: string;
   fecha: string;
@@ -502,7 +503,7 @@ type Props = {
   esDueno: boolean;
 };
 
-export function HojaDia({ siluetas, titulo, fecha, filasIniciales, salidas, vehiculosLibres, repartidores, diasSemana, cerrado, esDueno }: Props) {
+export function HojaDia({ hoy, siluetas, titulo, fecha, filasIniciales, salidas, vehiculosLibres, repartidores, diasSemana, cerrado, esDueno }: Props) {
   const router = useRouter();
   const [filas, setFilas] = useState(filasIniciales);
   const [error, setError] = useState<string | null>(null);
@@ -538,7 +539,7 @@ export function HojaDia({ siluetas, titulo, fecha, filasIniciales, salidas, vehi
   };
 
   const acc: Acciones = {
-    dias: diasSemana.filter((d) => d.fecha !== fecha).map((d) => ({ fecha: d.fecha, texto: d.corta })),
+    dias: diasSemana.filter((d) => d.fecha !== fecha && d.fecha >= hoy).map((d) => ({ fecha: d.fecha, texto: d.corta })),
     entrega: (f, valor) => ejecutar(f.id, (x) => ({ ...x, estado: valor, cobro: null, medioCobro: null }), () => marcarEntrega(f.id, valor)),
     entregarYCobrar: (f, cobro) =>
       ejecutar(
@@ -610,6 +611,10 @@ export function HojaDia({ siluetas, titulo, fecha, filasIniciales, salidas, vehi
     router.refresh();
   };
   const reabrir = () => llamar(() => reabrirDia(fecha));
+  const cerrar = () => {
+    if (window.confirm("¿Cerrar el día? Después no se puede mover ni cambiar nada de este día, y solo un dueño lo puede reabrir.")) llamar(() => cerrarDia(fecha));
+  };
+  const pasado = fecha < hoy;
   const sumarVehiculo = (vehiculoId: string) => {
     if (vehiculoId) llamar(() => agregarSalida(fecha, vehiculoId, null));
   };
@@ -665,11 +670,13 @@ export function HojaDia({ siluetas, titulo, fecha, filasIniciales, salidas, vehi
         <h2 className="text-center text-sm font-bold uppercase tracking-wide text-stone-800">
           {sinVehiculo.length > 0 && <>Sin ubicar <span className="font-medium normal-case tracking-normal text-stone-600">· {sinVehiculo.length} {sinVehiculo.length === 1 ? "pedido" : "pedidos"}</span></>}
         </h2>
-        <div className="sm:justify-self-end">
+        <div className="flex flex-wrap items-center gap-2 sm:justify-self-end">
           {filas.length > 0 && <button type="button" onClick={imprimirTodos} className="rounded-md border border-stone-400 bg-white px-3 py-2 font-medium shadow-sm">Imprimir todos los remitos</button>}
+          {!cerrado && (filas.length > 0 || siluetas.length > 0) && <button type="button" onClick={cerrar} className="rounded-md bg-stone-800 px-4 py-2 font-semibold text-white shadow-sm hover:bg-stone-700">Cerrar día</button>}
         </div>
       </div>
-      {error && <p className="rounded-lg border border-rojo-600 bg-rojo-50 p-3 text-sm text-rojo-700" role="alert">{error}</p>}
+      {pasado && !cerrado && <p className="rounded-lg border border-stone-400 bg-crema-100 p-3 text-center text-sm font-semibold text-stone-800">Este día ya pasó y falta cerrarlo. No se le pueden sumar pedidos.</p>}
+      {error && <p className="whitespace-pre-line rounded-lg border border-rojo-600 bg-rojo-50 p-3 text-sm text-rojo-700" role="alert">{error}</p>}
 
       {/* Pedidos del día que todavía no están en ningún vehículo: la misma información que en la hoja PEDIDOS */}
       {(sinVehiculo.length > 0 || arrastrando) && (
