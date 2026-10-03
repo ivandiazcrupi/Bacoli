@@ -11,10 +11,11 @@ export function PestanasPedidos({ activa, fechaRuta }: { activa: Pestana; fechaR
   const off = "border-transparent text-stone-500 hover:text-stone-900";
   const h = hoy();
   const dia = fechaRuta ?? (new Date(`${h}T00:00:00Z`).getUTCDay() === 0 ? sumarDias(h, 1) : h);
+  const lunes = lunesDe(dia);
   const items: { id: Pestana; texto: string; href: string }[] = [
     { id: "pedidos", texto: "Pedidos", href: "/pedidos" },
-    { id: "semana", texto: "Semana", href: `/pedidos/semana?semana=${lunesDe(dia)}` },
-    { id: "ruta", texto: "Hoja de ruta", href: `/pedidos/dia/${dia}` },
+    { id: "semana", texto: "Semana", href: `/pedidos/semana?semana=${lunes}` },
+    { id: "ruta", texto: "Hoja de ruta", href: `/pedidos/dia?semana=${lunes}` }, // siempre en blanco: hay que tocar el día
     { id: "vehiculos", texto: "Vehículos", href: "/pedidos/vehiculos" },
   ];
   return (

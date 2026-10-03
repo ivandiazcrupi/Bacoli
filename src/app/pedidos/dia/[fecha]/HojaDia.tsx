@@ -377,6 +377,14 @@ function BloqueSiluetas({ lista }: { lista: Silueta[] }) {
   );
 }
 
+// Cada reparto (camioneta) tiene su tono suave y una franja del lado izquierdo, para distinguirlos de un vistazo sin llamar la atención.
+const TONOS = [
+  { cuadro: "bg-[#eef3f8] border-l-[6px] border-l-[#9db7d1]", cabecera: "bg-[#e1eaf3]" },
+  { cuadro: "bg-[#eef4ee] border-l-[6px] border-l-[#9fc29f]", cabecera: "bg-[#e0ebe0]" },
+  { cuadro: "bg-[#f6f1e6] border-l-[6px] border-l-[#cdb98a]", cabecera: "bg-[#ece4d0]" },
+  { cuadro: "bg-[#f3eff7] border-l-[6px] border-l-[#b6a3cf]", cabecera: "bg-[#e8e1f0]" },
+];
+
 // Cuadro que recibe pedidos arrastrados (un vehículo, o "sin" = sin ubicar).
 function Zona({ id, bloqueada, clase, children }: { id: string; bloqueada: boolean; clase: string; children: React.ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id: `c:${id}`, disabled: bloqueada });
@@ -808,11 +816,12 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
       )}
 
       {/* Un cuadro por vehículo: su carga y su recorrido */}
-      {salidas.map((sa) => {
+      {salidas.map((sa, idx) => {
+        const tono = TONOS[idx % TONOS.length];
         const grupo = filas.filter((f) => f.salidaId === sa.id);
         return (
-          <Zona key={sa.id} id={sa.id} bloqueada={fija} clase="overflow-hidden rounded-xl border border-stone-400 bg-white shadow-sm">
-            <header className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-400 bg-crema-100 px-5 py-3 text-stone-900">
+          <Zona key={sa.id} id={sa.id} bloqueada={fija} clase={`overflow-hidden rounded-xl border border-stone-400 shadow-sm ${tono.cuadro}`}>
+            <header className={`flex flex-wrap items-center justify-between gap-3 border-b border-stone-300 px-5 py-3 text-stone-900 ${tono.cabecera}`}>
               <div>
                 <h2 className="text-lg font-bold leading-tight">{sa.nombre}</h2>
                 {sa.patente && <p className="text-xs text-stone-600">{sa.patente}</p>}
