@@ -401,7 +401,7 @@ function FilaUbicar({ f, salidas, bloqueada, acc }: { f: Fila; salidas: SalidaIn
     <div
       ref={setNodeRef}
       style={{ transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 20 : undefined, position: "relative" }}
-      className="rounded-xl border border-stone-300 bg-white px-5 py-3.5 shadow-sm"
+      className="rounded-lg border border-stone-300 bg-white px-4 py-2"
     >
       <div className={`grid items-center gap-x-4 gap-y-2 text-center ${COLUMNAS_UBICAR}`}>
         <button type="button" disabled={bloqueada} aria-label="Arrastrar el pedido a un vehículo" className="hidden cursor-grab text-lg leading-none text-stone-500 disabled:cursor-default disabled:opacity-30 lg:block" {...attributes} {...listeners}>⋮⋮</button>
