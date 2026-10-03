@@ -69,3 +69,20 @@ export async function restablecerClave(id: string, _: EstadoForm, formData: Form
   await db.usuario.update({ where: { id }, data: { passwordHash: await bcrypt.hash(nueva, 12) } });
   return { ok: `Listo: ${usuario.nombre} ahora entra con la contraseña nueva.` };
 }
+
+// Solo un dueño. No puede cambiarse el rol a sí mismo ni dejar al sistema sin ningún dueño activo.
+export async function cambiarRol(formData: FormData) {
+  const actual = await exigirUsuario();
+  if (!puedeGestionarUsuarios(actual.rol)) return;
+  const id = String(formData.get("id"));
+  const rol = z.enum(ROLES).safeParse(formData.get("rol"));
+  if (!rol.success || id === actual.id) return;
+  const usuario = await db.usuario.findUnique({ where: { id } });
+  if (!usuario || usuario.rol === rol.data) return;
+  if (usuario.rol === "DUENO" && usuario.activo) {
+    const duenos = await db.usuario.count({ where: { rol: "DUENO", activo: true } });
+    if (duenos <= 1) return;
+  }
+  await db.usuario.update({ where: { id }, data: { rol: rol.data } });
+  revalidatePath("/usuarios");
+}

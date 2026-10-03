@@ -259,6 +259,7 @@ y ~1000 minoristas.
 - La enumeración `TipoCliente` conserva el valor DISTRIBUIDOR (oculto en pantallas) para no alterar datos existentes.
 - Contraseñas cortas (mín. 4) y usuarios simples: riesgo aceptado por el dueño; el bloqueo de intentos es la defensa. Sin email no hay recuperación por correo.
 - Login: bloqueo de 15 min tras 5 fallos por usuario (en memoria; revisar si se usa más de una instancia).
+- **Cambiar el rol** (Usuarios, solo dueños; pedido del dueño): desplegable en la columna Rol de cada persona, pide confirmar (`cambiarRol`). Nadie puede cambiarse el rol a sí mismo y no se puede dejar al sistema sin ningún dueño activo. El rol se lee de la base en cada pantalla, así que el cambio vale enseguida.
 - Contraseña olvidada: un **dueño** la cambia desde **Usuarios** (botón "Cambiar contraseña" en cada persona, `restablecerClave`). Las contraseñas se guardan cifradas: **no se pueden ver**, solo reponer. Si un dueño pierde la suya, el otro dueño la cambia; último recurso: SEED_ADMIN_RESET en Railway.
 - El formulario de Usuarios pierde lo cargado si da error (aplicar el mismo `key` que en Clientes).
 - `npm audit` marca 3 alertas en una herramienta interna de Prisma (solo desarrollo, no en producción).

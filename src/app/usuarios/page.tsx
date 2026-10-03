@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { NOMBRE_ROL, puedeGestionarUsuarios } from "@/lib/roles";
 import { exigirUsuario } from "@/lib/session";
 import { cambiarActivo } from "./actions";
+import { SelectorRol } from "./SelectorRol";
 import { CambiarClave } from "./CambiarClave";
 import { FormularioUsuario } from "./FormularioUsuario";
 
@@ -29,7 +30,11 @@ export default async function Usuarios() {
               <span className="font-semibold">{u.nombre}</span>
               <span className="text-sm">{u.usuario}</span>
               <span className="text-sm">{esEmailSinCargar(u.email) ? <span className="text-stone-400">—</span> : u.email}</span>
-              <span className="text-sm">{NOMBRE_ROL[u.rol]}</span>
+              {u.id === actual.id ? (
+                <span className="text-sm">{NOMBRE_ROL[u.rol]} <span className="text-xs text-stone-500">(vos)</span></span>
+              ) : (
+                <SelectorRol id={u.id} nombre={u.nombre} rol={u.rol} />
+              )}
               <span>{u.activo ? <span className="rounded-full bg-verde-100 px-2.5 py-0.5 text-xs font-semibold text-verde-800">Activo</span> : <span className="rounded-full bg-stone-200 px-2.5 py-0.5 text-xs font-semibold text-stone-600">Desactivado</span>}</span>
               <div className="flex flex-wrap items-start justify-end gap-2">
                 <CambiarClave id={u.id} />
