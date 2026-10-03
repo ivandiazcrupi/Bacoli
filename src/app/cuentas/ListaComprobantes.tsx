@@ -26,6 +26,7 @@ export type FilaComprobante = {
   pagada: boolean;
   medio: string | null;
   obs: string;
+  hueco?: boolean; // número que no aparece en ningún pedido: se ve para que la numeración esté completa
 };
 
 const MEDIOS = [
@@ -46,13 +47,13 @@ export function ListaComprobantes({ filas }: { filas: FilaComprobante[] }) {
   const [error, setError] = useState<string | null>(null);
   const [trabajando, empezar] = useTransition();
 
-  const pagables = filas.filter((f) => f.entregado && !f.pagada && !f.cubierta && !f.anulado);
+  const pagables = filas.filter((f) => !f.hueco).filter((f) => f.entregado && !f.pagada && !f.cubierta && !f.anulado);
   const alternar = (id: string) => setElegidas((a) => {
     const n = new Set(a);
     if (n.has(id)) n.delete(id); else n.add(id);
     return n;
   });
-  const suma = filas.filter((f) => elegidas.has(f.id)).reduce((s, f) => s + f.monto, 0);
+  const suma = filas.filter((f) => elegidas.has(f.id) && !f.hueco).reduce((s, f) => s + f.monto, 0);
 
   const registrar = () => {
     setError(null);
@@ -82,7 +83,13 @@ export function ListaComprobantes({ filas }: { filas: FilaComprobante[] }) {
         <span>{filas[0].tipo === "FACTURA" ? "Factura" : "Remito"}</span><span className="text-left">Cliente</span><span>Cargado</span><span>Entrega</span><span>Monto</span><span>Vence</span><span>Estado</span><span>Observación</span>
       </div>
       <ul className="divide-y divide-stone-300">
-        {filas.map((f) => (
+        {filas.map((f) => f.hueco ? (
+          <li key={f.id} className={`items-center gap-x-3 px-4 py-1.5 text-center text-sm text-stone-400 lg:grid ${COLUMNAS}`}>
+            <span />
+            <span className="font-semibold tabular-nums">{f.numero}</span>
+            <span className="text-left italic">Número sin usar</span>
+          </li>
+        ) : (
           <li key={f.id} className={`items-center gap-x-3 gap-y-1 px-4 py-2.5 text-center text-sm lg:grid ${COLUMNAS} ${f.anulado ? "bg-stone-100 text-stone-500" : f.pagada ? "bg-verde-50" : elegidas.has(f.id) ? "bg-crema-50" : ""}`}>
             <input type="checkbox" aria-label={`Elegir ${f.numero ?? "comprobante"}`} checked={elegidas.has(f.id)} disabled={!f.entregado || f.pagada || f.cubierta || !!f.anulado} onChange={() => alternar(f.id)} className="h-4 w-4 accent-[#026433] disabled:opacity-30" />
             <span className="flex items-center justify-center gap-1.5 font-semibold tabular-nums">

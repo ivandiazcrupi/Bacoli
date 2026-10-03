@@ -3,13 +3,15 @@ import { Cabecera } from "@/components/Cabecera";
 import { diasDeAtraso, incluirNc, partidaDe } from "@/lib/cobranza";
 import { db } from "@/lib/db";
 import { hoy } from "@/lib/fechas";
+import { formatoRemito } from "@/lib/remito";
 import { formatoPesos } from "@/lib/numeros";
 import { exigirOficina } from "@/lib/session";
 import { CONTENEDOR_PEDIDOS } from "../pedidos/Encabezado";
 import { EncabezadoCuenta } from "./EncabezadoCuenta";
 import { ListaComprobantes, type FilaComprobante } from "./ListaComprobantes";
 
-const POR_PAGINA = 200;
+const POR_PAGINA = 1000;
+const pad4 = (n: number) => String(n).padStart(4, "0");
 
 // El N° se ordena como número (0001-00000012 → 100000012); los que todavía no tienen número van al final.
 const clave = (n: string | null) => {
@@ -22,7 +24,7 @@ type Params = { q?: string; estado?: string; pagina?: string };
 // Listado de TODAS las facturas (o remitos) de menor a mayor número, para ver que no quede ninguna sin pagar.
 export async function Listado({ tipo, searchParams, ruta }: { tipo: "FACTURA" | "REMITO"; searchParams: Params; ruta: string }) {
   const usuario = await exigirOficina();
-  const { q = "", estado = "sin-pagar" } = searchParams;
+  const { q = "", estado = "todas" } = searchParams;
   const pagina = Math.max(1, Number(searchParams.pagina) || 1);
   const hoyStr = hoy();
   const conAnulados = tipo === "REMITO" && estado === "todas";
@@ -50,9 +52,35 @@ export async function Listado({ tipo, searchParams, ruta }: { tipo: "FACTURA" | 
       entregado: x.entregado, bruto: x.bruto, nc: x.nc, cubierta: x.cubierta, anulado: p.estado === "CANCELADO" ? "Anulado" : p.estado === "NO_ENTREGADO" ? "No entregado" : null, ncTexto: x.ncNumeros.map((n) => `NC ${n}`).join(" · "), monto: x.monto, vence: x.vence, atraso: x.entregado ? diasDeAtraso(x.vence, hoyStr) : 0, pagada: x.pagada, medio: x.medio, obs: p.obsCobro ?? "",
     }];
   });
+
+  // Remitos que se emitieron y el pedido pasó a llevar factura: el número existe, así que se ve (no es un hueco).
+  if (tipo === "REMITO" && estado === "todas" && palabras.length === 0) {
+    const conFacturaYRemito = await db.pedido.findMany({ where: { clienteId: { not: null }, conFactura: true, remitoNumero: { not: null } }, include: { cliente: true }, orderBy: { remitoNumero: "asc" } });
+    for (const p of conFacturaYRemito) {
+      if (!p.cliente || !p.remitoNumero) continue;
+      todas.push({ id: p.id, clienteId: p.cliente.id, cliente: p.cliente.nombre, tipo, numero: formatoRemito(p.remitoNumero), cargado: p.creadoEn.toISOString().slice(0, 10), fecha: (p.fechaEntrega ?? p.creadoEn).toISOString().slice(0, 10), entregado: false, bruto: 0, nc: 0, cubierta: false, anulado: "Pasó a factura", ncTexto: "", monto: 0, vence: "", atraso: 0, pagada: false, medio: null, obs: "" });
+    }
+  }
+  // Números que no aparecen en ningún pedido (saltos de numeración): se muestran como "Sin usar" para que la numeración se vea completa.
+  const huecos: FilaComprobante[] = [];
+  if (estado === "todas" && palabras.length === 0) {
+    const usados = new Set(todas.map((f) => (f.numero ?? "").replace(/\D/g, "")).filter(Boolean).map(Number));
+    const nums = [...usados].filter((n) => n < 1_000_000);
+    if (nums.length > 0) {
+      const desde = Math.min(...nums), hasta = Math.max(...nums);
+      if (hasta - desde <= 20000) {
+        for (let n = desde; n <= hasta; n++) {
+          if (usados.has(n)) continue;
+          huecos.push({ id: `hueco-${n}`, clienteId: "", cliente: "", tipo, numero: tipo === "REMITO" ? formatoRemito(n) : `F-${pad4(n)}`, cargado: "", fecha: "", entregado: false, bruto: 0, nc: 0, cubierta: false, anulado: "Sin usar", ncTexto: "", monto: 0, vence: "", atraso: 0, pagada: false, medio: null, obs: "", hueco: true });
+        }
+      }
+    }
+  }
+  const sinHuecos = todas.length;
+  todas.push(...huecos);
   todas.sort((a, b) => clave(a.numero) - clave(b.numero) || a.fecha.localeCompare(b.fecha));
 
-  const sinPagar = todas.filter((f) => !f.pagada && !f.cubierta && !f.anulado);
+  const sinPagar = todas.filter((f) => !f.hueco).filter((f) => !f.pagada && !f.cubierta && !f.anulado);
   const montoSinPagar = sinPagar.reduce((s, f) => s + f.monto, 0);
   const vencido = sinPagar.filter((f) => f.atraso > 0).reduce((s, f) => s + f.monto, 0);
   const paginas = Math.max(1, Math.ceil(todas.length / POR_PAGINA));
@@ -81,13 +109,14 @@ export async function Listado({ tipo, searchParams, ruta }: { tipo: "FACTURA" | 
 
         <form className="flex flex-wrap items-center gap-2">
           <input name="q" defaultValue={q} placeholder="Filtrar por cliente…" className="h-10 w-full max-w-md rounded-md border border-stone-400 bg-white px-3 text-sm shadow-sm focus:border-verde-700 focus:outline-none" />
-          <select name="estado" defaultValue={estado} className="h-10 rounded-md border border-stone-400 bg-white px-3 text-sm shadow-sm">
-            <option value="sin-pagar">Sin pagar</option>
-            <option value="pagadas">Pagadas</option>
-            <option value="todas">Todas</option>
-          </select>
-          <button className="h-10 rounded-md border border-stone-400 bg-white px-4 text-sm font-medium shadow-sm hover:border-verde-700">Filtrar</button>
-          <span className="ml-auto text-sm text-stone-600">{todas.length} {todas.length === 1 ? nombre.slice(0, -1) : nombre} · de menor a mayor número</span>
+          <input type="hidden" name="estado" value={estado} />
+          <div role="group" aria-label="Mostrar" className="inline-flex overflow-hidden rounded-md border border-stone-400 bg-white text-sm font-medium shadow-sm">
+            {([["todas", "Todas"], ["sin-pagar", "Pendientes de pago"], ["pagadas", "Pagadas"]] as const).map(([v, t]) => (
+              <Link key={v} href={`${ruta}?${new URLSearchParams({ ...(q ? { q } : {}), estado: v })}`} aria-current={estado === v ? "true" : undefined} className={`h-10 px-4 leading-10 ${estado === v ? "bg-stone-800 text-white" : "hover:bg-crema-100"}`}>{t}</Link>
+            ))}
+          </div>
+          <button className="h-10 rounded-md border border-stone-400 bg-white px-4 text-sm font-medium shadow-sm hover:border-verde-700">Buscar</button>
+          <span className="ml-auto text-sm text-stone-600">{sinHuecos} {sinHuecos === 1 ? nombre.slice(0, -1) : nombre}{huecos.length > 0 ? ` · ${huecos.length} números sin usar` : ""} · de menor a mayor número</span>
         </form>
 
         <section className="overflow-hidden rounded-xl border border-stone-300 bg-white shadow-sm" aria-label={`Listado de ${nombre}`}>

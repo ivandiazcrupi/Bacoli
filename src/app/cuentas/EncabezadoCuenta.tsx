@@ -15,7 +15,7 @@ export function EncabezadoCuenta({ activa }: { activa: Pestana }) {
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold tracking-tight">Cuenta</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Cuenta corriente</h1>
         <Link href="/cuentas/cargar" className="whitespace-nowrap rounded-lg bg-verde-700 px-4 py-3 text-sm font-bold uppercase tracking-wide text-white hover:bg-verde-800 sm:px-10">+ Cargar comprobante</Link>
       </div>
       <nav className="flex gap-1 overflow-x-auto border-b border-stone-300" aria-label="Cuenta">
