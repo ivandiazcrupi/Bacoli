@@ -95,13 +95,19 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
           {pedido.estado !== "CANCELADO" && (
             <div className="flex flex-wrap items-center gap-2">
               {abierto && <Link href={`/pedidos/${pedido.id}/editar`} className={`${btn} inline-flex items-center border-stone-400 bg-white text-stone-800 hover:bg-crema-100`}>✎ Editar pedido</Link>}
-              <form action={cancelarPedido}>
-                <input type="hidden" name="id" value={pedido.id} />
-                <BotonConAviso texto="Cancelar pedido" aviso="¿Cancelar este pedido? Deja de sumar a la cuenta del cliente." clase={`${btn} border-rojo-600 bg-white text-rojo-700 hover:bg-rojo-50`} />
-              </form>
+              {!web && pedido.cobro === "COBRADO" ? (
+                <button type="button" disabled title="Primero deshacé el cobro (en la hoja de ruta o en CUENTA)" className={`${btn} cursor-not-allowed border-stone-300 bg-white text-stone-400`}>Cancelar pedido</button>
+              ) : (
+                <form action={cancelarPedido}>
+                  <input type="hidden" name="id" value={pedido.id} />
+                  <BotonConAviso texto="Cancelar pedido" aviso="¿Cancelar este pedido? Deja de sumar a la cuenta del cliente. Si tiene remito, el remito queda como ANULADO." clase={`${btn} border-rojo-600 bg-white text-rojo-700 hover:bg-rojo-50`} />
+                </form>
+              )}
             </div>
           )}
         </div>
+
+        {!web && pedido.cobro === "COBRADO" && pedido.estado !== "CANCELADO" && <p className="text-right text-xs text-stone-600">Para cancelarlo primero hay que deshacer el cobro.</p>}
 
         <TablaPedido
           pedidoId={pedido.id}

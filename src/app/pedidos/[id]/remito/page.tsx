@@ -32,6 +32,7 @@ export default async function RemitoPedido({ params }: { params: Promise<{ id: s
       <div className="py-6 print:py-0">
         <RemitoDoc
           empresa={empresa}
+          anulado={pedido.estado === "CANCELADO"}
           r={{
             numero: pedido.remitoNumero,
             fecha: pedido.fechaEntrega ? deFecha(pedido.fechaEntrega) : hoy(),

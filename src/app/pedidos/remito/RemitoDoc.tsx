@@ -27,7 +27,7 @@ const Campo = ({ rotulo, valor, clase = "" }: { rotulo: string; valor: string | 
 
 // Remito en A4, solo blanco y negro. Un único tamaño de letra (9 pt) y un solo molde de cuadro: todo parejo.
 // Documento de entrega: no reemplaza a la factura.
-export function RemitoDoc({ empresa, r }: { empresa: Empresa | null; r: DatosRemito }) {
+export function RemitoDoc({ empresa, r, anulado = false }: { empresa: Empresa | null; r: DatosRemito; anulado?: boolean }) {
   const total = r.items.reduce((s, i) => s + i.cantidad * i.precioUnitario, 0);
   const bruto = r.items.reduce((s, i) => s + i.cantidad * (i.precioLista ?? i.precioUnitario), 0);
   const descuento = Math.round((bruto - total) * 100) / 100;
@@ -36,7 +36,12 @@ export function RemitoDoc({ empresa, r }: { empresa: Empresa | null; r: DatosRem
   const columnas = "22mm 1fr 20mm 22mm 26mm 28mm";
   const fila = "grid h-[7mm] items-center border-b border-black";
   return (
-    <article className="mx-auto flex min-h-[297mm] w-[210mm] flex-col gap-[3mm] rounded-none bg-white p-[10mm] text-[9pt] leading-none text-black print:min-h-0 print:h-[296mm] print:overflow-hidden print:p-[8mm]">
+    <article className="relative mx-auto flex min-h-[297mm] w-[210mm] flex-col gap-[3mm] rounded-none bg-white p-[10mm] text-[9pt] leading-none text-black print:min-h-0 print:h-[296mm] print:overflow-hidden print:p-[8mm]">
+      {anulado && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center" aria-label="Remito anulado">
+          <span className="-rotate-[28deg] border-[6px] border-black px-10 py-3 text-[64pt] font-black tracking-widest text-black/80">ANULADO</span>
+        </div>
+      )}
       {/* Encabezado */}
       <header className="grid grid-cols-[1fr_20mm_1fr] border border-black">
         <div className="flex flex-col justify-center gap-1.5 p-2.5">

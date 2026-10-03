@@ -274,7 +274,11 @@ export async function reabrirPedido(formData: FormData) {
   await cambiarEstado(String(formData.get("id")), { estado: "PENDIENTE" }, true);
 }
 export async function cancelarPedido(formData: FormData) {
-  await cambiarEstado(String(formData.get("id")), { estado: "CANCELADO", fechaEntrega: null }, true);
+  const id = String(formData.get("id"));
+  const pedido = await db.pedido.findUnique({ where: { id }, select: { clienteId: true, cobro: true } });
+  // Un pedido ya cobrado no se cancela hasta deshacer el cobro (si no, el pago quedaría suelto como saldo a favor).
+  if (pedido?.clienteId && pedido.cobro === "COBRADO") return;
+  await cambiarEstado(id, { estado: "CANCELADO", fechaEntrega: null, salida: { disconnect: true } }, true);
 }
 
 /** Botón "Traer pedidos ahora": lee la planilla de la tienda online y carga los pedidos nuevos. */

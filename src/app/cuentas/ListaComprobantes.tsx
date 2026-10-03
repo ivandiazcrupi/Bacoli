@@ -18,6 +18,7 @@ export type FilaComprobante = {
   bruto: number;
   nc: number;
   cubierta: boolean;
+  anulado?: string | null; // "Anulado" o "No entregado": tiene número pero ya no se debe
   ncTexto: string; // "NC 0001-00000045" (vacío si no tiene)
   monto: number;
   vence: string;
@@ -45,7 +46,7 @@ export function ListaComprobantes({ filas }: { filas: FilaComprobante[] }) {
   const [error, setError] = useState<string | null>(null);
   const [trabajando, empezar] = useTransition();
 
-  const pagables = filas.filter((f) => f.entregado && !f.pagada && !f.cubierta);
+  const pagables = filas.filter((f) => f.entregado && !f.pagada && !f.cubierta && !f.anulado);
   const alternar = (id: string) => setElegidas((a) => {
     const n = new Set(a);
     if (n.has(id)) n.delete(id); else n.add(id);
@@ -82,18 +83,20 @@ export function ListaComprobantes({ filas }: { filas: FilaComprobante[] }) {
       </div>
       <ul className="divide-y divide-stone-300">
         {filas.map((f) => (
-          <li key={f.id} className={`items-center gap-x-3 gap-y-1 px-4 py-2.5 text-center text-sm lg:grid ${COLUMNAS} ${f.pagada ? "bg-verde-50" : elegidas.has(f.id) ? "bg-crema-50" : ""}`}>
-            <input type="checkbox" aria-label={`Elegir ${f.numero ?? "comprobante"}`} checked={elegidas.has(f.id)} disabled={!f.entregado || f.pagada || f.cubierta} onChange={() => alternar(f.id)} className="h-4 w-4 accent-[#026433] disabled:opacity-30" />
+          <li key={f.id} className={`items-center gap-x-3 gap-y-1 px-4 py-2.5 text-center text-sm lg:grid ${COLUMNAS} ${f.anulado ? "bg-stone-100 text-stone-500" : f.pagada ? "bg-verde-50" : elegidas.has(f.id) ? "bg-crema-50" : ""}`}>
+            <input type="checkbox" aria-label={`Elegir ${f.numero ?? "comprobante"}`} checked={elegidas.has(f.id)} disabled={!f.entregado || f.pagada || f.cubierta || !!f.anulado} onChange={() => alternar(f.id)} className="h-4 w-4 accent-[#026433] disabled:opacity-30" />
             <span className="flex items-center justify-center gap-1.5 font-semibold tabular-nums">
               {f.numero ?? <span className="font-normal text-rojo-700">sin número</span>}
-              {f.tipo === "FACTURA" && !f.pagada && !f.cubierta && <Link href={`/cuentas/${f.clienteId}/nc?factura=${f.id}`} title="Cargar nota de crédito" className="rounded border border-stone-400 px-1 text-[10px] font-semibold text-stone-600 hover:border-verde-700 hover:text-verde-800">NC</Link>}
+              {f.tipo === "FACTURA" && !f.pagada && !f.cubierta && !f.anulado && <Link href={`/cuentas/${f.clienteId}/nc?factura=${f.id}`} title="Cargar nota de crédito" className="rounded border border-stone-400 px-1 text-[10px] font-semibold text-stone-600 hover:border-verde-700 hover:text-verde-800">NC</Link>}
             </span>
             <Link href={`/cuentas/${f.clienteId}`} className="text-left hover:underline">{f.cliente}</Link>
             <span className="tabular-nums">{fechaCorta(f.cargado)}</span>
             <span className="tabular-nums">{f.entregado ? fechaCorta(f.fecha) : <span className="text-stone-400">—</span>}</span>
-            <span className={`font-bold tabular-nums ${f.cubierta ? "text-stone-400 line-through" : ""}`}>{formatoPesos(f.cubierta ? f.bruto : f.monto)}</span>
+            <span className={`font-bold tabular-nums ${f.cubierta || f.anulado ? "text-stone-400 line-through" : ""}`}>{formatoPesos(f.cubierta || f.anulado ? f.bruto : f.monto)}</span>
             <span className="tabular-nums">{f.entregado && !f.pagada ? fechaCorta(f.vence) : <span className="text-stone-400">—</span>}</span>
-            {f.pagada ? (
+            {f.anulado ? (
+              <span className="font-semibold text-stone-600">{f.anulado}</span>
+            ) : f.pagada ? (
               <span className="whitespace-nowrap font-semibold text-verde-800">Pagada · {TEXTO_MEDIO[f.medio ?? ""] ?? ""} <button type="button" onClick={() => deshacer(f.id)} className="ml-1 text-xs font-normal text-stone-500 underline hover:text-rojo-700">deshacer</button></span>
             ) : f.cubierta ? (
               <span className="font-semibold text-stone-700">Anulada por NC</span>

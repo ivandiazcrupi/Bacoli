@@ -25,13 +25,17 @@ export async function Listado({ tipo, searchParams, ruta }: { tipo: "FACTURA" | 
   const { q = "", estado = "sin-pagar" } = searchParams;
   const pagina = Math.max(1, Number(searchParams.pagina) || 1);
   const hoyStr = hoy();
+  const conAnulados = tipo === "REMITO" && estado === "todas";
   const palabras = q.trim().split(/\s+/).filter(Boolean);
 
   const pedidos = await db.pedido.findMany({
     where: {
       clienteId: { not: null },
       conFactura: tipo === "FACTURA",
-      estado: { in: ["PENDIENTE", "ENTREGADO"] },
+      // En REMITOS → Todas también se ven los anulados y no entregados que tienen número, para que la numeración se vea completa.
+      ...(conAnulados
+        ? { estado: { in: ["PENDIENTE", "ENTREGADO", "CANCELADO", "NO_ENTREGADO"] as ("PENDIENTE" | "ENTREGADO" | "CANCELADO" | "NO_ENTREGADO")[] }, OR: [{ estado: { in: ["PENDIENTE", "ENTREGADO"] as ("PENDIENTE" | "ENTREGADO")[] } }, { remitoNumero: { not: null } }] }
+        : { estado: { in: ["PENDIENTE", "ENTREGADO"] as ("PENDIENTE" | "ENTREGADO")[] } }),
       ...(estado === "sin-pagar" ? { pagado: false } : estado === "pagadas" ? { pagado: true } : {}),
       ...(palabras.length ? { AND: palabras.map((w) => ({ cliente: { nombre: { contains: w, mode: "insensitive" as const } } })) } : {}),
     },
@@ -43,12 +47,12 @@ export async function Listado({ tipo, searchParams, ruta }: { tipo: "FACTURA" | 
     const x = partidaDe(p, p.cliente.condicionPago);
     return [{
       id: p.id, clienteId: p.cliente.id, cliente: p.cliente.nombre, tipo, numero: x.numero, cargado: x.cargado, fecha: x.fecha,
-      entregado: x.entregado, bruto: x.bruto, nc: x.nc, cubierta: x.cubierta, ncTexto: x.ncNumeros.map((n) => `NC ${n}`).join(" · "), monto: x.monto, vence: x.vence, atraso: x.entregado ? diasDeAtraso(x.vence, hoyStr) : 0, pagada: x.pagada, medio: x.medio, obs: p.obsCobro ?? "",
+      entregado: x.entregado, bruto: x.bruto, nc: x.nc, cubierta: x.cubierta, anulado: p.estado === "CANCELADO" ? "Anulado" : p.estado === "NO_ENTREGADO" ? "No entregado" : null, ncTexto: x.ncNumeros.map((n) => `NC ${n}`).join(" · "), monto: x.monto, vence: x.vence, atraso: x.entregado ? diasDeAtraso(x.vence, hoyStr) : 0, pagada: x.pagada, medio: x.medio, obs: p.obsCobro ?? "",
     }];
   });
   todas.sort((a, b) => clave(a.numero) - clave(b.numero) || a.fecha.localeCompare(b.fecha));
 
-  const sinPagar = todas.filter((f) => !f.pagada && !f.cubierta);
+  const sinPagar = todas.filter((f) => !f.pagada && !f.cubierta && !f.anulado);
   const montoSinPagar = sinPagar.reduce((s, f) => s + f.monto, 0);
   const vencido = sinPagar.filter((f) => f.atraso > 0).reduce((s, f) => s + f.monto, 0);
   const paginas = Math.max(1, Math.ceil(todas.length / POR_PAGINA));
