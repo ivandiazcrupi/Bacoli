@@ -42,6 +42,13 @@ Ningún sistema dura 100 años sin cuidado. Este está armado con piezas estánd
 
 Con **mantenimiento una o dos veces por año** (actualizar piezas por seguridad y revisar que todo ande), **copias diarias** y **alguien que pueda mantenerlo**, puede servir **10 años o más**. Si algún día hay que cambiar de proveedor o de tecnología, los datos y las reglas se llevan.
 
+## Estabilidad de la base (3/10/2026)
+- `DATABASE_URL` ya usa la dirección **interna** de Railway (`postgres.railway.internal`): no era esa la causa de que el sistema "muera a veces".
+- El sistema limita las conexiones a la base (5, con esperas de 20 s y 15 s) y se reconecta solo si la base se corta (probado: tras caer y volver la base, responde de nuevo en segundos).
+- Hay un chequeo de salud en `/api/salud` (sin datos: 200 si todo anda, 503 si la base no responde). **Pendiente (decide el dueño, es configuración de Railway):** Bacoli → Settings → Healthcheck Path = `/api/salud`, para que Railway espere a que el sistema esté sano al publicar y lo reinicie si se cuelga.
+- Si "muere" de nuevo: mirar Bacoli → **Metrics** (memoria y CPU) y **Deployments → Logs** a la hora de la caída. Las pruebas gratis tienen recursos limitados; el plan pago los amplía.
+- **La contraseña de la base apareció en un chat el 3/10/2026**: hay que cambiarla (ALTER USER en la consola de Postgres y actualizar las variables que la usan) y, hasta entonces, no tener activado el acceso público (TCP Proxy) de la base.
+
 ## Mejoras pendientes de continuidad
 - Copia **automática** cada noche guardada en Drive (hoy es manual; necesita una carpeta compartida de Drive y una clave: decide el dueño).
 - Repositorio privado + protección de rama + tag de versión (arriba).
