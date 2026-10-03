@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { decodificar, leerArchivoArca } from "@/lib/arca";
+import { decodificar, esLibroIvaAlicuotas, esLibroIvaVentas, leerArchivoArca, leerLibroIvaVentas } from "@/lib/arca";
 import { exigirOficina } from "@/lib/session";
 
 export type EstadoArca = { ok?: string; error?: string; avisos?: string[] } | undefined;
@@ -14,7 +14,9 @@ export async function importarArca(_: EstadoArca, formData: FormData): Promise<E
   const archivo = formData.get("archivo");
   if (!(archivo instanceof File) || archivo.size === 0) return { error: "Elegí el archivo que bajaste de ARCA." };
   if (archivo.size > 8_000_000) return { error: "El archivo es demasiado grande (más de 8 MB)." };
-  const lectura = leerArchivoArca(decodificar(await archivo.arrayBuffer()));
+  const texto = decodificar(await archivo.arrayBuffer());
+  if (esLibroIvaAlicuotas(texto)) return { error: "Ese es el archivo de ALÍCUOTAS. Subí el de VENTAS (el que trae el nombre y el importe de cada comprobante)." };
+  const lectura = esLibroIvaVentas(texto) ? leerLibroIvaVentas(texto) : leerArchivoArca(texto);
   if (lectura.filas.length === 0) return { error: lectura.errores[0] ?? "No encontré comprobantes en el archivo." };
 
   const existentes = await db.comprobanteArca.findMany({ where: { numero: { in: [...new Set(lectura.filas.map((f) => f.numero))] } }, select: { tipo: true, puntoVenta: true, numero: true } });

@@ -110,5 +110,39 @@ export function leerArchivoArca(texto: string): ResultadoLectura {
   return { filas: salida, ignoradas, errores };
 }
 
+// ---------- Libro IVA Digital (RG 4597): archivo de ancho fijo "VENTAS.txt" (cabecera de 266 caracteres por comprobante) ----------
+// fecha(8) tipo(3) ptoVta(5) número(20) número hasta(20) tipoDoc(2) nroDoc(20) denominación(30) importe total(15, 2 decimales) …
+export function esLibroIvaVentas(texto: string): boolean {
+  const l = texto.split(/\r?\n/).find((x) => x.trim() !== "") ?? "";
+  return l.length >= 250 && /^\d{8}\d{3}\d{5}\d{20}/.test(l);
+}
+
+/** El de alícuotas (ALICUOTAS.txt) no sirve para esto: el importe total está en VENTAS.txt. */
+export function esLibroIvaAlicuotas(texto: string): boolean {
+  const l = texto.split(/\r?\n/).find((x) => x.trim() !== "") ?? "";
+  return l.length >= 55 && l.length <= 70 && /^\d{3}\d{5}\d{20}\d{15}\d{4}\d{15}/.test(l.trim());
+}
+
+export function leerLibroIvaVentas(texto: string): ResultadoLectura {
+  const filas: FilaArca[] = [];
+  const errores: string[] = [];
+  let ignoradas = 0;
+  texto.split(/\r?\n/).forEach((linea, n) => {
+    if (!linea.trim()) return;
+    if (linea.length < 123) { errores.push(`Línea ${n + 1}: demasiado corta, no se pudo leer.`); return; }
+    const fecha = `${linea.slice(0, 4)}-${linea.slice(4, 6)}-${linea.slice(6, 8)}`;
+    const tipo = parseInt(linea.slice(8, 11), 10);
+    const puntoVenta = parseInt(linea.slice(11, 16), 10);
+    const numero = parseInt(linea.slice(16, 36), 10);
+    const tipoDoc = parseInt(linea.slice(56, 58), 10);
+    const doc = linea.slice(58, 78).replace(/\D/g, "").replace(/^0+/, "");
+    const total = parseInt(linea.slice(108, 123), 10) / 100;
+    if (![tipo, puntoVenta, numero, total].every(Number.isFinite) || Number.isNaN(Date.parse(fecha))) { errores.push(`Línea ${n + 1}: no se pudo leer.`); return; }
+    if (ND.has(tipo)) { ignoradas++; return; }
+    filas.push({ tipo, puntoVenta, numero, fecha, cuitReceptor: tipoDoc === 80 && doc ? doc : doc || null, razonSocial: linea.slice(78, 108).trim() || null, total: Math.abs(total), cae: null, esNotaCredito: NC.has(tipo) });
+  });
+  return { filas, ignoradas, errores };
+}
+
 const LETRA: Record<number, string> = { 1: "A", 3: "A", 6: "B", 8: "B", 11: "C", 13: "C", 51: "M", 53: "M" };
 export const nombreComprobante = (tipo: number) => `${NC.has(tipo) ? "Nota de crédito" : "Factura"} ${LETRA[tipo] ?? ""}`.trim();
