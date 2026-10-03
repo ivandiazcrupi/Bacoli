@@ -7,6 +7,7 @@ import { exigirOficina } from "@/lib/session";
 import { CONTENEDOR_PEDIDOS } from "../../pedidos/Encabezado";
 import { EncabezadoCuenta } from "../EncabezadoCuenta";
 import { SubirArchivo } from "./SubirArchivo";
+import { SucursalArca } from "./SucursalArca";
 
 const soloDigitos = (t: string | null | undefined) => (t ?? "").replace(/\D/g, "");
 const fechaCorta = (d: Date) => `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}/${String(d.getUTCFullYear()).slice(2)}`;
@@ -26,12 +27,12 @@ export default async function Arca() {
   const usuario = await exigirOficina();
   const [arca, pedidos, clientes] = await Promise.all([
     db.comprobanteArca.findMany({ orderBy: [{ numero: "asc" }] }),
-    db.pedido.findMany({ where: { conFactura: true, numeroFactura: { not: null }, clienteId: { not: null } }, include: { items: true, cliente: true } }),
-    db.cliente.findMany({ where: { cuit: { not: null } }, select: { id: true, nombre: true, cuit: true } }),
+    db.pedido.findMany({ where: { conFactura: true, numeroFactura: { not: null }, clienteId: { not: null } }, include: { items: true, cliente: true, punto: true } }),
+    db.cliente.findMany({ where: { cuit: { not: null } }, select: { id: true, nombre: true, cuit: true, puntos: { where: { activo: true }, select: { id: true, barrio: true, direccion: true }, orderBy: { barrio: "asc" } } } }),
   ]);
   const facturas = arca.filter((c) => !c.esNotaCredito);
   const notas = arca.filter((c) => c.esNotaCredito);
-  const porCuit = new Map(clientes.map((c) => [soloDigitos(c.cuit), c.nombre]));
+  const porCuit = new Map(clientes.map((c) => [soloDigitos(c.cuit), c]));
   const porNumero = new Map<number, typeof facturas>();
   for (const f of facturas) porNumero.set(f.numero, [...(porNumero.get(f.numero) ?? []), f]);
 
@@ -107,10 +108,10 @@ export default async function Arca() {
             {sinPedido.length > 0 && (
               <section className="overflow-hidden rounded-xl border border-rojo-600 bg-white" aria-label="Facturas de ARCA sin pedido">
                 <h3 className="bg-rojo-50 px-4 py-2 text-sm font-bold text-rojo-700">Facturas de ARCA que ningún pedido tiene (se facturó y no está cargado el número)</h3>
-                <table className="w-full"><thead><tr><th className={th}>Factura</th><th className={th}>Fecha</th><th className={th}>Receptor</th><th className={th}>CUIT</th><th className={th}>Cliente en el sistema</th><th className={th}>Importe</th></tr></thead><tbody className="divide-y divide-stone-200">
+                <table className="w-full"><thead><tr><th className={th}>Factura</th><th className={th}>Fecha</th><th className={th}>Receptor</th><th className={th}>CUIT</th><th className={th}>Cliente en el sistema</th><th className={th}>Sucursal / observación</th><th className={th}>Importe</th></tr></thead><tbody className="divide-y divide-stone-200">
                   {sinPedido.map((f) => {
                     const cliente = porCuit.get(f.cuitReceptor ?? "");
-                    return <tr key={f.id}><td className={`${td} font-bold`}>{nombreComprobante(f.tipo)} {numeroArca(f.puntoVenta, f.numero)}</td><td className={td}>{fechaCorta(f.fecha)}</td><td className={td}>{f.razonSocial ?? "—"}</td><td className={`${td} tabular-nums`}>{f.cuitReceptor ?? "—"}</td><td className={td}>{cliente ?? <span className="font-semibold text-rojo-700">Cliente no encontrado</span>}</td><td className={`${td} font-bold tabular-nums`}>{formatoPesos(Number(f.total))}</td></tr>;
+                    return <tr key={f.id}><td className={`${td} font-bold`}>{nombreComprobante(f.tipo)} {numeroArca(f.puntoVenta, f.numero)}</td><td className={td}>{fechaCorta(f.fecha)}</td><td className={td}>{f.razonSocial ?? "—"}</td><td className={`${td} tabular-nums`}>{f.cuitReceptor ?? "—"}</td><td className={td}>{cliente?.nombre ?? <span className="font-semibold text-rojo-700">Cliente no encontrado</span>}</td><td className={`${td} min-w-[15rem]`}><SucursalArca id={f.id} puntos={cliente?.puntos ?? []} puntoId={f.puntoId} observacion={f.observacion} /></td><td className={`${td} font-bold tabular-nums`}>{formatoPesos(Number(f.total))}</td></tr>;
                   })}
                 </tbody></table>
               </section>
@@ -119,10 +120,19 @@ export default async function Arca() {
             {conProblemas.length > 0 && (
               <section className="overflow-hidden rounded-xl border border-stone-400 bg-white" aria-label="Cruzan con diferencias">
                 <h3 className="bg-crema-200 px-4 py-2 text-sm font-bold text-stone-800">Cruzan por número, pero con diferencias</h3>
-                <table className="w-full"><thead><tr><th className={th}>Número</th><th className={th}>Cliente</th><th className={th}>Diferencia</th><th className={th}>Pedido</th></tr></thead><tbody className="divide-y divide-stone-200">
-                  {conProblemas.map((c) => <tr key={c.pedido.id}><td className={`${td} font-bold`}>{c.pedido.numeroFactura}</td><td className={td}>{c.pedido.cliente?.nombre}</td><td className={`${td} text-left font-medium text-rojo-700`}>{c.problemas.map((x) => <span key={x} className="block">{x}</span>)}</td><td className={td}><a href={`/pedidos/${c.pedido.id}`} className="font-semibold text-verde-800 underline-offset-4 hover:underline">Abrir ›</a></td></tr>)}
+                <table className="w-full"><thead><tr><th className={th}>Número</th><th className={th}>Cliente</th><th className={th}>Sucursal</th><th className={th}>Diferencia</th><th className={th}>Pedido</th></tr></thead><tbody className="divide-y divide-stone-200">
+                  {conProblemas.map((c) => <tr key={c.pedido.id}><td className={`${td} font-bold`}>{c.pedido.numeroFactura}</td><td className={td}>{c.pedido.cliente?.nombre}</td><td className={td}>{c.pedido.punto?.barrio ?? "—"}</td><td className={`${td} text-left font-medium text-rojo-700`}>{c.problemas.map((x) => <span key={x} className="block">{x}</span>)}</td><td className={td}><a href={`/pedidos/${c.pedido.id}`} className="font-semibold text-verde-800 underline-offset-4 hover:underline">Abrir ›</a></td></tr>)}
                 </tbody></table>
               </section>
+            )}
+
+            {cruzan.length - conProblemas.length > 0 && (
+              <details className="overflow-hidden rounded-xl border border-stone-300 bg-white">
+                <summary className="cursor-pointer bg-crema-200 px-4 py-2 text-sm font-bold text-stone-800">Cruzan bien ({cruzan.length - conProblemas.length}): número, cliente y sucursal del pedido</summary>
+                <table className="w-full"><thead><tr><th className={th}>Número</th><th className={th}>Cliente</th><th className={th}>Sucursal</th><th className={th}>Importe</th></tr></thead><tbody className="divide-y divide-stone-200">
+                  {cruzan.filter((c) => !c.problemas.length).map((c) => <tr key={c.pedido.id}><td className={`${td} font-bold`}>{c.pedido.numeroFactura}</td><td className={td}>{c.pedido.cliente?.nombre}</td><td className={td}>{c.pedido.punto?.barrio ?? "—"}</td><td className={`${td} font-bold tabular-nums`}>{formatoPesos(c.total)}</td></tr>)}
+                </tbody></table>
+              </details>
             )}
 
             {notas.length > 0 && (

@@ -32,3 +32,11 @@ export async function importarArca(_: EstadoArca, formData: FormData): Promise<E
   const avisos = [...lectura.errores.slice(0, 5), ...(lectura.ignoradas ? [`${lectura.ignoradas} notas de débito ignoradas.`] : [])];
   return { ok: `Listo: ${nuevas.length} comprobantes nuevos${lectura.filas.length - nuevas.length ? ` y ${lectura.filas.length - nuevas.length} que ya estaban` : ""}.`, avisos };
 }
+
+/** A qué sucursal (y con qué aclaración) va una factura de ARCA: lo decide una persona, porque ARCA solo sabe la razón social. */
+export async function guardarDatosArca(id: string, puntoId: string, observacion: string): Promise<{ ok: boolean }> {
+  await exigirOficina();
+  await db.comprobanteArca.update({ where: { id }, data: { puntoId: puntoId || null, observacion: observacion.trim().slice(0, 150) || null } });
+  revalidatePath("/cuentas/arca");
+  return { ok: true };
+}

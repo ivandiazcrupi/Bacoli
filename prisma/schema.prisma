@@ -413,6 +413,8 @@ model ComprobanteArca {
   esNotaCredito Boolean  @default(false)
   importadoEn   DateTime @default(now())
   importadoPor  String?
+  puntoId       String? // sucursal a la que va esta factura (la elige una persona; ARCA solo sabe la razón social)
+  observacion   String? // dato libre: barrio, aclaración…
 
   @@unique([tipo, puntoVenta, numero])
   @@index([numero])
