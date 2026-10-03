@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { sincronizarCuentaPedido } from "@/lib/cuenta";
 import { db } from "@/lib/db";
 import { aFecha, esFechaValida } from "@/lib/fechas";
 import { mayus, titulo } from "@/lib/mayusculas";
@@ -99,7 +100,7 @@ export async function cambiarRepartidor(salidaId: string, repartidorId: string |
 
 /** Pone un pedido del día en un vehículo (al final de su recorrido) o lo deja "sin vehículo" (salidaId = null). */
 export async function asignarAVehiculo(pedidoId: string, salidaId: string | null): Promise<Resultado> {
-  await exigirOficina();
+  const usuario = await exigirOficina();
   const pedido = await db.pedido.findUnique({ where: { id: pedidoId } });
   if (!pedido || pedido.estado === "CANCELADO") return { ok: false, error: "No se puede mover ese pedido." };
   if (!pedido.fechaEntrega) return { ok: false, error: "Primero asignale un día al pedido." };
@@ -110,7 +111,10 @@ export async function asignarAVehiculo(pedidoId: string, salidaId: string | null
     const salida = await db.salida.findUnique({ where: { id: salidaId } });
     if (!salida || salida.fecha.getTime() !== pedido.fechaEntrega.getTime()) return { ok: false, error: "Ese vehículo no sale el día del pedido." };
     const ultimo = await db.pedido.aggregate({ where: { salidaId }, _max: { ordenRuta: true } });
-    await db.pedido.update({ where: { id: pedidoId }, data: { salidaId, ordenRuta: (ultimo._max.ordenRuta ?? -1) + 1 } });
+    await db.$transaction(async (tx) => {
+      await tx.pedido.update({ where: { id: pedidoId }, data: { salidaId, ordenRuta: (ultimo._max.ordenRuta ?? -1) + 1, ...(pedido.estado === "NO_ENTREGADO" ? { estado: "PENDIENTE" } : {}) } });
+      if (pedido.estado === "NO_ENTREGADO") await sincronizarCuentaPedido(tx, pedidoId, usuario.id);
+    });
   }
   refrescar();
   return { ok: true };
@@ -129,12 +133,16 @@ export async function ordenarSalida(salidaId: string, ordenIds: string[]): Promi
 
 /** Devuelve un pedido a la lista de PEDIDOS (sin día y sin vehículo). */
 export async function devolverAPedidos(pedidoId: string): Promise<Resultado> {
-  await exigirOficina();
+  const usuario = await exigirOficina();
   const pedido = await db.pedido.findUnique({ where: { id: pedidoId } });
   if (!pedido || pedido.estado === "CANCELADO") return { ok: false, error: "No se puede mover ese pedido." };
   if (pedido.estado === "ENTREGADO") return { ok: false, error: "Un pedido entregado no se puede mover." };
   if (!(await diaAbierto(pedido.fechaEntrega))) return { ok: false, error: "Ese día está cerrado. Un dueño puede reabrirlo." };
-  await db.pedido.update({ where: { id: pedidoId }, data: { fechaEntrega: null, salidaId: null, ordenRuta: 0 } });
+  // Un "no entregado" que vuelve a Pedidos se reactiva (pendiente) y vuelve a contar en la cuenta.
+  await db.$transaction(async (tx) => {
+    await tx.pedido.update({ where: { id: pedidoId }, data: { fechaEntrega: null, salidaId: null, ordenRuta: 0, ...(pedido.estado === "NO_ENTREGADO" ? { estado: "PENDIENTE" } : {}) } });
+    if (pedido.estado === "NO_ENTREGADO") await sincronizarCuentaPedido(tx, pedidoId, usuario.id);
+  });
   refrescar();
   return { ok: true };
 }

@@ -219,14 +219,18 @@ export async function moverPedido(pedidoId: string, destino: string, ordenIds: s
 
 /** Asigna un pedido sin día a un día, al final de la lista del reparto. Sirve para el botón del día y para arrastrar. */
 export async function asignarADia(pedidoId: string, fecha: string): Promise<{ ok: boolean; error?: string }> {
-  await exigirOficina();
+  const usuario = await exigirOficina();
   if (!esFechaValida(fecha)) return { ok: false, error: "Fecha inválida." };
   const pedido = await db.pedido.findUnique({ where: { id: pedidoId } });
   if (!pedido || pedido.estado === "CANCELADO") return { ok: false, error: "No se puede asignar ese pedido." };
   if (pedido.estado === "ENTREGADO") return { ok: false, error: "Un pedido entregado no se puede mover." };
   if (await db.diaCerrado.findUnique({ where: { fecha: aFecha(fecha) } })) return { ok: false, error: "Ese día está cerrado. Un dueño puede reabrirlo." };
   const ultimo = await db.pedido.aggregate({ where: { fechaEntrega: aFecha(fecha) }, _max: { ordenDia: true } });
-  await db.pedido.update({ where: { id: pedidoId }, data: { fechaEntrega: aFecha(fecha), ordenDia: (ultimo._max.ordenDia ?? -1) + 1, salidaId: null, ordenRuta: 0 } }); // al cambiar de día deja el vehículo
+  await db.$transaction(async (tx) => {
+    // al cambiar de día deja el vehículo; un "no entregado" se reactiva (pendiente) y vuelve a contar en la cuenta
+    await tx.pedido.update({ where: { id: pedidoId }, data: { fechaEntrega: aFecha(fecha), ordenDia: (ultimo._max.ordenDia ?? -1) + 1, salidaId: null, ordenRuta: 0, ...(pedido.estado === "NO_ENTREGADO" ? { estado: "PENDIENTE" } : {}) } });
+    if (pedido.estado === "NO_ENTREGADO") await sincronizarCuentaPedido(tx, pedidoId, usuario.id);
+  });
   revalidatePath("/pedidos", "layout");
   return { ok: true };
 }

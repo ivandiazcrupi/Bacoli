@@ -1,3 +1,4 @@
+import type { EstadoPedido } from "@prisma/client";
 import Link from "next/link";
 import { Cabecera } from "@/components/Cabecera";
 import { db } from "@/lib/db";
@@ -17,7 +18,8 @@ export default async function Pedidos({ searchParams }: { searchParams: Promise<
   const domingo = sumarDias(lunes, 6);
   const esta = lunesDe(hoy());
 
-  const esperando = { estado: "PENDIENTE", fechaEntrega: null } as const;
+  // Esperan día: los pendientes sin fecha y los que volvieron como "no entregado" (se reactivan al asignarles día).
+  const esperando = { estado: { in: ["PENDIENTE", "NO_ENTREGADO"] as EstadoPedido[] }, fechaEntrega: null };
   const [pedidos, cuentaMayoristas, cuentaWeb, cerrados] = await Promise.all([
     db.pedido.findMany({ where: { ...esperando, origen: esWeb ? "WEB" : "MAYORISTA" }, include: incluirPedido, orderBy: [{ creadoEn: "asc" }] }),
     db.pedido.count({ where: { ...esperando, origen: "MAYORISTA" } }),
