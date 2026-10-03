@@ -42,14 +42,19 @@ export async function cambiarActivoVehiculo(formData: FormData) {
   refrescar();
 }
 
-/** Borrar un vehículo: solo si nunca salió (si no, se pierde el historial: ahí se desactiva). */
+/** Eliminar un vehículo. Si nunca salió se borra de verdad; si ya repartió, se oculta para siempre (las hojas de ruta viejas conservan su nombre). */
 export async function eliminarVehiculo(_: EstadoForm, formData: FormData): Promise<EstadoForm> {
   await exigirOficina();
   const id = String(formData.get("id"));
   const v = await db.vehiculo.findUnique({ where: { id }, include: { _count: { select: { salidas: true } } } });
   if (!v) return { error: "El vehículo ya no existe." };
-  if (v._count.salidas > 0) return { error: "Este vehículo ya salió a repartir, por eso no se puede eliminar. Usá “Desactivar”: deja de ofrecerse y no se pierde el historial." };
-  await db.vehiculo.delete({ where: { id } });
+  if (v._count.salidas > 0) {
+    const enHojaAbierta = await db.salida.count({ where: { vehiculoId: id, fecha: { gte: aFecha(hoy()) } } });
+    if (enHojaAbierta > 0) return { error: "Este vehículo está en una hoja de ruta de hoy o de un día que viene. Sacalo de esos días primero." };
+    await db.vehiculo.update({ where: { id }, data: { eliminado: true, activo: false } });
+  } else {
+    await db.vehiculo.delete({ where: { id } });
+  }
   refrescar();
   return { ok: "Vehículo eliminado." };
 }

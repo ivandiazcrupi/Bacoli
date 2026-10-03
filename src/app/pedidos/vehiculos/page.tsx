@@ -7,7 +7,7 @@ import { EncabezadoVehiculos, FilaVehiculo } from "./FilaVehiculo";
 // Los vehículos de la empresa. Cada día, en la hoja de ruta, se elige cuáles salen.
 export default async function Vehiculos() {
   const usuario = await exigirOficina();
-  const vehiculos = await db.vehiculo.findMany({ orderBy: [{ activo: "desc" }, { orden: "asc" }] });
+  const vehiculos = await db.vehiculo.findMany({ where: { eliminado: false }, orderBy: [{ activo: "desc" }, { orden: "asc" }] });
 
   return (
     <>

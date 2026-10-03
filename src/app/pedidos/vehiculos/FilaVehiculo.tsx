@@ -51,7 +51,7 @@ export function FilaVehiculo({ vehiculo }: { vehiculo?: DatosVehiculo }) {
               <button
                 formAction={borrar}
                 formNoValidate
-                onClick={(e) => { if (!window.confirm(`¿Eliminar el vehículo ${vehiculo.nombre}? No se puede deshacer.`)) e.preventDefault(); }}
+                onClick={(e) => { if (!window.confirm(`¿Eliminar el vehículo ${vehiculo.nombre}? Si ya salió a repartir, se oculta pero las hojas de ruta viejas conservan su nombre.`)) e.preventDefault(); }}
                 className={`${boton} border border-rojo-600 bg-white text-rojo-700 hover:bg-rojo-50`}
               >
                 Eliminar

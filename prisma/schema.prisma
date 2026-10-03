@@ -321,6 +321,7 @@ model Vehiculo {
   patente   String?
   capacidad Int? // paquetes máximos; vacío = sin tope
   activo    Boolean  @default(true)
+  eliminado Boolean  @default(false) // "borrado" por el usuario pero con historial: se oculta en todas las listas y no se pierde ninguna hoja de ruta vieja
   orden     Int      @default(0)
   creadoEn  DateTime @default(now())
 

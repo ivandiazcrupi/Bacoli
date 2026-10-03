@@ -777,6 +777,7 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
           {sinVehiculo.length > 0 && <>Sin ubicar <span className="font-medium normal-case tracking-normal text-stone-600">· {sinVehiculo.length} {sinVehiculo.length === 1 ? "pedido" : "pedidos"}</span></>}
         </h2>
         <div className="flex flex-wrap items-center gap-2 sm:justify-self-end">
+          {salidas.length > 0 && <a href={`/pedidos/dia/${fecha}/imprimir`} target="_blank" rel="noreferrer" className="rounded-md border border-stone-400 bg-white px-3 py-2 font-medium shadow-sm">Imprimir hoja de ruta</a>}
           {filas.length > 0 && <button type="button" onClick={imprimirTodos} className="rounded-md border border-stone-400 bg-white px-3 py-2 font-medium shadow-sm">Imprimir todos los remitos</button>}
         </div>
       </div>
@@ -810,6 +811,7 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
                 {sa.patente && <p className="text-xs text-stone-600">{sa.patente}</p>}
               </div>
               <div className="flex flex-wrap items-center gap-2">
+                {grupo.length > 0 && <a href={`/pedidos/dia/${fecha}/imprimir?salida=${sa.id}`} target="_blank" rel="noreferrer" className="rounded-md border border-stone-400 bg-white px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-crema-50">Imprimir</a>}
                 {grupo.length > 0 && <a href={urlRuta(grupo)} target="_blank" rel="noreferrer" className="rounded-md border border-stone-400 bg-white px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-crema-50">Ver ruta en Google Maps</a>}
                 {!fija && <button type="button" onClick={() => { if (window.confirm(`¿Sacar ${sa.nombre} del día? Sus pedidos quedan “sin ubicar”.`)) llamar(() => quitarSalida(sa.id)); }} className="rounded-md border border-stone-400 bg-white px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-crema-50">Sacar del día</button>}
               </div>
