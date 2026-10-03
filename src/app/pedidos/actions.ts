@@ -168,6 +168,53 @@ export async function actualizarPedido(pedidoId: string, _: EstadoPedidoForm, fo
   redirect(`/pedidos/${pedidoId}`);
 }
 
+/** Carga a mano un pedido minorista (de la tienda, pero que llegó por otro lado, ej. WhatsApp). Queda igual que los de la tienda: pagos por transferencia, sin cuenta corriente. */
+export async function crearPedidoWebManual(_: EstadoPedidoForm, formData: FormData): Promise<EstadoPedidoForm> {
+  const usuario = await exigirOficina();
+  const nombre = mayus(String(formData.get("nombre") ?? ""));
+  if (!nombre) return { error: "Falta el nombre." };
+  const direccion = titulo(String(formData.get("direccion") ?? "").trim());
+  if (!direccion) return { error: "Falta la dirección de entrega." };
+  const total = leerMonto(String(formData.get("total") ?? ""));
+  if (total === null || total <= 0) return { error: "Poné el total que paga el cliente (con el envío, si lo lleva)." };
+
+  const productos = await db.producto.findMany({ where: { activo: true } });
+  const items: Prisma.PedidoItemCreateWithoutPedidoInput[] = [];
+  for (const p of productos) {
+    const cantidad = Number(String(formData.get(`q_${p.id}`) ?? "0").replace(/\D/g, "") || 0);
+    if (cantidad > 0) items.push({ producto: { connect: { id: p.id } }, nombre: p.nombre, sku: p.sku, unidad: p.unidad, cantidad, precioUnitario: 0 });
+  }
+  if (items.length === 0) return { error: "Poné la cantidad de al menos un producto." };
+
+  const pagado = formData.get("pagado") === "1";
+  const ultimo = await db.pedido.aggregate({ where: { fechaEntrega: null }, _max: { ordenDia: true } });
+  const numero = await db.$transaction(async (tx) => {
+    const n = await tx.numerador.upsert({ where: { id: "WEB_MANUAL" }, update: { ultimo: { increment: 1 } }, create: { id: "WEB_MANUAL", ultimo: 1 } });
+    await tx.pedido.create({
+      data: {
+        origen: "WEB",
+        estado: "PENDIENTE",
+        conFactura: false,
+        ivaPct: 0,
+        creadoPorId: usuario.id,
+        ordenDia: (ultimo._max.ordenDia ?? -1) + 1,
+        webOrden: `M-${n.ultimo}`,
+        webNombre: nombre,
+        webDireccion: direccion,
+        webBarrio: mayus(String(formData.get("barrio") ?? "")) || null,
+        webTelefono: String(formData.get("telefono") ?? "").trim() || null,
+        webTotal: total,
+        webPago: pagado ? "PAGO_TRANSFERENCIA" : "PENDIENTE",
+        nota: oracion(String(formData.get("nota") ?? "")) || null,
+        items: { create: items },
+      },
+    });
+    return n.ultimo;
+  });
+  revalidatePath("/pedidos", "layout");
+  return { ok: `Pedido minorista de ${nombre} cargado (N° M-${numero}). Quedó en Pedidos → Minoristas (web), esperando día.` };
+}
+
 /** Modifica un pedido de la tienda online: datos de entrega, cantidades de cada renglón (en 0 se saca), total pagado y nota. */
 export async function actualizarPedidoWeb(pedidoId: string, _: EstadoPedidoForm, formData: FormData): Promise<EstadoPedidoForm> {
   await exigirOficina();

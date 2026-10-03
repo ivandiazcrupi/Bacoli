@@ -1,11 +1,16 @@
 import Link from "next/link";
 import { Cabecera } from "@/components/Cabecera";
+import { db } from "@/lib/db";
 import { exigirOficina } from "@/lib/session";
 import { CONTENEDOR_PEDIDOS } from "../Encabezado";
 import { NuevoPedido } from "../NuevoPedido";
+import { NuevoPedidoWeb } from "../NuevoPedidoWeb";
 
-export default async function NuevoPedidoPagina() {
+export default async function NuevoPedidoPagina({ searchParams }: { searchParams: Promise<{ tipo?: string }> }) {
   const usuario = await exigirOficina();
+  const minorista = (await searchParams).tipo === "minorista";
+  const productos = minorista ? await db.producto.findMany({ where: { activo: true }, orderBy: { orden: "asc" }, select: { id: true, nombre: true, sku: true, unidad: true } }) : [];
+  const pastilla = "rounded-md px-5 py-2.5 text-sm font-semibold";
   return (
     <>
       <Cabecera usuario={usuario} />
@@ -17,7 +22,11 @@ export default async function NuevoPedidoPagina() {
           </div>
           <Link href="/pedidos" className="rounded-md border border-stone-400 bg-white px-3 py-2 text-sm font-medium shadow-sm hover:bg-crema-100">← Pedidos</Link>
         </div>
-        <NuevoPedido esDueno={usuario.rol === "DUENO"} />
+        <div className="flex gap-2" role="group" aria-label="Tipo de pedido">
+          <Link href="/pedidos/nuevo" className={`${pastilla} ${!minorista ? "bg-stone-800 text-white" : "border border-stone-400 bg-white text-stone-700 hover:bg-crema-100"}`}>Mayorista</Link>
+          <Link href="/pedidos/nuevo?tipo=minorista" className={`${pastilla} ${minorista ? "bg-stone-800 text-white" : "border border-stone-400 bg-white text-stone-700 hover:bg-crema-100"}`}>Minorista (tienda)</Link>
+        </div>
+        {minorista ? <NuevoPedidoWeb productos={productos} /> : <NuevoPedido esDueno={usuario.rol === "DUENO"} />}
       </main>
     </>
   );
