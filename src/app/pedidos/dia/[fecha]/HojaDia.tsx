@@ -10,7 +10,7 @@ import { formatoPesos } from "@/lib/numeros";
 import { enlaceWhatsApp } from "@/lib/telefonos";
 import { BotonRemito } from "../../BotonRemito";
 import { normalizarFactura, soloNumeroFactura } from "@/lib/remito";
-import { asignarADia } from "../../actions";
+import { asignarADia, marcarPagoWeb } from "../../actions";
 import { agregarSalida, asignarAVehiculo, devolverAPedidos, ordenarSalida, quitarSalida } from "../../ruta/actions";
 import { emitirRemitosDia } from "../../remito/actions";
 import { cerrarDia, dejarEnCuentaCorriente, dejarListo, reabrirHoja, deshacerCobro, guardarNumeroFactura, marcarEntrega, reabrirDia, registrarCobro, registrarNoEntrega, type Resultado } from "../actions";
@@ -79,6 +79,7 @@ type Acciones = {
   cobrar: (f: Fila, medio: string) => void;
   cuentaCorriente: (f: Fila) => void;
   deshacer: (f: Fila) => void;
+  pagoWeb: (f: Fila, pagado: boolean) => void; // tienda: confirmar la transferencia o volver a pendiente
   factura: (f: Fila, numero: string) => void;
   mover: (f: Fila, destino: string) => void; // "sin" = sin vehículo, "pedidos" = vuelve a Pedidos, "dia:AAAA-MM-DD" = otro día, otro = id de la salida
   dias: { fecha: string; texto: string }[];
@@ -148,7 +149,7 @@ function useFlujoEntrega(f: Fila, acc: Acciones) {
     error,
     enviando,
     // ✓ Entregado: la tienda ya pagada con Mercado Pago se entrega directo; el resto pide primero cómo se cobra.
-    entregar: () => (f.pagoMp ? acc.entregarYCobrar(f, undefined) : setEligiendoCobro((v) => !v)),
+    entregar: () => (f.pagoMp || f.webOrden ? acc.entregarYCobrar(f, undefined) : setEligiendoCobro((v) => !v)),
     elegirCobro: (cobro: string) => {
       setEligiendoCobro(false);
       if (f.estado === "ENTREGADO") acc.entregarYCobrar(f, cobro); // completa un cobro que faltaba
@@ -183,7 +184,8 @@ function CobroMarcado({ tipo, detalle, onDeshacer }: { tipo: "PAGO" | "CC"; deta
 // Mientras se está entregando (✓ tocado y sin cobro elegido) se muestra la elección; el pedido no queda entregado hasta elegir.
 function CeldaCobro({ f, bloqueada, acc, eligiendoCobro, onElegir, onCancelar }: { f: Fila; bloqueada: boolean; acc: Acciones; eligiendoCobro: boolean; onElegir: (cobro: string) => void; onCancelar: () => void }) {
   const [medio, setMedio] = useState(false);
-  if (f.pagoMp) return <CobroMarcado tipo="PAGO" detalle={f.pagoTexto ?? "Pagado"} />;
+  if (f.pagoMp) return <CobroMarcado tipo="PAGO" detalle={f.pagoTexto ?? "Pagado"} onDeshacer={!bloqueada && f.estado !== "ENTREGADO" && f.pagoTexto === "Transferencia" ? () => acc.pagoWeb(f, false) : undefined} />;
+  if (f.webOrden) return <button type="button" disabled={bloqueada} onClick={() => acc.pagoWeb(f, true)} className="h-[44px] w-full rounded-md border border-rojo-600 bg-white px-1 text-xs font-semibold leading-tight text-rojo-700 hover:bg-rojo-50 disabled:opacity-40">Falta pago<br />Confirmar</button>;
   const pidiendo = eligiendoCobro || (f.estado === "ENTREGADO" && !f.cobro); // entregado sin cobro (datos viejos): también se completa acá
   if (!pidiendo) {
     if (f.estado !== "ENTREGADO") return <span className="text-stone-400">—</span>;
@@ -459,8 +461,9 @@ function FilaTarjeta({ f, n, bloqueada, fija, acc, salidas }: { f: Fila; n: numb
 
       <SelectorEntrega f={f} bloqueada={bloqueada} acc={acc} grande eligiendoCobro={flujo.eligiendoCobro} onEntregar={flujo.entregar} onNoEntregar={flujo.abrirMotivo} />
 
-      {f.pagoMp && <div className="rounded-lg border border-verde-700 bg-verde-50 px-3 py-3 text-center font-semibold text-verde-800">✓ Pago · {f.pagoTexto}</div>}
-      {(f.estado === "ENTREGADO" || flujo.eligiendoCobro) && !f.pagoMp && (
+      {f.pagoMp && <div className="flex items-center justify-between rounded-lg border border-verde-700 bg-verde-50 px-3 py-3 font-semibold text-verde-800"><span>✓ Pago · {f.pagoTexto}</span>{!bloqueada && f.estado !== "ENTREGADO" && f.pagoTexto === "Transferencia" && <button type="button" onClick={() => acc.pagoWeb(f, false)} aria-label="Volver a pago pendiente" className="px-2 text-xl">✕</button>}</div>}
+      {f.webOrden && !f.pagoMp && !bloqueada && <button type="button" onClick={() => acc.pagoWeb(f, true)} className="h-12 w-full rounded-lg border border-rojo-600 bg-white font-semibold text-rojo-700">Falta el pago · Confirmar transferencia</button>}
+      {(f.estado === "ENTREGADO" || flujo.eligiendoCobro) && !f.pagoMp && !f.webOrden && (
         <div className="space-y-2">
           {f.cobro === "COBRADO" && !flujo.eligiendoCobro ? (
             <div className="flex items-center justify-between rounded-lg bg-verde-700 px-3 py-3 font-semibold text-white"><span>✓ PAGO · {textoMedio(f.medioCobro)}</span>{!bloqueada && <button type="button" onClick={() => acc.deshacer(f)} aria-label="Deshacer el cobro" className="px-2 text-xl">✕</button>}</div>
@@ -647,6 +650,7 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
     },
     cobrar: (f, medio) => ejecutar(f.id, (x) => ({ ...x, cobro: "COBRADO", medioCobro: medio }), () => registrarCobro(f.id, medio)),
     cuentaCorriente: (f) => ejecutar(f.id, (x) => ({ ...x, cobro: "CUENTA_CORRIENTE" }), () => dejarEnCuentaCorriente(f.id)),
+    pagoWeb: (f, pagado) => ejecutar(f.id, (x) => ({ ...x, pagoMp: pagado, pagoTexto: pagado ? "Transferencia" : null }), () => marcarPagoWeb(f.id, pagado)),
     deshacer: (f) => ejecutar(f.id, (x) => ({ ...x, cobro: null, medioCobro: null }), () => deshacerCobro(f.id)),
     factura: (f, numero) => ejecutar(f.id, (x) => ({ ...x, numeroFactura: normalizarFactura(numero) ?? "" }), () => guardarNumeroFactura(f.id, numero)),
     mover: (f, destino) => {

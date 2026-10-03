@@ -330,6 +330,20 @@ export async function confirmarPagoWeb(pedidoId: string): Promise<{ ok: boolean;
   return { ok: true };
 }
 
+/** Cambia el estado de pago de un pedido de la tienda (transferencia): confirmado o vuelve a pendiente. No toca los de Mercado Pago ni los ya entregados. */
+export async function marcarPagoWeb(pedidoId: string, pagado: boolean): Promise<{ ok: boolean; error?: string }> {
+  await exigirOficina();
+  const pedido = await db.pedido.findUnique({ where: { id: pedidoId }, select: { webOrden: true, webPago: true, estado: true } });
+  if (!pedido?.webOrden) return { ok: false, error: "Solo los pedidos de la tienda online tienen estado de pago." };
+  if (pedido.estado === "CANCELADO") return { ok: false, error: "El pedido está cancelado." };
+  if (pedido.estado === "ENTREGADO") return { ok: false, error: "El pedido ya se entregó: primero deshacé la entrega." };
+  if (pedido.webPago === "PAGO_MP") return { ok: false, error: "Este pedido se pagó con Mercado Pago." };
+  await db.pedido.update({ where: { id: pedidoId }, data: { webPago: pagado ? "PAGO_TRANSFERENCIA" : "PENDIENTE" } });
+  revalidatePath("/pedidos", "layout");
+  revalidatePath(`/pedidos/${pedidoId}`);
+  return { ok: true };
+}
+
 /** Botón "Traer pedidos ahora": lee la planilla de la tienda online y carga los pedidos nuevos. */
 export async function traerPedidosWeb(): Promise<ResultadoImportacion> {
   await exigirOficina();
