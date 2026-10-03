@@ -313,6 +313,52 @@ function FilaSilueta({ x }: { x: Silueta }) {
   );
 }
 
+// Lugares del recorrido: la silueta de un pedido no entregado queda clavada en su número (gris) y los pedidos vivos ocupan los demás.
+type Lugar = { n: number; f?: Fila; x?: Silueta };
+function lugaresDelRecorrido(grupo: Fila[], siluetas: Silueta[]): Lugar[] {
+  const total = grupo.length + siluetas.length;
+  const lugares: (Lugar | null)[] = Array.from({ length: total }, () => null);
+  for (const x of [...siluetas].sort((p, q) => p.orden - q.orden)) {
+    let i = Math.min(Math.max(x.orden, 0), total - 1);
+    while (lugares[i]) i = (i + 1) % total;
+    lugares[i] = { n: i + 1, x };
+  }
+  let k = 0;
+  return lugares.map((l, i) => l ?? { n: i + 1, f: grupo[k++] });
+}
+
+// Silueta dentro de la tabla del vehículo: misma fila que un pedido, pero en gris, con su número y sin moverse.
+function FilaSiluetaTabla({ x, n }: { x: Silueta; n: number }) {
+  return (
+    <div role="row" style={{ gridTemplateColumns: COLUMNAS }} className="grid items-center gap-x-2 rounded-lg border border-dashed border-stone-400 bg-stone-100 px-2 py-2.5 text-center text-sm text-stone-500">
+      <div role="cell"><span className="inline-flex h-7 min-w-7 items-center justify-center rounded bg-stone-400 px-1 text-sm font-bold text-white">{n}</span></div>
+      <div role="cell" className="text-xs font-bold uppercase leading-tight">{x.barrio}</div>
+      <div role="cell" className="font-bold uppercase leading-snug text-stone-600">{x.cliente}</div>
+      <div role="cell" className="leading-snug">{x.direccion}<span className="block text-xs font-semibold text-rojo-700/80">No se entregó · {x.motivo}</span></div>
+      <div role="cell">—</div>
+      <div role="cell" className="inline-grid justify-center justify-self-center gap-x-2 text-left [grid-template-columns:auto_auto]">
+        {x.items.map((i, k) => <span key={k} className="contents"><span className="text-right font-semibold tabular-nums">{i.cantidad}</span><span className="leading-snug">{i.nombre}</span></span>)}
+      </div>
+      <div role="cell">—</div>
+      <div role="cell">—</div>
+      <div role="cell" className="col-span-3 text-xs leading-tight">{x.destino}</div>
+      <div role="cell"><Link href={`/pedidos/${x.pedidoId}`} className="text-sm font-semibold text-verde-800 underline-offset-4 hover:underline">Abrir ›</Link></div>
+    </div>
+  );
+}
+
+function FilaSiluetaTarjeta({ x, n }: { x: Silueta; n: number }) {
+  return (
+    <div className="rounded-xl border border-dashed border-stone-400 bg-stone-100 p-3 text-sm text-stone-500">
+      <p className="flex items-center gap-2 font-bold uppercase"><span className="inline-flex h-6 min-w-6 items-center justify-center rounded bg-stone-400 px-1 text-white">{n}</span>{x.barrio} · {x.cliente}</p>
+      <p>{x.direccion}</p>
+      <p className="text-xs">{x.items.map((i) => `${i.cantidad} ${i.nombre}`).join(" · ")}</p>
+      <p className="font-semibold text-rojo-700/80">No se entregó · {x.motivo}</p>
+      <p className="flex justify-between text-xs"><span>{x.destino}</span><Link href={`/pedidos/${x.pedidoId}`} className="font-semibold text-verde-800 underline">Abrir ›</Link></p>
+    </div>
+  );
+}
+
 function BloqueSiluetas({ lista }: { lista: Silueta[] }) {
   if (lista.length === 0) return null;
   return (
@@ -689,10 +735,13 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
     if (vehiculoId) llamar(() => agregarSalida(fecha, vehiculoId, null));
   };
 
-  const tabla = (grupo: Fila[], salida: SalidaInfo) => (
+  const siluetasDe = (id: string) => siluetas.filter((x) => x.salidaId === id);
+  const tabla = (grupo: Fila[], salida: SalidaInfo, sil: Silueta[]) => {
+    const lugares = lugaresDelRecorrido(grupo, sil);
+    return (
     <>
       <div className="space-y-3 p-3 xl:hidden">
-        {grupo.map((f, n) => <FilaTarjeta key={f.id} f={f} n={n + 1} bloqueada={cerrado} fija={fija} acc={acc} salidas={salidas} />)}
+        {lugares.map((l) => l.f ? <FilaTarjeta key={l.f.id} f={l.f} n={l.n} bloqueada={cerrado} fija={fija} acc={acc} salidas={salidas} /> : <FilaSiluetaTarjeta key={l.x!.id} x={l.x!} n={l.n} />)}
       </div>
       <div className="hidden p-3 xl:block">
         <div role="table" className="space-y-1.5">
@@ -700,12 +749,13 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
             {ENCABEZADOS.map((h) => <div key={h} role="columnheader">{h}</div>)}
           </div>
           <SortableContext items={grupo.map((f) => f.id)} strategy={verticalListSortingStrategy}>
-            {grupo.map((f, n) => <FilaHoja key={f.id} f={f} n={n + 1} bloqueada={cerrado} fija={fija} acc={acc} salidas={salidas} />)}
+            {lugares.map((l) => l.f ? <FilaHoja key={l.f.id} f={l.f} n={l.n} bloqueada={cerrado} fija={fija} acc={acc} salidas={salidas} /> : <FilaSiluetaTabla key={l.x!.id} x={l.x!} n={l.n} />)}
           </SortableContext>
         </div>
       </div>
     </>
-  );
+    );
+  };
 
   return (
     <DndContext id="hoja-de-ruta" sensors={sensores} collisionDetection={colision} onDragStart={() => setArrastrando(true)} onDragCancel={() => setArrastrando(false)} onDragEnd={alSoltar}>
@@ -785,10 +835,9 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
                 {!fija && <button type="button" onClick={() => { if (window.confirm(`¿Sacar ${sa.nombre} del día? Sus pedidos quedan “sin ubicar”.`)) llamar(() => quitarSalida(sa.id)); }} className="rounded-md border border-stone-400 bg-white px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-crema-50">Sacar del día</button>}
               </div>
             </header>
-            {grupo.length === 0 ? (
+            {grupo.length === 0 && siluetasDe(sa.id).length === 0 ? (
               <p className="p-6 text-center text-sm text-stone-600">Todavía no tiene pedidos. Arrastralos desde “Sin ubicar”.</p>
-            ) : tabla(grupo, sa)}
-            <BloqueSiluetas lista={siluetas.filter((x) => x.salidaId === sa.id).sort((a, b) => a.orden - b.orden)} />
+            ) : tabla(grupo, sa, siluetasDe(sa.id))}
             <ResumenVuelta grupo={grupo} capacidad={sa.capacidad} />
           </Zona>
         );
