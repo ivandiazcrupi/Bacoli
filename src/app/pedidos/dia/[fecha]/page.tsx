@@ -16,14 +16,28 @@ export default async function HojaDelDia({ params }: { params: Promise<{ fecha: 
   const { fecha } = await params;
   if (!esFechaValida(fecha)) notFound();
 
-  const [pedidos, salidas, vehiculos, repartidores, cerrado] = await Promise.all([
+  const [pedidos, salidas, vehiculos, repartidores, cerrado, intentos] = await Promise.all([
     db.pedido.findMany({ where: { fechaEntrega: aFecha(fecha), estado: { not: "CANCELADO" } }, include: { ...incluirPedido, salida: true } }),
     db.salida.findMany({ where: { fecha: aFecha(fecha) }, include: { vehiculo: true }, orderBy: { orden: "asc" } }),
     db.vehiculo.findMany({ where: { activo: true }, orderBy: { orden: "asc" } }),
     db.usuario.findMany({ where: { rol: "REPARTIDOR", activo: true }, orderBy: { nombre: "asc" } }),
     db.diaCerrado.findUnique({ where: { fecha: aFecha(fecha) } }),
+    db.intentoEntrega.findMany({ where: { fecha: aFecha(fecha) }, include: { pedido: { select: { estado: true, fechaEntrega: true } } }, orderBy: [{ orden: "asc" }, { creadoEn: "asc" }] }),
   ]);
   pedidos.sort(porReparto);
+
+  // Qué pasó después con cada pedido que no se entregó este día.
+  const destinoDe = (p: { estado: string; fechaEntrega: Date | null }) => {
+    const f = p.fechaEntrega ? deFecha(p.fechaEntrega) : null;
+    if (p.estado === "ENTREGADO" && f) return `Se entregó el ${diaMes(f)}`;
+    if (p.estado === "CANCELADO") return "Cancelado";
+    if (f) return `Reprogramado: ${nombreDia(f).slice(0, 3)} ${diaMes(f)}`;
+    return "En Pedidos, esperando día";
+  };
+  const siluetas = intentos.map((i) => {
+    const r = i.resumen as { barrio?: string; cliente?: string; direccion?: string; items?: { nombre: string; cantidad: number }[] };
+    return { id: i.id, pedidoId: i.pedidoId, salidaId: i.salidaId, vehiculo: i.vehiculo, orden: i.orden, motivo: i.motivo, barrio: r.barrio ?? "", cliente: r.cliente ?? "", direccion: r.direccion ?? "", items: r.items ?? [], destino: destinoDe(i.pedido) };
+  });
   const debe = await clientesConDeuda(pedidos.flatMap((p) => (p.clienteId ? [p.clienteId] : [])));
   const filas = pedidos.map((p) => aFila(p, debe));
   const salen = new Set(salidas.map((s) => s.vehiculoId));
@@ -59,6 +73,7 @@ export default async function HojaDelDia({ params }: { params: Promise<{ fecha: 
         />
 
         <HojaDia
+          siluetas={siluetas}
           titulo={`Hoja de ruta · ${nombreDia(fecha)} ${diaMes(fecha)}`}
           fecha={fecha}
           filasIniciales={filas}

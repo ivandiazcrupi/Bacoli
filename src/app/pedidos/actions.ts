@@ -1,5 +1,6 @@
 "use server";
 
+import { leerCobro, marcarCobroEnTx } from "@/lib/cobrar";
 import { mayus, oracion, titulo } from "@/lib/mayusculas";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -267,22 +268,32 @@ export async function marcarEntregado(pedidoId: string, _: EstadoPedidoForm, for
 
   if (pedido.conFactura && !pedido.numeroFactura?.trim()) return { error: "Este pedido lleva factura: cargá primero el N° de factura y después confirmá la entrega." };
 
+  const cobro = leerCobro(String(formData.get("cobro") ?? ""));
+  if (!cobro && pedido.webPago !== "PAGO_MP") return { error: "Elegí cómo se cobra antes de confirmar la entrega." };
+
   const entregas = pedido.items.map((i) => ({ id: i.id, cantidad: i.cantidad, entregada: Math.min(i.cantidad, Number(String(formData.get(`e_${i.id}`) ?? i.cantidad).replace(/\D/g, "") || 0)) }));
   if (entregas.every((e) => e.entregada === 0) && pedido.items.every((i) => i.sinCargo === 0)) return { error: "No se entregó nada. Si no se pudo entregar, usá \"No entregado\"." };
 
+  let errorCobro: string | null = null;
   await db.$transaction(async (tx) => {
+    // Si ya estaba cobrado (se está corrigiendo la entrega), el cobro anterior se anula y se marca el nuevo.
+    if (pedido.cobro === "COBRADO" && pedido.clienteId && pedido.montoCobrado) {
+      await tx.movimientoCuenta.create({ data: { clienteId: pedido.clienteId, pedidoId, tipo: "ANULACION_PAGO", monto: pedido.montoCobrado, medio: pedido.medioCobro, nota: "Cobro anulado", usuarioId: usuario.id } });
+    }
     for (const e of entregas) await tx.pedidoItem.update({ where: { id: e.id }, data: { cantidadEntregada: e.entregada } });
-    await tx.pedido.update({ where: { id: pedidoId }, data: { estado: "ENTREGADO" } });
+    await tx.pedido.update({ where: { id: pedidoId }, data: { estado: "ENTREGADO", cobro: null, medioCobro: null, montoCobrado: null, pagado: false } });
     if (pedido.estado !== "ENTREGADO") await anotarEntregaEnCuenta(tx, pedidoId, pedido.clienteId, usuario.id);
     await sincronizarCuentaPedido(tx, pedidoId, usuario.id);
+    errorCobro = await marcarCobroEnTx(tx, pedidoId, cobro, usuario.id);
+    if (errorCobro) throw new Error(errorCobro);
+  }).catch((e) => {
+    if (!errorCobro) throw e;
   });
+  if (errorCobro) return { error: errorCobro };
   refrescar(pedidoId);
   return { ok: entregas.some((e) => e.entregada < e.cantidad) ? "Entrega parcial guardada." : "Entregado." };
 }
 
-export async function marcarNoEntregado(formData: FormData) {
-  await cambiarEstado(String(formData.get("id")), { estado: "NO_ENTREGADO" }, true);
-}
 export async function reabrirPedido(formData: FormData) {
   await cambiarEstado(String(formData.get("id")), { estado: "PENDIENTE" }, true);
 }

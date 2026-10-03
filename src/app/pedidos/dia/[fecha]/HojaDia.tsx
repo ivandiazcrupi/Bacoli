@@ -13,7 +13,8 @@ import { normalizarFactura, soloNumeroFactura } from "@/lib/remito";
 import { asignarADia } from "../../actions";
 import { agregarSalida, asignarAVehiculo, devolverAPedidos, ordenarSalida, quitarSalida } from "../../ruta/actions";
 import { emitirRemitosDia } from "../../remito/actions";
-import { dejarEnCuentaCorriente, deshacerCobro, guardarNumeroFactura, marcarEntrega, reabrirDia, registrarCobro, type Resultado } from "../actions";
+import { dejarEnCuentaCorriente, deshacerCobro, guardarNumeroFactura, marcarEntrega, reabrirDia, registrarCobro, registrarNoEntrega, type Resultado } from "../actions";
+import { ModalMotivo } from "@/components/ModalMotivo";
 
 export type Fila = {
   id: string;
@@ -38,6 +39,21 @@ export type Fila = {
   pagoMp: boolean; // pedido de la tienda ya pagado con Mercado Pago
 };
 
+/** Un pedido que salió ese día y no se entregó: queda su "silueta" en la hoja (con el motivo) aunque se reprograme. */
+export type Silueta = {
+  id: string;
+  pedidoId: string;
+  salidaId: string | null;
+  vehiculo: string;
+  orden: number;
+  motivo: string;
+  barrio: string;
+  cliente: string;
+  direccion: string;
+  items: { nombre: string; cantidad: number }[];
+  destino: string; // qué pasó después: "Se entregó el 9/10", "Reprogramado: Jue 9/10", "En Pedidos, esperando día"…
+};
+
 export type SalidaInfo = { id: string; nombre: string; patente: string; capacidad: number | null; repartidorId: string };
 export type Opcion = { id: string; nombre: string };
 
@@ -56,7 +72,9 @@ const MEDIOS_COBRO = MEDIOS.filter((m) => m.valor === "EFECTIVO" || m.valor === 
 const textoMedio = (m: string | null) => MEDIOS.find((x) => x.valor === m)?.texto ?? "";
 
 type Acciones = {
-  entrega: (f: Fila, valor: Fila["estado"]) => void;
+  entrega: (f: Fila, valor: "PENDIENTE") => void; // deshace la entrega
+  entregarYCobrar: (f: Fila, cobro: string | undefined) => void; // cobro: EFECTIVO, TRANSFERENCIA o CC (Mercado Pago de la tienda va solo)
+  noEntregado: (f: Fila, motivo: string) => Promise<string | null>; // devuelve el error, si hubo
   cobrar: (f: Fila, medio: string) => void;
   cuentaCorriente: (f: Fila) => void;
   deshacer: (f: Fila) => void;
@@ -97,15 +115,15 @@ function Selectores({ f, salidas, bloqueada, acc, clase }: { f: Fila; salidas: S
   );
 }
 
-// Entrega: dos botones parejos, uno arriba del otro. Tocar el elegido lo deshace.
-function SelectorEntrega({ f, bloqueada, acc, grande }: { f: Fila; bloqueada: boolean; acc: Acciones; grande?: boolean }) {
+// Entrega: dos botones parejos, uno arriba del otro. ✓ pide enseguida cómo se cobra; ✗ pide el motivo.
+function SelectorEntrega({ f, bloqueada, acc, grande, eligiendoCobro, onEntregar, onNoEntregar }: { f: Fila; bloqueada: boolean; acc: Acciones; grande?: boolean; eligiendoCobro: boolean; onEntregar: () => void; onNoEntregar: () => void }) {
   const base = `${grande ? "h-12 text-base" : "h-7 text-xs"} w-full rounded-md border font-semibold transition disabled:opacity-40`;
   const si = f.estado === "ENTREGADO";
-  const no = f.estado === "NO_ENTREGADO";
+  const noLegado = f.estado === "NO_ENTREGADO";
   return (
     <div role="group" aria-label="Entrega" className={`flex w-full ${grande ? "flex-row gap-2" : "flex-col gap-1"}`}>
-      <button type="button" disabled={bloqueada} aria-pressed={si} onClick={() => acc.entrega(f, si ? "PENDIENTE" : "ENTREGADO")} className={`${base} ${si ? "border-verde-700 bg-verde-700 text-white" : "border-stone-300 bg-white text-stone-600 hover:border-verde-700 hover:text-verde-800"}`}>✓ Entregado</button>
-      <button type="button" disabled={bloqueada} aria-pressed={no} onClick={() => acc.entrega(f, no ? "PENDIENTE" : "NO_ENTREGADO")} className={`${base} ${no ? "border-rojo-700 bg-rojo-700 text-white" : "border-stone-300 bg-white text-stone-600 hover:border-rojo-700 hover:text-rojo-800"}`}>✗ No entregado</button>
+      <button type="button" disabled={bloqueada} aria-pressed={si} onClick={() => (si ? acc.entrega(f, "PENDIENTE") : onEntregar())} className={`${base} ${si ? "border-verde-700 bg-verde-700 text-white" : eligiendoCobro ? "border-verde-700 bg-verde-50 text-verde-800 ring-2 ring-verde-700/30" : "border-stone-300 bg-white text-stone-600 hover:border-verde-700 hover:text-verde-800"}`}>✓ Entregado</button>
+      <button type="button" disabled={bloqueada} aria-pressed={noLegado} onClick={() => (noLegado ? acc.entrega(f, "PENDIENTE") : onNoEntregar())} className={`${base} ${noLegado ? "border-rojo-700 bg-rojo-700 text-white" : "border-stone-300 bg-white text-stone-600 hover:border-rojo-700 hover:text-rojo-800"}`}>✗ No entregado</button>
     </div>
   );
 }
@@ -116,6 +134,36 @@ const BORDE_FILA = {
   ENTREGADO: "border-verde-700 shadow-[0_0_0_1px_#026433]",
   NO_ENTREGADO: "border-rojo-700 shadow-[0_0_0_1px_#aa0e1d]",
 } as const;
+
+// El camino de entregar y el de no entregar de un pedido (se comparte entre la fila de la PC y la tarjeta del celular).
+function useFlujoEntrega(f: Fila, acc: Acciones) {
+  const [eligiendoCobro, setEligiendoCobro] = useState(false);
+  const [motivoAbierto, setMotivoAbierto] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [enviando, setEnviando] = useState(false);
+  return {
+    eligiendoCobro,
+    motivoAbierto,
+    error,
+    enviando,
+    // ✓ Entregado: la tienda ya pagada con Mercado Pago se entrega directo; el resto pide primero cómo se cobra.
+    entregar: () => (f.pagoMp ? acc.entregarYCobrar(f, undefined) : setEligiendoCobro((v) => !v)),
+    elegirCobro: (cobro: string) => {
+      setEligiendoCobro(false);
+      if (f.estado === "ENTREGADO") acc.entregarYCobrar(f, cobro); // completa un cobro que faltaba
+      else acc.entregarYCobrar(f, cobro);
+    },
+    cancelar: () => setEligiendoCobro(false),
+    abrirMotivo: () => { setEligiendoCobro(false); setError(null); setMotivoAbierto(true); },
+    cerrarMotivo: () => setMotivoAbierto(false),
+    guardarMotivo: async (motivo: string) => {
+      setEnviando(true);
+      const e = await acc.noEntregado(f, motivo);
+      setEnviando(false);
+      if (e) setError(e); else setMotivoAbierto(false);
+    },
+  };
+}
 
 const CELESTE = "border-[#1c8fd1] bg-[#1fa2e0] text-white";
 
@@ -131,25 +179,30 @@ function CobroMarcado({ tipo, detalle, onDeshacer }: { tipo: "PAGO" | "CC"; deta
 }
 
 // Cobro: dos opciones, PAGO o CUENTA CORRIENTE. Al elegir PAGO se despliega cómo se pagó.
-function CeldaCobro({ f, bloqueada, acc }: { f: Fila; bloqueada: boolean; acc: Acciones }) {
+// Mientras se está entregando (✓ tocado y sin cobro elegido) se muestra la elección; el pedido no queda entregado hasta elegir.
+function CeldaCobro({ f, bloqueada, acc, eligiendoCobro, onElegir, onCancelar }: { f: Fila; bloqueada: boolean; acc: Acciones; eligiendoCobro: boolean; onElegir: (cobro: string) => void; onCancelar: () => void }) {
   const [medio, setMedio] = useState(false);
   if (f.pagoMp) return <CobroMarcado tipo="PAGO" detalle="Mercado Pago" />;
-  if (f.estado !== "ENTREGADO") return <span className="text-stone-400">—</span>;
-  if (f.cobro === "COBRADO") return <CobroMarcado tipo="PAGO" detalle={textoMedio(f.medioCobro)} onDeshacer={bloqueada ? undefined : () => acc.deshacer(f)} />;
-  if (f.cobro === "CUENTA_CORRIENTE") return <CobroMarcado tipo="CC" detalle="" onDeshacer={bloqueada ? undefined : () => acc.deshacer(f)} />;
+  const pidiendo = eligiendoCobro || (f.estado === "ENTREGADO" && !f.cobro); // entregado sin cobro (datos viejos): también se completa acá
+  if (!pidiendo) {
+    if (f.estado !== "ENTREGADO") return <span className="text-stone-400">—</span>;
+    if (f.cobro === "COBRADO") return <CobroMarcado tipo="PAGO" detalle={textoMedio(f.medioCobro)} onDeshacer={bloqueada ? undefined : () => acc.deshacer(f)} />;
+    return <CobroMarcado tipo="CC" detalle="" onDeshacer={bloqueada ? undefined : () => acc.deshacer(f)} />;
+  }
   const base = "h-7 w-full rounded-md border text-xs font-semibold transition disabled:opacity-40";
   if (medio) {
     return (
       <div role="group" aria-label="¿Cómo pagó?" className="relative flex w-full flex-col gap-1">
-        <button type="button" onClick={() => setMedio(false)} aria-label="Cancelar" className="absolute -right-1.5 -top-2 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-stone-300 text-[10px] leading-none text-stone-700 hover:bg-stone-400">✕</button>
-        {MEDIOS_COBRO.map((m) => <button key={m.valor} type="button" disabled={bloqueada} onClick={() => { setMedio(false); acc.cobrar(f, m.valor); }} className={`${base} border-verde-700 bg-white text-verde-800 hover:bg-verde-700 hover:text-white`}>{m.texto}</button>)}
+        <button type="button" onClick={() => setMedio(false)} aria-label="Volver" className="absolute -right-1.5 -top-2 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-stone-300 text-[10px] leading-none text-stone-700 hover:bg-stone-400">✕</button>
+        {MEDIOS_COBRO.map((m) => <button key={m.valor} type="button" disabled={bloqueada} onClick={() => { setMedio(false); onElegir(m.valor); }} className={`${base} border-verde-700 bg-white text-verde-800 hover:bg-verde-700 hover:text-white`}>{m.texto}</button>)}
       </div>
     );
   }
   return (
-    <div role="group" aria-label="Cobro" className="flex w-full flex-col gap-1">
+    <div role="group" aria-label="Cobro" className="relative flex w-full flex-col gap-1">
+      {eligiendoCobro && <button type="button" onClick={onCancelar} aria-label="Cancelar la entrega" className="absolute -right-1.5 -top-2 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-stone-300 text-[10px] leading-none text-stone-700 hover:bg-stone-400">✕</button>}
       <button type="button" disabled={bloqueada} onClick={() => setMedio(true)} className={`${base} border-verde-700 bg-white text-verde-800 hover:bg-verde-700 hover:text-white`}>Pago</button>
-      {!f.webOrden && <button type="button" disabled={bloqueada} onClick={() => acc.cuentaCorriente(f)} className={`${base} border-[#1c8fd1] bg-white text-[#1475ac] hover:bg-[#1fa2e0] hover:text-white`}>Cuenta corriente</button>}
+      {!f.webOrden && <button type="button" disabled={bloqueada} onClick={() => onElegir("CC")} className={`${base} border-[#1c8fd1] bg-white text-[#1475ac] hover:bg-[#1fa2e0] hover:text-white`}>Cuenta corriente</button>}
     </div>
   );
 }
@@ -199,6 +252,7 @@ function FilaHoja({ f, n, bloqueada, acc, salidas }: { f: Fila; n: number; bloqu
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: f.id, disabled: bloqueada });
   const entregado = f.estado === "ENTREGADO";
   const falta = entregado && !f.webOrden && (f.conFactura ? !f.numeroFactura : !f.remito); // ya entregado y sin su número de comprobante
+  const flujo = useFlujoEntrega(f, acc);
 
   return (
     <div
@@ -230,12 +284,40 @@ function FilaHoja({ f, n, bloqueada, acc, salidas }: { f: Fila; n: number; bloqu
       <div role="cell" className="font-bold tabular-nums">{formatoPesos(f.monto)}</div>
 
       <div role="cell"><CajaComprobante f={f} falta={falta} bloqueada={bloqueada} acc={acc} /></div>
-      <div role="cell"><SelectorEntrega f={f} bloqueada={bloqueada} acc={acc} /></div>
-      <div role="cell"><CeldaCobro f={f} bloqueada={bloqueada} acc={acc} /></div>
+      <div role="cell"><SelectorEntrega f={f} bloqueada={bloqueada} acc={acc} eligiendoCobro={flujo.eligiendoCobro} onEntregar={flujo.entregar} onNoEntregar={flujo.abrirMotivo} /></div>
+      <div role="cell"><CeldaCobro f={f} bloqueada={bloqueada} acc={acc} eligiendoCobro={flujo.eligiendoCobro} onElegir={flujo.elegirCobro} onCancelar={flujo.cancelar} /></div>
       <div role="cell"><SelectorMover f={f} salidas={salidas} bloqueada={bloqueada} acc={acc} /></div>
       <div role="cell">
         <Link href={`/pedidos/${f.id}`} className="text-sm font-semibold text-verde-800 underline-offset-4 hover:underline">Abrir ›</Link>
       </div>
+      <ModalMotivo abierto={flujo.motivoAbierto} titulo="¿Por qué no se entregó?" ayuda={`${f.cliente}: el pedido vuelve a Pedidos para reprogramarlo y en esta hoja queda anotado que salió y no se entregó.`} textoBoton="No se entregó" enviando={flujo.enviando} error={flujo.error} onCancelar={flujo.cerrarMotivo} onGuardar={flujo.guardarMotivo} />
+    </div>
+  );
+}
+
+// La silueta de un pedido que salió y no se entregó: gris, punteada, con el motivo y qué pasó después.
+function FilaSilueta({ x }: { x: Silueta }) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-dashed border-stone-400 bg-stone-100/80 px-3 py-2 text-sm text-stone-500">
+      <span className="text-xs font-bold uppercase tracking-wide">{x.barrio}</span>
+      <span className="font-semibold text-stone-600">{x.cliente}</span>
+      <span>{x.direccion}</span>
+      <span className="text-xs">{x.items.map((i) => `${i.cantidad} ${i.nombre}`).join(" · ")}</span>
+      <span className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="font-semibold text-rojo-700/80">No se entregó · {x.motivo}</span>
+        <span className="text-xs">{x.destino}</span>
+        <Link href={`/pedidos/${x.pedidoId}`} className="text-xs font-semibold text-verde-800 underline">Abrir ›</Link>
+      </span>
+    </div>
+  );
+}
+
+function BloqueSiluetas({ lista }: { lista: Silueta[] }) {
+  if (lista.length === 0) return null;
+  return (
+    <div className="space-y-1.5 border-t border-stone-300 px-3 py-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">No se entregaron ({lista.length})</p>
+      {lista.map((x) => <FilaSilueta key={x.id} x={x} />)}
     </div>
   );
 }
@@ -295,6 +377,7 @@ const mapa = (f: Fila) => `https://www.google.com/maps/search/?api=1&query=${enc
 // El mismo pedido, en el celular: una tarjeta con botones grandes (dirección a Google Maps, teléfono que llama).
 function FilaTarjeta({ f, n, bloqueada, acc, salidas }: { f: Fila; n: number; bloqueada: boolean; acc: Acciones; salidas: SalidaInfo[] }) {
   const [eligiendo, setEligiendo] = useState(false);
+  const flujo = useFlujoEntrega(f, acc);
   const fondo = `bg-white ${BORDE_FILA[f.estado]}`;
   const grande = "h-12 rounded-lg border px-3 text-base font-semibold disabled:opacity-40";
   return (
@@ -327,24 +410,28 @@ function FilaTarjeta({ f, n, bloqueada, acc, salidas }: { f: Fila; n: number; bl
       </ul>
       <p className="flex items-baseline justify-between text-lg font-bold"><span className="text-sm font-medium text-stone-600">Monto</span><span className="tabular-nums">{formatoPesos(f.monto)}</span></p>
 
-      <SelectorEntrega f={f} bloqueada={bloqueada} acc={acc} grande />
+      <SelectorEntrega f={f} bloqueada={bloqueada} acc={acc} grande eligiendoCobro={flujo.eligiendoCobro} onEntregar={flujo.entregar} onNoEntregar={flujo.abrirMotivo} />
 
       {f.pagoMp && <div className="rounded-lg border border-verde-700 bg-verde-50 px-3 py-3 text-center font-semibold text-verde-800">✓ Pago · Mercado Pago</div>}
-      {f.estado === "ENTREGADO" && !f.pagoMp && (
+      {(f.estado === "ENTREGADO" || flujo.eligiendoCobro) && !f.pagoMp && (
         <div className="space-y-2">
-          {f.cobro === "COBRADO" ? (
-            <div className="flex items-center justify-between rounded-lg bg-verde-100 px-3 py-3 font-semibold text-verde-800"><span>✓ Pago · {textoMedio(f.medioCobro)}</span>{!bloqueada && <button type="button" onClick={() => acc.deshacer(f)} aria-label="Deshacer el cobro" className="px-2 text-xl">✕</button>}</div>
-          ) : f.cobro === "CUENTA_CORRIENTE" ? (
-            <div className="flex items-center justify-between rounded-lg bg-crema-200 px-3 py-3 font-semibold text-verde-900"><span>Cuenta corriente</span>{!bloqueada && <button type="button" onClick={() => acc.deshacer(f)} aria-label="Deshacer" className="px-2 text-xl">✕</button>}</div>
+          {f.cobro === "COBRADO" && !flujo.eligiendoCobro ? (
+            <div className="flex items-center justify-between rounded-lg bg-verde-700 px-3 py-3 font-semibold text-white"><span>✓ PAGO · {textoMedio(f.medioCobro)}</span>{!bloqueada && <button type="button" onClick={() => acc.deshacer(f)} aria-label="Deshacer el cobro" className="px-2 text-xl">✕</button>}</div>
+          ) : f.cobro === "CUENTA_CORRIENTE" && !flujo.eligiendoCobro ? (
+            <div className={`flex items-center justify-between rounded-lg border px-3 py-3 font-semibold ${CELESTE}`}><span>CUENTA CORRIENTE</span>{!bloqueada && <button type="button" onClick={() => acc.deshacer(f)} aria-label="Deshacer" className="px-2 text-xl">✕</button>}</div>
           ) : eligiendo ? (
             <div className="grid grid-cols-2 gap-2">
-              {MEDIOS_COBRO.map((m) => <button key={m.valor} type="button" onClick={() => { setEligiendo(false); acc.cobrar(f, m.valor); }} className="h-12 rounded-lg border border-verde-700 bg-white font-semibold text-verde-800">{m.texto}</button>)}
-              <button type="button" onClick={() => setEligiendo(false)} className="h-12 rounded-lg border border-stone-300 bg-white text-stone-600">Cancelar</button>
+              {MEDIOS_COBRO.map((m) => <button key={m.valor} type="button" onClick={() => { setEligiendo(false); flujo.elegirCobro(m.valor); }} className="h-12 rounded-lg border border-verde-700 bg-white font-semibold text-verde-800">{m.texto}</button>)}
+              <button type="button" onClick={() => setEligiendo(false)} className="col-span-2 h-10 rounded-lg border border-stone-300 bg-white text-stone-600">Volver</button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-2">
-              <button type="button" disabled={bloqueada} onClick={() => setEligiendo(true)} className={`${grande} border-verde-700 bg-white text-verde-800`}>Pago</button>
-              {!f.webOrden && <button type="button" disabled={bloqueada} onClick={() => acc.cuentaCorriente(f)} className={`${grande} border-verde-700 bg-white text-verde-900`}>Cuenta corriente</button>}
+            <div className="space-y-2">
+              <p className="text-center text-sm font-semibold text-stone-700">¿Cómo se cobra?</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" disabled={bloqueada} onClick={() => setEligiendo(true)} className={`${grande} border-verde-700 bg-white text-verde-800`}>Pago</button>
+                {!f.webOrden && <button type="button" disabled={bloqueada} onClick={() => flujo.elegirCobro("CC")} className={`${grande} border-[#1c8fd1] bg-white text-[#1475ac]`}>Cuenta corriente</button>}
+              </div>
+              {flujo.eligiendoCobro && <button type="button" onClick={flujo.cancelar} className="w-full text-sm text-stone-500 underline">Cancelar la entrega</button>}
             </div>
           )}
         </div>
@@ -368,6 +455,7 @@ function FilaTarjeta({ f, n, bloqueada, acc, salidas }: { f: Fila; n: number; bl
         <Link href={`/pedidos/${f.id}`} className="flex h-12 items-center justify-center rounded-lg border border-stone-300 bg-white px-3 text-base font-semibold">Abrir pedido</Link>
       </div>
       <div className="grid grid-cols-2 gap-2"><Selectores f={f} salidas={salidas} bloqueada={bloqueada} acc={acc} clase="h-12 w-full" /></div>
+      <ModalMotivo abierto={flujo.motivoAbierto} titulo="¿Por qué no se entregó?" ayuda={`${f.cliente}: el pedido vuelve a Pedidos para reprogramarlo.`} textoBoton="No se entregó" enviando={flujo.enviando} error={flujo.error} onCancelar={flujo.cerrarMotivo} onGuardar={flujo.guardarMotivo} />
     </article>
   );
 }
@@ -402,6 +490,7 @@ function ResumenVuelta({ grupo, capacidad }: { grupo: Fila[]; capacidad: number 
 }
 
 type Props = {
+  siluetas: Silueta[];
   titulo: string;
   fecha: string;
   filasIniciales: Fila[];
@@ -413,7 +502,7 @@ type Props = {
   esDueno: boolean;
 };
 
-export function HojaDia({ titulo, fecha, filasIniciales, salidas, vehiculosLibres, repartidores, diasSemana, cerrado, esDueno }: Props) {
+export function HojaDia({ siluetas, titulo, fecha, filasIniciales, salidas, vehiculosLibres, repartidores, diasSemana, cerrado, esDueno }: Props) {
   const router = useRouter();
   const [filas, setFilas] = useState(filasIniciales);
   const [error, setError] = useState<string | null>(null);
@@ -450,7 +539,21 @@ export function HojaDia({ titulo, fecha, filasIniciales, salidas, vehiculosLibre
 
   const acc: Acciones = {
     dias: diasSemana.filter((d) => d.fecha !== fecha).map((d) => ({ fecha: d.fecha, texto: d.corta })),
-    entrega: (f, valor) => ejecutar(f.id, (x) => ({ ...x, estado: valor, ...(valor !== "ENTREGADO" ? { cobro: null, medioCobro: null } : {}) }), () => marcarEntrega(f.id, valor)),
+    entrega: (f, valor) => ejecutar(f.id, (x) => ({ ...x, estado: valor, cobro: null, medioCobro: null }), () => marcarEntrega(f.id, valor)),
+    entregarYCobrar: (f, cobro) =>
+      ejecutar(
+        f.id,
+        (x) => ({ ...x, estado: "ENTREGADO", ...(cobro === "CC" ? { cobro: "CUENTA_CORRIENTE" as const, medioCobro: null } : cobro ? { cobro: "COBRADO" as const, medioCobro: cobro } : {}) }),
+        () => marcarEntrega(f.id, "ENTREGADO", cobro),
+      ),
+    // No entregado: el pedido sale de esta hoja (vuelve a Pedidos) y, al refrescar, aparece su silueta.
+    noEntregado: async (f, motivo) => {
+      const r = await registrarNoEntrega(f.id, motivo);
+      if (!r.ok) return r.error ?? "No se pudo guardar.";
+      setFilas((fs) => fs.filter((x) => x.id !== f.id));
+      router.refresh();
+      return null;
+    },
     cobrar: (f, medio) => ejecutar(f.id, (x) => ({ ...x, cobro: "COBRADO", medioCobro: medio }), () => registrarCobro(f.id, medio)),
     cuentaCorriente: (f) => ejecutar(f.id, (x) => ({ ...x, cobro: "CUENTA_CORRIENTE" }), () => dejarEnCuentaCorriente(f.id)),
     deshacer: (f) => ejecutar(f.id, (x) => ({ ...x, cobro: null, medioCobro: null }), () => deshacerCobro(f.id)),
@@ -602,12 +705,20 @@ export function HojaDia({ titulo, fecha, filasIniciales, salidas, vehiculosLibre
             {grupo.length === 0 ? (
               <p className="p-6 text-center text-sm text-stone-600">Todavía no tiene pedidos. Arrastralos desde “Sin ubicar”.</p>
             ) : tabla(grupo, sa)}
+            <BloqueSiluetas lista={siluetas.filter((x) => x.salidaId === sa.id).sort((a, b) => a.orden - b.orden)} />
             <ResumenVuelta grupo={grupo} capacidad={sa.capacidad} />
           </Zona>
         );
       })}
 
-      {filas.length === 0 && <p className="rounded-lg border border-dashed border-stone-400 p-8 text-center text-stone-600">Todavía no hay pedidos en este día. Asignalos desde Pedidos.</p>}
+      {/* Siluetas de pedidos cuya camioneta ya no está en el día */}
+      {siluetas.some((x) => !salidas.some((sa) => sa.id === x.salidaId)) && (
+        <section className="overflow-hidden rounded-xl border border-stone-300 bg-white">
+          <BloqueSiluetas lista={siluetas.filter((x) => !salidas.some((sa) => sa.id === x.salidaId))} />
+        </section>
+      )}
+
+      {filas.length === 0 && siluetas.length === 0 && <p className="rounded-lg border border-dashed border-stone-400 p-8 text-center text-stone-600">Todavía no hay pedidos en este día. Asignalos desde Pedidos.</p>}
     </div>
     </DndContext>
   );

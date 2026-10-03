@@ -29,6 +29,11 @@ export default async function Pedidos({ searchParams }: { searchParams: Promise<
   const cerradosSet = new Set(cerrados.map((d) => deFecha(d.fecha)));
   const dias = Array.from({ length: 6 }, (_, n) => sumarDias(lunes, n)).map((f) => ({ fecha: f, letra: nombreDia(f).charAt(0), numero: Number(f.slice(8)), nombre: nombreDia(f), hoy: f === hoy(), cerrado: cerradosSet.has(f) }));
 
+  // El último intento de entrega que falló de cada pedido: "No se entregó el 1/10 · motivo".
+  const intentos = await db.intentoEntrega.findMany({ where: { pedidoId: { in: pedidos.map((p) => p.id) } }, orderBy: { creadoEn: "desc" } });
+  const avisosIntento = new Map<string, string>();
+  for (const i of intentos) if (!avisosIntento.has(i.pedidoId)) avisosIntento.set(i.pedidoId, `No se entregó el ${diaMes(deFecha(i.fecha))} · ${i.motivo}`);
+
   const enlace = (extra: Record<string, string>) => {
     const v: Record<string, string> = { ...(esWeb ? { lista: "web" } : {}), ...(semana ? { semana } : {}), ...extra };
     const q = new URLSearchParams(Object.entries(v).filter(([, x]) => x));
@@ -61,7 +66,7 @@ export default async function Pedidos({ searchParams }: { searchParams: Promise<
         {esWeb && pedidos.length === 0 ? (
           <p className="rounded-lg border border-dashed border-stone-400 p-8 text-center text-stone-600">Todavía no hay pedidos de la tienda online esperando día. Entran solos cada 15 minutos, o tocá “Traer pedidos ahora”.</p>
         ) : (
-          <Bandeja key={`${lunes}-${esWeb}`} filas={pedidos.map(aFilaBandeja)} dias={dias} />
+          <Bandeja key={`${lunes}-${esWeb}`} filas={pedidos.map((p) => aFilaBandeja(p, avisosIntento.get(p.id) ?? ""))} dias={dias} />
         )}
       </main>
     </>

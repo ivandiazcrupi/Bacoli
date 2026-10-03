@@ -85,6 +85,7 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
             <span className="text-sm leading-snug">
               {f.direccion}
               {f.comentario && <span className="mt-0.5 block text-xs font-medium text-rojo-700">{f.comentario}</span>}
+              {f.intento && <span className="mt-0.5 block text-xs font-semibold text-stone-600">↺ {f.intento}</span>}
             </span>
             <span className="text-sm tabular-nums"><Telefono tel={f.telefono} /></span>
             <span className="inline-grid justify-center justify-self-center gap-x-2 gap-y-0.5 text-left text-sm [grid-template-columns:auto_auto]">
@@ -106,6 +107,7 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
                 {f.webOrden && <p className="text-xs text-stone-500">N° {f.webOrden} · {f.pagoMp ? "pagado con Mercado Pago" : "pago pendiente"}</p>}
                 <p className="text-sm">{f.direccion}</p>
                 {f.comentario && <p className="text-sm font-medium text-rojo-700">{f.comentario}</p>}
+                {f.intento && <p className="text-sm font-semibold text-stone-600">↺ {f.intento}</p>}
                 {f.telefono && <p className="text-sm tabular-nums"><Telefono tel={f.telefono} /></p>}
               </div>
               <Comprobante conFactura={f.conFactura} />

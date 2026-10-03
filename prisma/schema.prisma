@@ -222,6 +222,7 @@ model Pedido {
   items          PedidoItem[]
   movimientos    MovimientoCuenta[]
   ncAplicaciones NotaCreditoAplicacion[]
+  intentos       IntentoEntrega[]
 
   @@index([fechaEntrega, ordenDia])
   @@index([clienteId])
@@ -362,4 +363,24 @@ model NotaCreditoAplicacion {
 
   @@index([pedidoId])
   @@index([notaId])
+}
+
+// Un pedido que salió en un vehículo y no se pudo entregar. El pedido vuelve a Pedidos para reprogramarlo, y este registro deja
+// la "silueta" en la hoja de ruta de ese día (con el motivo, obligatorio). No se edita ni se borra.
+model IntentoEntrega {
+  id        String   @id @default(cuid())
+  pedidoId  String
+  fecha     DateTime @db.Date // el día de la hoja de ruta en la que salió
+  salidaId  String? // la camioneta de ese día (puede dejar de existir)
+  vehiculo  String // nombre de la camioneta, para mostrarlo siempre
+  orden     Int // lugar que tenía en el recorrido
+  motivo    String
+  resumen   Json // lo que se veía en la hoja: barrio, cliente, dirección, teléfono, pedido y monto
+  usuarioId String?
+  creadoEn  DateTime @default(now())
+
+  pedido Pedido @relation(fields: [pedidoId], references: [id])
+
+  @@index([fecha])
+  @@index([pedidoId])
 }

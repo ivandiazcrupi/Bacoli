@@ -7,10 +7,11 @@ import { db } from "@/lib/db";
 import { deFecha, diaMes, nombreDia } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
 import { exigirOficina } from "@/lib/session";
-import { cancelarPedido, marcarNoEntregado, reabrirPedido } from "../actions";
+import { cancelarPedido, reabrirPedido } from "../actions";
 import { formatoRemito } from "@/lib/remito";
 import { BotonRemito } from "../BotonRemito";
 import { NumeroFactura } from "../NumeroFactura";
+import { BotonNoEntregado } from "./BotonNoEntregado";
 import { CONTENEDOR_PEDIDOS } from "../Encabezado";
 import { datosEntrega, ordenarItems } from "../filas";
 import { BotonConAviso, TablaPedido } from "./Acciones";
@@ -79,12 +80,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
             {!web && !pedido.conFactura && pedido.estado !== "CANCELADO" && (
               <BotonRemito pedidoId={pedido.id} numero={pedido.remitoNumero ? `Imprimir remito ${formatoRemito(pedido.remitoNumero)}` : null} textoSinNumero="Emitir remito" clase={`${btn} border-stone-400 bg-white text-stone-800 hover:bg-crema-100`} />
             )}
-            {abierto && (
-              <form action={marcarNoEntregado}>
-                <input type="hidden" name="id" value={pedido.id} />
-                <BotonConAviso texto="✗ No entregado" aviso="¿Marcar como NO entregado? El pedido deja de sumar a la cuenta del cliente." clase={`${btn} border-stone-400 bg-white text-rojo-700 hover:bg-rojo-50`} />
-              </form>
-            )}
+            {abierto && fecha && <BotonNoEntregado pedidoId={pedido.id} clase={`${btn} border-stone-400 bg-white text-rojo-700 hover:bg-rojo-50`} />}
             {!abierto && (
               <form action={reabrirPedido}>
                 <input type="hidden" name="id" value={pedido.id} />
@@ -116,6 +112,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
           items={items.map((i) => ({ id: i.id, nombre: i.nombre, sku: i.sku, unidad: i.unidad, precio: Number(i.precioUnitario), cantidad: i.cantidad, entregada: i.cantidadEntregada, sinCargo: i.sinCargo, motivoSinCargo: i.motivoSinCargo, descuentoPct: Number(i.descuentoPct) }))}
           totales={{ bruto: pedidoBruto, descuento: pedidoBruto - pedidoBase, base: pedidoBase, iva: total - pedidoBase, ivaPct, total, conFactura: pedido.conFactura, sinCargoPaquetes: pedido.items.reduce((t, i) => t + i.sinCargo, 0), sinCargoValor: pedido.items.reduce((t, i) => t + i.sinCargo * Number(i.precioUnitario), 0) }}
           web={web}
+          pagoMp={pedido.webPago === "PAGO_MP"}
           nota={oracion(pedido.nota)}
         />
       </main>

@@ -5,7 +5,10 @@ import type { MedioPago } from "@prisma/client";
 import { anotarEntregaEnCuenta, importeVigente, sincronizarCuentaPedido } from "@/lib/cuenta";
 import { db } from "@/lib/db";
 import { aFecha, diaMes, esFechaValida } from "@/lib/fechas";
-import { normalizarFactura } from "@/lib/remito";
+import { titulo } from "@/lib/mayusculas";
+import { datosEntrega, ordenarItems } from "../filas";
+import { leerCobro, marcarCobroEnTx } from "@/lib/cobrar";
+import { formatoRemito, normalizarFactura } from "@/lib/remito";
 import { exigirOficina } from "@/lib/session";
 
 export type Resultado = { ok: boolean; error?: string };
@@ -21,31 +24,98 @@ async function pedidoAbierto(id: string) {
   return { pedido } as const;
 }
 
-/** Entrega: "ENTREGADO" (verde), "NO_ENTREGADO" (rojo) o "PENDIENTE" (sin marcar). */
-export async function marcarEntrega(pedidoId: string, valor: "ENTREGADO" | "NO_ENTREGADO" | "PENDIENTE"): Promise<Resultado> {
+/**
+ * Entrega. "ENTREGADO" exige decir cómo se cobra (pago en efectivo / transferencia, o cuenta corriente): se guardan juntas,
+ * así no puede quedar un pedido entregado sin cobro marcado. "PENDIENTE" deshace la entrega (y el cobro, si lo había).
+ * Para "no entregado" se usa registrarNoEntrega, que pide el motivo.
+ */
+export async function marcarEntrega(pedidoId: string, valor: "ENTREGADO" | "PENDIENTE", cobroTexto?: string): Promise<Resultado> {
   const usuario = await exigirOficina();
   const r = await pedidoAbierto(pedidoId);
   if ("error" in r) return { ok: false, error: r.error };
   const { pedido } = r;
   if (pedido.estado === "CANCELADO") return { ok: false, error: "El pedido está cancelado." };
   if (valor === "ENTREGADO" && pedido.conFactura && !pedido.numeroFactura?.trim()) return { ok: false, error: "Este pedido lleva factura: cargá primero el N° de factura y después marcalo como entregado." };
+  const cobro = leerCobro(cobroTexto);
+  if (valor === "ENTREGADO" && !cobro && pedido.webPago !== "PAGO_MP") return { ok: false, error: "Elegí cómo se cobra: Pago o Cuenta corriente." };
 
+  let error: string | null = null;
   await db.$transaction(async (tx) => {
     // Si estaba cobrado y deja de estar entregado, el cobro se deshace solo (queda anotado en la cuenta como anulación del pago).
-    if (valor !== "ENTREGADO" && pedido.cobro === "COBRADO" && pedido.clienteId && pedido.montoCobrado) {
+    if (pedido.cobro === "COBRADO" && pedido.clienteId && pedido.montoCobrado && (valor !== "ENTREGADO" || pedido.estado === "ENTREGADO")) {
       await tx.movimientoCuenta.create({ data: { clienteId: pedido.clienteId, pedidoId, tipo: "ANULACION_PAGO", monto: pedido.montoCobrado, medio: pedido.medioCobro, nota: "Cobro anulado", usuarioId: usuario.id } });
     }
-    await tx.pedido.update({ where: { id: pedidoId }, data: { estado: valor, ...(valor !== "ENTREGADO" ? { cobro: null, medioCobro: null, montoCobrado: null, pagado: false } : {}) } });
-    // Pedido de la tienda ya pagado con Mercado Pago: al entregarlo queda cobrado (no hay nada más que cobrar).
-    if (valor === "ENTREGADO" && pedido.webPago === "PAGO_MP" && pedido.cobro === null) {
-      await tx.pedido.update({ where: { id: pedidoId }, data: { cobro: "COBRADO", medioCobro: "MERCADO_PAGO", montoCobrado: pedido.webTotal, pagado: true } });
-    }
-    // Entregado completo: lo entregado es lo pedido. Si volvió a pendiente o a no entregado, se borra lo entregado.
+    await tx.pedido.update({ where: { id: pedidoId }, data: { estado: valor, cobro: null, medioCobro: null, montoCobrado: null, pagado: false } });
+    // Entregado completo: lo entregado es lo pedido. Si volvió a pendiente, se borra lo entregado.
     await tx.pedidoItem.updateMany({ where: { pedidoId }, data: { cantidadEntregada: null } });
     if (valor === "ENTREGADO") for (const i of pedido.items) await tx.pedidoItem.update({ where: { id: i.id }, data: { cantidadEntregada: i.cantidad } });
     if (valor === "ENTREGADO" && pedido.estado !== "ENTREGADO") await anotarEntregaEnCuenta(tx, pedidoId, pedido.clienteId, usuario.id);
     await sincronizarCuentaPedido(tx, pedidoId, usuario.id);
+    if (valor === "ENTREGADO") {
+      error = await marcarCobroEnTx(tx, pedidoId, cobro, usuario.id);
+      if (error) throw new Error(error);
+    }
+  }).catch((e) => {
+    if (!error) throw e;
   });
+  if (error) return { ok: false, error };
+  revalidatePath("/pedidos", "layout");
+  return { ok: true };
+}
+
+/**
+ * No se pudo entregar: el motivo es obligatorio. El pedido vuelve a Pedidos (pendiente, sin día, para reprogramar) y en la hoja
+ * de ruta de ese día queda su "silueta" (el registro de que salió y no se entregó).
+ */
+export async function registrarNoEntrega(pedidoId: string, motivo: string): Promise<Resultado> {
+  const usuario = await exigirOficina();
+  const texto = motivo.trim().replace(/\s+/g, " ");
+  if (texto.length < 3) return { ok: false, error: "Escribí el motivo por el que no se entregó." };
+  const pedido = await db.pedido.findUnique({
+    where: { id: pedidoId },
+    include: { cliente: true, punto: true, items: { include: { producto: { select: { orden: true } } } }, salida: { include: { vehiculo: true } } },
+  });
+  if (!pedido) return { ok: false, error: "No encontré el pedido." };
+  if (pedido.estado === "CANCELADO") return { ok: false, error: "El pedido está cancelado." };
+  if (!pedido.fechaEntrega) return { ok: false, error: "Este pedido no estaba en ninguna hoja de ruta." };
+  if (await db.diaCerrado.findUnique({ where: { fecha: pedido.fechaEntrega } })) return { ok: false, error: "Ese día está cerrado. Un dueño puede reabrirlo." };
+
+  const d = datosEntrega(pedido);
+  const resumen = {
+    barrio: d.barrio,
+    cliente: d.nombre,
+    direccion: d.direccion,
+    telefono: d.telefono,
+    items: ordenarItems(pedido.items).map((i) => ({ nombre: i.nombre, cantidad: i.cantidad + i.sinCargo, sinCargo: i.sinCargo })),
+    monto: importeVigente(pedido.items, Number(pedido.ivaPct), "PENDIENTE", pedido.webTotal),
+    conFactura: pedido.conFactura,
+    comprobante: pedido.conFactura ? pedido.numeroFactura : pedido.remitoNumero ? formatoRemito(pedido.remitoNumero) : null,
+  };
+  await db.$transaction(async (tx) => {
+    await tx.intentoEntrega.create({
+      data: {
+        pedidoId,
+        fecha: pedido.fechaEntrega!,
+        salidaId: pedido.salidaId,
+        vehiculo: pedido.salida ? titulo(pedido.salida.vehiculo.nombre) : "Sin camioneta",
+        orden: pedido.ordenRuta,
+        motivo: texto,
+        resumen,
+        usuarioId: usuario.id,
+      },
+    });
+    // Si había un cobro marcado, se deshace con su anulación en la cuenta.
+    if (pedido.cobro === "COBRADO" && pedido.clienteId && pedido.montoCobrado) {
+      await tx.movimientoCuenta.create({ data: { clienteId: pedido.clienteId, pedidoId, tipo: "ANULACION_PAGO", monto: pedido.montoCobrado, medio: pedido.medioCobro, nota: "Cobro anulado", usuarioId: usuario.id } });
+    }
+    await tx.pedido.update({
+      where: { id: pedidoId },
+      data: { estado: "PENDIENTE", fechaEntrega: null, salidaId: null, ordenRuta: 0, cobro: null, medioCobro: null, montoCobrado: null, pagado: false },
+    });
+    await tx.pedidoItem.updateMany({ where: { pedidoId }, data: { cantidadEntregada: null } });
+    await sincronizarCuentaPedido(tx, pedidoId, usuario.id);
+  });
+  revalidatePath("/pedidos", "layout");
   return { ok: true };
 }
 

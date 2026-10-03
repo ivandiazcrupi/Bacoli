@@ -43,6 +43,7 @@ export type FilaBandeja = {
   conFactura: boolean;
   webOrden: string | null; // N° de orden de Empretienda (solo pedidos de la tienda)
   pagoMp: boolean; // pedido de la tienda ya pagado con Mercado Pago
+  intento?: string; // "No se entregó el 1/10 · Local cerrado": el último intento que falló, si lo hubo
 };
 
 /** Marca de deuda: clientes con saldo a favor de la empresa (el monto se ve en su cuenta corriente). */
@@ -79,7 +80,7 @@ export function aFila(p: PedidoCompleto, debe: Set<string>): Fila {
   };
 }
 
-export function aFilaBandeja(p: PedidoCompleto): FilaBandeja {
+export function aFilaBandeja(p: PedidoCompleto, intento = ""): FilaBandeja {
   const d = datosEntrega(p);
   return {
     id: p.id,
@@ -93,5 +94,6 @@ export function aFilaBandeja(p: PedidoCompleto): FilaBandeja {
     conFactura: p.conFactura,
     webOrden: p.webOrden,
     pagoMp: p.webPago === "PAGO_MP",
+    intento,
   };
 }

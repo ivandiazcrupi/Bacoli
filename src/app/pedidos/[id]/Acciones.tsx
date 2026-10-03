@@ -13,7 +13,7 @@ const COLUMNAS = "lg:grid-cols-[minmax(0,2fr)_7rem_7rem_8rem_9rem]";
 const COLUMNAS_WEB = "lg:grid-cols-[minmax(0,2fr)_9rem_9rem]"; // la tienda no tiene precio por renglón: vale el total pagado
 
 // Los productos del pedido en una tabla a lo ancho. Si el pedido está abierto, la columna ENTREGADO se edita y abajo está "Confirmar entrega".
-export function TablaPedido({ pedidoId, abierto, entregado, items, totales, nota, web = false }: { pedidoId: string; abierto: boolean; entregado: boolean; items: Renglon[]; totales: Totales; nota: string; web?: boolean }) {
+export function TablaPedido({ pedidoId, abierto, entregado, items, totales, nota, web = false, pagoMp = false }: { pedidoId: string; abierto: boolean; entregado: boolean; items: Renglon[]; totales: Totales; nota: string; web?: boolean; pagoMp?: boolean }) {
   const cols = web ? COLUMNAS_WEB : COLUMNAS;
   const [estado, enviar, cargando] = useActionState(marcarEntregado.bind(null, pedidoId), undefined as EstadoPedidoForm);
   const ivaTexto = String(totales.ivaPct).replace(".", ",");
@@ -69,6 +69,19 @@ export function TablaPedido({ pedidoId, abierto, entregado, items, totales, nota
           {totales.descuento > 0.004 && totales.conFactura && <div className="flex justify-between"><span className="text-stone-600">Neto</span><span className="tabular-nums">{formatoPesos(totales.base)}</span></div>}
           {totales.conFactura && <div className="flex justify-between"><span className="text-stone-600">IVA {ivaTexto}%</span><span className="tabular-nums">{formatoPesos(totales.iva)}</span></div>}
           <div className={`flex justify-between text-lg font-bold ${totales.conFactura ? "mt-1 border-t border-stone-300 pt-2" : ""}`}><span>Total</span><span className="tabular-nums">{formatoPesos(totales.total)}</span></div>
+          {abierto && (
+            <label className="mt-2 block text-xs font-semibold uppercase tracking-wide text-stone-600">
+              ¿Cómo se cobra? {pagoMp && <span className="font-normal normal-case text-stone-500">(ya pagado con Mercado Pago)</span>}
+              {!pagoMp && (
+                <select name="cobro" required defaultValue="" className="mt-1 h-10 w-full rounded-md border border-stone-400 bg-white px-2 text-sm font-medium normal-case text-stone-900">
+                  <option value="" disabled hidden>Elegí una opción…</option>
+                  <option value="EFECTIVO">Pago · Efectivo</option>
+                  <option value="TRANSFERENCIA">Pago · Transferencia</option>
+                  {!web && <option value="CC">Cuenta corriente</option>}
+                </select>
+              )}
+            </label>
+          )}
           {totales.sinCargoPaquetes > 0 && <p className="mt-1 border-t border-stone-300 pt-1.5 text-xs text-stone-600">Sin cargo: <b>{totales.sinCargoPaquetes}</b> {totales.sinCargoPaquetes === 1 ? "paquete" : "paquetes"} · valor {formatoPesos(totales.sinCargoValor)} (no se cobra)</p>}
         </div>
       </div>
