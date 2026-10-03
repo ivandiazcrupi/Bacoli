@@ -65,7 +65,15 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
           {celda("Estado", <span className={COLOR[pedido.estado]}>{ETIQUETA[pedido.estado]}</span>)}
           {celda("Día", fecha ? `${nombreDia(fecha)} ${diaMes(fecha)}` : "Sin día")}
           {web && celda("Pedido de la tienda", `N° ${pedido.webOrden}`)}
-          {web && celda("Pago", textoPagoWeb(pedido.webPago) ?? <BotonConfirmarPago pedidoId={pedido.id} />)}
+          {web && celda("Pago", <BotonConfirmarPago
+            pedidoId={pedido.id}
+            nombre={entrega.nombre}
+            monto={formatoPesos(Number(pedido.webTotal ?? 0))}
+            pagado={webPagado(pedido.webOrden, pedido.webPago)}
+            medio={textoPagoWeb(pedido.webPago)}
+            detalle={pedido.webPagoPor && pedido.webPagoEn ? `Confirmó ${pedido.webPagoPor} · ${pedido.webPagoEn.toLocaleString("es-AR", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "America/Argentina/Buenos_Aires" })}` : null}
+            puedeCambiar={pedido.estado === "PENDIENTE" && pedido.webPago !== "PAGO_MP"}
+          />)}
           {!web && celda("Comprobante", pedido.conFactura ? "Factura" : "Remito")}
           {!web && celda(
             pedido.conFactura ? "N° de factura" : "N° de remito",

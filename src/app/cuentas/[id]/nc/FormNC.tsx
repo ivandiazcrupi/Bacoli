@@ -97,7 +97,7 @@ export function FormNC({ clienteId, comprobantes, inicial, nota }: { clienteId: 
             {comprobantes.map((c) => (
               <li key={c.id} className={`grid grid-cols-[28px_1fr_90px_130px_150px] items-center gap-x-3 px-4 py-2.5 text-center text-sm ${elegidos.has(c.id) ? "bg-crema-50" : ""}`}>
                 <input type="checkbox" checked={elegidos.has(c.id)} onChange={() => alternar(c.id)} aria-label={`Elegir ${c.numero ?? "comprobante"}`} className="h-4 w-4 accent-[#026433]" />
-                <span className="font-semibold">{c.tipo === "FACTURA" ? "Factura" : "Remito"} {c.numero ?? "sin número"}</span>
+                <span className="font-semibold">{c.tipo === "FACTURA" ? "FACTURA" : "REMITO"} {c.numero ?? "sin número"}</span>
                 <span className="tabular-nums">{fechaCorta(c.fecha)}</span>
                 <span className="tabular-nums">debe {formatoPesos(c.debe)}</span>
                 <input

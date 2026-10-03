@@ -113,7 +113,7 @@ export default async function CuentaDeCliente({ params }: { params: Promise<{ id
                 return (
                   <li key={p.id} className="grid grid-cols-[110px_1fr_130px_170px] items-center gap-x-3 px-4 py-2.5 text-center text-stone-600">
                     <span className="tabular-nums">Cargado {fechaCorta(x.cargado)}</span>
-                    <span>{p.conFactura ? "Factura" : "Remito"} {x.numero ?? ""}</span>
+                    <span>{p.conFactura ? "FACTURA" : "REMITO"} {x.numero ?? ""}</span>
                     <span className="tabular-nums line-through">{formatoPesos(importeVigente(p.items, Number(p.ivaPct), "PENDIENTE", p.webTotal))}</span>
                     <span className="font-semibold text-rojo-700">{p.estado === "CANCELADO" ? "Cancelado" : "No entregado"}</span>
                   </li>
@@ -132,7 +132,7 @@ export default async function CuentaDeCliente({ params }: { params: Promise<{ id
                 return (
                   <li key={p.id} className="grid grid-cols-[100px_1fr_130px_220px_80px] items-center gap-x-3 px-4 py-2.5 text-center">
                     <span className="tabular-nums">{fechaCorta(x.fecha)}</span>
-                    <span className="font-semibold">{x.tipo === "FACTURA" ? "Factura" : "Remito"} {x.numero ?? "sin número"}</span>
+                    <span className="font-semibold">{x.tipo === "FACTURA" ? "FACTURA" : "REMITO"} {x.numero ?? "sin número"}</span>
                     <span className="tabular-nums">{formatoPesos(x.monto)}</span>
                     <span className="font-semibold text-verde-800">Pagada · {MEDIO[x.medio ?? ""] ?? ""}</span>
                     <DeshacerPago pedidoId={p.id} />

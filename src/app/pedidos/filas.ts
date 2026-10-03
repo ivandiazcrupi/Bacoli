@@ -62,7 +62,7 @@ export function aFila(p: PedidoCompleto, debe: Set<string>): Fila {
     id: p.id,
     clienteId: p.clienteId,
     barrio: d.barrio,
-    cliente: d.nombre,
+    cliente: p.webOrden ? `${d.nombre} - ${p.webOrden}` : d.nombre,
     direccion: d.direccion,
     comentario: avisos(d.comentario, p.nota),
     telefono: d.telefono,
@@ -88,7 +88,7 @@ export function aFilaBandeja(p: PedidoCompleto, intento = ""): FilaBandeja {
   return {
     id: p.id,
     barrio: d.barrio,
-    cliente: d.nombre,
+    cliente: p.webOrden ? `${d.nombre} - ${p.webOrden}` : d.nombre,
     direccion: d.direccion,
     comentario: avisos(d.comentario, p.nota),
     telefono: d.telefono,

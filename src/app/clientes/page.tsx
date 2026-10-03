@@ -38,7 +38,7 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
     db.cliente.findMany({
       where,
       orderBy: { nombre: "asc" },
-      include: { puntos: { include: { zona: true }, orderBy: [{ barrio: "asc" }, { direccion: "asc" }] } },
+      include: { puntos: { where: zona ? { zonaId: zona } : undefined, include: { zona: true }, orderBy: [{ barrio: "asc" }, { direccion: "asc" }] } },
     }),
     db.zona.findMany({ orderBy: { orden: "asc" } }),
   ]);

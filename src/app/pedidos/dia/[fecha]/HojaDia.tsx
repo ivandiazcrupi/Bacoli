@@ -14,6 +14,7 @@ import { asignarADia, marcarPagoWeb } from "../../actions";
 import { agregarSalida, asignarAVehiculo, devolverAPedidos, ordenarSalida, quitarSalida } from "../../ruta/actions";
 import { emitirRemitosDia } from "../../remito/actions";
 import { cerrarDia, dejarEnCuentaCorriente, dejarListo, reabrirHoja, deshacerCobro, guardarNumeroFactura, marcarEntrega, reabrirDia, registrarCobro, registrarNoEntrega, type Resultado } from "../actions";
+import { EstadoPagoWeb } from "@/components/EstadoPagoWeb";
 import { ModalMotivo } from "@/components/ModalMotivo";
 
 export type Fila = {
@@ -184,8 +185,8 @@ function CobroMarcado({ tipo, detalle, onDeshacer }: { tipo: "PAGO" | "CC"; deta
 // Mientras se está entregando (✓ tocado y sin cobro elegido) se muestra la elección; el pedido no queda entregado hasta elegir.
 function CeldaCobro({ f, bloqueada, acc, eligiendoCobro, onElegir, onCancelar }: { f: Fila; bloqueada: boolean; acc: Acciones; eligiendoCobro: boolean; onElegir: (cobro: string) => void; onCancelar: () => void }) {
   const [medio, setMedio] = useState(false);
-  if (f.pagoMp) return <CobroMarcado tipo="PAGO" detalle={f.pagoTexto ?? "Pagado"} onDeshacer={!bloqueada && f.estado !== "ENTREGADO" && f.pagoTexto === "Transferencia" ? () => acc.pagoWeb(f, false) : undefined} />;
-  if (f.webOrden) return <button type="button" disabled={bloqueada} onClick={() => acc.pagoWeb(f, true)} className="h-[44px] w-full rounded-md border border-rojo-600 bg-white px-1 text-xs font-semibold leading-tight text-rojo-700 hover:bg-rojo-50 disabled:opacity-40">Falta pago<br />Confirmar</button>;
+  if (f.pagoMp) return <CobroMarcado tipo="PAGO" detalle={f.pagoTexto ?? "Pagado"} onDeshacer={!bloqueada && f.estado !== "ENTREGADO" && f.pagoTexto === "Transferencia" ? () => { if (window.confirm(`¿Volver a "pendiente de pago" el pedido de ${f.cliente}?`)) acc.pagoWeb(f, false); } : undefined} />;
+  if (f.webOrden) return <button type="button" disabled={bloqueada} onClick={() => { if (window.confirm(`¿Confirmás que YA LLEGÓ la transferencia de ${formatoPesos(f.monto)} de ${f.cliente}?\n\nRevisá que esté acreditada en la cuenta.`)) acc.pagoWeb(f, true); }} className="h-[44px] w-full rounded-md border border-rojo-600 bg-white px-1 text-xs font-semibold leading-tight text-rojo-700 hover:bg-rojo-50 disabled:opacity-40">Pendiente de pago<br />Confirmar…</button>;
   const pidiendo = eligiendoCobro || (f.estado === "ENTREGADO" && !f.cobro); // entregado sin cobro (datos viejos): también se completa acá
   if (!pidiendo) {
     if (f.estado !== "ENTREGADO") return <span className="text-stone-400">—</span>;
@@ -270,7 +271,7 @@ function FilaHoja({ f, n, bloqueada, fija, acc, salidas }: { f: Fila; n: number;
       <div role="cell" className="text-xs font-bold uppercase leading-tight tracking-wide text-stone-700">{f.barrio}</div>
       <div role="cell" className="leading-snug">
         <p className="font-bold">{f.cliente}</p>
-        <WebOrden n={f.webOrden} />
+        <EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} />
       </div>
       <div role="cell" className="min-w-0 break-words leading-snug">
         <a href={mapa(f)} target="_blank" rel="noreferrer" className="hover:underline">{f.direccion}</a>
@@ -371,11 +372,6 @@ function BloqueSiluetas({ lista }: { lista: Silueta[] }) {
   );
 }
 
-// Rótulo chico bajo el nombre en los pedidos de la tienda online.
-function WebOrden({ n }: { n: string | null }) {
-  return n ? <span className="block text-[11px] font-normal text-stone-500">Tienda online · N° {n}</span> : null;
-}
-
 // Cuadro que recibe pedidos arrastrados (un vehículo, o "sin" = sin ubicar).
 function Zona({ id, bloqueada, clase, children }: { id: string; bloqueada: boolean; clase: string; children: React.ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id: `c:${id}`, disabled: bloqueada });
@@ -397,7 +393,7 @@ function FilaUbicar({ f, salidas, bloqueada, acc }: { f: Fila; salidas: SalidaIn
       <div className={`grid items-center gap-x-4 gap-y-2 text-center ${COLUMNAS_UBICAR}`}>
         <button type="button" disabled={bloqueada} aria-label="Arrastrar el pedido a un vehículo" className="hidden cursor-grab text-lg leading-none text-stone-500 disabled:cursor-default disabled:opacity-30 lg:block" {...attributes} {...listeners}>⋮⋮</button>
         <span className="text-sm font-semibold">{f.barrio}</span>
-        <span className="text-sm font-semibold leading-snug">{f.cliente}<WebOrden n={f.webOrden} /></span>
+        <span className="text-sm font-semibold leading-snug">{f.cliente}<EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} /></span>
         <span className="text-sm leading-snug">
           {f.direccion}
           {f.comentario && <span className="mt-0.5 block text-xs font-medium text-rojo-700">{f.comentario}</span>}
@@ -435,7 +431,7 @@ function FilaTarjeta({ f, n, bloqueada, fija, acc, salidas }: { f: Fila; n: numb
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-stone-800 text-sm font-semibold text-white">{n}</span>
         <div className="min-w-0 flex-1">
           <h3 className="text-lg font-bold leading-snug">{f.cliente}</h3>
-          <WebOrden n={f.webOrden} />
+          <EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} />
           <p className="text-sm text-stone-600">{f.barrio}</p>
         </div>
         <span className={`shrink-0 rounded px-2 py-0.5 text-xs font-semibold ${f.conFactura ? "bg-stone-800 text-white" : "bg-stone-200 text-stone-700"}`}>{f.conFactura ? "FACTURA" : "REMITO"}</span>
@@ -461,8 +457,8 @@ function FilaTarjeta({ f, n, bloqueada, fija, acc, salidas }: { f: Fila; n: numb
 
       <SelectorEntrega f={f} bloqueada={bloqueada} acc={acc} grande eligiendoCobro={flujo.eligiendoCobro} onEntregar={flujo.entregar} onNoEntregar={flujo.abrirMotivo} />
 
-      {f.pagoMp && <div className="flex items-center justify-between rounded-lg border border-verde-700 bg-verde-50 px-3 py-3 font-semibold text-verde-800"><span>✓ Pago · {f.pagoTexto}</span>{!bloqueada && f.estado !== "ENTREGADO" && f.pagoTexto === "Transferencia" && <button type="button" onClick={() => acc.pagoWeb(f, false)} aria-label="Volver a pago pendiente" className="px-2 text-xl">✕</button>}</div>}
-      {f.webOrden && !f.pagoMp && !bloqueada && <button type="button" onClick={() => acc.pagoWeb(f, true)} className="h-12 w-full rounded-lg border border-rojo-600 bg-white font-semibold text-rojo-700">Falta el pago · Confirmar transferencia</button>}
+      {f.pagoMp && <div className="flex items-center justify-between rounded-lg border border-verde-700 bg-verde-50 px-3 py-3 font-semibold text-verde-800"><span>✓ Pago · {f.pagoTexto}</span>{!bloqueada && f.estado !== "ENTREGADO" && f.pagoTexto === "Transferencia" && <button type="button" onClick={() => { if (window.confirm(`¿Volver a "pendiente de pago" el pedido de ${f.cliente}?`)) acc.pagoWeb(f, false); }} aria-label="Volver a pago pendiente" className="px-2 text-xl">✕</button>}</div>}
+      {f.webOrden && !f.pagoMp && !bloqueada && <button type="button" onClick={() => { if (window.confirm(`¿Confirmás que YA LLEGÓ la transferencia de ${formatoPesos(f.monto)} de ${f.cliente}?\n\nRevisá que esté acreditada en la cuenta.`)) acc.pagoWeb(f, true); }} className="h-12 w-full rounded-lg border border-rojo-600 bg-white font-semibold text-rojo-700">Pendiente de pago · Confirmar…</button>}
       {(f.estado === "ENTREGADO" || flujo.eligiendoCobro) && !f.pagoMp && !f.webOrden && (
         <div className="space-y-2">
           {f.cobro === "COBRADO" && !flujo.eligiendoCobro ? (

@@ -215,6 +215,8 @@ model Pedido {
   webTelefono  String?
   webTotal     Decimal? @db.Decimal(14, 2) // lo que pagó el cliente en la tienda
   webPago      String? // PAGO_MP (ya pagado con Mercado Pago) o PENDIENTE (todavía no se cruzó la transferencia)
+  webPagoPor   String? // quién confirmó la transferencia (nombre)
+  webPagoEn    DateTime? // cuándo
 
   cliente        Cliente?                @relation(fields: [clienteId], references: [id])
   punto          PuntoEntrega?           @relation(fields: [puntoId], references: [id])

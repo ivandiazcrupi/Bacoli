@@ -370,26 +370,18 @@ export async function cancelarPedido(formData: FormData) {
 
 /** Confirma que llegó la transferencia de un pedido de la tienda online: recién ahí puede asignarse a un día y salir. */
 export async function confirmarPagoWeb(pedidoId: string): Promise<{ ok: boolean; error?: string }> {
-  await exigirOficina();
-  const pedido = await db.pedido.findUnique({ where: { id: pedidoId }, select: { webOrden: true, webPago: true, estado: true } });
-  if (!pedido?.webOrden) return { ok: false, error: "Solo los pedidos de la tienda online necesitan confirmar el pago." };
-  if (pedido.estado === "CANCELADO") return { ok: false, error: "El pedido está cancelado." };
-  if (pedido.webPago !== "PENDIENTE") return { ok: true };
-  await db.pedido.update({ where: { id: pedidoId }, data: { webPago: "PAGO_TRANSFERENCIA" } });
-  revalidatePath("/pedidos", "layout");
-  revalidatePath(`/pedidos/${pedidoId}`);
-  return { ok: true };
+  return marcarPagoWeb(pedidoId, true);
 }
 
 /** Cambia el estado de pago de un pedido de la tienda (transferencia): confirmado o vuelve a pendiente. No toca los de Mercado Pago ni los ya entregados. */
 export async function marcarPagoWeb(pedidoId: string, pagado: boolean): Promise<{ ok: boolean; error?: string }> {
-  await exigirOficina();
+  const usuario = await exigirOficina();
   const pedido = await db.pedido.findUnique({ where: { id: pedidoId }, select: { webOrden: true, webPago: true, estado: true } });
   if (!pedido?.webOrden) return { ok: false, error: "Solo los pedidos de la tienda online tienen estado de pago." };
   if (pedido.estado === "CANCELADO") return { ok: false, error: "El pedido está cancelado." };
   if (pedido.estado === "ENTREGADO") return { ok: false, error: "El pedido ya se entregó: primero deshacé la entrega." };
   if (pedido.webPago === "PAGO_MP") return { ok: false, error: "Este pedido se pagó con Mercado Pago." };
-  await db.pedido.update({ where: { id: pedidoId }, data: { webPago: pagado ? "PAGO_TRANSFERENCIA" : "PENDIENTE" } });
+  await db.pedido.update({ where: { id: pedidoId }, data: { webPago: pagado ? "PAGO_TRANSFERENCIA" : "PENDIENTE", webPagoPor: pagado ? usuario.nombre : null, webPagoEn: pagado ? new Date() : null } });
   revalidatePath("/pedidos", "layout");
   revalidatePath(`/pedidos/${pedidoId}`);
   return { ok: true };

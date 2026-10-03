@@ -59,7 +59,7 @@ export function PagarPartidas({ filas }: { filas: FilaAbierta[] }) {
             <span className="tabular-nums">{fechaCorta(f.cargado)}</span>
             <span className="tabular-nums">{f.entregado ? fechaCorta(f.fecha) : <span className="text-stone-400">—</span>}</span>
             <span className="font-semibold">
-              {f.tipo === "FACTURA" ? "Factura" : "Remito"} {f.numero ?? (f.entregado ? <span className="text-rojo-700">sin número</span> : <span className="font-normal text-stone-500">(se carga al entregar)</span>)}
+              {f.tipo === "FACTURA" ? "FACTURA" : "REMITO"} {f.numero ?? (f.entregado ? <span className="text-rojo-700">sin número</span> : <span className="font-normal text-stone-500">(se carga al entregar)</span>)}
             </span>
             <span className="font-bold tabular-nums">{formatoPesos(f.monto)}</span>
             <span className="tabular-nums">{f.entregado ? fechaCorta(f.vence) : <span className="text-stone-400">—</span>}</span>

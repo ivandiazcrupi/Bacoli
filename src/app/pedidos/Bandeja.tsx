@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
+import { EstadoPagoWeb } from "@/components/EstadoPagoWeb";
 import { formatoPesos } from "@/lib/numeros";
 import { enlaceWhatsApp } from "@/lib/telefonos";
-import { asignarADia, confirmarPagoWeb } from "./actions";
+import { asignarADia, marcarPagoWeb } from "./actions";
 import type { FilaBandeja } from "./filas";
 
 export type DiaBoton = { fecha: string; letra: string; numero: number; nombre: string; hoy: boolean; cerrado: boolean };
@@ -45,11 +46,16 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
     });
   };
 
-  const confirmarPago = (f: FilaBandeja) => {
+  // Confirmar o deshacer el pago de la tienda: siempre pide confirmar, con el nombre y el monto a la vista.
+  const cambiarPago = (f: FilaBandeja, pagado: boolean) => {
+    const texto = pagado
+      ? `¿Confirmás que YA LLEGÓ la transferencia de ${formatoPesos(f.monto)} de ${f.cliente}?\n\nRevisá que esté acreditada en la cuenta. Se puede deshacer mientras el pedido no se entregue.`
+      : `¿Volver a "pendiente de pago" el pedido de ${f.cliente}?`;
+    if (!window.confirm(texto)) return;
     setError(null);
     empezar(async () => {
-      const r = await confirmarPagoWeb(f.id);
-      if (!r.ok) setError(r.error ?? "No se pudo confirmar el pago.");
+      const r = await marcarPagoWeb(f.id, pagado);
+      if (!r.ok) setError(r.error ?? "No se pudo cambiar el pago.");
       router.refresh();
     });
   };
@@ -57,9 +63,12 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
   const botones = (f: FilaBandeja, grande?: boolean) => (
     <div className="flex flex-col items-center gap-1.5">
     {f.webOrden && !f.pagoMp && (
-      <button type="button" onClick={() => confirmarPago(f)} className="rounded-md border border-verde-700 bg-white px-2 py-1 text-xs font-semibold text-verde-800 hover:bg-verde-700 hover:text-white">
-        Confirmar pago (transferencia)
+      <button type="button" onClick={() => cambiarPago(f, true)} className="rounded-md border border-stone-500 bg-white px-2 py-1 text-xs font-semibold text-stone-800 hover:bg-stone-800 hover:text-white">
+        Confirmar pago…
       </button>
+    )}
+    {f.webOrden && f.pagoMp && f.pagoTexto === "Transferencia" && (
+      <button type="button" onClick={() => cambiarPago(f, false)} className="text-xs text-stone-500 underline underline-offset-2 hover:text-rojo-700">Deshacer pago</button>
     )}
     <div className="flex gap-1.5" role="group" aria-label="Asignar a un día">
       {dias.map((d) => (
@@ -96,7 +105,7 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
             <span className="text-sm font-semibold">{f.barrio}</span>
             <span className="text-sm font-semibold leading-snug">
               {f.cliente}
-              {f.webOrden && <span className="block text-[11px] font-normal text-stone-500">N° {f.webOrden} · {f.pagoMp ? `pagado · ${f.pagoTexto}` : <span className="text-rojo-700">falta confirmar el pago</span>}</span>}
+              <EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} />
             </span>
             <span className="text-sm leading-snug">
               {f.direccion}
@@ -120,7 +129,7 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
               <div>
                 <p className="font-semibold">{f.barrio}</p>
                 <p className="font-semibold">{f.cliente}</p>
-                {f.webOrden && <p className="text-xs text-stone-500">N° {f.webOrden} · {f.pagoMp ? `pagado · ${f.pagoTexto}` : "falta confirmar el pago"}</p>}
+                <EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} />
                 <p className="text-sm">{f.direccion}</p>
                 {f.comentario && <p className="text-sm font-medium text-rojo-700">{f.comentario}</p>}
                 {f.intento && <p className="text-sm font-semibold text-stone-600">↺ {f.intento}</p>}
