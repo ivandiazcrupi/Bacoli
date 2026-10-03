@@ -39,57 +39,57 @@ export default async function ImprimirHojaDeRuta({ params, searchParams }: { par
             const paquetes = pedidos.filter((p) => p.salidaId === sa.id).reduce((s, p) => s + bultosDe(p.items), 0);
             return (
               <section key={sa.id} className="mx-auto w-[277mm] bg-white p-[6mm] text-black shadow print:w-full print:p-0 print:shadow-none [&:not(:last-child)]:break-after-page">
-                <header className="mb-3 flex items-end justify-between border-b-2 border-black pb-2">
+                <header className="mb-4 flex items-end justify-between border-b-[3px] border-black pb-2">
                   <div>
-                    <p className="text-[11px] font-bold uppercase tracking-[0.2em]">BACOLI · Hoja de ruta</p>
-                    <h1 className="text-[26px] font-extrabold uppercase leading-tight">{titulo(sa.vehiculo.nombre)}{sa.vehiculo.patente ? <span className="ml-3 text-[16px] font-semibold">{sa.vehiculo.patente}</span> : null}</h1>
+                    <p className="text-[12px] font-bold uppercase tracking-[0.25em]">BACOLI · Hoja de ruta</p>
+                    <h1 className="text-[30px] font-extrabold uppercase leading-tight">{titulo(sa.vehiculo.nombre)}{sa.vehiculo.patente ? <span className="ml-4 text-[18px] font-semibold tracking-wide">{sa.vehiculo.patente}</span> : null}</h1>
                   </div>
-                  <div className="text-right">
-                    <p className="text-[22px] font-extrabold uppercase leading-tight">{textoFecha}</p>
-                    <p className="text-[13px] font-semibold">{grupo.length} {grupo.length === 1 ? "parada" : "paradas"} · {paquetes} paquetes</p>
-                  </div>
+                  <p className="text-[26px] font-extrabold uppercase leading-tight">{textoFecha}</p>
                 </header>
 
-                <table className="w-full table-fixed border-collapse text-[13px] leading-snug">
-                  <colgroup>{["8mm", "19mm", "38mm", "42mm", "30mm", "54mm", "28mm", "28mm", "28mm"].map((w, i) => <col key={i} style={{ width: w }} />)}</colgroup>
+                <table className="w-full table-fixed border-collapse text-[14px] leading-snug">
+                  <colgroup>{["11mm", "20mm", "38mm", "56mm", "28mm", "62mm", "26mm", "27mm", "11mm"].map((w, i) => <col key={i} style={{ width: w }} />)}</colgroup>
                   <thead>
-                    <tr className="bg-neutral-200 text-[11px] font-bold uppercase tracking-wide">
-                      {["N°", "Barrio", "Cliente", "Dirección", "Teléfono", "Pedido", "Comprobante", "Monto", "Entregó / Cobró"].map((h) => (
-                        <th key={h} className="border border-black px-1.5 py-1.5 text-center">{h}</th>
+                    <tr className="border-b-2 border-black text-[11px] font-extrabold uppercase tracking-wider">
+                      {["N°", "Barrio", "Cliente", "Dirección", "Teléfono", "Pedido", "Comprobante", "Monto", "OK"].map((h, i) => (
+                        <th key={h} className={`px-1.5 pb-1.5 ${i === 3 || i === 5 ? "text-left" : "text-center"}`}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {grupo.map((x, n) => (
-                      <tr key={x.id} className="break-inside-avoid align-middle">
-                        <td className="border border-black px-1 py-2 text-center text-[18px] font-extrabold">{n + 1}</td>
-                        <td className="border border-black px-1.5 py-2 text-center text-[12px] font-bold uppercase">{x.barrio}</td>
-                        <td className="border border-black px-1.5 py-2 text-center text-[14px] font-bold uppercase leading-tight">{x.cliente}</td>
-                        <td className="border border-black px-1.5 py-2 text-center text-[14px] font-semibold">
+                      <tr key={x.id} className="break-inside-avoid border-b border-neutral-500 align-middle">
+                        <td className="px-1 py-3 text-center"><span className="inline-flex h-8 w-8 items-center justify-center rounded-full border-[2.5px] border-black text-[16px] font-extrabold text-black">{n + 1}</span></td>
+                        <td className="px-1.5 py-3 text-center text-[12px] font-bold uppercase leading-tight">{x.barrio}</td>
+                        <td className="px-1.5 py-3 text-center text-[15px] font-extrabold uppercase leading-tight">{x.cliente}</td>
+                        <td className="px-2 py-3 text-left text-[15px] font-bold leading-tight">
                           {x.direccion}
-                          {x.comentario && <span className="mt-0.5 block text-[12px] font-bold">⚠ {x.comentario}</span>}
+                          {x.comentario && <span className="mt-1 block text-[12.5px] font-bold">⚠ {x.comentario}</span>}
                         </td>
-                        <td className="whitespace-nowrap border border-black px-1.5 py-2 text-center text-[13px] font-semibold tabular-nums">{x.telefono || "—"}</td>
-                        <td className="border border-black px-2 py-2">
+                        <td className="whitespace-nowrap px-1.5 py-3 text-center text-[13.5px] font-semibold tabular-nums">{x.telefono || "—"}</td>
+                        <td className="px-2 py-3 text-left">
                           {x.items.map((i, k) => (
-                            <div key={k} className="flex gap-2 text-[14px] font-semibold"><span className="w-6 shrink-0 text-right font-extrabold tabular-nums">{i.cantidad}</span><span>{i.nombre}</span></div>
+                            <div key={k} className="flex gap-2 text-[14.5px] font-semibold leading-snug"><span className="w-7 shrink-0 text-right text-[16px] font-extrabold tabular-nums">{i.cantidad}</span><span>{i.nombre}</span></div>
                           ))}
                         </td>
-                        <td className="border border-black px-1.5 py-2 text-center text-[13px] font-bold">
+                        <td className="px-1.5 py-3 text-center text-[12px] font-extrabold uppercase leading-tight">
                           {x.webOrden ? "TIENDA" : x.conFactura ? <>FACTURA<span className="block text-[14px]">{x.numeroFactura || "—"}</span></> : <>REMITO<span className="block text-[14px]">{x.remito ?? "—"}</span></>}
                         </td>
-                        <td className="whitespace-nowrap border border-black px-1.5 py-2 text-center text-[14px] font-extrabold tabular-nums">
-                          {x.webOrden && x.pagoMp ? <span className="text-[12px]">PAGADO</span> : formatoPesos(x.monto)}
+                        <td className="whitespace-nowrap px-1.5 py-3 text-center text-[15px] font-extrabold tabular-nums">
+                          {x.webOrden ? <span className="text-[13px] tracking-wide">PAGADO</span> : formatoPesos(x.monto)}
                         </td>
-                        <td className="border border-black px-1.5 py-2 text-[11px] text-neutral-500">
-                          <div>☐ Entregó</div>
-                          <div className="mt-1.5">Cobró $ ________</div>
-                        </td>
+                        <td className="px-1 py-3 text-center"><span className="inline-block h-5 w-5 border-2 border-black" /></td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                <p className="mt-2 text-right text-[12px] font-semibold">Total a entregar: {paquetes} paquetes · {grupo.length} {grupo.length === 1 ? "parada" : "paradas"}</p>
+
+                <div className="mt-5 flex justify-end break-inside-avoid">
+                  <div className="w-[60mm] border-[3px] border-black text-center">
+                    <p className="border-b-[3px] border-black py-1 text-[12px] font-extrabold uppercase tracking-[0.2em]">Paquetes</p>
+                    <p className="py-2 text-[40px] font-extrabold leading-none tabular-nums">{paquetes}</p>
+                  </div>
+                </div>
               </section>
             );
           })}
