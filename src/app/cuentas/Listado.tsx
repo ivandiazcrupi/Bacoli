@@ -3,6 +3,7 @@ import { Cabecera } from "@/components/Cabecera";
 import { diasDeAtraso, incluirNc, partidaDe } from "@/lib/cobranza";
 import { db } from "@/lib/db";
 import { cargarFacturas, soloDigitos } from "@/lib/facturas";
+import { BorrarFacturas } from "./arca/BorrarFacturas";
 import { SubirArchivo } from "./arca/SubirArchivo";
 import { hoy } from "@/lib/fechas";
 import { formatoRemito } from "@/lib/remito";
@@ -57,6 +58,7 @@ export async function Listado({ tipo, searchParams, ruta }: { tipo: "FACTURA" | 
 
   // FACTURAS: salen de ARCA (facturas y notas de crédito), en las mismas columnas que los remitos.
   let ncSinAplicar = 0;
+  const cantidadArca = tipo === "FACTURA" ? await db.comprobanteArca.count() : 0;
   let escritasSinArca: string[] = [];
   if (tipo === "FACTURA") {
     const { filas, controles, puntosDeCuit } = await cargarFacturas();
@@ -154,6 +156,7 @@ export async function Listado({ tipo, searchParams, ruta }: { tipo: "FACTURA" | 
             <summary className="cursor-pointer font-semibold text-stone-600 hover:text-stone-900">Subir archivo de ARCA</summary>
             <p className="mt-2 text-stone-600">Libro IVA Ventas (VENTAS.txt) o el CSV de Mis Comprobantes → Emitidos. No duplica lo ya cargado.</p>
             <div className="mt-2"><SubirArchivo /></div>
+            {usuario.rol === "DUENO" && <BorrarFacturas cantidad={cantidadArca} />}
           </details>
         )}
         {paginas > 1 && (
