@@ -185,6 +185,12 @@ export async function crearPedidoWebManual(_: EstadoPedidoForm, formData: FormDa
     const cantidad = Number(String(formData.get(`q_${p.id}`) ?? "0").replace(/\D/g, "") || 0);
     if (cantidad > 0) items.push({ producto: { connect: { id: p.id } }, nombre: p.nombre, sku: p.sku, unidad: p.unidad, cantidad, precioUnitario: 0 });
   }
+  // Producto de la tienda que no está en el catálogo, escrito a mano (si no pone cantidad, se toma 1).
+  const otroNombre = mayus(String(formData.get("otro_nombre") ?? "")).slice(0, 80);
+  if (otroNombre) {
+    const cantidadOtro = Number(String(formData.get("otro_cantidad") ?? "").replace(/\D/g, "") || 1);
+    items.push({ nombre: otroNombre, sku: null, unidad: "unidad", cantidad: cantidadOtro, precioUnitario: 0 });
+  }
   if (items.length === 0) return { error: "Poné la cantidad de al menos un producto." };
 
   const pagado = formData.get("pagado") === "1";

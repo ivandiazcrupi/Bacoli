@@ -11,7 +11,9 @@ const etiqueta = "block text-xs font-semibold uppercase tracking-wide text-stone
 const boton = "flex h-11 w-11 items-center justify-center rounded-md border border-stone-400 bg-white text-xl font-medium hover:bg-crema-100 lg:h-9 lg:w-9 lg:text-lg";
 
 // Pedido minorista cargado a mano: datos de entrega, productos con cantidad, total que paga y si ya pagó por transferencia.
-export function NuevoPedidoWeb({ productos }: { productos: Producto[] }) {
+export function NuevoPedidoWeb({ productos: todos }: { productos: Producto[] }) {
+  // Solo las dos prepizzas del catálogo; cualquier otro producto de la tienda se escribe a mano en el tercer renglón.
+  const productos = todos.filter((p) => p.sku === "PPT01" || p.sku === "PPC02" || /^PREPIZZA (TOMATE|CEBOLLA)$/i.test(p.nombre.trim()));
   const [estado, enviar, cargando] = useActionState(crearPedidoWebManual, undefined as EstadoPedidoForm);
   const [cantidades, setCantidades] = useState<Record<string, string>>({});
   const form = useRef<HTMLFormElement>(null);
@@ -61,6 +63,16 @@ export function NuevoPedidoWeb({ productos }: { productos: Producto[] }) {
             </div>
           </div>
         ))}
+        {/* Tercer renglón: cualquier otro producto de la tienda, escrito a mano */}
+        <div className={`grid grid-cols-[minmax(0,2fr)_6rem_11rem] items-center gap-x-4 border-t border-stone-400 px-5 py-2.5 text-center max-lg:grid-cols-1 max-lg:gap-y-2 ${cantidad("otro") > 0 ? "bg-crema-50" : "bg-white"}`}>
+          <input name="otro_nombre" aria-label="Otro producto (escribilo)" placeholder="Otro producto de la tienda (escribilo)" maxLength={80} className="h-10 w-full rounded-md border border-dashed border-stone-400 bg-white px-3 text-center text-base font-semibold focus:border-verde-700 focus:outline-none" />
+          <p className="text-sm text-stone-600">a mano</p>
+          <div className="flex items-center justify-center gap-1">
+            <button type="button" className={boton} onClick={() => cambiar("otro", -1)} aria-label="Menos otro producto">−</button>
+            <input name="otro_cantidad" aria-label="Cantidad del otro producto" inputMode="numeric" value={cantidades.otro ?? ""} onChange={(e) => setCantidades((c) => ({ ...c, otro: e.target.value.replace(/\D/g, "") }))} placeholder="0" className="h-11 w-16 rounded-md border border-stone-400 bg-white text-center text-lg tabular-nums lg:h-9 lg:text-base" />
+            <button type="button" className={boton} onClick={() => cambiar("otro", 1)} aria-label="Más otro producto">+</button>
+          </div>
+        </div>
       </div>
 
       <div className="grid items-stretch gap-4 lg:grid-cols-[1fr_20rem]">

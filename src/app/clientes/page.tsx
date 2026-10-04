@@ -127,7 +127,7 @@ function FilaCliente({ c }: { c: Cliente }) {
             <span className={dato}>{p ? p.barrio : <span className="font-normal text-stone-400">Sin sucursal</span>}</span>
             <span className="min-w-0">
               <Link href={`/clientes/${c.id}`} className={`${dato} hover:text-verde-800 hover:underline`}>{c.nombre}</Link>
-              {i === 0 && c.observacion && <span className="mt-0.5 line-clamp-2 block text-xs font-medium text-rojo-700" title={c.observacion}>⚠ {c.observacion}</span>}
+              {c.observacion && <span title={c.observacion} aria-label={`Observación: ${c.observacion}`} className="ml-1.5 cursor-help align-middle text-[13px] text-stone-500">⚠</span>}
             </span>
             <span className="text-sm leading-tight">{p ? titulo(p.direccion) : ""}{p?.comentario && <span className="mt-0.5 block text-xs font-medium text-rojo-700">{p.comentario}</span>}</span>
             <span className="text-sm"><Telefono tel={p?.telefono ?? null} /></span>
@@ -140,7 +140,7 @@ function FilaCliente({ c }: { c: Cliente }) {
             <p className={`${dato} flex flex-wrap items-center gap-2`}>{p ? p.barrio : "Sin sucursal"}{p && <Estado activa={c.activo && p.activo} />}</p>
             <div>
               <Link href={`/clientes/${c.id}`} className={`block ${dato}`}>{c.nombre}</Link>
-              {i === 0 && c.observacion && <p className="text-xs font-medium text-rojo-700">⚠ {c.observacion}</p>}
+              {c.observacion && <p className="text-xs text-stone-500">⚠ {c.observacion}</p>}
             </div>
             {p && <p className="text-sm">{titulo(p.direccion)}</p>}
             {p?.comentario && <p className="text-xs font-medium text-rojo-700">{p.comentario}</p>}

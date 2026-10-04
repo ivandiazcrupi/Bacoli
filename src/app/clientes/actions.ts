@@ -61,6 +61,24 @@ export async function cambiarActivoCliente(formData: FormData) {
   revalidatePath("/clientes");
 }
 
+/** Borra un cliente (con sus sucursales y precios propios) solo si nunca tuvo movimiento: sin pedidos, cuenta, notas de crédito ni facturas de ARCA. Solo dueños. */
+export async function eliminarCliente(_: EstadoForm, formData: FormData): Promise<EstadoForm> {
+  const usuario = await exigirOficina();
+  if (usuario.rol !== "DUENO") return { error: "Solo un dueño puede eliminar un cliente." };
+  const id = String(formData.get("id"));
+  const c = await db.cliente.findUnique({ where: { id }, include: { _count: { select: { pedidos: true, movimientos: true, notasCredito: true } } } });
+  if (!c) return { error: "El cliente ya no existe." };
+  const historial = c._count.pedidos + c._count.movimientos + c._count.notasCredito;
+  const cuit = (c.cuit ?? "").replace(/\D/g, "");
+  const facturas = cuit ? await db.comprobanteArca.count({ where: { cuitReceptor: cuit } }) : 0;
+  if (historial > 0 || facturas > 0) {
+    return { error: `Este cliente tiene historial (${c._count.pedidos} pedidos${facturas ? `, ${facturas} facturas de ARCA` : ""}), por eso no se puede eliminar sin perder información. Usá “Desactivar”: deja de aparecer para pedidos nuevos y no se pierde nada. Podés anotar el motivo en la Observación.` };
+  }
+  await db.cliente.delete({ where: { id } }); // sus sucursales y precios propios se borran con él
+  revalidatePath("/clientes");
+  redirect("/clientes");
+}
+
 export async function guardarSucursal(clienteId: string, sucursalId: string | null, _: EstadoForm, formData: FormData): Promise<EstadoForm> {
   await exigirOficina();
   const valores = valoresDe(formData);

@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { exigirOficina } from "@/lib/session";
 import { actualizarCliente, cambiarActivoCliente, guardarPreciosEspeciales } from "../actions";
 import { formatoPesos } from "@/lib/numeros";
+import { EliminarCliente } from "../EliminarCliente";
 import { ClienteForm, type DatosCliente } from "../ClienteForm";
 import { PreciosEspeciales, type FilaPrecio } from "../PreciosEspeciales";
 import { EncabezadoSucursales, FilaSucursal } from "../SucursalForm";
@@ -90,6 +91,7 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
               <input type="hidden" name="id" value={cliente.id} />
               <button className="rounded-md border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 hover:bg-crema-100">{cliente.activo ? "Desactivar" : "Activar"}</button>
             </form>
+            {usuario.rol === "DUENO" && <EliminarCliente id={cliente.id} nombre={cliente.nombre} />}
           </div>
         </div>
 
