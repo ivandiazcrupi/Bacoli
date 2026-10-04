@@ -54,7 +54,7 @@ export default async function CuentaDeCliente({ params }: { params: Promise<{ id
       <main className={CONTENEDOR_PEDIDOS}>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Cuenta</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Cuenta corriente</h1>
             <p className="mt-2 text-lg font-semibold">{cliente.nombre}{cliente.cuit ? <span className="ml-3 text-sm font-normal text-stone-500">CUIT {cliente.cuit}</span> : null}</p>
             {cliente.observacion && <p className="mt-2 max-w-3xl whitespace-pre-line rounded-md border border-rojo-200 bg-rojo-50 px-3 py-1.5 text-sm font-medium text-rojo-800"><span className="mr-1.5 font-bold uppercase">Importante:</span>{cliente.observacion}</p>}
           </div>

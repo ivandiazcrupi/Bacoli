@@ -3,7 +3,7 @@ import { Cabecera } from "@/components/Cabecera";
 import { cabeceraTabla } from "@/components/campos";
 import { importeVigente } from "@/lib/cuenta";
 import { db } from "@/lib/db";
-import { aFecha, deFecha, diaMes, esFechaValida, hoy, lunesDe, nombreDia, sumarDias } from "@/lib/fechas";
+import { aFecha, deFecha, diaMes, esFechaValida, hoy, lunesDe, nombreDia, sumarDias, semanaDeTrabajo } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
 import { bultosDe } from "@/lib/ruta";
 import { exigirOficina } from "@/lib/session";
@@ -13,9 +13,9 @@ import { CONTENEDOR_PEDIDOS, EncabezadoPedidos } from "../Encabezado";
 export default async function Semana({ searchParams }: { searchParams: Promise<{ semana?: string }> }) {
   const usuario = await exigirOficina();
   const { semana } = await searchParams;
-  const lunes = lunesDe(semana && esFechaValida(semana) ? semana : hoy());
+  const lunes = semana && esFechaValida(semana) ? lunesDe(semana) : semanaDeTrabajo();
   const domingo = sumarDias(lunes, 6);
-  const esta = lunesDe(hoy());
+  const esta = semanaDeTrabajo();
 
   const [pedidos, salidas, cerrados] = await Promise.all([
     db.pedido.findMany({ where: { estado: { not: "CANCELADO" }, fechaEntrega: { gte: aFecha(lunes), lte: aFecha(domingo) } }, include: { items: true } }),

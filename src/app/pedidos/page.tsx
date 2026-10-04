@@ -2,7 +2,7 @@ import type { EstadoPedido } from "@prisma/client";
 import Link from "next/link";
 import { Cabecera } from "@/components/Cabecera";
 import { db } from "@/lib/db";
-import { aFecha, deFecha, diaMes, esFechaValida, hoy, lunesDe, nombreDia, sumarDias } from "@/lib/fechas";
+import { aFecha, deFecha, diaMes, esFechaValida, hoy, lunesDe, nombreDia, sumarDias, semanaDeTrabajo } from "@/lib/fechas";
 import { exigirOficina } from "@/lib/session";
 import { Bandeja } from "./Bandeja";
 import { TraerPedidosWeb } from "./TraerPedidosWeb";
@@ -14,9 +14,9 @@ export default async function Pedidos({ searchParams }: { searchParams: Promise<
   const usuario = await exigirOficina();
   const { lista, semana } = await searchParams;
   const esWeb = lista === "web";
-  const lunes = lunesDe(semana && esFechaValida(semana) ? semana : hoy());
+  const lunes = semana && esFechaValida(semana) ? lunesDe(semana) : semanaDeTrabajo();
   const domingo = sumarDias(lunes, 6);
-  const esta = lunesDe(hoy());
+  const esta = semanaDeTrabajo();
 
   // Esperan día: los pendientes sin fecha y los que volvieron como "no entregado" (se reactivan al asignarles día).
   const esperando = { estado: { in: ["PENDIENTE", "NO_ENTREGADO"] as EstadoPedido[] }, fechaEntrega: null };

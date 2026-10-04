@@ -582,8 +582,8 @@ function BarraEstado({ estado, esDueno, hayPedidos, resumen, onDejarLista, onVol
   const pasos = ["Armando", "Lista", "Cerrada"];
   const boton = "h-10 rounded-md px-5 text-sm font-semibold shadow-sm";
   return (
-    <section className="mx-auto grid w-full max-w-3xl grid-cols-[1fr_auto_1fr] items-center gap-4 rounded-xl border border-stone-300 bg-white px-5 py-3 shadow-sm" aria-label="Estado de la hoja de ruta">
-      <div className="justify-self-start">
+    <section className="mx-auto grid w-full max-w-3xl grid-cols-1 items-center gap-3 rounded-xl sm:grid-cols-[1fr_auto_1fr] sm:gap-4 border border-stone-300 bg-white px-5 py-3 shadow-sm" aria-label="Estado de la hoja de ruta">
+      <div className="justify-self-center sm:justify-self-start">
         {estado.estado === "LISTA" && <button type="button" onClick={onVolverArmar} className={`${boton} border border-stone-400 bg-white text-stone-800 hover:bg-crema-100`}>← Volver a armar</button>}
         {estado.estado === "CERRADA" && esDueno && <button type="button" onClick={onReabrirDia} className={`${boton} border border-stone-400 bg-white text-stone-800 hover:bg-crema-100`}>← Reabrir día</button>}
       </div>
@@ -600,7 +600,7 @@ function BarraEstado({ estado, esDueno, hayPedidos, resumen, onDejarLista, onVol
           );
         })}
       </ol>
-      <div className="justify-self-end">
+      <div className="justify-self-center sm:justify-self-end">
         {estado.estado === "ARMANDO" && hayPedidos && <button type="button" onClick={onDejarLista} className={`${boton} bg-verde-700 text-white hover:bg-verde-800`}>Dejar lista →</button>}
         {estado.estado === "LISTA" && <button type="button" onClick={onCerrar} className={`${boton} bg-stone-800 text-white hover:bg-stone-700`}>Cerrar día →</button>}
       </div>
@@ -790,7 +790,7 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
           <span />
         )}
         <h2 className="text-center text-sm font-bold uppercase tracking-wide text-stone-800">
-          {sinVehiculo.length > 0 && <>Sin ubicar <span className="font-medium normal-case tracking-normal text-stone-600">· {sinVehiculo.length} {sinVehiculo.length === 1 ? "pedido" : "pedidos"}</span></>}
+          {sinVehiculo.length > 0 && <>Sin ubicar <span className="font-medium normal-case tracking-normal text-stone-600">· {sinVehiculo.length} {sinVehiculo.length === 1 ? "pedido" : "pedidos"}</span>{salidas.length === 0 && <span className="ml-2 font-medium normal-case tracking-normal text-stone-500">· primero sumá un vehículo</span>}</>}
         </h2>
         <div className="flex flex-wrap items-center gap-2 sm:justify-self-end">
           {salidas.length > 0 && <a href={`/pedidos/dia/${fecha}/imprimir`} target="_blank" rel="noreferrer" className="rounded-md border border-stone-400 bg-white px-3 py-2 font-medium shadow-sm">Imprimir hoja de ruta</a>}

@@ -22,6 +22,12 @@ export function lunesDe(s: string) {
   return sumarDias(s, dia === 0 ? -6 : 1 - dia);
 }
 
+/** Lunes de la semana en que se está trabajando: de lunes a sábado es la actual; el domingo ya se arma la que viene. */
+export function semanaDeTrabajo() {
+  const h = hoy();
+  return aFecha(h).getUTCDay() === 0 ? sumarDias(h, 1) : lunesDe(h);
+}
+
 export function esFechaValida(s: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(aFecha(s).getTime()) && deFecha(aFecha(s)) === s;
 }

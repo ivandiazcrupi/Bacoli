@@ -57,17 +57,17 @@ type ColId = "numero" | "cliente" | "sucursal" | "fecha" | "entrega" | "vence" |
 type Columna = { id: ColId; titulo: string; ancho: string; solo?: "arca" | "remito"; ordena?: boolean; filtro?: "texto" | "estado" | "pedido" | "lista" };
 
 const COLUMNAS: Columna[] = [
-  { id: "numero", titulo: "Número", ancho: "132px", ordena: true, filtro: "texto" },
-  { id: "cliente", titulo: "Cliente", ancho: "minmax(180px,1.3fr)", ordena: true, filtro: "lista" },
+  { id: "numero", titulo: "Número", ancho: "120px", ordena: true, filtro: "texto" },
+  { id: "cliente", titulo: "Cliente", ancho: "minmax(150px,1.3fr)", ordena: true, filtro: "lista" },
   { id: "sucursal", titulo: "Sucursal", ancho: "128px", solo: "arca", filtro: "lista" },
-  { id: "fecha", titulo: "Fecha", ancho: "78px", ordena: true, filtro: "texto" },
-  { id: "entrega", titulo: "Entrega", ancho: "78px", solo: "remito", filtro: "texto" },
-  { id: "vence", titulo: "Vence", ancho: "78px", solo: "remito", filtro: "texto" },
-  { id: "monto", titulo: "Monto", ancho: "124px", ordena: true, filtro: "texto" },
-  { id: "estado", titulo: "Estado", ancho: "184px", ordena: true, filtro: "estado" },
-  { id: "pedido", titulo: "Pedido", ancho: "92px", filtro: "pedido" },
-  { id: "nc", titulo: "Nota de crédito", ancho: "140px", filtro: "texto" },
-  { id: "obs", titulo: "Observación", ancho: "minmax(150px,1fr)", filtro: "texto" },
+  { id: "fecha", titulo: "Fecha", ancho: "74px", ordena: true, filtro: "texto" },
+  { id: "entrega", titulo: "Entrega", ancho: "74px", solo: "remito", filtro: "texto" },
+  { id: "vence", titulo: "Vence", ancho: "74px", solo: "remito", filtro: "texto" },
+  { id: "monto", titulo: "Monto", ancho: "108px", ordena: true, filtro: "texto" },
+  { id: "estado", titulo: "Estado", ancho: "164px", ordena: true, filtro: "estado" },
+  { id: "pedido", titulo: "Pedido", ancho: "70px", filtro: "pedido" },
+  { id: "nc", titulo: "Nota de crédito", ancho: "120px", filtro: "texto" },
+  { id: "obs", titulo: "Observación", ancho: "minmax(120px,1fr)", filtro: "texto" },
 ];
 
 function estadoDe(f: FilaComprobante): string {
@@ -271,7 +271,7 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
       {error && <p className="border-b border-rojo-600 bg-rojo-50 px-3 py-2 text-sm text-rojo-700" role="alert">{error}</p>}
 
       <div className="max-h-[calc(100vh-330px)] min-h-[260px] overflow-auto">
-        <div className="min-w-[1000px]">
+        <div className="min-w-[900px]">
           {/* Títulos (se ordena al tocar) y, debajo, el filtro de cada columna. */}
           <div className="sticky top-0 z-20 border-b border-stone-300 bg-crema-100">
             <div className="grid items-center gap-x-3 px-3 pt-2 text-[11px] font-semibold uppercase tracking-wide text-stone-500" style={{ gridTemplateColumns: grilla }}>

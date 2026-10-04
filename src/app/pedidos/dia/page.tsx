@@ -1,5 +1,5 @@
 import { Cabecera } from "@/components/Cabecera";
-import { esFechaValida, hoy, lunesDe, diaMes, nombreDia, sumarDias } from "@/lib/fechas";
+import { esFechaValida, hoy, lunesDe, diaMes, nombreDia, sumarDias, semanaDeTrabajo } from "@/lib/fechas";
 import { exigirOficina } from "@/lib/session";
 import { CONTENEDOR_PEDIDOS, EncabezadoPedidos } from "../Encabezado";
 import { DiasSemana } from "./[fecha]/DiasSemana";
@@ -8,7 +8,7 @@ import { DiasSemana } from "./[fecha]/DiasSemana";
 export default async function ElegirDia({ searchParams }: { searchParams: Promise<{ semana?: string }> }) {
   const usuario = await exigirOficina();
   const { semana } = await searchParams;
-  const lunes = lunesDe(semana && esFechaValida(semana) ? semana : hoy());
+  const lunes = semana && esFechaValida(semana) ? lunesDe(semana) : semanaDeTrabajo();
   const fechas = Array.from({ length: 6 }, (_, n) => sumarDias(lunes, n));
   return (
     <>

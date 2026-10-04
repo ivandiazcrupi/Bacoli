@@ -3,8 +3,7 @@ import { Cabecera } from "@/components/Cabecera";
 import { diasDeAtraso, incluirNc, partidaDe } from "@/lib/cobranza";
 import { db } from "@/lib/db";
 import { cargarFacturas } from "@/lib/facturas";
-import { BorrarFacturas } from "./arca/BorrarFacturas";
-import { SubirArchivo } from "./arca/SubirArchivo";
+import { AccionesArca } from "./AccionesArca";
 import { hoy } from "@/lib/fechas";
 import { formatoRemito } from "@/lib/remito";
 import { formatoPesos } from "@/lib/numeros";
@@ -112,16 +111,7 @@ export async function Listado({ tipo, searchParams, ruta }: { tipo: "FACTURA" | 
         {tipo === "FACTURA" && escritasSinArca.length > 0 && <p className="text-sm font-semibold text-rojo-700">Números escritos en pedidos que ARCA no tiene: {escritasSinArca.join(", ")}</p>}
 
         <section className={CONTENEDOR_TABLA} aria-label={`Listado de ${nombre}`}>
-          <ListaComprobantes filas={visibles} tipo={tipo} acciones={tipo === "FACTURA" ? (
-            <details className="relative">
-              <summary className="flex h-8 cursor-pointer list-none items-center rounded-md border border-stone-300 bg-white px-3 text-[13px] font-semibold text-stone-700 hover:border-stone-500">⬆ Subir archivo de ARCA</summary>
-              <div className="absolute right-0 top-9 z-30 w-[420px] rounded-md border border-stone-300 bg-white p-4 text-sm shadow-lg">
-                <p className="mb-2 text-stone-600">Libro IVA Ventas (VENTAS.txt) o el CSV de Mis Comprobantes → Emitidos. No duplica lo ya cargado.</p>
-                <SubirArchivo />
-                {usuario.rol === "DUENO" && <BorrarFacturas cantidad={cantidadArca} />}
-              </div>
-            </details>
-          ) : undefined} />
+          <ListaComprobantes filas={visibles} tipo={tipo} acciones={tipo === "FACTURA" ? <AccionesArca esDueno={usuario.rol === "DUENO"} cantidad={cantidadArca} /> : undefined} />
         </section>
 
         {paginas > 1 && (
