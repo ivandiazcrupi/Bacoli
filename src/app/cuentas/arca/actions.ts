@@ -8,7 +8,7 @@ import { exigirOficina } from "@/lib/session";
 import { deshacerCobro, registrarCobro } from "../../pedidos/dia/actions";
 import type { MedioPago } from "@prisma/client";
 
-export type EstadoArca = { ok?: string; error?: string; avisos?: string[] } | undefined;
+export type EstadoArca = { ok?: string; error?: string; avisos?: string[]; alerta?: string } | undefined;
 
 // Trae el archivo "Mis Comprobantes Emitidos" de ARCA. Por ahora solo guarda los comprobantes para compararlos con los pedidos:
 // no cambia la cuenta corriente ni los pedidos. Subir el mismo archivo dos veces no duplica nada.
@@ -33,7 +33,17 @@ export async function importarArca(_: EstadoArca, formData: FormData): Promise<E
   }
   revalidatePath("/cuentas", "layout");
   const avisos = [...lectura.errores.slice(0, 5), ...(lectura.ignoradas ? [`${lectura.ignoradas} notas de débito ignoradas.`] : [])];
-  return { ok: `Listo: ${nuevas.length} comprobantes nuevos${lectura.filas.length - nuevas.length ? ` y ${lectura.filas.length - nuevas.length} que ya estaban` : ""}.`, avisos };
+  // Resumen para la alerta: cuántas facturas / notas de crédito se agregaron y cuántas ya estaban (repetidas, no se vuelven a cargar).
+  const cuenta = (lista: typeof lectura.filas, nc: boolean) => lista.filter((f) => f.esNotaCredito === nc).length;
+  const repetidas = lectura.filas.filter((f) => ya.has(`${f.tipo}-${f.puntoVenta}-${f.numero}`));
+  const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
+  const nuevasF = cuenta(nuevas, false), nuevasN = cuenta(nuevas, true), repF = cuenta(repetidas, false), repN = cuenta(repetidas, true);
+  const partes: string[] = [];
+  if (nuevasF + nuevasN > 0) partes.push(`Se agregaron ${[nuevasF ? plural(nuevasF, "factura nueva", "facturas nuevas") : "", nuevasN ? plural(nuevasN, "nota de crédito nueva", "notas de crédito nuevas") : ""].filter(Boolean).join(" y ")}.`);
+  else partes.push("No se agregó nada: todo lo que tenía el archivo ya estaba cargado.");
+  if (repF + repN > 0) partes.push(`${[repF ? plural(repF, "factura repetida", "facturas repetidas") : "", repN ? plural(repN, "nota de crédito repetida", "notas de crédito repetidas") : ""].filter(Boolean).join(" y ")} (ya estaban cargadas: no se volvieron a cargar).`);
+  const alerta = partes.join("\n");
+  return { ok: partes.join(" "), avisos, alerta };
 }
 
 /** A qué sucursal (y con qué aclaración) va una factura de ARCA: lo decide una persona, porque ARCA solo sabe la razón social. */

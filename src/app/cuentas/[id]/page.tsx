@@ -61,7 +61,6 @@ export default async function CuentaDeCliente({ params }: { params: Promise<{ id
           <div className="flex flex-wrap gap-2 text-sm">
             <Link href={`/cuentas/${id}/nc`} className="rounded-md bg-verde-700 px-3 py-2 font-semibold text-white shadow-sm hover:bg-verde-800">+ Nota de crédito</Link>
             <Link href={`/clientes/${id}/pedidos`} className="rounded-md border border-stone-400 bg-white px-3 py-2 font-medium shadow-sm hover:bg-crema-100">Pedidos</Link>
-            <Link href={`/clientes/${id}/cuenta`} className="rounded-md border border-stone-400 bg-white px-3 py-2 font-medium shadow-sm hover:bg-crema-100">Movimientos</Link>
             <BotonVolver fallback="/cuentas/clientes" />
           </div>
         </div>

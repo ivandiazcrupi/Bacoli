@@ -156,7 +156,7 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
 
   useEffect(() => {
     try { const g = localStorage.getItem(claveCols); if (g) { setOcultas(new Set(JSON.parse(g) as ColId[])); return; } } catch { /* sin almacenamiento */ }
-    setOcultas(new Set<ColId>(tipo === "FACTURA" ? ["pedido"] : tipo === "CUENTA" ? ["cliente", "sucursal", "entrega", "pedido"] : [])); // en Facturas, "sin pedido" se ve junto al nombre; la columna se prende desde Columnas
+    setOcultas(new Set<ColId>(tipo === "FACTURA" || tipo === "CUENTA" ? ["pedido"] : [])); // en Facturas, "sin pedido" se ve junto al nombre; la columna se prende desde Columnas
   }, [claveCols, tipo]);
   const alternarColumna = (id: ColId) => setOcultas((a) => {
     const n = new Set(a);
