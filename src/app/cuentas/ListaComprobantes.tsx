@@ -54,17 +54,15 @@ const TEXTO_MEDIO: Record<string, string> = { EFECTIVO: "Efectivo", TRANSFERENCI
 const fechaCorta = (s: string) => (s ? `${s.slice(8)}/${s.slice(5, 7)}/${s.slice(2, 4)}` : "");
 const POR_VEZ = 250;
 
-type ColId = "numero" | "cliente" | "razon" | "sucursal" | "fecha" | "entrega" | "vence" | "monto" | "estado" | "pedido" | "nc" | "obs";
+type ColId = "numero" | "cliente" | "razon" | "sucursal" | "fecha" | "monto" | "estado" | "pedido" | "nc" | "obs";
 type Columna = { id: ColId; titulo: string; ancho: string; solo?: "arca" | "remito"; ordena?: boolean; filtro?: "texto" | "estado" | "pedido" | "lista" };
 
 const COLUMNAS: Columna[] = [
   { id: "numero", titulo: "Número", ancho: "112px", ordena: true, filtro: "texto" },
   { id: "cliente", titulo: "Cliente", ancho: "minmax(110px,1.2fr)", ordena: true, filtro: "lista" },
   { id: "razon", titulo: "Razón social", ancho: "minmax(110px,1fr)", filtro: "lista" },
-  { id: "sucursal", titulo: "Sucursal", ancho: "120px", solo: "arca", filtro: "lista" },
+  { id: "sucursal", titulo: "Sucursal", ancho: "120px", filtro: "lista" },
   { id: "fecha", titulo: "Fecha", ancho: "70px", ordena: true, filtro: "texto" },
-  { id: "entrega", titulo: "Entrega", ancho: "70px", solo: "remito", filtro: "texto" },
-  { id: "vence", titulo: "Vence", ancho: "70px", solo: "remito", filtro: "texto" },
   { id: "monto", titulo: "Monto", ancho: "104px", ordena: true, filtro: "texto" },
   { id: "estado", titulo: "Estado", ancho: "150px", ordena: true, filtro: "estado" },
   { id: "pedido", titulo: "Pedido", ancho: "64px", filtro: "pedido" },
@@ -91,8 +89,6 @@ function textoDe(f: FilaComprobante, c: ColId): string {
     case "razon": return f.razon ?? "";
     case "sucursal": return f.sucursal ?? "";
     case "fecha": return fechaCorta(f.cargado);
-    case "entrega": return f.entregado ? fechaCorta(f.fecha) : "";
-    case "vence": return f.entregado && !f.pagada ? fechaCorta(f.vence) : "";
     case "monto": return formatoPesos(Math.abs(montoDe(f))).replace(/\s/g, "");
     case "estado": return estadoDe(f);
     case "pedido": return f.arca ? (f.sinPedido ? "Sin pedido" : f.esNc ? "" : "Con pedido") : "";
@@ -156,11 +152,11 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
   const [ocultas, setOcultas] = useState<Set<ColId>>(new Set());
   const [verColumnas, setVerColumnas] = useState(false);
   const [cuantas, setCuantas] = useState(POR_VEZ);
-  const claveCols = `cc-columnas-v2-${tipo}`; // v2: se reinician las columnas que el navegador había guardado antes de unificar las hojas
+  const claveCols = `cc-columnas-v3-${tipo}`; // v2: se reinician las columnas que el navegador había guardado antes de unificar las hojas
 
   useEffect(() => {
     try { const g = localStorage.getItem(claveCols); if (g) { setOcultas(new Set(JSON.parse(g) as ColId[])); return; } } catch { /* sin almacenamiento */ }
-    setOcultas(new Set<ColId>(tipo === "FACTURA" || tipo === "CUENTA" ? ["pedido"] : [])); // en Facturas, "sin pedido" se ve junto al nombre; la columna se prende desde Columnas
+    setOcultas(new Set<ColId>(["pedido"])); // en Facturas, "sin pedido" se ve junto al nombre; la columna se prende desde Columnas
   }, [claveCols, tipo]);
   const alternarColumna = (id: ColId) => setOcultas((a) => {
     const n = new Set(a);
@@ -318,14 +314,12 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
                     case "cliente": return <span key={c.id} className={celdaBase} title={f.aviso || undefined}>
                       {f.clienteId ? <Link href={`/cuentas/${f.clienteId}`} className="font-semibold hover:underline">{f.cliente}</Link> : <span className="font-semibold italic text-rojo-700" title="El CUIT no está cargado en ningún cliente">{f.cliente}</span>}
                       {f.arca && f.sinPedido && <span className="ml-2 text-[12px] font-semibold text-rojo-700">sin pedido</span>}
-                      {f.arca && f.pedidoId && <Link href={`/pedidos/${f.pedidoId}`} className="ml-2 text-[12px] text-verde-800 hover:underline" title="Abrir el pedido">pedido ›</Link>}
+                      {f.pedidoId && <Link href={`/pedidos/${f.pedidoId}`} className="ml-2 text-[12px] text-verde-800 hover:underline" title="Abrir el pedido">pedido ›</Link>}
                       {f.aviso && <span className="ml-2 text-[12px] text-rojo-700">{f.aviso}</span>}
                     </span>;
                     case "razon": return <span key={c.id} className={`${celdaBase} text-stone-600`} title={f.razon || undefined}>{f.razon || <span className="text-stone-300">—</span>}</span>;
                     case "sucursal": return <SucursalCelda key={c.id} f={f} />;
                     case "fecha": return <span key={c.id} className="tabular-nums text-stone-600">{fechaCorta(f.cargado)}</span>;
-                    case "entrega": return <span key={c.id} className="tabular-nums text-stone-600">{f.entregado ? fechaCorta(f.fecha) : <span className="text-stone-300">—</span>}</span>;
-                    case "vence": return <span key={c.id} className="tabular-nums text-stone-600">{f.entregado && !f.pagada && f.vence ? fechaCorta(f.vence) : <span className="text-stone-300">—</span>}</span>;
                     case "monto": return <span key={c.id} className={`whitespace-nowrap text-[14px] font-bold tabular-nums ${f.cubierta || f.anulado ? "text-stone-300 line-through" : f.esNc ? "text-stone-500" : "text-stone-900"}`}>{f.esNc ? "−" : ""}{formatoPesos(f.cubierta || f.anulado || f.esNc ? f.bruto : f.monto)}</span>;
                     case "estado": {
                       const e = estadoDe(f);
