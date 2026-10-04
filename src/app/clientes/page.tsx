@@ -82,6 +82,16 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
   );
 }
 
+// Aviso de observación: un circulito gris con "!" (sin color, no cambia el alto de la fila); al pasar el mouse o tocarlo se lee el texto.
+function IconoObservacion({ texto }: { texto: string }) {
+  return (
+    <span tabIndex={0} aria-label={`Observación: ${texto}`} className="group relative ml-2 inline-flex h-[18px] w-[18px] cursor-help items-center justify-center rounded-full border border-stone-400 align-middle text-[11px] font-bold leading-none text-stone-500 outline-none hover:border-stone-700 hover:text-stone-800 focus:border-stone-700">
+      !
+      <span role="tooltip" className="pointer-events-none absolute left-1/2 top-full z-30 mt-1.5 hidden w-64 -translate-x-1/2 whitespace-pre-line rounded-md border border-stone-300 bg-white p-2.5 text-left text-xs font-normal normal-case leading-snug tracking-normal text-stone-800 shadow-lg group-hover:block group-focus:block">{texto}</span>
+    </span>
+  );
+}
+
 // Columnas (PC): barrio, nombre, dirección, teléfono, accesos.
 const COLUMNAS = "lg:grid-cols-[1.2fr_1.6fr_2fr_1.1fr_6.5rem_19rem]";
 const acceso = "rounded-md border border-stone-400 bg-white px-2.5 py-1 text-xs font-medium uppercase hover:border-verde-700 hover:text-verde-800";
@@ -127,7 +137,7 @@ function FilaCliente({ c }: { c: Cliente }) {
             <span className={dato}>{p ? p.barrio : <span className="font-normal text-stone-400">Sin sucursal</span>}</span>
             <span className="min-w-0">
               <Link href={`/clientes/${c.id}`} className={`${dato} hover:text-verde-800 hover:underline`}>{c.nombre}</Link>
-              {c.observacion && <span title={c.observacion} aria-label={`Observación: ${c.observacion}`} className="ml-1.5 cursor-help align-middle text-[13px] text-stone-500">⚠</span>}
+              {c.observacion && <IconoObservacion texto={c.observacion} />}
             </span>
             <span className="text-sm leading-tight">{p ? titulo(p.direccion) : ""}{p?.comentario && <span className="mt-0.5 block text-xs font-medium text-rojo-700">{p.comentario}</span>}</span>
             <span className="text-sm"><Telefono tel={p?.telefono ?? null} /></span>
@@ -138,9 +148,9 @@ function FilaCliente({ c }: { c: Cliente }) {
           {/* Celular: la misma información apilada */}
           <div className={`space-y-1 p-4 lg:hidden ${p && !p.activo ? "opacity-60" : ""}`}>
             <p className={`${dato} flex flex-wrap items-center gap-2`}>{p ? p.barrio : "Sin sucursal"}{p && <Estado activa={c.activo && p.activo} />}</p>
-            <div>
-              <Link href={`/clientes/${c.id}`} className={`block ${dato}`}>{c.nombre}</Link>
-              {c.observacion && <p className="text-xs text-stone-500">⚠ {c.observacion}</p>}
+            <div className="flex items-center">
+              <Link href={`/clientes/${c.id}`} className={dato}>{c.nombre}</Link>
+              {c.observacion && <IconoObservacion texto={c.observacion} />}
             </div>
             {p && <p className="text-sm">{titulo(p.direccion)}</p>}
             {p?.comentario && <p className="text-xs font-medium text-rojo-700">{p.comentario}</p>}
