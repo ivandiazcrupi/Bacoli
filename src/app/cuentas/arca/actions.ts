@@ -59,7 +59,9 @@ export async function registrarPagosArca(ids: string[], medio: string, obs: stri
     if (!f || f.esNc) return { ok: false, error: "Una de las facturas elegidas no existe." };
     if (f.pagada) continue;
     if (f.pedidoId && f.pedidoEntregado) await registrarCobro(f.pedidoId, medio); // si el pedido no se puede cobrar ahora, igual se marca la factura
-    await db.comprobanteArca.update({ where: { id }, data: { pagado: true, medioCobro: medio as MedioPago, pagadoEn: new Date(), obsCobro: obs.trim().slice(0, 150) || null } });
+    // La observación del pago (ej. N° de OP) queda en la columna Observación de la hoja.
+    const nueva = obs.trim() ? [f.observacion, obs.trim()].filter(Boolean).join(" · ").slice(0, 150) : f.observacion;
+    await db.comprobanteArca.update({ where: { id }, data: { pagado: true, medioCobro: medio as MedioPago, pagadoEn: new Date(), obsCobro: obs.trim().slice(0, 150) || null, observacion: nueva || null } });
   }
   void usuario;
   revalidatePath("/cuentas", "layout");

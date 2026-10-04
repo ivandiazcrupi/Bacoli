@@ -53,17 +53,17 @@ const fechaCorta = (s: string) => (s ? `${s.slice(8)}/${s.slice(5, 7)}/${s.slice
 const POR_VEZ = 250;
 
 type ColId = "numero" | "cliente" | "sucursal" | "fecha" | "entrega" | "vence" | "monto" | "estado" | "pedido" | "nc" | "obs";
-type Columna = { id: ColId; titulo: string; ancho: string; solo?: "arca" | "remito"; ordena?: boolean; filtro?: "texto" | "estado" | "pedido" };
+type Columna = { id: ColId; titulo: string; ancho: string; solo?: "arca" | "remito"; ordena?: boolean; filtro?: "texto" | "estado" | "pedido" | "lista" };
 
 const COLUMNAS: Columna[] = [
   { id: "numero", titulo: "Número", ancho: "132px", ordena: true, filtro: "texto" },
-  { id: "cliente", titulo: "Cliente", ancho: "minmax(150px,1.3fr)", ordena: true, filtro: "texto" },
-  { id: "sucursal", titulo: "Sucursal", ancho: "128px", solo: "arca", filtro: "texto" },
+  { id: "cliente", titulo: "Cliente", ancho: "minmax(180px,1.3fr)", ordena: true, filtro: "lista" },
+  { id: "sucursal", titulo: "Sucursal", ancho: "128px", solo: "arca", filtro: "lista" },
   { id: "fecha", titulo: "Fecha", ancho: "78px", ordena: true, filtro: "texto" },
   { id: "entrega", titulo: "Entrega", ancho: "78px", solo: "remito", filtro: "texto" },
   { id: "vence", titulo: "Vence", ancho: "78px", solo: "remito", filtro: "texto" },
   { id: "monto", titulo: "Monto", ancho: "124px", ordena: true, filtro: "texto" },
-  { id: "estado", titulo: "Estado", ancho: "128px", ordena: true, filtro: "estado" },
+  { id: "estado", titulo: "Estado", ancho: "184px", ordena: true, filtro: "estado" },
   { id: "pedido", titulo: "Pedido", ancho: "92px", filtro: "pedido" },
   { id: "nc", titulo: "Nota de crédito", ancho: "140px", filtro: "texto" },
   { id: "obs", titulo: "Observación", ancho: "minmax(150px,1fr)", filtro: "texto" },
@@ -75,8 +75,7 @@ function estadoDe(f: FilaComprobante): string {
   if (f.pagada) return "Pagada";
   if (f.cubierta) return "Anulada por NC";
   if (!f.entregado) return "Por entregar";
-  if (f.atraso > 0) return "Vencida";
-  return "Sin pagar";
+  return "Pendiente";
 }
 const montoDe = (f: FilaComprobante) => (f.esNc ? -f.bruto : f.cubierta || f.anulado ? f.bruto : f.monto);
 const digitos = (t: string | null) => (t ?? "").replace(/\D/g, "");
@@ -93,7 +92,7 @@ function textoDe(f: FilaComprobante, c: ColId): string {
     case "monto": return formatoPesos(Math.abs(montoDe(f))).replace(/\s/g, "");
     case "estado": return estadoDe(f);
     case "pedido": return f.arca ? (f.sinPedido ? "Sin pedido" : f.esNc ? "" : "Con pedido") : "";
-    case "nc": return f.ncTexto + " " + (f.aplicaciones ?? []).map((a) => `FACTURA ${a.facturaNumero}`).join(" ");
+    case "nc": return f.ncTexto + " " + (f.aplicaciones ?? []).map((a) => `F-${a.facturaNumero}`).join(" ");
     case "obs": return f.obs;
   }
 }
@@ -110,7 +109,7 @@ function ObsCelda({ f }: { f: FilaComprobante }) {
   };
   return (
     <input aria-label="Observación" value={valor} maxLength={200} placeholder="—" onChange={(e) => setValor(e.target.value)} onBlur={guardar} onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
-      className={`h-7 w-full min-w-0 rounded border bg-transparent px-1.5 text-[12.5px] placeholder:text-stone-300 hover:border-stone-300 focus:border-verde-700 focus:bg-white focus:outline-none ${estado === "ok" ? "border-verde-600" : estado === "error" ? "border-rojo-600" : "border-transparent"}`} />
+      className={`h-7 w-full min-w-0 rounded border bg-transparent px-1.5 text-center text-[12.5px] placeholder:text-stone-300 hover:border-stone-300 focus:border-verde-700 focus:bg-white focus:outline-none ${estado === "ok" ? "border-verde-600" : estado === "error" ? "border-rojo-600" : "border-transparent"}`} />
   );
 }
 
@@ -118,7 +117,7 @@ function SucursalCelda({ f }: { f: FilaComprobante }) {
   const [punto, setPunto] = useState(f.puntoId ?? "");
   if (!f.puntos || f.puntos.length === 0) return <span className="truncate text-stone-500">{f.sucursal ?? ""}</span>;
   return (
-    <select aria-label="Sucursal" value={punto} onChange={async (e) => { setPunto(e.target.value); await guardarDatosArca(f.id, e.target.value, f.obs); }} className="h-7 w-full min-w-0 rounded border border-transparent bg-transparent px-0.5 text-[12.5px] hover:border-stone-300 focus:border-verde-700 focus:outline-none">
+    <select aria-label="Sucursal" value={punto} onChange={async (e) => { setPunto(e.target.value); await guardarDatosArca(f.id, e.target.value, f.obs); }} className="h-7 w-full min-w-0 rounded border border-transparent bg-transparent px-0.5 text-center text-[12.5px] hover:border-stone-300 focus:border-verde-700 focus:outline-none">
       <option value="">{f.sucursal ?? "—"}</option>
       {f.puntos.map((p) => <option key={p.id} value={p.id}>{p.barrio}</option>)}
     </select>
@@ -137,6 +136,7 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
   const disponibles = COLUMNAS.filter((c) => !c.solo || (c.solo === "arca" ? esArca : !esArca));
   const [elegidas, setElegidas] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  const [obsPago, setObsPago] = useState("");
   const [trabajando, empezar] = useTransition();
   const [picker, setPicker] = useState<string | null>(null);
   const [vista, setVista] = useState(vistaInicial);
@@ -148,8 +148,9 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
   const claveCols = `cc-columnas-${tipo}`;
 
   useEffect(() => {
-    try { const g = localStorage.getItem(claveCols); if (g) setOcultas(new Set(JSON.parse(g) as ColId[])); } catch { /* sin almacenamiento: se ven todas */ }
-  }, [claveCols]);
+    try { const g = localStorage.getItem(claveCols); if (g) { setOcultas(new Set(JSON.parse(g) as ColId[])); return; } } catch { /* sin almacenamiento */ }
+    setOcultas(new Set<ColId>(esArca ? ["pedido"] : [])); // en Facturas, "sin pedido" se ve junto al nombre; la columna se prende desde Columnas
+  }, [claveCols, esArca]);
   const alternarColumna = (id: ColId) => setOcultas((a) => {
     const n = new Set(a);
     if (n.has(id)) n.delete(id); else n.add(id);
@@ -170,7 +171,7 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
         const v = (filtros[c.id] ?? "").trim();
         if (!v) continue;
         const t = textoDe(f, c.id);
-        if (c.filtro === "estado" || c.filtro === "pedido") { if (t !== v) return false; continue; }
+        if (c.filtro === "estado" || c.filtro === "pedido" || c.filtro === "lista") { if (t !== v) return false; continue; }
         if (c.id === "monto" || c.id === "numero") { if (!digitos(t).includes(digitos(v)) && !t.toLowerCase().includes(v.toLowerCase())) return false; continue; }
         if (!t.toLowerCase().includes(v.toLowerCase())) return false;
       }
@@ -184,6 +185,10 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
     return r;
   }, [filas, vista, filtros, orden, visibles, hayFiltro]);
 
+  const opcionesLista = useMemo(() => {
+    const dist = (id: ColId) => [...new Set(filas.filter((f) => !f.hueco).map((f) => textoDe(f, id)).filter(Boolean))].sort((a, b) => a.localeCompare(b, "es"));
+    return { cliente: dist("cliente"), sucursal: dist("sucursal") } as Partial<Record<ColId, string[]>>;
+  }, [filas]);
   const pagables = filtradas.filter((f) => !f.hueco && !f.esNc && f.entregado && !f.pagada && !f.cubierta && !f.anulado);
   const mostradas = filtradas.slice(0, cuantas);
   const suma = filas.filter((f) => elegidas.has(f.id) && !f.hueco).reduce((s, f) => s + f.monto, 0);
@@ -196,9 +201,9 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
     const cant = elegidas.size;
     if (!window.confirm(`¿Confirmás que se ${cant === 1 ? "pagó 1 comprobante" : `pagaron ${cant} comprobantes`} por ${formatoPesos(suma)} con ${MEDIOS.find((m) => m.valor === medio)?.texto.toLowerCase()}?\n\nQuedan marcados como pagados.`)) return;
     empezar(async () => {
-      const r = esArca ? await registrarPagosArca([...elegidas], medio, "") : await registrarPagos([...elegidas], medio);
+      const r = esArca ? await registrarPagosArca([...elegidas], medio, obsPago) : await registrarPagos([...elegidas], medio, obsPago);
       if (!r.ok) setError(r.error ?? "No se pudo registrar.");
-      else setElegidas(new Set());
+      else { setElegidas(new Set()); setObsPago(""); }
       router.refresh();
     });
   };
@@ -212,8 +217,8 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
   };
 
   const celdaBase = "min-w-0 truncate";
-  const entrada = "h-7 w-full min-w-0 rounded border border-stone-300 bg-white px-1.5 text-[12px] font-normal normal-case tracking-normal text-stone-800 placeholder:text-stone-300 focus:border-verde-700 focus:outline-none";
-  const opcionesEstado = esArca ? ["Sin pagar", "Pagada", "Anulada por NC", "NC sin aplicar", "NC aplicada"] : ["Sin pagar", "Vencida", "Pagada", "Por entregar", "Anulada por NC", "Anulado"];
+  const entrada = "h-7 w-full min-w-0 rounded border border-stone-300 bg-white px-1.5 text-center text-[12px] font-normal normal-case tracking-normal text-stone-800 placeholder:text-stone-300 focus:border-verde-700 focus:outline-none";
+  const opcionesEstado = esArca ? ["Pendiente", "Pagada", "Anulada por NC", "NC sin aplicar", "NC aplicada"] : ["Pendiente", "Pagada", "Por entregar", "Anulada por NC", "Anulado"];
 
   return (
     <div>
@@ -245,6 +250,7 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
       {elegidas.size > 0 && (
         <div className="flex flex-wrap items-center gap-3 border-b border-verde-700 bg-verde-50 px-3 py-2 text-[13px]">
           <span><b>{elegidas.size}</b> {elegidas.size === 1 ? "elegido" : "elegidos"} · <b className="tabular-nums">{formatoPesos(suma)}</b></span>
+          <input value={obsPago} onChange={(e) => setObsPago(e.target.value)} maxLength={100} placeholder="Observación para todas (ej. N° de OP)" aria-label="Observación del pago" className="h-8 w-64 rounded-md border border-stone-300 bg-white px-2 text-[13px] placeholder:text-stone-400 focus:border-verde-700 focus:outline-none" />
           <span className="text-stone-500">Pagó con:</span>
           {MEDIOS.map((m) => <button key={m.valor} type="button" disabled={trabajando} onClick={() => pagar(m.valor)} className="h-8 rounded-md bg-verde-700 px-4 font-semibold text-white hover:bg-verde-800 disabled:opacity-50">{m.texto}</button>)}
           <button type="button" onClick={() => setElegidas(new Set())} className="ml-auto text-stone-500 underline hover:text-stone-800">Cancelar</button>
@@ -259,7 +265,7 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
             <div className="grid items-center gap-x-3 px-3 pt-2 text-[11px] font-semibold uppercase tracking-wide text-stone-500" style={{ gridTemplateColumns: grilla }}>
               <input type="checkbox" aria-label="Elegir todos los pendientes de la lista" checked={pagables.length > 0 && pagables.every((f) => elegidas.has(f.id))} onChange={() => setElegidas(pagables.every((f) => elegidas.has(f.id)) ? new Set() : new Set(pagables.map((f) => f.id)))} className="h-4 w-4 accent-[#026433]" />
               {visibles.map((c) => (
-                <button key={c.id} type="button" disabled={!c.ordena} onClick={() => ordenarPor(c.id)} className={`flex items-center gap-1 text-left uppercase ${c.id === "monto" ? "justify-end" : ""} ${c.ordena ? "hover:text-stone-900" : "cursor-default"}`}>
+                <button key={c.id} type="button" disabled={!c.ordena} onClick={() => ordenarPor(c.id)} className={`flex items-center justify-center gap-1 uppercase ${c.ordena ? "hover:text-stone-900" : "cursor-default"}`}>
                   {c.id === "numero" ? (tipo === "FACTURA" ? "Factura" : "Remito") : c.titulo}
                   {orden.col === c.id && <span className="text-verde-700">{orden.asc ? "▲" : "▼"}</span>}
                 </button>
@@ -267,7 +273,12 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
             </div>
             <div className="grid items-center gap-x-3 px-3 pb-2 pt-1" style={{ gridTemplateColumns: grilla }}>
               <span />
-              {visibles.map((c) => c.filtro === "estado" ? (
+              {visibles.map((c) => c.filtro === "lista" ? (
+                <select key={c.id} aria-label={`Filtrar ${c.titulo}`} value={filtros[c.id] ?? ""} onChange={(e) => setFiltros({ ...filtros, [c.id]: e.target.value })} className={entrada}>
+                  <option value="">Todos</option>
+                  {(opcionesLista[c.id] ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
+                </select>
+              ) : c.filtro === "estado" ? (
                 <select key={c.id} aria-label="Filtrar estado" value={filtros.estado ?? ""} onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })} className={entrada}>
                   <option value="">Todos</option>
                   {opcionesEstado.map((o) => <option key={o} value={o}>{o}</option>)}
@@ -289,29 +300,30 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
             </div>
           ) : (
             <Fragment key={f.id}>
-              <div className={`grid items-center gap-x-3 border-b border-stone-200 px-3 py-1.5 text-[13px] hover:bg-crema-50 ${f.anulado ? "text-stone-400" : "text-stone-800"} ${elegidas.has(f.id) ? "bg-verde-50" : ""}`} style={{ gridTemplateColumns: grilla }}>
+              <div className={`grid h-10 items-center gap-x-3 overflow-hidden border-b border-stone-200 px-3 text-center text-[13px] hover:bg-crema-50 ${f.anulado ? "text-stone-400" : "text-stone-800"} ${elegidas.has(f.id) ? "bg-verde-50" : ""}`} style={{ gridTemplateColumns: grilla }}>
                 <input type="checkbox" aria-label={`Elegir ${f.numero ?? "comprobante"}`} checked={elegidas.has(f.id)} disabled={!f.entregado || f.pagada || f.cubierta || !!f.anulado || f.esNc} onChange={() => alternar(f.id)} className="h-4 w-4 accent-[#026433] disabled:opacity-25" />
                 {visibles.map((c) => {
                   switch (c.id) {
                     case "numero": return <span key={c.id} className={`${celdaBase} text-[14px] font-bold tabular-nums ${f.esNc ? "text-stone-500" : "text-stone-900"}`}>{f.numero ?? <span className="text-[13px] font-semibold text-rojo-700">sin número</span>}</span>;
                     case "cliente": return <span key={c.id} className={celdaBase} title={f.aviso || undefined}>
                       {f.clienteId ? <Link href={`/cuentas/${f.clienteId}`} className="font-semibold hover:underline">{f.cliente}</Link> : <span className="font-semibold italic text-rojo-700" title="El CUIT no está cargado en ningún cliente">{f.cliente}</span>}
+                      {f.arca && f.sinPedido && <span className="ml-2 text-[12px] font-semibold text-rojo-700">sin pedido</span>}
+                      {f.arca && f.pedidoId && <Link href={`/pedidos/${f.pedidoId}`} className="ml-2 text-[12px] text-verde-800 hover:underline" title="Abrir el pedido">pedido ›</Link>}
                       {f.aviso && <span className="ml-2 text-[12px] text-rojo-700">{f.aviso}</span>}
                     </span>;
                     case "sucursal": return <SucursalCelda key={c.id} f={f} />;
                     case "fecha": return <span key={c.id} className="tabular-nums text-stone-600">{fechaCorta(f.cargado)}</span>;
                     case "entrega": return <span key={c.id} className="tabular-nums text-stone-600">{f.entregado ? fechaCorta(f.fecha) : <span className="text-stone-300">—</span>}</span>;
                     case "vence": return <span key={c.id} className="tabular-nums text-stone-600">{f.entregado && !f.pagada && f.vence ? fechaCorta(f.vence) : <span className="text-stone-300">—</span>}</span>;
-                    case "monto": return <span key={c.id} className={`whitespace-nowrap text-right text-[14px] font-bold tabular-nums ${f.cubierta || f.anulado ? "text-stone-300 line-through" : f.esNc ? "text-stone-500" : "text-stone-900"}`}>{f.esNc ? "−" : ""}{formatoPesos(f.cubierta || f.anulado || f.esNc ? f.bruto : f.monto)}</span>;
+                    case "monto": return <span key={c.id} className={`whitespace-nowrap text-[14px] font-bold tabular-nums ${f.cubierta || f.anulado ? "text-stone-300 line-through" : f.esNc ? "text-stone-500" : "text-stone-900"}`}>{f.esNc ? "−" : ""}{formatoPesos(f.cubierta || f.anulado || f.esNc ? f.bruto : f.monto)}</span>;
                     case "estado": {
                       const e = estadoDe(f);
-                      return <span key={c.id}>
+                      const relleno = e === "Pendiente" ? "bg-rojo-100 text-rojo-800" : e === "Pagada" ? "bg-verde-100 text-verde-800" : "";
+                      return <span key={c.id} className={`flex h-full items-center justify-center gap-1.5 whitespace-nowrap ${relleno}`} title={e === "Pendiente" && f.atraso > 0 ? `Vencida hace ${f.atraso} días` : undefined}>
                         {e === "NC sin aplicar" ? <button type="button" onClick={() => setPicker(picker === f.id ? null : f.id)} className="text-[13px] font-semibold text-rojo-700 underline decoration-rojo-600/40 underline-offset-4 hover:decoration-rojo-700">Aplicar a factura…</button>
-                          : e === "Pagada" ? <span className="inline-flex flex-col leading-tight"><Punto color="bg-verde-600" texto="text-verde-800">Pagada{f.medio ? ` · ${TEXTO_MEDIO[f.medio] ?? ""}` : ""}</Punto><button type="button" onClick={() => deshacer(f.id)} className="ml-3.5 text-left text-[11px] text-stone-400 hover:text-rojo-700 hover:underline">deshacer</button></span>
-                          : e === "Sin pagar" ? <Punto color="bg-rojo-600" texto="font-semibold text-rojo-700">Sin pagar</Punto>
-                          : e === "Vencida" ? <Punto color="bg-rojo-700" texto="font-bold text-rojo-700">Vencida {f.atraso} {f.atraso === 1 ? "día" : "días"}</Punto>
-                          : e === "Por entregar" ? <Punto color="bg-stone-300">Por entregar</Punto>
-                          : <Punto color="bg-stone-300" texto="text-stone-500">{e === "Anulado" ? f.anulado : e}</Punto>}
+                          : e === "Pagada" ? <><span className="font-semibold">Pagada{f.medio ? ` · ${TEXTO_MEDIO[f.medio] ?? ""}` : ""}</span><button type="button" title="Deshacer el pago" aria-label="Deshacer el pago" onClick={() => deshacer(f.id)} className="text-[12px] opacity-50 hover:opacity-100">✕</button></>
+                          : e === "Pendiente" ? <span className="font-semibold">Pendiente{f.atraso > 0 ? <span className="font-normal"> · {f.atraso} d</span> : null}</span>
+                          : <span className="text-stone-500">{e === "Anulado" ? f.anulado : e}</span>}
                       </span>;
                     }
                     case "pedido": return <span key={c.id} className="text-[12.5px]">
@@ -319,11 +331,11 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
                         : <Link href={`/pedidos/${f.id}`} className="font-medium text-verde-800 hover:underline">Abrir ›</Link>}
                     </span>;
                     case "nc": return <span key={c.id} className="truncate text-[12.5px] text-stone-500">
-                      {f.arca && f.esNc ? <>{(f.aplicaciones ?? []).map((a) => <span key={a.id} className="mr-2 whitespace-nowrap">→ FACTURA {a.facturaNumero} <button type="button" title="Quitar" onClick={() => window.confirm("¿Quitar esta aplicación?") && empezar(async () => { const r = await quitarAplicacionNc(a.id); if (!r.ok) setError(r.error ?? "No se pudo."); router.refresh(); })} className="text-stone-300 hover:text-rojo-700">✕</button></span>)}{(f.aplicaciones ?? []).length === 0 && <span className="text-stone-300">—</span>}</>
+                      {f.arca && f.esNc ? <>{(f.aplicaciones ?? []).map((a) => <span key={a.id} className="mr-2 whitespace-nowrap">→ F-{a.facturaNumero} <button type="button" title="Quitar" onClick={() => window.confirm("¿Quitar esta aplicación?") && empezar(async () => { const r = await quitarAplicacionNc(a.id); if (!r.ok) setError(r.error ?? "No se pudo."); router.refresh(); })} className="text-stone-300 hover:text-rojo-700">✕</button></span>)}{(f.aplicaciones ?? []).length === 0 && <span className="text-stone-300">—</span>}</>
                         : !f.arca && tipo === "FACTURA" && !f.pagada && !f.cubierta && !f.anulado ? <Link href={`/cuentas/${f.clienteId}/nc?factura=${f.id}`} className="font-medium text-stone-600 underline decoration-stone-300 underline-offset-4 hover:text-stone-900">+ Nota de crédito</Link>
                         : f.ncTexto ? <>{f.ncTexto}{!f.cubierta && f.nc > 0 ? ` (−${formatoPesos(f.nc)})` : ""}</> : <span className="text-stone-300">—</span>}
                     </span>;
-                    case "obs": return <ObsCelda key={c.id} f={f} />;
+                    case "obs": return <ObsCelda key={`${c.id}-${f.obs}`} f={f} />;
                   }
                 })}
               </div>

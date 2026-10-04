@@ -10,7 +10,7 @@ import { deshacerCobro, registrarCobro } from "../pedidos/dia/actions";
 type Resultado = { ok: boolean; error?: string };
 
 /** Marca varios comprobantes como pagados con el mismo medio (cada uno por su monto completo: no hay pagos parciales). */
-export async function registrarPagos(pedidoIds: string[], medio: string): Promise<Resultado> {
+export async function registrarPagos(pedidoIds: string[], medio: string, obs = ""): Promise<Resultado> {
   await exigirOficina();
   if (pedidoIds.length === 0) return { ok: false, error: "Elegí al menos un comprobante." };
   for (const id of pedidoIds) {
@@ -18,6 +18,10 @@ export async function registrarPagos(pedidoIds: string[], medio: string): Promis
     if (!r.ok) {
       revalidatePath("/cuentas", "layout");
       return { ok: false, error: r.error ?? "No se pudo registrar el pago." };
+    }
+    if (obs.trim()) {
+      const p = await db.pedido.findUnique({ where: { id }, select: { obsCobro: true } });
+      await db.pedido.update({ where: { id }, data: { obsCobro: [p?.obsCobro, obs.trim()].filter(Boolean).join(" · ").slice(0, 200) } });
     }
   }
   revalidatePath("/cuentas", "layout");

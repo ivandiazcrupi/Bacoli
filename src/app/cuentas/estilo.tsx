@@ -7,11 +7,11 @@ export const FILA_TABLA = "items-center gap-x-4 border-b border-stone-200 px-4 p
 
 export function Resumen({ datos }: { datos: { titulo: string; valor: React.ReactNode; rojo?: boolean }[] }) {
   return (
-    <section aria-label="Resumen" className="grid grid-cols-2 divide-x divide-stone-200 overflow-hidden rounded-lg border border-stone-300 bg-white sm:grid-cols-[repeat(auto-fit,minmax(0,1fr))]">
+    <section aria-label="Resumen" className="flex w-fit max-w-full flex-wrap divide-x divide-stone-200 overflow-hidden rounded-lg border border-stone-300 bg-white">
       {datos.map((d) => (
-        <div key={d.titulo} className="px-4 py-2.5">
+        <div key={d.titulo} className="min-w-[170px] px-5 py-2 text-center">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-500">{d.titulo}</p>
-          <p className={`text-lg font-bold tabular-nums ${d.rojo ? "text-rojo-700" : "text-stone-900"}`}>{d.valor}</p>
+          <p className={`text-base font-bold tabular-nums ${d.rojo ? "text-rojo-700" : "text-stone-900"}`}>{d.valor}</p>
         </div>
       ))}
     </section>

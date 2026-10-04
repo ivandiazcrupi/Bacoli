@@ -73,7 +73,7 @@ export async function Listado({ tipo, searchParams, ruta }: { tipo: "FACTURA" | 
       if (estado === "sin-pagar" && (f.esNc ? f.saldo <= 0.01 : f.pagada || cubierta)) continue;
       if (estado === "pagadas" && (f.esNc || !(f.pagada || cubierta))) continue;
       todas.push({
-        id: f.id, clienteId: f.clienteId ?? "", cliente: nombreCli, tipo, numero: f.esNc ? `NC ${f.numero}` : `FACTURA ${f.numero}`, cargado: f.fecha, fecha: f.fecha,
+        id: f.id, clienteId: f.clienteId ?? "", cliente: nombreCli, tipo, numero: f.esNc ? `NC ${f.numero}` : `F-${f.numero}`, cargado: f.fecha, fecha: f.fecha,
         entregado: true, bruto: f.total, nc: f.aplicado, cubierta, anulado: null, ncTexto: f.creditos.map((c) => `NC ${c.ncNumero}`).join(" · "), monto: f.esNc ? 0 : f.saldo, vence: "", atraso: 0, pagada: f.pagada, medio: f.medio, obs: f.observacion ?? "",
         arca: true, esNc: f.esNc, cuit: f.cuit, saldo: f.saldo, sucursal: f.sucursal, puntoId: f.puntoId, puntos: puntosDeCuit(f.cuit),
         aviso: f.problemas.join(" · "), sinPedido: !f.esNc && !f.pedidoId, pedidoId: f.pedidoId, aplicaciones: f.aplicaciones.map((a) => ({ id: a.id, facturaNumero: a.facturaNumero, monto: a.monto })),
