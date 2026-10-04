@@ -4,7 +4,8 @@ import { diasDeAtraso, incluirNc, partidaDe } from "@/lib/cobranza";
 import { db } from "@/lib/db";
 import { hoy } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
-import { BarraFiltros, CABECERA_TABLA, CONTENEDOR_TABLA, FILA_TABLA, Resumen } from "../estilo";
+import { BuscadorClientes } from "./BuscadorClientes";
+import { CABECERA_TABLA, CONTENEDOR_TABLA, FILA_TABLA, Resumen } from "../estilo";
 import { EncabezadoCuenta } from "../EncabezadoCuenta";
 import { exigirOficina } from "@/lib/session";
 import { CONTENEDOR_PEDIDOS } from "../../pedidos/Encabezado";
@@ -63,7 +64,10 @@ export default async function Cuentas({ searchParams }: { searchParams: Promise<
           { titulo: "Cobrado este mes", valor: formatoPesos(cobradoMes) },
         ]} />
 
-        <BarraFiltros q={q} placeholder="Buscar cliente…" derecha={`${filas.length} ${filas.length === 1 ? "cliente" : "clientes"} con comprobantes sin pagar`} />
+        <div className="flex flex-wrap items-center gap-3">
+          <BuscadorClientes q={q} opciones={[...porCliente.values()].map((f) => f.nombre).sort((a, b) => a.localeCompare(b, "es"))} />
+          <span className="ml-auto text-[13px] text-stone-500">{filas.length} {filas.length === 1 ? "cliente" : "clientes"} con comprobantes sin pagar</span>
+        </div>
 
         <section className={CONTENEDOR_TABLA} aria-label="Clientes con deuda">
           <div className={`hidden sm:grid ${CABECERA_TABLA} ${COLUMNAS}`}>

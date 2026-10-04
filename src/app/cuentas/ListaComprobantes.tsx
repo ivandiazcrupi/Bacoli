@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useMemo, useState, useTransition } from "react";
 import { formatoPesos } from "@/lib/numeros";
+import { FiltroLista } from "./FiltroLista";
 import { deshacerPago, guardarObservacion, registrarPagos } from "./actions";
 import { aplicarNc, deshacerPagoArca, guardarDatosArca, quitarAplicacionNc, registrarPagosArca } from "./arca/actions";
 
@@ -117,7 +118,13 @@ function SucursalCelda({ f }: { f: FilaComprobante }) {
   const [punto, setPunto] = useState(f.puntoId ?? "");
   if (!f.puntos || f.puntos.length === 0) return <span className="truncate text-stone-500">{f.sucursal ?? ""}</span>;
   return (
-    <select aria-label="Sucursal" value={punto} onChange={async (e) => { setPunto(e.target.value); await guardarDatosArca(f.id, e.target.value, f.obs); }} className="h-7 w-full min-w-0 rounded border border-transparent bg-transparent px-0.5 text-center text-[12.5px] hover:border-stone-300 focus:border-verde-700 focus:outline-none">
+    <select aria-label="Sucursal" value={punto} onChange={async (e) => {
+      const nuevo = e.target.value;
+      const nombre = f.puntos?.find((p) => p.id === nuevo)?.barrio ?? "ninguna";
+      if (!window.confirm(`¿Cambiar la sucursal de ${f.numero} a ${nombre}?`)) return; // evita cambiarla sin querer
+      setPunto(nuevo);
+      await guardarDatosArca(f.id, nuevo, f.obs);
+    }} className="h-7 w-full min-w-0 rounded border border-transparent bg-transparent px-0.5 text-center text-[12.5px] hover:border-stone-300 focus:border-verde-700 focus:outline-none">
       <option value="">{f.sucursal ?? "—"}</option>
       {f.puntos.map((p) => <option key={p.id} value={p.id}>{p.barrio}</option>)}
     </select>
@@ -274,15 +281,9 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
             <div className="grid items-center gap-x-3 px-3 pb-2 pt-1" style={{ gridTemplateColumns: grilla }}>
               <span />
               {visibles.map((c) => c.filtro === "lista" ? (
-                <select key={c.id} aria-label={`Filtrar ${c.titulo}`} value={filtros[c.id] ?? ""} onChange={(e) => setFiltros({ ...filtros, [c.id]: e.target.value })} className={entrada}>
-                  <option value="">Todos</option>
-                  {(opcionesLista[c.id] ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
-                </select>
+                <FiltroLista key={c.id} titulo={c.titulo} opciones={opcionesLista[c.id] ?? []} valor={filtros[c.id] ?? ""} onCambio={(v) => setFiltros({ ...filtros, [c.id]: v })} />
               ) : c.filtro === "estado" ? (
-                <select key={c.id} aria-label="Filtrar estado" value={filtros.estado ?? ""} onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })} className={entrada}>
-                  <option value="">Todos</option>
-                  {opcionesEstado.map((o) => <option key={o} value={o}>{o}</option>)}
-                </select>
+                <FiltroLista key={c.id} titulo="Estado" opciones={opcionesEstado} valor={filtros.estado ?? ""} onCambio={(v) => setFiltros({ ...filtros, estado: v })} />
               ) : c.filtro === "pedido" ? (
                 esArca ? <select key={c.id} aria-label="Filtrar pedido" value={filtros.pedido ?? ""} onChange={(e) => setFiltros({ ...filtros, pedido: e.target.value })} className={entrada}>
                   <option value="">Todos</option><option value="Sin pedido">Sin pedido</option><option value="Con pedido">Con pedido</option>
@@ -318,9 +319,9 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
                     case "monto": return <span key={c.id} className={`whitespace-nowrap text-[14px] font-bold tabular-nums ${f.cubierta || f.anulado ? "text-stone-300 line-through" : f.esNc ? "text-stone-500" : "text-stone-900"}`}>{f.esNc ? "−" : ""}{formatoPesos(f.cubierta || f.anulado || f.esNc ? f.bruto : f.monto)}</span>;
                     case "estado": {
                       const e = estadoDe(f);
-                      const relleno = e === "Pendiente" ? "bg-rojo-100 text-rojo-800" : e === "Pagada" ? "bg-verde-100 text-verde-800" : "";
+                      const relleno = e === "Pendiente" ? "bg-rojo-100 text-rojo-800" : e === "Pagada" ? "bg-verde-100 text-verde-800" : e === "NC sin aplicar" ? "bg-[#fbf1c7] text-[#7a5f06]" : "";
                       return <span key={c.id} className={`flex h-full items-center justify-center gap-1.5 whitespace-nowrap ${relleno}`} title={e === "Pendiente" && f.atraso > 0 ? `Vencida hace ${f.atraso} días` : undefined}>
-                        {e === "NC sin aplicar" ? <button type="button" onClick={() => setPicker(picker === f.id ? null : f.id)} className="text-[13px] font-semibold text-rojo-700 underline decoration-rojo-600/40 underline-offset-4 hover:decoration-rojo-700">Aplicar a factura…</button>
+                        {e === "NC sin aplicar" ? <button type="button" onClick={() => setPicker(picker === f.id ? null : f.id)} className="h-full w-full font-semibold hover:underline">Aplicar a factura</button>
                           : e === "Pagada" ? <><span className="font-semibold">Pagada{f.medio ? ` · ${TEXTO_MEDIO[f.medio] ?? ""}` : ""}</span><button type="button" title="Deshacer el pago" aria-label="Deshacer el pago" onClick={() => deshacer(f.id)} className="text-[12px] opacity-50 hover:opacity-100">✕</button></>
                           : e === "Pendiente" ? <span className="font-semibold">Pendiente{f.atraso > 0 ? <span className="font-normal"> · {f.atraso} d</span> : null}</span>
                           : <span className="text-stone-500">{e === "Anulado" ? f.anulado : e}</span>}
