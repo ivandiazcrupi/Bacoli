@@ -68,7 +68,7 @@ export function RegistroDeRecorrido() {
   return null;
 }
 
-/** Botón "← Volver": va a la pantalla donde estabas antes (no a un formulario ya usado). Si no hay, va a la que se le indica. */
+/** Botón "← Volver" (flotante, siempre abajo a la derecha: no va en los encabezados de las pantallas): va a la pantalla donde estabas antes (no a un formulario ya usado). Si no hay, va a la que se le indica. */
 export function BotonVolver({ fallback, texto = "Volver" }: { fallback: string; texto?: string }) {
   const router = useRouter();
   const ruta = usePathname();
@@ -88,7 +88,7 @@ export function BotonVolver({ fallback, texto = "Volver" }: { fallback: string; 
     router.push(destino ?? fallback);
   };
   return (
-    <button type="button" onClick={volver} className="inline-flex items-center gap-1.5 rounded-md border border-stone-400 bg-white px-3.5 py-2 text-sm font-semibold text-stone-800 shadow-sm hover:bg-crema-100 print:hidden">
+    <button type="button" onClick={volver} className="fixed bottom-10 right-4 z-40 inline-flex items-center gap-1.5 rounded-full border border-stone-400 bg-white px-4 py-2.5 text-sm font-semibold text-stone-800 shadow-md hover:bg-crema-100 print:hidden">
       <span aria-hidden>←</span> {texto}
     </button>
   );
