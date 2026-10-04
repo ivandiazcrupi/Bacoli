@@ -125,7 +125,10 @@ function FilaCliente({ c }: { c: Cliente }) {
           {/* PC: barrio, nombre, dirección, teléfono y accesos en una fila */}
           <div className={`hidden items-center gap-x-4 px-4 py-2 lg:grid ${COLUMNAS} ${p && !p.activo ? "opacity-60" : ""}`}>
             <span className={dato}>{p ? p.barrio : <span className="font-normal text-stone-400">Sin sucursal</span>}</span>
-            <Link href={`/clientes/${c.id}`} className={`${dato} hover:text-verde-800 hover:underline`}>{c.nombre}</Link>{c.observacion && <span title={c.observacion} aria-label={`Importante: ${c.observacion}`} className="ml-1.5 cursor-help font-bold text-rojo-700">⚠</span>}
+            <span className="min-w-0">
+              <Link href={`/clientes/${c.id}`} className={`${dato} hover:text-verde-800 hover:underline`}>{c.nombre}</Link>
+              {i === 0 && c.observacion && <span className="mt-0.5 line-clamp-2 block text-xs font-medium text-rojo-700" title={c.observacion}>⚠ {c.observacion}</span>}
+            </span>
             <span className="text-sm leading-tight">{p ? titulo(p.direccion) : ""}{p?.comentario && <span className="mt-0.5 block text-xs font-medium text-rojo-700">{p.comentario}</span>}</span>
             <span className="text-sm"><Telefono tel={p?.telefono ?? null} /></span>
             <span>{p ? <Estado activa={c.activo && p.activo} /> : null}</span>
@@ -135,7 +138,10 @@ function FilaCliente({ c }: { c: Cliente }) {
           {/* Celular: la misma información apilada */}
           <div className={`space-y-1 p-4 lg:hidden ${p && !p.activo ? "opacity-60" : ""}`}>
             <p className={`${dato} flex flex-wrap items-center gap-2`}>{p ? p.barrio : "Sin sucursal"}{p && <Estado activa={c.activo && p.activo} />}</p>
-            <Link href={`/clientes/${c.id}`} className={`block ${dato}`}>{c.nombre}{c.observacion && <span title={c.observacion} className="ml-1.5 font-bold text-rojo-700">⚠</span>}</Link>
+            <div>
+              <Link href={`/clientes/${c.id}`} className={`block ${dato}`}>{c.nombre}</Link>
+              {i === 0 && c.observacion && <p className="text-xs font-medium text-rojo-700">⚠ {c.observacion}</p>}
+            </div>
             {p && <p className="text-sm">{titulo(p.direccion)}</p>}
             {p?.comentario && <p className="text-xs font-medium text-rojo-700">{p.comentario}</p>}
             {p && <p className="text-sm"><Telefono tel={p.telefono} /></p>}
