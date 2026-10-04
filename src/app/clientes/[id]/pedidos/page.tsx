@@ -8,6 +8,7 @@ import { titulo } from "@/lib/mayusculas";
 import { formatoRemito } from "@/lib/remito";
 import { exigirOficina } from "@/lib/session";
 import { BotonVolver } from "@/components/BotonVolver";
+import { formatoPesos } from "@/lib/numeros";
 import { TablaPedidos } from "./TablaPedidos";
 
 // Historial de pedidos de un cliente: el más reciente primero. Tocar un pedido lo abre.
@@ -31,7 +32,7 @@ export default async function PedidosDelCliente({ params }: { params: Promise<{ 
           <div>
             <div className="mb-2"><BotonVolver fallback={`/clientes/${id}`} /></div>
             <h1 className="text-2xl font-bold">Pedidos de {cliente.nombre}</h1>
-            <p className="text-sm text-stone-600">{pedidos.length} {pedidos.length === 1 ? "pedido" : "pedidos"}</p>
+            <p className="text-sm text-stone-600">{pedidos.length} {pedidos.length === 1 ? "pedido" : "pedidos"} · <b className="tabular-nums text-stone-800">{formatoPesos(pedidos.filter((p) => p.estado === "PENDIENTE" || p.estado === "ENTREGADO").reduce((s, p) => s + importeVigente(p.items, Number(p.ivaPct), "PENDIENTE"), 0))}</b></p>
           </div>
           <Link href={`/clientes/${id}/cuenta`} className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-medium">Cuenta corriente</Link>
         </div>
