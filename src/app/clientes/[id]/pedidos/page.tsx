@@ -1,22 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Cabecera } from "@/components/Cabecera";
-import { cabeceraTabla } from "@/components/campos";
 import { importeVigente } from "@/lib/cuenta";
 import { db } from "@/lib/db";
-import { deFecha, diaMes, nombreDia } from "@/lib/fechas";
+import { deFecha } from "@/lib/fechas";
 import { titulo } from "@/lib/mayusculas";
-import { formatoPesos } from "@/lib/numeros";
 import { formatoRemito } from "@/lib/remito";
 import { exigirOficina } from "@/lib/session";
 import { BotonVolver } from "@/components/BotonVolver";
-
-const ESTADO = {
-  PENDIENTE: { texto: "Pendiente", clase: "bg-crema-200 text-verde-900" },
-  ENTREGADO: { texto: "Entregado", clase: "bg-verde-100 text-verde-800" },
-  NO_ENTREGADO: { texto: "No entregado", clase: "bg-rojo-100 text-rojo-800" },
-  CANCELADO: { texto: "Cancelado", clase: "bg-stone-200 text-stone-600" },
-} as const;
+import { TablaPedidos } from "./TablaPedidos";
 
 // Historial de pedidos de un cliente: el más reciente primero. Tocar un pedido lo abre.
 export default async function PedidosDelCliente({ params }: { params: Promise<{ id: string }> }) {
@@ -28,7 +20,7 @@ export default async function PedidosDelCliente({ params }: { params: Promise<{ 
   const pedidos = await db.pedido.findMany({
     where: { clienteId: id },
     include: { items: true, punto: true },
-    orderBy: [{ fechaEntrega: { sort: "desc", nulls: "first" } }, { creadoEn: "desc" }],
+    orderBy: [{ creadoEn: "desc" }],
   });
 
   return (
@@ -37,7 +29,7 @@ export default async function PedidosDelCliente({ params }: { params: Promise<{ 
       <main className="mx-auto max-w-[1600px] space-y-4 px-4 py-6 sm:px-8">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <BotonVolver fallback={`/clientes/${id}`} />
+            <div className="mb-2"><BotonVolver fallback={`/clientes/${id}`} /></div>
             <h1 className="text-2xl font-bold">Pedidos de {cliente.nombre}</h1>
             <p className="text-sm text-stone-600">{pedidos.length} {pedidos.length === 1 ? "pedido" : "pedidos"}</p>
           </div>
@@ -47,34 +39,22 @@ export default async function PedidosDelCliente({ params }: { params: Promise<{ 
         {pedidos.length === 0 ? (
           <p className="rounded-lg border border-dashed border-stone-300 p-4 text-stone-600">Este cliente todavía no tiene pedidos.</p>
         ) : (
-          <div className="space-y-2">
-            <div className={`hidden grid-cols-[8rem_1.6fr_2.4fr_1fr_1fr_1fr] gap-3 rounded-t-xl px-4 py-3 lg:grid ${cabeceraTabla}`}>
-              <span>Día</span><span>Sucursal</span><span>Pedido</span><span className="text-right">Monto</span><span>Comprobante</span><span>Estado</span>
-            </div>
-            {pedidos.map((p) => {
-              const fecha = p.fechaEntrega ? deFecha(p.fechaEntrega) : null;
-              const monto = importeVigente(p.items, Number(p.ivaPct), "PENDIENTE"); // lo pedido, con IVA si lleva factura
-              const est = ESTADO[p.estado];
-              return (
-                <Link
-                  key={p.id}
-                  href={`/pedidos/${p.id}`}
-                  className="grid items-center gap-x-3 gap-y-1 rounded-xl border border-stone-300 bg-white p-4 shadow-sm hover:border-verde-700 lg:grid-cols-[8rem_1.6fr_2.4fr_1fr_1fr_1fr]"
-                >
-                  <span className="text-sm font-medium">{fecha ? `${nombreDia(fecha)} ${diaMes(fecha)}` : <span className="text-stone-500">Sin asignar</span>}</span>
-                  <span className="text-sm">{titulo(p.punto?.direccion)} <span className="text-stone-500">· {p.punto?.barrio}</span></span>
-                  <span className="text-sm">{p.items.map((i) => `${i.cantidad} ${i.nombre}`).join(" · ")}</span>
-                  <span className="text-sm font-semibold tabular-nums lg:text-right">{formatoPesos(monto)}</span>
-                  <span className="text-sm">
-                    {p.conFactura
-                      ? (p.numeroFactura ? <>Factura <b>{p.numeroFactura}</b></> : <span className="text-rojo-700">Factura sin número</span>)
-                      : (p.remitoNumero ? <>Remito <b>{formatoRemito(p.remitoNumero)}</b></> : <span className="text-stone-500">Remito sin emitir</span>)}
-                  </span>
-                  <span><span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${est.clase}`}>{est.texto}</span></span>
-                </Link>
-              );
-            })}
-          </div>
+          <TablaPedidos
+            filas={pedidos.map((p) => ({
+              id: p.id,
+              cargado: new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Argentina/Buenos_Aires" }).format(p.creadoEn),
+              entrega: p.fechaEntrega ? deFecha(p.fechaEntrega) : null,
+              sucursal: p.punto ? `${p.punto.barrio} · ${titulo(p.punto.direccion)}` : "—",
+              pedido: p.items.map((i) => `${i.cantidad} ${i.nombre}`).join(" · "),
+              monto: importeVigente(p.items, Number(p.ivaPct), "PENDIENTE"), // lo pedido, con IVA si lleva factura
+              comprobante: p.conFactura ? (p.numeroFactura ?? "") : p.remitoNumero ? formatoRemito(p.remitoNumero) : "",
+              comprobanteFalta: p.conFactura ? "Factura sin número" : "Remito sin emitir",
+              estado: p.estado,
+              pagado: p.pagado,
+              medio: p.medioCobro,
+              aCuenta: p.cobro === "CUENTA_CORRIENTE",
+            }))}
+          />
         )}
       </main>
     </>
