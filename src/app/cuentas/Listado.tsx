@@ -11,10 +11,10 @@ import { formatoPesos } from "@/lib/numeros";
 import { exigirOficina } from "@/lib/session";
 import { CONTENEDOR_PEDIDOS } from "../pedidos/Encabezado";
 import { EncabezadoCuenta } from "./EncabezadoCuenta";
-import { BarraFiltros, CONTENEDOR_TABLA, Resumen } from "./estilo";
+import { CONTENEDOR_TABLA, Resumen } from "./estilo";
 import { ListaComprobantes, type FilaComprobante } from "./ListaComprobantes";
 
-const POR_PAGINA = 1000;
+const POR_PAGINA = 20000;
 const pad4 = (n: number) => String(n).padStart(4, "0");
 
 // El N° se ordena como número (0001-00000012 → 100000012); los que todavía no tienen número van al final.
@@ -28,7 +28,7 @@ type Params = { q?: string; estado?: string; pagina?: string };
 // Listado de TODAS las facturas (o remitos) de menor a mayor número, para ver que no quede ninguna sin pagar.
 export async function Listado({ tipo, searchParams, ruta }: { tipo: "FACTURA" | "REMITO"; searchParams: Params; ruta: string }) {
   const usuario = await exigirOficina();
-  const { q = "", estado = "todas" } = searchParams;
+  const q: string = "", estado: string = "todas"; // los filtros ahora se hacen en la hoja (como un Excel), con todas las filas cargadas
   const pagina = Math.max(1, Number(searchParams.pagina) || 1);
   const hoyStr = hoy();
   const conAnulados = tipo === "REMITO" && estado === "todas";
@@ -76,7 +76,7 @@ export async function Listado({ tipo, searchParams, ruta }: { tipo: "FACTURA" | 
         id: f.id, clienteId: f.clienteId ?? "", cliente: nombreCli, tipo, numero: f.esNc ? `NC ${f.numero}` : `FACTURA ${f.numero}`, cargado: f.fecha, fecha: f.fecha,
         entregado: true, bruto: f.total, nc: f.aplicado, cubierta, anulado: null, ncTexto: f.creditos.map((c) => `NC ${c.ncNumero}`).join(" · "), monto: f.esNc ? 0 : f.saldo, vence: "", atraso: 0, pagada: f.pagada, medio: f.medio, obs: f.observacion ?? "",
         arca: true, esNc: f.esNc, cuit: f.cuit, saldo: f.saldo, sucursal: f.sucursal, puntoId: f.puntoId, puntos: puntosDeCuit(f.cuit),
-        aviso: f.problemas.join(" · "), sinPedido: !f.esNc && !f.pedidoId, aplicaciones: f.aplicaciones.map((a) => ({ id: a.id, facturaNumero: a.facturaNumero, monto: a.monto })),
+        aviso: f.problemas.join(" · "), sinPedido: !f.esNc && !f.pedidoId, pedidoId: f.pedidoId, aplicaciones: f.aplicaciones.map((a) => ({ id: a.id, facturaNumero: a.facturaNumero, monto: a.monto })),
       });
     }
   }
@@ -128,21 +128,21 @@ export async function Listado({ tipo, searchParams, ruta }: { tipo: "FACTURA" | 
           tipo === "FACTURA" ? { titulo: "NC sin aplicar", valor: ncSinAplicar, rojo: ncSinAplicar > 0 } : { titulo: "Vencido", valor: formatoPesos(vencido), rojo: vencido > 0 },
         ]} />
 
-        <BarraFiltros q={q} placeholder="Buscar cliente o número…" estado={estado} ruta={ruta} derecha={`${sinHuecos} ${sinHuecos === 1 ? nombre.slice(0, -1) : nombre}${huecos.length > 0 ? ` · ${huecos.length} números sin usar` : ""}`} />
+        {tipo === "FACTURA" && escritasSinArca.length > 0 && <p className="text-sm font-semibold text-rojo-700">Números escritos en pedidos que ARCA no tiene: {escritasSinArca.join(", ")}</p>}
 
         <section className={CONTENEDOR_TABLA} aria-label={`Listado de ${nombre}`}>
-          <ListaComprobantes filas={visibles} />
+          <ListaComprobantes filas={visibles} tipo={tipo} acciones={tipo === "FACTURA" ? (
+            <details className="relative">
+              <summary className="flex h-8 cursor-pointer list-none items-center rounded-md border border-stone-300 bg-white px-3 text-[13px] font-semibold text-stone-700 hover:border-stone-500">⬆ Subir archivo de ARCA</summary>
+              <div className="absolute right-0 top-9 z-30 w-[420px] rounded-md border border-stone-300 bg-white p-4 text-sm shadow-lg">
+                <p className="mb-2 text-stone-600">Libro IVA Ventas (VENTAS.txt) o el CSV de Mis Comprobantes → Emitidos. No duplica lo ya cargado.</p>
+                <SubirArchivo />
+                {usuario.rol === "DUENO" && <BorrarFacturas cantidad={cantidadArca} />}
+              </div>
+            </details>
+          ) : undefined} />
         </section>
 
-        {tipo === "FACTURA" && escritasSinArca.length > 0 && <p className="text-sm font-semibold text-rojo-700">Números escritos en pedidos que ARCA no tiene: {escritasSinArca.join(", ")}</p>}
-        {tipo === "FACTURA" && (
-          <details className="text-sm">
-            <summary className="cursor-pointer font-semibold text-stone-600 hover:text-stone-900">Subir archivo de ARCA</summary>
-            <p className="mt-2 text-stone-600">Libro IVA Ventas (VENTAS.txt) o el CSV de Mis Comprobantes → Emitidos. No duplica lo ya cargado.</p>
-            <div className="mt-2"><SubirArchivo /></div>
-            {usuario.rol === "DUENO" && <BorrarFacturas cantidad={cantidadArca} />}
-          </details>
-        )}
         {paginas > 1 && (
           <nav className="flex items-center justify-center gap-3 text-sm" aria-label="Páginas">
             {pagina > 1 && <Link href={hrefPagina(pagina - 1)} className="rounded-md border border-stone-400 bg-white px-3 py-2 font-medium shadow-sm">← Anteriores</Link>}
