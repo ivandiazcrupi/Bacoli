@@ -215,6 +215,7 @@ model Pedido {
   webBarrio    String?
   webTelefono  String?
   webTotal     Decimal?  @db.Decimal(14, 2) // lo que pagó el cliente en la tienda
+  webExtra     Decimal?  @db.Decimal(14, 2) // lo agregado por fuera después del pedido (ya sumado a webTotal)
   webPago      String? // PAGO_MP (ya pagado con Mercado Pago) o PENDIENTE (todavía no se cruzó la transferencia)
   webPagoPor   String? // quién confirmó la transferencia (nombre)
   webPagoEn    DateTime? // cuándo

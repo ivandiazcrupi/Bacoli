@@ -69,7 +69,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
         <section aria-label="Datos del pedido" className={`grid grid-cols-2 divide-x divide-stone-300 overflow-hidden rounded-xl border border-stone-300 bg-white shadow-sm sm:grid-cols-4`}>
           {celda("Estado", <span className={COLOR[pedido.estado]}>{ETIQUETA[pedido.estado]}</span>)}
           {celda("Día", fecha ? `${nombreDia(fecha)} ${diaMes(fecha)}` : "Sin día")}
-          {web && celda("Pedido de la tienda", `N° ${pedido.webOrden}`)}
+          {web && celda("Pedido de la tienda", <>N° {pedido.webOrden}{Number(pedido.webExtra ?? 0) > 0 && <span className="block text-xs font-normal text-stone-500">Incluye {formatoPesos(Number(pedido.webExtra))} agregado por fuera</span>}</>)}
           {web && celda("Pago", <BotonConfirmarPago
             pedidoId={pedido.id}
             nombre={entrega.nombre}

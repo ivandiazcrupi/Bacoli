@@ -236,19 +236,35 @@ export async function actualizarPedidoWeb(pedidoId: string, _: EstadoPedidoForm,
   const cantidades = pedido.items.map((i) => ({ id: i.id, cantidad: Number(String(formData.get(`q_${i.id}`) ?? i.cantidad).replace(/\D/g, "") || 0) }));
   if (cantidades.every((c) => c.cantidad === 0)) return { error: "El pedido tiene que llevar al menos un producto." };
 
+  // Agregado por fuera ("sumame 2 paquetes más"): renglones nuevos marcados "(POR FUERA)" y, si se cobra algo, el total sube y el pago vuelve a pendiente.
+  const montoExtra = Math.max(0, leerMonto(String(formData.get("extra_monto") ?? "")) ?? 0);
+  const productosExtra = await db.producto.findMany({ where: { activo: true, sku: { in: ["PPT01", "PPC02"] } } });
+  const nuevos: Prisma.PedidoItemCreateWithoutPedidoInput[] = [];
+  for (const p of productosExtra) {
+    const q = Number(String(formData.get(`x_${p.id}`) ?? "0").replace(/\D/g, "") || 0);
+    if (q > 0) nuevos.push({ producto: { connect: { id: p.id } }, nombre: `${p.nombre} (POR FUERA)`, sku: p.sku, unidad: p.unidad, cantidad: q, precioUnitario: 0 });
+  }
+  const otro = mayus(String(formData.get("x_otro_nombre") ?? "")).slice(0, 70);
+  if (otro) nuevos.push({ nombre: `${otro} (POR FUERA)`, sku: null, unidad: "unidad", cantidad: Number(String(formData.get("x_otro_cantidad") ?? "").replace(/\D/g, "") || 1), precioUnitario: 0 });
+  if (montoExtra > 0 && nuevos.length === 0) return { error: "Elegí qué producto se agregó por fuera (o dejá el monto vacío)." };
+  const volverAPendiente = montoExtra > 0 && (pedido.webPago === "PAGO_MP" || pedido.webPago === "PAGO_TRANSFERENCIA");
+
   await db.$transaction(async (tx) => {
     for (const c of cantidades) {
       if (c.cantidad === 0) await tx.pedidoItem.delete({ where: { id: c.id } });
       else await tx.pedidoItem.update({ where: { id: c.id }, data: { cantidad: c.cantidad } });
     }
+    for (const n of nuevos) await tx.pedidoItem.create({ data: { ...n, pedido: { connect: { id: pedidoId } } } });
     await tx.pedido.update({
       where: { id: pedidoId },
       data: {
+        ...(montoExtra > 0 ? { webExtra: Number(pedido.webExtra ?? 0) + montoExtra } : {}),
+        ...(volverAPendiente ? { webPago: "PENDIENTE", webPagoPor: null, webPagoEn: null } : {}),
         webNombre: nombre,
         webBarrio: mayus(String(formData.get("barrio") ?? "")) || null,
         webDireccion: titulo(String(formData.get("direccion") ?? "").trim()) || null,
         webTelefono: String(formData.get("telefono") ?? "").trim() || null,
-        webTotal: total,
+        webTotal: total + montoExtra,
         nota: oracion(String(formData.get("nota") ?? "")) || null,
       },
     });

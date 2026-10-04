@@ -8,6 +8,7 @@ import { actualizarPedido } from "../../actions";
 import { productosParaCliente } from "../../datos";
 import { CONTENEDOR_PEDIDOS } from "../../Encabezado";
 import { datosEntrega, ordenarItems } from "../../filas";
+import { webPagado } from "@/lib/webpago";
 import { EditorWeb } from "./EditorWeb";
 import { FormularioLineas, type LineaProducto } from "../../FormularioLineas";
 import { BotonVolver } from "@/components/BotonVolver";
@@ -35,6 +36,8 @@ export default async function EditarPedido({ params }: { params: Promise<{ id: s
           </div>
           <EditorWeb
             pedidoId={id}
+            extras={(await db.producto.findMany({ where: { activo: true, sku: { in: ["PPT01", "PPC02"] } }, orderBy: { orden: "asc" } })).map((x) => ({ id: x.id, nombre: x.nombre, unidad: x.unidad }))}
+            pagado={webPagado(pedido.webOrden, pedido.webPago)}
             items={ordenarItems(pedido.items).map((i) => ({ id: i.id, nombre: i.nombre, unidad: i.unidad, cantidad: i.cantidad }))}
             datos={{ nombre: pedido.webNombre ?? "", barrio: pedido.webBarrio ?? "", direccion: titulo(pedido.webDireccion), telefono: pedido.webTelefono ?? "", total: String(pedido.webTotal ?? "").replace(".", ","), nota: pedido.nota ?? "" }}
           />
