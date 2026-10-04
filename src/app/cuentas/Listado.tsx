@@ -75,7 +75,7 @@ export async function Listado({ tipo, searchParams, ruta }: { tipo: "FACTURA" | 
         id: f.id, clienteId: f.clienteId ?? "", cliente: nombreCli, tipo, numero: f.esNc ? `NC ${f.numero}` : `FACTURA ${f.numero}`, cargado: f.fecha, fecha: f.fecha,
         entregado: true, bruto: f.total, nc: f.aplicado, cubierta, anulado: null, ncTexto: f.creditos.map((c) => `NC ${c.ncNumero}`).join(" · "), monto: f.esNc ? 0 : f.saldo, vence: "", atraso: 0, pagada: f.pagada, medio: f.medio, obs: f.observacion ?? "",
         arca: true, esNc: f.esNc, cuit: f.cuit, saldo: f.saldo, sucursal: f.sucursal, puntoId: f.puntoId, puntos: puntosDeCuit(f.cuit),
-        aviso: [...f.problemas, ...(!f.esNc && !f.pedidoId ? ["Sin pedido"] : [])].join(" · "), aplicaciones: f.aplicaciones.map((a) => ({ id: a.id, facturaNumero: a.facturaNumero, monto: a.monto })),
+        aviso: f.problemas.join(" · "), sinPedido: !f.esNc && !f.pedidoId, aplicaciones: f.aplicaciones.map((a) => ({ id: a.id, facturaNumero: a.facturaNumero, monto: a.monto })),
       });
     }
   }
@@ -115,10 +115,10 @@ export async function Listado({ tipo, searchParams, ruta }: { tipo: "FACTURA" | 
 
   const nombre = tipo === "FACTURA" ? "facturas" : "remitos";
   const hrefPagina = (n: number) => `${ruta}?${new URLSearchParams({ ...(q ? { q } : {}), estado, pagina: String(n) })}`;
-  const celda = (titulo: string, valor: React.ReactNode, clase = "") => (
-    <div className="min-w-0">
-      <p className="border-b border-stone-300 bg-crema-100 px-3 py-1.5 text-center text-xs font-semibold uppercase tracking-wide text-stone-600">{titulo}</p>
-      <p className={`px-3 py-3 text-center text-xl font-bold tabular-nums ${clase}`}>{valor}</p>
+  const dato = (titulo: string, valor: React.ReactNode, clase = "") => (
+    <div>
+      <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-stone-400">{titulo}</p>
+      <p className={`mt-1 text-[26px] font-semibold leading-none tabular-nums text-stone-900 ${clase}`}>{valor}</p>
     </div>
   );
 
@@ -128,25 +128,24 @@ export async function Listado({ tipo, searchParams, ruta }: { tipo: "FACTURA" | 
       <main className={CONTENEDOR_PEDIDOS}>
         <EncabezadoCuenta activa={tipo === "FACTURA" ? "facturas" : "remitos"} />
 
-        <section aria-label="Resumen" className="grid grid-cols-1 divide-y divide-stone-300 overflow-hidden rounded-xl border border-stone-300 bg-white shadow-sm sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-          {celda(`${tipo === "FACTURA" ? "Facturas" : "Remitos"} sin pagar`, sinPagar.length)}
-          {celda("Monto sin pagar", formatoPesos(montoSinPagar))}
-          {tipo === "FACTURA" ? celda("NC sin aplicar", ncSinAplicar, ncSinAplicar > 0 ? "text-rojo-700" : "") : celda("Vencido", formatoPesos(vencido), vencido > 0 ? "text-rojo-700" : "")}
+        <section aria-label="Resumen" className="flex flex-wrap gap-x-16 gap-y-4 px-1 pb-2 pt-3">
+          {dato(`${tipo === "FACTURA" ? "Facturas" : "Remitos"} sin pagar`, sinPagar.length)}
+          {dato("Monto sin pagar", formatoPesos(montoSinPagar))}
+          {tipo === "FACTURA" ? dato("NC sin aplicar", ncSinAplicar, ncSinAplicar > 0 ? "text-rojo-700" : "") : dato("Vencido", formatoPesos(vencido), vencido > 0 ? "text-rojo-700" : "")}
         </section>
 
-        <form className="flex flex-wrap items-center gap-2">
-          <input name="q" defaultValue={q} placeholder="Filtrar por cliente…" className="h-10 w-full max-w-md rounded-md border border-stone-400 bg-white px-3 text-sm shadow-sm focus:border-verde-700 focus:outline-none" />
+        <form className="flex flex-wrap items-center gap-3">
+          <input name="q" defaultValue={q} placeholder="Buscar cliente o número…" className="h-10 w-full max-w-sm rounded-full border border-stone-300 bg-white px-4 text-sm focus:border-stone-500 focus:outline-none" />
           <input type="hidden" name="estado" value={estado} />
-          <div role="group" aria-label="Mostrar" className="inline-flex overflow-hidden rounded-md border border-stone-400 bg-white text-sm font-medium shadow-sm">
+          <div role="group" aria-label="Mostrar" className="inline-flex gap-1 rounded-full bg-crema-100 p-1 text-sm">
             {([["todas", "Todas"], ["sin-pagar", "Pendientes de pago"], ["pagadas", "Pagadas"]] as const).map(([v, t]) => (
-              <Link key={v} href={`${ruta}?${new URLSearchParams({ ...(q ? { q } : {}), estado: v })}`} aria-current={estado === v ? "true" : undefined} className={`h-10 px-4 leading-10 ${estado === v ? "bg-stone-800 text-white" : "hover:bg-crema-100"}`}>{t}</Link>
+              <Link key={v} href={`${ruta}?${new URLSearchParams({ ...(q ? { q } : {}), estado: v })}`} aria-current={estado === v ? "true" : undefined} className={`rounded-full px-4 py-1.5 ${estado === v ? "bg-white font-semibold text-stone-900 shadow-sm" : "text-stone-500 hover:text-stone-800"}`}>{t}</Link>
             ))}
           </div>
-          <button className="h-10 rounded-md border border-stone-400 bg-white px-4 text-sm font-medium shadow-sm hover:border-verde-700">Buscar</button>
-          <span className="ml-auto text-sm text-stone-600">{sinHuecos} {sinHuecos === 1 ? nombre.slice(0, -1) : nombre}{huecos.length > 0 ? ` · ${huecos.length} números sin usar` : ""} · de menor a mayor número</span>
+          <span className="ml-auto text-[13px] text-stone-400">{sinHuecos} {sinHuecos === 1 ? nombre.slice(0, -1) : nombre}{huecos.length > 0 ? ` · ${huecos.length} números sin usar` : ""}</span>
         </form>
 
-        <section className="overflow-hidden rounded-xl border border-stone-300 bg-white shadow-sm" aria-label={`Listado de ${nombre}`}>
+        <section className="overflow-hidden rounded-2xl border border-stone-200 bg-white" aria-label={`Listado de ${nombre}`}>
           <ListaComprobantes filas={visibles} />
         </section>
 
