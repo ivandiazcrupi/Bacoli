@@ -152,7 +152,7 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
   const [ocultas, setOcultas] = useState<Set<ColId>>(new Set());
   const [verColumnas, setVerColumnas] = useState(false);
   const [cuantas, setCuantas] = useState(POR_VEZ);
-  const claveCols = `cc-columnas-${tipo}`;
+  const claveCols = `cc-columnas-v2-${tipo}`; // v2: se reinician las columnas que el navegador había guardado antes de unificar las hojas
 
   useEffect(() => {
     try { const g = localStorage.getItem(claveCols); if (g) { setOcultas(new Set(JSON.parse(g) as ColId[])); return; } } catch { /* sin almacenamiento */ }
