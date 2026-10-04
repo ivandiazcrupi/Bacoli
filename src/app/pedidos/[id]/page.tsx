@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { Cabecera } from "@/components/Cabecera";
 import { importeVigente } from "@/lib/cuenta";
 import { db } from "@/lib/db";
+import { estadoDelDia } from "@/lib/dias";
 import { deFecha, diaMes, nombreDia } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
 import { exigirOficina } from "@/lib/session";
@@ -40,6 +41,9 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
   const total = importeVigente(pedido.items, ivaPct, pedido.estado === "ENTREGADO" ? "ENTREGADO" : "PENDIENTE", pedido.webTotal);
   const fecha = pedido.fechaEntrega ? deFecha(pedido.fechaEntrega) : null;
   const abierto = pedido.estado === "PENDIENTE";
+  // Entregado / no entregado solo se marcan con la ruta ya lista (salió); los comprobantes cargados a mano no pasan por la ruta.
+  const rutaSalio = pedido.manual || (pedido.fechaEntrega ? (await estadoDelDia(pedido.fechaEntrega)).estado !== "ARMANDO" : false);
+  const motivoApagado = !pedido.fechaEntrega ? "Asignale un día y un vehículo, y dejá lista la hoja de ruta, para marcar la entrega." : "Dejá lista la hoja de ruta de ese día para marcar la entrega.";
   const btn = "h-10 whitespace-nowrap rounded-md border px-4 text-sm font-semibold shadow-sm";
   const celda = (titulo: string, valor: React.ReactNode) => (
     <div className="min-w-0">
@@ -87,11 +91,11 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
         {/* Barra de acciones: a la izquierda lo que se hace con la entrega, a la derecha editar o cancelar. */}
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-stone-300 bg-white px-4 py-3 shadow-sm" role="toolbar" aria-label="Acciones del pedido">
           <div className="flex flex-wrap items-center gap-2">
-            {abierto && <button type="submit" form="form-entrega" className={`${btn} border-verde-700 bg-verde-700 text-white hover:bg-verde-800`}>✓ Confirmar entrega</button>}
+            {abierto && <button type="submit" form="form-entrega" disabled={!rutaSalio} title={rutaSalio ? undefined : motivoApagado} className={`${btn} border-verde-700 bg-verde-700 text-white hover:bg-verde-800 disabled:cursor-not-allowed disabled:opacity-40`}>✓ Confirmar entrega</button>}
             {!web && !pedido.conFactura && pedido.estado !== "CANCELADO" && (
               <BotonRemito pedidoId={pedido.id} numero={pedido.remitoNumero ? `Imprimir remito ${formatoRemito(pedido.remitoNumero)}` : null} textoSinNumero="Emitir remito" clase={`${btn} border-stone-400 bg-white text-stone-800 hover:bg-crema-100`} />
             )}
-            {abierto && fecha && <BotonNoEntregado pedidoId={pedido.id} clase={`${btn} border-stone-400 bg-white text-rojo-700 hover:bg-rojo-50`} />}
+            {abierto && fecha && rutaSalio && <BotonNoEntregado pedidoId={pedido.id} clase={`${btn} border-stone-400 bg-white text-rojo-700 hover:bg-rojo-50`} />}
             {!abierto && (
               <form action={reabrirPedido}>
                 <input type="hidden" name="id" value={pedido.id} />
@@ -115,6 +119,8 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
             </div>
           )}
         </div>
+
+        {abierto && !rutaSalio && <p className="text-xs text-stone-600">{motivoApagado}</p>}
 
         {!web && pedido.estado === "ENTREGADO" && pedido.cobro === "COBRADO" && <p className="text-right text-xs text-stone-600">Para cancelarlo primero hay que deshacer el cobro.</p>}
 

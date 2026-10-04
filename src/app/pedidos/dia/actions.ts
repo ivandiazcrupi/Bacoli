@@ -26,6 +26,15 @@ async function pedidoAbierto(id: string) {
   return { pedido } as const;
 }
 
+/** Solo se puede marcar entregado / no entregado un pedido cuya ruta ya salió (hoja LISTA): primero se deja lista la hoja de ese día. */
+async function errorSiNoSalio(pedido: { fechaEntrega: Date | null; manual: boolean }): Promise<string | null> {
+  if (pedido.manual) return null; // comprobantes cargados a mano: no pasan por la ruta
+  if (!pedido.fechaEntrega) return "Este pedido no está en ninguna hoja de ruta. Asignale un día y un vehículo (para retiros en fábrica se usa un vehículo “Mostrador”) y dejá lista la hoja.";
+  const { estado } = await estadoDelDia(pedido.fechaEntrega);
+  if (estado === "ARMANDO") return "La hoja de ruta de ese día todavía se está armando: dejala lista (“Dejar lista →”) para poder marcar entregas.";
+  return null;
+}
+
 /**
  * Entrega. "ENTREGADO" exige decir cómo se cobra (pago en efectivo / transferencia, o cuenta corriente): se guardan juntas,
  * así no puede quedar un pedido entregado sin cobro marcado. "PENDIENTE" deshace la entrega (y el cobro, si lo había).
@@ -37,6 +46,10 @@ export async function marcarEntrega(pedidoId: string, valor: "ENTREGADO" | "PEND
   if ("error" in r) return { ok: false, error: r.error };
   const { pedido } = r;
   if (pedido.estado === "CANCELADO") return { ok: false, error: "El pedido está cancelado." };
+  if (valor === "ENTREGADO") {
+    const noSalio = await errorSiNoSalio(pedido);
+    if (noSalio) return { ok: false, error: noSalio };
+  }
   if (valor === "ENTREGADO" && pedido.conFactura && !pedido.numeroFactura?.trim()) return { ok: false, error: "Este pedido lleva factura: cargá primero el N° de factura y después marcalo como entregado." };
   const cobro = leerCobro(cobroTexto);
   if (valor === "ENTREGADO" && pedido.webOrden && !webPagado(pedido.webOrden, pedido.webPago)) return { ok: false, error: ERROR_WEB_SIN_PAGO };
@@ -82,6 +95,8 @@ export async function registrarNoEntrega(pedidoId: string, motivo: string): Prom
   if (pedido.estado === "CANCELADO") return { ok: false, error: "El pedido está cancelado." };
   if (!pedido.fechaEntrega) return { ok: false, error: "Este pedido no estaba en ninguna hoja de ruta." };
   if (await db.diaCerrado.findUnique({ where: { fecha: pedido.fechaEntrega } })) return { ok: false, error: "Ese día está cerrado. Un dueño puede reabrirlo." };
+  const noSalio = await errorSiNoSalio(pedido);
+  if (noSalio) return { ok: false, error: noSalio };
 
   const d = datosEntrega(pedido);
   const resumen = {
