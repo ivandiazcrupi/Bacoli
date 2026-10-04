@@ -106,7 +106,7 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
             <span className="text-[12.5px] font-semibold">{f.barrio}</span>
             <span className="text-[12.5px] font-semibold leading-snug">
               {f.cliente}
-              <EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} />
+              <EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} ingreso={f.ingreso} />
             </span>
             <span className="text-[12.5px] leading-snug">
               {f.direccion}
@@ -131,7 +131,7 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
               <div>
                 <p className="font-semibold">{f.barrio}</p>
                 <p className="font-semibold">{f.cliente}</p>
-                <EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} />
+                <EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} ingreso={f.ingreso} />
                 <p className="text-[13px]">{f.direccion}</p>
                 {f.comentario && <p className="text-[13px] font-medium text-rojo-700">{f.comentario}</p>}
                 <NotaRapida pedidoId={f.id} nota={f.nota} />

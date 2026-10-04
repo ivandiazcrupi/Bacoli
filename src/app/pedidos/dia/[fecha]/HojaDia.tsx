@@ -41,6 +41,7 @@ export type Fila = {
   webOrden: string | null; // pedido de la tienda online: sin cuenta corriente ni remito
   pagoMp: boolean; // pedido de la tienda ya pagado (Mercado Pago o transferencia confirmada)
   pagoTexto: string | null;
+  ingreso: string; // día en que entró el pedido al sistema (dd/mm)
 };
 
 /** Un pedido que salió ese día y no se entregó: queda su "silueta" en la hoja (con el motivo) aunque se reprograme. */
@@ -275,7 +276,7 @@ function FilaHoja({ f, n, bloqueada, fija, acc, salidas }: { f: Fila; n: number;
       <div role="cell" className="text-[11px] font-bold uppercase leading-tight tracking-wide text-stone-800">{f.barrio}</div>
       <div role="cell" className="leading-snug">
         <p className="font-bold">{f.cliente}</p>
-        <EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} />
+        <EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} ingreso={f.ingreso} />
       </div>
       <div role="cell" className="min-w-0 break-words leading-snug">
         <a href={mapa(f)} target="_blank" rel="noreferrer" className="hover:underline">{f.direccion}</a>
@@ -406,7 +407,7 @@ function FilaUbicar({ f, salidas, bloqueada, acc }: { f: Fila; salidas: SalidaIn
       <div className={`grid items-center gap-x-4 gap-y-2 text-center ${COLUMNAS_UBICAR}`}>
         <button type="button" disabled={bloqueada} aria-label="Arrastrar el pedido a un vehículo" className="hidden cursor-grab text-lg leading-none text-stone-500 disabled:cursor-default disabled:opacity-30 lg:block" {...attributes} {...listeners}>⋮⋮</button>
         <span className="text-[13px] font-semibold">{f.barrio}</span>
-        <span className="text-[13px] font-semibold leading-snug">{f.cliente}<EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} /></span>
+        <span className="text-[13px] font-semibold leading-snug">{f.cliente}<EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} ingreso={f.ingreso} /></span>
         <span className="text-[13px] leading-snug">
           {f.direccion}
           {f.comentario && <span className="mt-0.5 block text-[12px] font-medium text-rojo-700">{f.comentario}</span>}
@@ -445,7 +446,7 @@ function FilaTarjeta({ f, n, bloqueada, fija, acc, salidas }: { f: Fila; n: numb
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-stone-800 text-sm font-semibold text-white">{n}</span>
         <div className="min-w-0 flex-1">
           <h3 className="text-lg font-bold leading-snug">{f.cliente}</h3>
-          <EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} />
+          <EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} ingreso={f.ingreso} />
           <p className="text-sm text-stone-600">{f.barrio}</p>
         </div>
         <span className={`shrink-0 rounded px-2 py-0.5 text-xs font-semibold ${f.conFactura ? "bg-stone-800 text-white" : "bg-stone-200 text-stone-700"}`}>{f.conFactura ? "FACTURA" : "REMITO"}</span>

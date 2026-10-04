@@ -46,6 +46,7 @@ export type FilaBandeja = {
   webOrden: string | null; // N° de orden de Empretienda (solo pedidos de la tienda)
   pagoMp: boolean; // pedido de la tienda ya pagado (Mercado Pago o transferencia confirmada)
   pagoTexto: string | null; // cómo pagó: "Mercado Pago" / "Transferencia"
+  ingreso: string; // día en que entró el pedido al sistema (dd/mm), para los de la tienda
   intento?: string; // "No se entregó el 1/10 · Local cerrado": el último intento que falló, si lo hubo
 };
 
@@ -82,6 +83,7 @@ export function aFila(p: PedidoCompleto, debe: Set<string>): Fila {
     webOrden: p.webOrden,
     pagoMp: webPagado(p.webOrden, p.webPago),
     pagoTexto: textoPagoWeb(p.webPago),
+    ingreso: p.creadoEn.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", timeZone: "America/Argentina/Buenos_Aires" }),
   };
 }
 
@@ -101,6 +103,7 @@ export function aFilaBandeja(p: PedidoCompleto, intento = ""): FilaBandeja {
     webOrden: p.webOrden,
     pagoMp: webPagado(p.webOrden, p.webPago),
     pagoTexto: textoPagoWeb(p.webPago),
+    ingreso: p.creadoEn.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", timeZone: "America/Argentina/Buenos_Aires" }),
     intento,
   };
 }
