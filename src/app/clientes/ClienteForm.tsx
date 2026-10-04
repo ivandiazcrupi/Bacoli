@@ -74,17 +74,11 @@ export function ClienteForm({ accion, inicial, listas, zonas, barrios = [], text
         </Campo>
       </Bloque>
 
-      <Bloque titulo="Precios y pago" ayuda="Qué lista usa y cuándo paga.">
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Campo etiqueta="Lista de precios" ayuda="Las franquicias de VACALIN usan la lista VACALIN.">
-            <select name="listaPreciosId" defaultValue={v("listaPreciosId")} className={estiloCampo}>
-              <option value="">Sin asignar</option>
-              {listas.map((l) => <option key={l.id} value={l.id}>{l.nombre}</option>)}
-            </select>
-          </Campo>
-          <Campo etiqueta="Descuento sobre la lista (%)" ayuda="Vacío si no tiene.">
-            <input name="descuentoPct" inputMode="decimal" defaultValue={v("descuentoPct")} className={estiloCampo} />
-          </Campo>
+      <Bloque titulo="Pago" ayuda="Cuándo paga. El precio se escribe en cada pedido.">
+        <div className="grid gap-3 sm:grid-cols-1">
+          {/* Las listas de precios no se usan por ahora; se conserva lo que el cliente ya tenía. */}
+          <input type="hidden" name="listaPreciosId" value={v("listaPreciosId")} />
+          <input type="hidden" name="descuentoPct" value={v("descuentoPct")} />
           <Campo etiqueta="Condición de pago">
             <select name="condicionPago" defaultValue={v("condicionPago")} className={estiloCampo}>
               {Object.entries(CONDICION_PAGO).map(([k, t]) => <option key={k} value={k}>{t}</option>)}

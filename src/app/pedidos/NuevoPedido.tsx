@@ -81,7 +81,6 @@ export function NuevoPedido({ esDueno }: { esDueno: boolean }) {
             <p className="min-w-0">
               <span className="font-bold">{destino.cliente}</span>
               <span className="text-stone-600"> · {destino.sucursal}</span>
-              <span className="text-sm text-stone-500"> · {destino.lista ? `Lista ${destino.lista}` : "Sin lista de precios"}</span>
             </p>
             <button type="button" onClick={() => setDestino(null)} className="shrink-0 rounded-md border border-stone-400 bg-white px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-crema-100">Cambiar cliente</button>
           </div>

@@ -11,6 +11,8 @@ import { PreciosEspeciales, type FilaPrecio } from "../PreciosEspeciales";
 import { EncabezadoSucursales, FilaSucursal } from "../SucursalForm";
 import { BotonVolver } from "@/components/BotonVolver";
 
+const MOSTRAR_PRECIOS_PROPIOS = Boolean(process.env.MOSTRAR_PRECIOS_PROPIOS);
+
 export default async function FichaCliente({ params }: { params: Promise<{ id: string }> }) {
   const usuario = await exigirOficina();
   const { id } = await params;
@@ -77,7 +79,7 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
             <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-wide">
               <span className={`rounded-full px-3 py-1 ${cliente.activo ? "bg-verde-50 text-verde-800" : "bg-rojo-100 text-rojo-800"}`}>{cliente.activo ? "Cliente activo" : "Cliente desactivado"}</span>
               <span className="rounded-full bg-crema-200 px-3 py-1 text-stone-700">{cliente.puntos.length} {cliente.puntos.length === 1 ? "sucursal" : "sucursales"}</span>
-              {cliente.listaPrecios && <span className="rounded-full bg-crema-200 px-3 py-1 text-stone-700">Lista {cliente.listaPrecios.nombre}</span>}
+              
             </div>
             {cliente.observacion && (
               <p className="mt-3 max-w-3xl whitespace-pre-line rounded-md border border-rojo-200 bg-rojo-50 px-3 py-2 text-sm font-medium text-rojo-800"><span className="mr-1.5 font-bold uppercase">Importante:</span>{cliente.observacion}</p>
@@ -99,7 +101,7 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
           <ClienteForm accion={actualizarCliente.bind(null, cliente.id)} inicial={inicial} listas={listas} textoBoton="Guardar cambios" />
         </section>
 
-        {cliente.preciosEspeciales.length > 0 && (
+        {cliente.preciosEspeciales.length > 0 && MOSTRAR_PRECIOS_PROPIOS && ( // los precios propios no se usan por ahora (el precio se escribe en cada pedido)
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">Precios propios anteriores</h2>
           <p className="text-sm text-stone-600">

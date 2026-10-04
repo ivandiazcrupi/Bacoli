@@ -40,7 +40,7 @@ export async function guardarPrecios(listaId: string, _: EstadoPrecios, formData
           }),
     ),
   );
-  revalidatePath("/precios");
+  revalidatePath("/productos");
   return { ok: "Precios guardados." };
 }
 
@@ -70,7 +70,7 @@ export async function crearProducto(_: EstadoPrecios, formData: FormData): Promi
   } catch (e) {
     return errorProducto(e, formData);
   }
-  revalidatePath("/precios");
+  revalidatePath("/productos");
   return { ok: `Producto "${nombre}" agregado. Ahora cargale el precio en cada lista.` };
 }
 
@@ -97,7 +97,7 @@ export async function guardarProducto(productoId: string, _: EstadoPrecios, form
   } catch (e) {
     return errorProducto(e, formData);
   }
-  revalidatePath("/precios");
+  revalidatePath("/productos");
   return { ok: "Producto guardado." };
 }
 
@@ -116,6 +116,13 @@ export async function crearLista(_: EstadoPrecios, formData: FormData): Promise<
     const origen = await db.precio.findMany({ where: { listaId: copiarDe } });
     if (origen.length) await db.precio.createMany({ data: origen.map((p) => ({ listaId: nueva.id, productoId: p.productoId, precio: p.precio })) });
   }
-  revalidatePath("/precios");
-  redirect(`/precios?lista=${nueva.id}`);
+  revalidatePath("/productos");
+  redirect("/productos");
+}
+
+// Un producto desactivado no aparece al cargar pedidos (los pedidos viejos lo conservan).
+export async function cambiarActivoProducto(productoId: string, activar: boolean) {
+  await exigirOficina();
+  await db.producto.update({ where: { id: productoId }, data: { activo: activar } });
+  revalidatePath("/productos");
 }

@@ -35,7 +35,7 @@ export async function Cabecera({ usuario }: { usuario: Usuario }) {
           {oficina && <Link href="/pedidos" className={principal}>Pedidos</Link>}
           {oficina && <Link href="/cuentas" className={principal}>Cuenta corriente</Link>}
           {oficina && <span aria-hidden className="mx-2 hidden h-5 w-px bg-stone-300 lg:block" />}
-          {oficina && <Link href="/precios" className={secundario}>Precios</Link>}
+          {oficina && <Link href="/productos" className={secundario}>Productos</Link>}
           {puedeGestionarUsuarios(usuario.rol) && <Link href="/usuarios" className={secundario}>Usuarios</Link>}
           {puedeGestionarUsuarios(usuario.rol) && <Link href="/empresa" className={secundario}>Empresa{copiaVencida && <span title="Falta descargar la copia de seguridad de hoy" aria-label="Falta la copia de seguridad" className="ml-1 inline-block h-2 w-2 rounded-full bg-rojo-600 align-middle" />}</Link>}
           <Link href="/cuenta" className={secundario}>Mi cuenta</Link>

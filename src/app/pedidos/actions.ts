@@ -80,7 +80,7 @@ async function leerRenglones(formData: FormData): Promise<{ renglones: Renglon[]
     if (descuentoPct < 0 || descuentoPct > 100) return { error: `La bonificación de ${p.nombre} tiene que estar entre 0 y 100 %.` };
     const precio = leerMonto(String(formData.get(`pr_${p.id}`) ?? ""));
     // Un renglón que es solo "sin cargo" (recambio) no necesita precio.
-    if (cantidad > 0 && (precio === null || precio <= 0)) return { error: `Falta el precio de ${p.nombre}. Cargalo en el pedido o en Precios.` };
+    if (cantidad > 0 && (precio === null || precio <= 0)) return { error: `Falta el precio de ${p.nombre}. Escribilo en el pedido.` };
     renglones.push({ productoId: p.id, nombre: p.nombre, sku: p.sku, unidad: p.unidad, cantidad, precioUnitario: precio ?? 0, sinCargo, descuentoPct, motivoSinCargo: sinCargo > 0 ? motivoSinCargo : null });
   }
   if (renglones.length === 0) return { error: "Poné la cantidad de al menos un producto." };

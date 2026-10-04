@@ -153,6 +153,10 @@ y ~1000 minoristas.
 - [ ] Publicación en Railway (guiar al dueño paso a paso; él crea el proyecto y carga las claves).
 - [ ] Más adelante: facturación ARCA, reportes, migración de planillas, Empretienda, sugerencia de ruta.
 
+## Sin listas de precios, por ahora (decisión del dueño, cierre previo al arranque)
+- **El precio se escribe a mano en cada pedido** (cada producto, cada vez; los campos de precio arrancan vacíos; sin precio no se puede guardar). Las **listas de precios y los precios propios por cliente quedan apagados** pero **no se borró nada**: las tablas (`ListaPrecios`, `Precio`, `PrecioCliente`), `precioParaCliente` y los datos siguen en la base para retomarlo ("luego terminamos de desarrollar eso"). Se sacó de pantalla: el menú PRECIOS (ahora **PRODUCTOS**, `/productos`; `/precios` redirige), el selector de lista y el descuento de la ficha del cliente (se conservan como campos ocultos para no perder lo que ya tenían), la etiqueta "Lista X" y la barra "Lista …" al cargar pedido, y la sección "Precios propios anteriores" (se prende con la variable `MOSTRAR_PRECIOS_PROPIOS`). `productosParaCliente` (`src/app/pedidos/datos.ts`) devuelve los productos activos sin precio. Al editar un pedido, los renglones conservan el precio que tenían.
+- **Productos** (`/productos`): ver, editar, agregar y **Desactivar / Volver a activar**; un producto desactivado **no aparece al cargar pedidos** (los pedidos ya hechos lo conservan). Pantalla simple, una lista.
+
 ## Mayúsculas (acordado con el dueño): mix
 - **El sistema** (menús, botones, títulos, etiquetas, ayudas, filtros) va en **minúscula normal**.
 - **Lo que cargan ellos va en MAYÚSCULA**, para no depender del teclado: nombres, productos, listas de precios, direcciones,
