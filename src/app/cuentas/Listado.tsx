@@ -11,6 +11,7 @@ import { formatoPesos } from "@/lib/numeros";
 import { exigirOficina } from "@/lib/session";
 import { CONTENEDOR_PEDIDOS } from "../pedidos/Encabezado";
 import { EncabezadoCuenta } from "./EncabezadoCuenta";
+import { BarraFiltros, CONTENEDOR_TABLA, Resumen } from "./estilo";
 import { ListaComprobantes, type FilaComprobante } from "./ListaComprobantes";
 
 const POR_PAGINA = 1000;
@@ -115,37 +116,21 @@ export async function Listado({ tipo, searchParams, ruta }: { tipo: "FACTURA" | 
 
   const nombre = tipo === "FACTURA" ? "facturas" : "remitos";
   const hrefPagina = (n: number) => `${ruta}?${new URLSearchParams({ ...(q ? { q } : {}), estado, pagina: String(n) })}`;
-  const dato = (titulo: string, valor: React.ReactNode, clase = "") => (
-    <div>
-      <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-stone-400">{titulo}</p>
-      <p className={`mt-1 text-[26px] font-semibold leading-none tabular-nums text-stone-900 ${clase}`}>{valor}</p>
-    </div>
-  );
-
   return (
     <>
       <Cabecera usuario={usuario} />
       <main className={CONTENEDOR_PEDIDOS}>
         <EncabezadoCuenta activa={tipo === "FACTURA" ? "facturas" : "remitos"} />
 
-        <section aria-label="Resumen" className="flex flex-wrap gap-x-16 gap-y-4 px-1 pb-2 pt-3">
-          {dato(`${tipo === "FACTURA" ? "Facturas" : "Remitos"} sin pagar`, sinPagar.length)}
-          {dato("Monto sin pagar", formatoPesos(montoSinPagar))}
-          {tipo === "FACTURA" ? dato("NC sin aplicar", ncSinAplicar, ncSinAplicar > 0 ? "text-rojo-700" : "") : dato("Vencido", formatoPesos(vencido), vencido > 0 ? "text-rojo-700" : "")}
-        </section>
+        <Resumen datos={[
+          { titulo: `${tipo === "FACTURA" ? "Facturas" : "Remitos"} sin pagar`, valor: sinPagar.length },
+          { titulo: "Monto sin pagar", valor: formatoPesos(montoSinPagar) },
+          tipo === "FACTURA" ? { titulo: "NC sin aplicar", valor: ncSinAplicar, rojo: ncSinAplicar > 0 } : { titulo: "Vencido", valor: formatoPesos(vencido), rojo: vencido > 0 },
+        ]} />
 
-        <form className="flex flex-wrap items-center gap-3">
-          <input name="q" defaultValue={q} placeholder="Buscar cliente o número…" className="h-10 w-full max-w-sm rounded-full border border-stone-300 bg-white px-4 text-sm focus:border-stone-500 focus:outline-none" />
-          <input type="hidden" name="estado" value={estado} />
-          <div role="group" aria-label="Mostrar" className="inline-flex gap-1 rounded-full bg-crema-100 p-1 text-sm">
-            {([["todas", "Todas"], ["sin-pagar", "Pendientes de pago"], ["pagadas", "Pagadas"]] as const).map(([v, t]) => (
-              <Link key={v} href={`${ruta}?${new URLSearchParams({ ...(q ? { q } : {}), estado: v })}`} aria-current={estado === v ? "true" : undefined} className={`rounded-full px-4 py-1.5 ${estado === v ? "bg-white font-semibold text-stone-900 shadow-sm" : "text-stone-500 hover:text-stone-800"}`}>{t}</Link>
-            ))}
-          </div>
-          <span className="ml-auto text-[13px] text-stone-400">{sinHuecos} {sinHuecos === 1 ? nombre.slice(0, -1) : nombre}{huecos.length > 0 ? ` · ${huecos.length} números sin usar` : ""}</span>
-        </form>
+        <BarraFiltros q={q} placeholder="Buscar cliente o número…" estado={estado} ruta={ruta} derecha={`${sinHuecos} ${sinHuecos === 1 ? nombre.slice(0, -1) : nombre}${huecos.length > 0 ? ` · ${huecos.length} números sin usar` : ""}`} />
 
-        <section className="overflow-hidden rounded-2xl border border-stone-200 bg-white" aria-label={`Listado de ${nombre}`}>
+        <section className={CONTENEDOR_TABLA} aria-label={`Listado de ${nombre}`}>
           <ListaComprobantes filas={visibles} />
         </section>
 

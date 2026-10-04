@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { Cabecera } from "@/components/Cabecera";
-import { cabeceraTabla } from "@/components/campos";
 import { diasDeAtraso, incluirNc, partidaDe } from "@/lib/cobranza";
 import { db } from "@/lib/db";
 import { hoy } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
+import { BarraFiltros, CABECERA_TABLA, CONTENEDOR_TABLA, FILA_TABLA, Resumen } from "../estilo";
 import { EncabezadoCuenta } from "../EncabezadoCuenta";
 import { exigirOficina } from "@/lib/session";
 import { CONTENEDOR_PEDIDOS } from "../../pedidos/Encabezado";
@@ -50,49 +50,38 @@ export default async function Cuentas({ searchParams }: { searchParams: Promise<
   const totalVencido = [...porCliente.values()].reduce((s, f) => s + f.vencido, 0);
   const cobradoMes = Math.max(0, -Number(pagosMes._sum.monto ?? 0));
 
-  const celda = (titulo: string, valor: string, clase = "") => (
-    <div className="min-w-0">
-      <p className="border-b border-stone-300 bg-crema-100 px-3 py-1.5 text-center text-xs font-semibold uppercase tracking-wide text-stone-600">{titulo}</p>
-      <p className={`px-3 py-3 text-center text-xl font-bold tabular-nums ${clase}`}>{valor}</p>
-    </div>
-  );
-
   return (
     <>
       <Cabecera usuario={usuario} />
       <main className={CONTENEDOR_PEDIDOS}>
         <EncabezadoCuenta activa="clientes" />
 
-        <section aria-label="Resumen" className="grid grid-cols-1 divide-y divide-stone-300 overflow-hidden rounded-xl border border-stone-300 bg-white shadow-sm sm:grid-cols-4 sm:divide-x sm:divide-y-0">
-          {celda("Deuda total", formatoPesos(totalACobrar))}
-          {celda("Por entregar", formatoPesos(totalPorEntregar))}
-          {celda("Vencido", formatoPesos(totalVencido), totalVencido > 0 ? "text-rojo-700" : "")}
-          {celda("Cobrado este mes", formatoPesos(cobradoMes))}
-        </section>
+        <Resumen datos={[
+          { titulo: "Deuda total", valor: formatoPesos(totalACobrar) },
+          { titulo: "Por entregar", valor: formatoPesos(totalPorEntregar) },
+          { titulo: "Vencido", valor: formatoPesos(totalVencido), rojo: totalVencido > 0 },
+          { titulo: "Cobrado este mes", valor: formatoPesos(cobradoMes) },
+        ]} />
 
-        <form className="flex flex-wrap items-center gap-2">
-          <input name="q" defaultValue={q} placeholder="Buscar cliente…" className="h-10 w-full max-w-md rounded-md border border-stone-400 bg-white px-3 text-sm shadow-sm focus:border-verde-700 focus:outline-none" />
-          <button className="h-10 rounded-md border border-stone-400 bg-white px-4 text-sm font-medium shadow-sm hover:border-verde-700">Buscar</button>
-          <span className="ml-auto text-sm text-stone-600">{filas.length} {filas.length === 1 ? "cliente" : "clientes"} con comprobantes sin pagar</span>
-        </form>
+        <BarraFiltros q={q} placeholder="Buscar cliente…" derecha={`${filas.length} ${filas.length === 1 ? "cliente" : "clientes"} con comprobantes sin pagar`} />
 
-        <section className="overflow-hidden rounded-xl border border-stone-300 bg-white shadow-sm" aria-label="Clientes con deuda">
-          <div className={`hidden gap-x-3 px-4 py-2.5 text-center sm:grid ${COLUMNAS} ${cabeceraTabla}`}>
-            {["Cliente", "Comprobantes", "Por entregar", "Vencido", "Deuda total", "Más viejo", ""].map((h, i) => <span key={i} className={i === 0 ? "text-left" : ""}>{h}</span>)}
+        <section className={CONTENEDOR_TABLA} aria-label="Clientes con deuda">
+          <div className={`hidden sm:grid ${CABECERA_TABLA} ${COLUMNAS}`}>
+            {["Cliente", "Comprobantes", "Por entregar", "Vencido", "Deuda total", "Más viejo", ""].map((h, i) => <span key={i} className={i === 0 ? "" : i === 4 ? "text-right" : "text-center"}>{h}</span>)}
           </div>
           {filas.length === 0 ? (
-            <p className="p-8 text-center text-stone-600">{q ? "No hay clientes que coincidan." : "No hay comprobantes sin pagar. Todo cobrado."}</p>
+            <p className="p-8 text-center text-sm text-stone-500">{q ? "No hay clientes que coincidan." : "No hay comprobantes sin pagar. Todo cobrado."}</p>
           ) : (
-            <ul className="divide-y divide-stone-300">
+            <ul>
               {filas.map((f) => (
-                <li key={f.id} className={`grid items-center gap-x-3 gap-y-1 px-4 py-3 text-center text-sm sm:grid ${COLUMNAS}`}>
-                  <Link href={`/cuentas/${f.id}`} className="text-left font-semibold hover:underline">{f.nombre}</Link>
-                  <span className="tabular-nums">{f.comprobantes}</span>
-                  <span className="tabular-nums">{f.porEntregar > 0 ? formatoPesos(f.porEntregar) : <span className="text-stone-400">—</span>}</span>
-                  <span className={`font-semibold tabular-nums ${f.vencido > 0 ? "text-rojo-700" : "text-stone-400"}`}>{f.vencido > 0 ? formatoPesos(f.vencido) : "—"}</span>
-                  <span className="font-bold tabular-nums">{formatoPesos(f.total)}</span>
-                  <span className={`tabular-nums ${f.masViejo > 0 ? "text-rojo-700" : "text-stone-400"}`}>{f.masViejo > 0 ? `${f.masViejo} ${f.masViejo === 1 ? "día" : "días"}` : "—"}</span>
-                  <Link href={`/cuentas/${f.id}`} className="font-semibold text-verde-800 underline-offset-4 hover:underline">Abrir ›</Link>
+                <li key={f.id} className={`gap-y-1 sm:grid ${FILA_TABLA} ${COLUMNAS}`}>
+                  <Link href={`/cuentas/${f.id}`} className="truncate font-semibold hover:underline">{f.nombre}</Link>
+                  <span className="text-center tabular-nums">{f.comprobantes}</span>
+                  <span className="text-center tabular-nums">{f.porEntregar > 0 ? formatoPesos(f.porEntregar) : <span className="text-stone-300">—</span>}</span>
+                  <span className={`text-center font-semibold tabular-nums ${f.vencido > 0 ? "text-rojo-700" : "text-stone-300"}`}>{f.vencido > 0 ? formatoPesos(f.vencido) : "—"}</span>
+                  <span className="text-right text-[14px] font-bold tabular-nums">{formatoPesos(f.total)}</span>
+                  <span className={`text-center tabular-nums ${f.masViejo > 0 ? "text-rojo-700" : "text-stone-300"}`}>{f.masViejo > 0 ? `${f.masViejo} ${f.masViejo === 1 ? "día" : "días"}` : "—"}</span>
+                  <Link href={`/cuentas/${f.id}`} className="text-center text-[12.5px] font-semibold text-verde-800 underline-offset-4 hover:underline">Abrir ›</Link>
                 </li>
               ))}
             </ul>

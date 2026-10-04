@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useState, useTransition } from "react";
 import { formatoPesos } from "@/lib/numeros";
+import { CABECERA_TABLA, FILA_TABLA } from "./estilo";
 import { deshacerPago, guardarObservacion, registrarPagos } from "./actions";
 import { aplicarNc, deshacerPagoArca, guardarDatosArca, quitarAplicacionNc, registrarPagosArca } from "./arca/actions";
 
@@ -48,7 +49,7 @@ const MEDIOS = [
   { valor: "OTRO", texto: "Otro" },
 ];
 const TEXTO_MEDIO: Record<string, string> = { EFECTIVO: "Efectivo", TRANSFERENCIA: "Transferencia", CHEQUE: "Cheque", MERCADO_PAGO: "Mercado Pago", OTRO: "Otro" };
-const COLUMNAS = "grid-cols-[32px_150px_minmax(220px,1fr)_150px_130px_170px_190px_40px]";
+const COLUMNAS = "grid-cols-[28px_140px_minmax(200px,1fr)_96px_120px_160px_170px_28px]";
 const fechaCorta = (s: string) => `${s.slice(8)}/${s.slice(5, 7)}/${s.slice(2, 4)}`;
 
 // Estado en una palabra, con un puntito de color (sin cajas ni pastillas).
@@ -136,38 +137,38 @@ export function ListaComprobantes({ filas }: { filas: FilaComprobante[] }) {
 
   return (
     <div>
-      <div className={`hidden items-center gap-x-4 border-b border-stone-200 px-6 py-3 text-[11px] font-medium uppercase tracking-[0.08em] text-stone-400 lg:grid ${COLUMNAS}`}>
+      <div className={`hidden lg:grid ${CABECERA_TABLA} ${COLUMNAS}`}>
         <input type="checkbox" aria-label="Elegir todos los de esta página" checked={pagables.length > 0 && elegidas.size === pagables.length} onChange={() => setElegidas(elegidas.size === pagables.length ? new Set() : new Set(pagables.map((f) => f.id)))} className="h-4 w-4 accent-[#026433]" />
         <span>{filas[0].tipo === "FACTURA" ? "Factura" : "Remito"}</span><span>Cliente</span><span>Fecha</span><span className="text-right">Monto</span><span className="pl-4">Estado</span><span>{filas[0].tipo === "FACTURA" ? "Nota de crédito" : "Pedido"}</span><span />
       </div>
       <ul>
         {filas.map((f) => f.hueco ? (
-          <li key={f.id} className={`items-center gap-x-4 px-6 py-2 text-sm text-stone-300 lg:grid ${COLUMNAS}`}>
+          <li key={f.id} className={`items-center gap-x-4 px-4 py-1.5 text-sm text-stone-300 lg:grid ${COLUMNAS}`}>
             <span />
             <span className="tabular-nums">{f.numero}</span>
             <span className="italic">Número sin usar</span>
           </li>
         ) : (
           <Fragment key={f.id}>
-            <li className={`items-center gap-x-4 gap-y-1 border-b border-stone-100 px-6 py-4 text-[13px] text-stone-800 transition-colors hover:bg-crema-50 lg:grid ${COLUMNAS} ${f.anulado ? "text-stone-400" : elegidas.has(f.id) ? "bg-crema-100" : ""}`}>
+            <li className={`gap-y-1 lg:grid ${FILA_TABLA} ${COLUMNAS} ${f.anulado ? "text-stone-400" : elegidas.has(f.id) ? "bg-crema-100" : ""}`}>
               <input type="checkbox" aria-label={`Elegir ${f.numero ?? "comprobante"}`} checked={elegidas.has(f.id)} disabled={!f.entregado || f.pagada || f.cubierta || !!f.anulado || f.esNc} onChange={() => alternar(f.id)} className="h-4 w-4 accent-[#026433] disabled:opacity-25" />
-              <span className={`whitespace-nowrap text-[15px] font-semibold tabular-nums ${f.esNc ? "text-stone-500" : "text-stone-900"}`}>
+              <span className={`whitespace-nowrap text-[14px] font-bold tabular-nums ${f.esNc ? "text-stone-500" : "text-stone-900"}`}>
                 {f.numero ?? <span className="text-[13px] font-medium text-rojo-700">sin número</span>}
               </span>
-              <span className="min-w-0">
-                {f.clienteId ? <Link href={`/cuentas/${f.clienteId}`} className="text-[14px] font-medium text-stone-900 [overflow-wrap:anywhere] hover:underline">{f.cliente}</Link> : <span className="text-[14px] font-medium italic text-rojo-700" title="El CUIT no está cargado en ningún cliente">{f.cliente}</span>}
+              <span className="min-w-0 truncate">
+                {f.clienteId ? <Link href={`/cuentas/${f.clienteId}`} className="font-semibold text-stone-900 hover:underline">{f.cliente}</Link> : <span className="font-semibold italic text-rojo-700" title="El CUIT no está cargado en ningún cliente">{f.cliente}</span>}
                 {(f.sucursal || f.obs || f.aviso || f.sinPedido) && (
-                  <span className="mt-0.5 block text-[12px] leading-snug text-stone-400">
+                  <span className="ml-2 text-[12px] text-stone-400">
                     {[f.sucursal, f.obs, f.sinPedido ? "sin pedido" : ""].filter(Boolean).join(" · ")}
-                    {f.aviso && <span className="block text-rojo-700">{f.aviso}</span>}
+                    {f.aviso && <span className="ml-2 text-rojo-700">{f.aviso}</span>}
                   </span>
                 )}
               </span>
               <span className="tabular-nums text-stone-600">
                 {fechaCorta(f.cargado)}
-                {!f.arca && f.entregado && <span className="block text-[12px] text-stone-400">entrega {fechaCorta(f.fecha)}{!f.pagada && f.vence ? ` · vence ${fechaCorta(f.vence)}` : ""}</span>}
+                {!f.arca && f.entregado && <span className="block text-[11.5px] leading-tight text-stone-400" title="Entrega y vencimiento">{fechaCorta(f.fecha)}{!f.pagada && f.vence ? ` · vence ${fechaCorta(f.vence)}` : ""}</span>}
               </span>
-              <span className={`text-right text-[15px] font-semibold tabular-nums ${f.cubierta || f.anulado ? "text-stone-300 line-through" : f.esNc ? "text-stone-500" : "text-stone-900"}`}>{f.esNc ? "−" : ""}{formatoPesos(f.cubierta || f.anulado || f.esNc ? f.bruto : f.monto)}</span>
+              <span className={`text-right text-[14px] font-bold tabular-nums ${f.cubierta || f.anulado ? "text-stone-300 line-through" : f.esNc ? "text-stone-500" : "text-stone-900"}`}>{f.esNc ? "−" : ""}{formatoPesos(f.cubierta || f.anulado || f.esNc ? f.bruto : f.monto)}</span>
               <span className="pl-4">
                 {f.esNc ? (
                   (f.saldo ?? 0) > 0.01
@@ -207,12 +208,12 @@ export function ListaComprobantes({ filas }: { filas: FilaComprobante[] }) {
               <button type="button" onClick={() => setEditando(editando === f.id ? null : f.id)} aria-label="Observación" title="Observación" className="justify-self-end text-stone-300 hover:text-stone-700">✎</button>
             </li>
             {editando === f.id && (
-              <li className="border-b border-stone-100 bg-crema-50 px-6 py-3 lg:pl-[238px]">
+              <li className="border-b border-stone-200 bg-crema-50 px-4 py-3 lg:pl-[190px]">
                 <div className="max-w-xl"><ObsInput id={f.id} inicial={f.obs} arca={f.arca ? { puntoId: f.puntoId ?? null, puntos: f.puntos ?? [] } : undefined} /></div>
               </li>
             )}
             {picker === f.id && f.esNc && (
-              <li className="border-b border-stone-100 bg-crema-50 px-6 py-4 text-left text-[13px] lg:pl-[238px]">
+              <li className="border-b border-stone-200 bg-crema-50 px-4 py-3 text-left text-[13px] lg:pl-[190px]">
                 <p className="mb-2 font-medium text-stone-700">¿A qué factura corresponde la {f.numero}? <span className="font-normal text-stone-400">mismo CUIT; primero las del mismo importe</span></p>
                 {(() => {
                   const candidatas = filas.filter((x) => x.arca && !x.esNc && x.cuit === f.cuit && (x.saldo ?? 0) > 0.01).sort((a, b) => Number(Math.abs((b.saldo ?? 0) - (f.saldo ?? 0)) < 0.01) - Number(Math.abs((a.saldo ?? 0) - (f.saldo ?? 0)) < 0.01) || (b.numero ?? "").localeCompare(a.numero ?? ""));
@@ -237,7 +238,7 @@ export function ListaComprobantes({ filas }: { filas: FilaComprobante[] }) {
         ))}
       </ul>
 
-      <div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-3 border-t border-stone-200 bg-white/95 px-6 py-3 text-sm backdrop-blur">
+      <div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-3 border-t border-stone-300 bg-crema-100 px-4 py-2.5 text-sm">
         <p>{elegidas.size > 0 ? <><span className="font-semibold">{elegidas.size}</span> {elegidas.size === 1 ? "elegido" : "elegidos"} · <span className="font-semibold tabular-nums">{formatoPesos(suma)}</span></> : <span className="text-stone-400">Tildá lo que se pagó.</span>}</p>
         <div className="flex items-center gap-2">
           <select aria-label="Medio de pago" value={medio} onChange={(e) => setMedio(e.target.value)} disabled={elegidas.size === 0} className="h-9 rounded-md border border-stone-300 bg-white px-2 text-sm disabled:opacity-40">
@@ -247,7 +248,7 @@ export function ListaComprobantes({ filas }: { filas: FilaComprobante[] }) {
           <button type="button" onClick={registrar} disabled={elegidas.size === 0 || trabajando} className="h-9 rounded-md bg-verde-700 px-5 text-sm font-semibold text-white hover:bg-verde-800 disabled:opacity-40">{trabajando ? "Guardando…" : "Registrar pago"}</button>
         </div>
       </div>
-      {error && <p className="border-t border-rojo-600 bg-rojo-50 px-6 py-2 text-sm text-rojo-700" role="alert">{error}</p>}
+      {error && <p className="border-t border-rojo-600 bg-rojo-50 px-4 py-2 text-sm text-rojo-700" role="alert">{error}</p>}
     </div>
   );
 }
