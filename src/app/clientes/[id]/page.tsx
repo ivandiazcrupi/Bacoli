@@ -8,6 +8,7 @@ import { formatoPesos } from "@/lib/numeros";
 import { ClienteForm, type DatosCliente } from "../ClienteForm";
 import { PreciosEspeciales, type FilaPrecio } from "../PreciosEspeciales";
 import { EncabezadoSucursales, FilaSucursal } from "../SucursalForm";
+import { BotonVolver } from "@/components/BotonVolver";
 
 export default async function FichaCliente({ params }: { params: Promise<{ id: string }> }) {
   const usuario = await exigirOficina();
@@ -62,6 +63,7 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
     maxMonto: cliente.maxMonto?.toString().replace(".", ",") ?? "",
     comisionista: cliente.comisionista ?? "",
     comisionPct: cliente.comisionPct?.toString().replace(".", ",") ?? "",
+    observacion: cliente.observacion ?? "",
   };
 
   return (
@@ -70,13 +72,16 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
       <main className="mx-auto max-w-[1600px] space-y-6 px-4 py-6 sm:px-8">
         <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-stone-300 bg-white p-5 text-stone-900">
           <div>
-            <Link href="/clientes" className="text-sm text-stone-500 hover:text-stone-900">← Clientes</Link>
-            <h1 className="mt-1 text-3xl font-bold tracking-tight">{cliente.nombre}</h1>
+            <div className="mb-2"><BotonVolver fallback="/clientes" /></div>
+            <h1 className="text-3xl font-bold tracking-tight">{cliente.nombre}</h1>
             <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-wide">
               <span className={`rounded-full px-3 py-1 ${cliente.activo ? "bg-verde-50 text-verde-800" : "bg-rojo-100 text-rojo-800"}`}>{cliente.activo ? "Cliente activo" : "Cliente desactivado"}</span>
               <span className="rounded-full bg-crema-200 px-3 py-1 text-stone-700">{cliente.puntos.length} {cliente.puntos.length === 1 ? "sucursal" : "sucursales"}</span>
               {cliente.listaPrecios && <span className="rounded-full bg-crema-200 px-3 py-1 text-stone-700">Lista {cliente.listaPrecios.nombre}</span>}
             </div>
+            {cliente.observacion && (
+              <p className="mt-3 max-w-3xl whitespace-pre-line rounded-md border border-rojo-200 bg-rojo-50 px-3 py-2 text-sm font-medium text-rojo-800"><span className="mr-1.5 font-bold uppercase">Importante:</span>{cliente.observacion}</p>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Link href={`/cuentas/${cliente.id}`} className="rounded-md border border-stone-300 bg-white px-4 py-2 text-sm font-semibold uppercase text-stone-800 hover:bg-crema-100">Cuenta corriente</Link>

@@ -13,6 +13,7 @@ import { CONTENEDOR_TABLA, Resumen } from "../estilo";
 import { filaDeArca, filaDeRemito } from "../filas";
 import { ListaComprobantes } from "../ListaComprobantes";
 import { AnularNota } from "./AnularNota";
+import { BotonVolver } from "@/components/BotonVolver";
 
 const fechaCorta = (s: string) => `${s.slice(8)}/${s.slice(5, 7)}/${s.slice(2, 4)}`;
 
@@ -55,11 +56,12 @@ export default async function CuentaDeCliente({ params }: { params: Promise<{ id
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Cuenta</h1>
             <p className="mt-2 text-lg font-semibold">{cliente.nombre}{cliente.cuit ? <span className="ml-3 text-sm font-normal text-stone-500">CUIT {cliente.cuit}</span> : null}</p>
+            {cliente.observacion && <p className="mt-2 max-w-3xl whitespace-pre-line rounded-md border border-rojo-200 bg-rojo-50 px-3 py-1.5 text-sm font-medium text-rojo-800"><span className="mr-1.5 font-bold uppercase">Importante:</span>{cliente.observacion}</p>}
           </div>
           <div className="flex gap-2 text-sm">
             <Link href={`/cuentas/${id}/nc`} className="rounded-md bg-verde-700 px-3 py-2 font-semibold text-white shadow-sm hover:bg-verde-800">+ Nota de crédito</Link>
             <Link href={`/clientes/${id}/cuenta`} className="rounded-md border border-stone-400 bg-white px-3 py-2 font-medium shadow-sm hover:bg-crema-100">Movimientos</Link>
-            <Link href="/cuentas/clientes" className="rounded-md border border-stone-400 bg-white px-3 py-2 font-medium shadow-sm hover:bg-crema-100">← Cuenta</Link>
+            <BotonVolver fallback="/cuentas/clientes" />
           </div>
         </div>
 

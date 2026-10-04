@@ -20,11 +20,12 @@ export type DatosCliente = {
   maxMonto: string;
   comisionista: string;
   comisionPct: string;
+  observacion: string;
 };
 
 export const CLIENTE_VACIO: DatosCliente = {
   nombre: "", tipo: "", razonSocial: "", cuit: "", facturado: false, condicionPago: "CONTADO", listaPreciosId: "",
-  descuentoPct: "", imputacionPago: "SALDO", sinLimite: false, maxPedidosImpagos: "", maxMonto: "", comisionista: "", comisionPct: "",
+  descuentoPct: "", imputacionPago: "SALDO", sinLimite: false, maxPedidosImpagos: "", maxMonto: "", comisionista: "", comisionPct: "", observacion: "",
 };
 
 type Props = {
@@ -65,6 +66,12 @@ export function ClienteForm({ accion, inicial, listas, zonas, barrios = [], text
             Se le factura normalmente
           </label>
         </div>
+      </Bloque>
+
+      <Bloque titulo="Observación" ayuda="Algo importante para saber: por qué está desactivado, cuidados, acuerdos. Se ve arriba, en la ficha y en su cuenta.">
+        <Campo etiqueta="Observación importante">
+          <textarea name="observacion" rows={2} maxLength={500} placeholder="Ej: Desactivado por deuda desde marzo. Pedir pago adelantado." defaultValue={v("observacion")} className={estiloCampo} />
+        </Campo>
       </Bloque>
 
       <Bloque titulo="Precios y pago" ayuda="Qué lista usa y cuándo paga.">

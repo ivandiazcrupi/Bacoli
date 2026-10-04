@@ -9,6 +9,7 @@ import { formatoPesos } from "@/lib/numeros";
 import { formatoRemito } from "@/lib/remito";
 import { exigirOficina } from "@/lib/session";
 import { CONTENEDOR_PEDIDOS } from "../../../pedidos/Encabezado";
+import { BotonVolver } from "@/components/BotonVolver";
 
 const formatoFecha = new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Argentina/Buenos_Aires" });
 const MEDIO: Record<string, string> = { EFECTIVO: "Efectivo", TRANSFERENCIA: "Transferencia", CHEQUE: "Cheque", MERCADO_PAGO: "Mercado Pago", OTRO: "Otro" };
@@ -45,7 +46,7 @@ export default async function CuentaCorriente({ params }: { params: Promise<{ id
             <h1 className="text-2xl font-bold tracking-tight">Cuenta corriente</h1>
             <p className="mt-1 text-sm text-stone-600">{cliente.nombre}</p>
           </div>
-          <Link href={`/clientes/${id}`} className="rounded-md border border-stone-400 bg-white px-3 py-2 text-sm font-medium shadow-sm hover:bg-crema-100">← {cliente.nombre}</Link>
+          <BotonVolver fallback={`/clientes/${id}`} />
         </div>
 
         <section className="grid grid-cols-1 divide-y divide-stone-300 overflow-hidden rounded-xl border border-stone-300 bg-white shadow-sm sm:grid-cols-3 sm:divide-x sm:divide-y-0" aria-label="Saldo">

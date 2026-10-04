@@ -17,6 +17,7 @@ import { BotonNoEntregado } from "./BotonNoEntregado";
 import { CONTENEDOR_PEDIDOS } from "../Encabezado";
 import { datosEntrega, ordenarItems } from "../filas";
 import { BotonConAviso, TablaPedido } from "./Acciones";
+import { BotonVolver } from "@/components/BotonVolver";
 
 const ETIQUETA = { PENDIENTE: "Pendiente", ENTREGADO: "Entregado", NO_ENTREGADO: "No entregado", CANCELADO: "Cancelado" } as const;
 const COLOR = { PENDIENTE: "text-stone-700", ENTREGADO: "text-verde-700", NO_ENTREGADO: "text-rojo-700", CANCELADO: "text-stone-500" } as const;
@@ -58,7 +59,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
               {web ? [entrega.barrio, entrega.direccion, entrega.telefono].filter(Boolean).join(" · ") : `${[pedido.punto?.alias, titulo(pedido.punto?.direccion), pedido.punto?.barrio].filter(Boolean).join(" · ")} · ${pedido.punto?.zona.nombre}`}
             </p>
           </div>
-          <Link href={fecha ? `/pedidos/dia/${fecha}` : "/pedidos"} className="rounded-md border border-stone-400 bg-white px-3 py-2 text-sm font-medium shadow-sm hover:bg-crema-100">← {fecha ? "Hoja de ruta" : "Pedidos"}</Link>
+          <BotonVolver fallback={fecha ? `/pedidos/dia/${fecha}` : "/pedidos"} />
         </div>
 
         <section aria-label="Datos del pedido" className={`grid grid-cols-2 divide-x divide-stone-300 overflow-hidden rounded-xl border border-stone-300 bg-white shadow-sm sm:grid-cols-4`}>

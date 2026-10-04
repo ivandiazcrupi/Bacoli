@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { exigirOficina } from "@/lib/session";
 import { CONTENEDOR_PEDIDOS } from "../../../pedidos/Encabezado";
 import { FormNC } from "./FormNC";
+import { BotonVolver } from "@/components/BotonVolver";
 
 export default async function CargarNotaCredito({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ factura?: string; nota?: string }> }) {
   const usuario = await exigirOficina();
@@ -39,7 +40,7 @@ export default async function CargarNotaCredito({ params, searchParams }: { para
             <h1 className="text-2xl font-bold tracking-tight">{nota ? "Aplicar saldo de nota de crédito" : "Nueva nota de crédito"}</h1>
             <p className="mt-1 text-lg font-semibold">{cliente.nombre}</p>
           </div>
-          <Link href={`/cuentas/${id}`} className="rounded-md border border-stone-400 bg-white px-3 py-2 text-sm font-medium shadow-sm hover:bg-crema-100">← Cuenta del cliente</Link>
+          <BotonVolver fallback={`/cuentas/${id}`} />
         </div>
         <FormNC clienteId={id} comprobantes={comprobantes} inicial={factura ?? null} nota={nota} />
       </main>

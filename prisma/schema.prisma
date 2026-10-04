@@ -94,6 +94,7 @@ model Cliente {
   tipo              TipoCliente
   razonSocial       String?
   cuit              String?
+  observacion       String? // nota importante del cliente (por qué está desactivado, cuidados, etc.)
   facturado         Boolean        @default(false) // true = con factura (IVA); false = con remito
   condicionPago     CondicionPago  @default(CONTADO)
   listaPreciosId    String?

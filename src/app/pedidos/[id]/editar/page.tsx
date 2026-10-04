@@ -10,6 +10,7 @@ import { CONTENEDOR_PEDIDOS } from "../../Encabezado";
 import { datosEntrega, ordenarItems } from "../../filas";
 import { EditorWeb } from "./EditorWeb";
 import { FormularioLineas, type LineaProducto } from "../../FormularioLineas";
+import { BotonVolver } from "@/components/BotonVolver";
 
 export default async function EditarPedido({ params }: { params: Promise<{ id: string }> }) {
   const usuario = await exigirOficina();
@@ -30,7 +31,7 @@ export default async function EditarPedido({ params }: { params: Promise<{ id: s
               <h1 className="text-2xl font-bold tracking-tight">Pedido de la tienda N° {pedido.webOrden}</h1>
               <p className="mt-1 text-sm text-stone-600">{entrega.nombre}</p>
             </div>
-            <Link href={`/pedidos/${id}`} className="rounded-md border border-stone-400 bg-white px-3 py-2 text-sm font-medium shadow-sm hover:bg-crema-100">← Volver al pedido</Link>
+            <BotonVolver fallback={`/pedidos/${id}`} />
           </div>
           <EditorWeb
             pedidoId={id}
@@ -63,7 +64,7 @@ export default async function EditarPedido({ params }: { params: Promise<{ id: s
             <h1 className="text-2xl font-bold tracking-tight">{pedido.cliente?.nombre}</h1>
             <p className="mt-1 text-sm text-stone-600">{[pedido.punto?.alias, titulo(pedido.punto?.direccion)].filter(Boolean).join(" · ")}</p>
           </div>
-          <Link href={`/pedidos/${id}`} className="rounded-md border border-stone-400 bg-white px-3 py-2 text-sm font-medium shadow-sm hover:bg-crema-100">← Volver al pedido</Link>
+          <BotonVolver fallback={`/pedidos/${id}`} />
         </div>
         <FormularioLineas
           accion={actualizarPedido.bind(null, id)}

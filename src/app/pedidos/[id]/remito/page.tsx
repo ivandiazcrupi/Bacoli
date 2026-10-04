@@ -6,6 +6,7 @@ import { exigirOficina } from "@/lib/session";
 import { BarraImpresion } from "../../remito/BarraImpresion";
 import { RemitoDoc } from "../../remito/RemitoDoc";
 import { datosRemito } from "../../remito/datos";
+import { BotonVolver } from "@/components/BotonVolver";
 
 export default async function RemitoPedido({ params }: { params: Promise<{ id: string }> }) {
   await exigirOficina();
@@ -20,7 +21,7 @@ export default async function RemitoPedido({ params }: { params: Promise<{ id: s
     return (
       <main className="mx-auto max-w-xl space-y-3 px-4 py-10">
         <p>Este pedido todavía no tiene remito. Volvé al pedido y tocá “Remito” para emitirlo.</p>
-        <Link href={`/pedidos/${id}`} className="underline">← Volver al pedido</Link>
+        <BotonVolver fallback={`/pedidos/${id}`} />
       </main>
     );
   }

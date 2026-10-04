@@ -19,6 +19,7 @@ export const esquemaCliente = z
     tipo: z.enum(["MINORISTA", "MAYORISTA", "DISTRIBUIDOR"], "Elegí el tipo de cliente."),
     razonSocial: textoOpcional,
     cuit: textoOpcional,
+    observacion: z.preprocess(vacioANull, z.string().trim().max(500, "La observación es muy larga (máx. 500).").nullable()),
     facturado: z.preprocess((v) => v === "on", z.boolean()),
     condicionPago: z.enum(["CONTADO", "DIAS_7", "DIAS_15", "DIAS_30", "DIAS_45"]),
     listaPreciosId: textoOpcional,

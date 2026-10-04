@@ -9,6 +9,7 @@ import { titulo } from "@/lib/mayusculas";
 import { formatoPesos } from "@/lib/numeros";
 import { formatoRemito } from "@/lib/remito";
 import { exigirOficina } from "@/lib/session";
+import { BotonVolver } from "@/components/BotonVolver";
 
 const ESTADO = {
   PENDIENTE: { texto: "Pendiente", clase: "bg-crema-200 text-verde-900" },
@@ -36,7 +37,7 @@ export default async function PedidosDelCliente({ params }: { params: Promise<{ 
       <main className="mx-auto max-w-[1600px] space-y-4 px-4 py-6 sm:px-8">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <Link href={`/clientes/${id}`} className="text-sm text-stone-600">← {cliente.nombre}</Link>
+            <BotonVolver fallback={`/clientes/${id}`} />
             <h1 className="text-2xl font-bold">Pedidos de {cliente.nombre}</h1>
             <p className="text-sm text-stone-600">{pedidos.length} {pedidos.length === 1 ? "pedido" : "pedidos"}</p>
           </div>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Cabecera } from "@/components/Cabecera";
 import { diasDeAtraso, incluirNc, partidaDe } from "@/lib/cobranza";
 import { db } from "@/lib/db";
+import { cargarFacturas } from "@/lib/facturas";
 import { hoy } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
 import { BuscadorClientes } from "./BuscadorClientes";
@@ -19,9 +20,10 @@ export default async function Cuentas({ searchParams }: { searchParams: Promise<
   const hoyStr = hoy();
   const inicioMes = new Date(`${hoyStr.slice(0, 7)}-01T00:00:00Z`);
 
-  const [abiertos, pagosMes] = await Promise.all([
-    db.pedido.findMany({ where: { clienteId: { not: null }, estado: { in: ["PENDIENTE", "ENTREGADO"] }, pagado: false }, include: { items: true, cliente: true, ...incluirNc } }),
+  const [abiertos, pagosMes, arca] = await Promise.all([
+    db.pedido.findMany({ where: { clienteId: { not: null }, conFactura: false, estado: { in: ["PENDIENTE", "ENTREGADO"] }, pagado: false }, include: { items: true, cliente: true, ...incluirNc } }),
     db.movimientoCuenta.aggregate({ where: { tipo: { in: ["PAGO", "ANULACION_PAGO"] }, fecha: { gte: inicioMes } }, _sum: { monto: true } }),
+    cargarFacturas(), // las facturas salen de ARCA (igual que la pestaña Facturas y la cuenta de cada cliente)
   ]);
 
   type Fila = { id: string; nombre: string; comprobantes: number; porEntregar: number; vencido: number; total: number; masViejo: number };
@@ -40,6 +42,16 @@ export default async function Cuentas({ searchParams }: { searchParams: Promise<
       f.masViejo = Math.max(f.masViejo, atraso);
     }
     porCliente.set(p.cliente.id, f);
+  }
+
+  for (const f of arca.filas) {
+    if (f.esNc || f.pagada || f.saldo <= 0.01 || !f.clienteId) continue;
+    const c = arca.clientes.get(f.clienteId);
+    if (!c) continue;
+    const fila = porCliente.get(c.id) ?? { id: c.id, nombre: c.nombre, comprobantes: 0, porEntregar: 0, vencido: 0, total: 0, masViejo: 0 };
+    fila.comprobantes += 1;
+    fila.total += f.saldo;
+    porCliente.set(c.id, fila);
   }
 
   const palabras = q.toLowerCase().split(/\s+/).filter(Boolean);

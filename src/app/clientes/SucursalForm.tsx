@@ -9,7 +9,7 @@ export type DatosSucursal = { id: string; alias: string; direccion: string; barr
 type Zona = { id: string; nombre: string };
 
 // Columnas de la fila (PC): barrio, dirección, zona, teléfono, comentario y los botones.
-const COLUMNAS = "lg:grid-cols-[1.5fr_2.3fr_1.3fr_1.4fr_1.5fr_auto]";
+const COLUMNAS = "lg:grid-cols-[1.5fr_2.3fr_1.3fr_1.4fr_1.5fr_19.5rem]";
 const celda = "min-w-0";
 const campo = `${estiloCampo} mt-0 py-3 text-base`;
 const boton = "rounded-md px-4 py-3 text-sm font-semibold shadow-sm";

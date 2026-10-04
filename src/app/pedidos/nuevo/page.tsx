@@ -5,6 +5,7 @@ import { exigirOficina } from "@/lib/session";
 import { CONTENEDOR_PEDIDOS } from "../Encabezado";
 import { NuevoPedido } from "../NuevoPedido";
 import { NuevoPedidoWeb } from "../NuevoPedidoWeb";
+import { BotonVolver } from "@/components/BotonVolver";
 
 export default async function NuevoPedidoPagina({ searchParams }: { searchParams: Promise<{ tipo?: string }> }) {
   const usuario = await exigirOficina();
@@ -20,7 +21,7 @@ export default async function NuevoPedidoPagina({ searchParams }: { searchParams
             <h1 className="text-2xl font-bold tracking-tight">Pedido nuevo</h1>
             <p className="mt-1 text-sm text-stone-600">Se carga sin día y queda en la lista de Pedidos. Después se le asigna el día.</p>
           </div>
-          <Link href="/pedidos" className="rounded-md border border-stone-400 bg-white px-3 py-2 text-sm font-medium shadow-sm hover:bg-crema-100">← Pedidos</Link>
+          <BotonVolver fallback="/pedidos" />
         </div>
         <div className="flex gap-2" role="group" aria-label="Tipo de pedido">
           <Link href="/pedidos/nuevo" className={`${pastilla} ${!minorista ? "bg-stone-800 text-white" : "border border-stone-400 bg-white text-stone-700 hover:bg-crema-100"}`}>Mayorista</Link>
