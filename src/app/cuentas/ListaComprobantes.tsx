@@ -137,10 +137,10 @@ function Punto({ color, texto, children }: { color: string; texto?: string; chil
 
 // Hoja de comprobantes (facturas o remitos) que funciona como un Excel: filtros arriba de cada columna, orden al tocar el título,
 // columnas que se ocultan y pago con un solo toque (tildar → elegir cómo pagó).
-export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas" }: { filas: FilaComprobante[]; tipo: "FACTURA" | "REMITO"; acciones?: React.ReactNode; vistaInicial?: "todas" | "sin-pagar" | "pagadas" }) {
+export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas" }: { filas: FilaComprobante[]; tipo: "FACTURA" | "REMITO" | "CUENTA"; acciones?: React.ReactNode; vistaInicial?: "todas" | "sin-pagar" | "pagadas" }) {
   const router = useRouter();
   const esArca = filas.some((f) => f.arca);
-  const disponibles = COLUMNAS.filter((c) => !c.solo || (c.solo === "arca" ? esArca : !esArca));
+  const disponibles = COLUMNAS.filter((c) => tipo === "CUENTA" || !c.solo || (c.solo === "arca" ? esArca : !esArca)); // en la cuenta de un cliente conviven facturas (ARCA) y remitos
   const [elegidas, setElegidas] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [obsPago, setObsPago] = useState("");
@@ -156,8 +156,8 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
 
   useEffect(() => {
     try { const g = localStorage.getItem(claveCols); if (g) { setOcultas(new Set(JSON.parse(g) as ColId[])); return; } } catch { /* sin almacenamiento */ }
-    setOcultas(new Set<ColId>(esArca ? ["pedido"] : [])); // en Facturas, "sin pedido" se ve junto al nombre; la columna se prende desde Columnas
-  }, [claveCols, esArca]);
+    setOcultas(new Set<ColId>(tipo === "FACTURA" ? ["pedido"] : tipo === "CUENTA" ? ["cliente", "sucursal", "entrega", "pedido"] : [])); // en Facturas, "sin pedido" se ve junto al nombre; la columna se prende desde Columnas
+  }, [claveCols, tipo]);
   const alternarColumna = (id: ColId) => setOcultas((a) => {
     const n = new Set(a);
     if (n.has(id)) n.delete(id); else n.add(id);
@@ -208,16 +208,21 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
     const cant = elegidas.size;
     if (!window.confirm(`¿Confirmás que se ${cant === 1 ? "pagó 1 comprobante" : `pagaron ${cant} comprobantes`} por ${formatoPesos(suma)} con ${MEDIOS.find((m) => m.valor === medio)?.texto.toLowerCase()}?\n\nQuedan marcados como pagados.`)) return;
     empezar(async () => {
-      const r = esArca ? await registrarPagosArca([...elegidas], medio, obsPago) : await registrarPagos([...elegidas], medio, obsPago);
+      const ids = [...elegidas];
+      const deArca = ids.filter((id) => filas.find((f) => f.id === id)?.arca);
+      const deRemito = ids.filter((id) => !deArca.includes(id));
+      let r: { ok: boolean; error?: string } = { ok: true };
+      if (deArca.length > 0) r = await registrarPagosArca(deArca, medio, obsPago);
+      if (r.ok && deRemito.length > 0) r = await registrarPagos(deRemito, medio, obsPago);
       if (!r.ok) setError(r.error ?? "No se pudo registrar.");
       else { setElegidas(new Set()); setObsPago(""); }
       router.refresh();
     });
   };
-  const deshacer = (id: string) => {
+  const deshacer = (id: string, esDeArca: boolean) => {
     if (!window.confirm("¿Deshacer este pago? El comprobante vuelve a figurar sin pagar.")) return;
     empezar(async () => {
-      const r = esArca ? await deshacerPagoArca(id) : await deshacerPago(id);
+      const r = esDeArca ? await deshacerPagoArca(id) : await deshacerPago(id);
       if (!r.ok) window.alert(r.error);
       router.refresh();
     });
@@ -225,7 +230,7 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
 
   const celdaBase = "min-w-0 truncate";
   const entrada = "h-7 w-full min-w-0 rounded border border-stone-300 bg-white px-1.5 text-center text-[12px] font-normal normal-case tracking-normal text-stone-800 placeholder:text-stone-300 focus:border-verde-700 focus:outline-none";
-  const opcionesEstado = esArca ? ["Pendiente", "Pagada", "Anulada por NC", "NC sin aplicar", "NC aplicada"] : ["Pendiente", "Pagada", "Por entregar", "Anulada por NC", "Anulado"];
+  const opcionesEstado = esArca && tipo !== "CUENTA" ? ["Pendiente", "Pagada", "Anulada por NC", "NC sin aplicar", "NC aplicada"] : ["Pendiente", "Pagada", "Por entregar", "Anulada por NC", "Anulado"];
 
   return (
     <div>
@@ -273,7 +278,7 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
               <input type="checkbox" aria-label="Elegir todos los pendientes de la lista" checked={pagables.length > 0 && pagables.every((f) => elegidas.has(f.id))} onChange={() => setElegidas(pagables.every((f) => elegidas.has(f.id)) ? new Set() : new Set(pagables.map((f) => f.id)))} className="h-4 w-4 accent-[#026433]" />
               {visibles.map((c) => (
                 <button key={c.id} type="button" disabled={!c.ordena} onClick={() => ordenarPor(c.id)} className={`flex items-center justify-center gap-1 uppercase ${c.ordena ? "hover:text-stone-900" : "cursor-default"}`}>
-                  {c.id === "numero" ? (tipo === "FACTURA" ? "Factura" : "Remito") : c.titulo}
+                  {c.id === "numero" ? (tipo === "FACTURA" ? "Factura" : tipo === "REMITO" ? "Remito" : "Comprobante") : c.titulo}
                   {orden.col === c.id && <span className="text-verde-700">{orden.asc ? "▲" : "▼"}</span>}
                 </button>
               ))}
@@ -322,18 +327,18 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
                       const relleno = e === "Pendiente" ? "bg-rojo-100 text-rojo-800" : e === "Pagada" ? "bg-verde-100 text-verde-800" : e === "NC sin aplicar" ? "bg-[#fbf1c7] text-[#7a5f06]" : "";
                       return <span key={c.id} className={`flex h-full items-center justify-center gap-1.5 whitespace-nowrap ${relleno}`} title={e === "Pendiente" && f.atraso > 0 ? `Vencida hace ${f.atraso} días` : undefined}>
                         {e === "NC sin aplicar" ? <button type="button" onClick={() => setPicker(picker === f.id ? null : f.id)} className="h-full w-full font-semibold hover:underline">Aplicar a factura</button>
-                          : e === "Pagada" ? <><span className="font-semibold">Pagada{f.medio ? ` · ${TEXTO_MEDIO[f.medio] ?? ""}` : ""}</span><button type="button" title="Deshacer el pago" aria-label="Deshacer el pago" onClick={() => deshacer(f.id)} className="text-[12px] opacity-50 hover:opacity-100">✕</button></>
+                          : e === "Pagada" ? <><span className="font-semibold">Pagada{f.medio ? ` · ${TEXTO_MEDIO[f.medio] ?? ""}` : ""}</span><button type="button" title="Deshacer el pago" aria-label="Deshacer el pago" onClick={() => deshacer(f.id, !!f.arca)} className="text-[12px] opacity-50 hover:opacity-100">✕</button></>
                           : e === "Pendiente" ? <span className="font-semibold">Pendiente{f.atraso > 0 ? <span className="font-normal"> · {f.atraso} d</span> : null}</span>
                           : <span className="text-stone-500">{e === "Anulado" ? f.anulado : e}</span>}
                       </span>;
                     }
                     case "pedido": return <span key={c.id} className="text-[12.5px]">
-                      {f.arca ? (f.esNc ? <span className="text-stone-300">—</span> : f.sinPedido ? <span className="font-semibold text-rojo-700">Sin pedido</span> : f.pedidoId ? <Link href={`/pedidos/${f.pedidoId}`} className="font-medium text-verde-800 hover:underline">Abrir ›</Link> : <span className="text-stone-400">Con pedido</span>)
+                      {f.arca ? (f.esNc ? <span className="text-stone-300">—</span> : f.sinPedido ? (tipo === "CUENTA" ? <span className="text-stone-300">—</span> : <span className="font-semibold text-rojo-700">Sin pedido</span>) : f.pedidoId ? <Link href={`/pedidos/${f.pedidoId}`} className="font-medium text-verde-800 hover:underline">Abrir ›</Link> : <span className="text-stone-400">Con pedido</span>)
                         : <Link href={`/pedidos/${f.id}`} className="font-medium text-verde-800 hover:underline">Abrir ›</Link>}
                     </span>;
                     case "nc": return <span key={c.id} className="truncate text-[12.5px] text-stone-500">
                       {f.arca && f.esNc ? <>{(f.aplicaciones ?? []).map((a) => <span key={a.id} className="mr-2 whitespace-nowrap">→ F-{a.facturaNumero} <button type="button" title="Quitar" onClick={() => window.confirm("¿Quitar esta aplicación?") && empezar(async () => { const r = await quitarAplicacionNc(a.id); if (!r.ok) setError(r.error ?? "No se pudo."); router.refresh(); })} className="text-stone-300 hover:text-rojo-700">✕</button></span>)}{(f.aplicaciones ?? []).length === 0 && <span className="text-stone-300">—</span>}</>
-                        : !f.arca && tipo === "FACTURA" && !f.pagada && !f.cubierta && !f.anulado ? <Link href={`/cuentas/${f.clienteId}/nc?factura=${f.id}`} className="font-medium text-stone-600 underline decoration-stone-300 underline-offset-4 hover:text-stone-900">+ Nota de crédito</Link>
+                        : !f.arca && f.tipo === "FACTURA" && !f.pagada && !f.cubierta && !f.anulado ? <Link href={`/cuentas/${f.clienteId}/nc?factura=${f.id}`} className="font-medium text-stone-600 underline decoration-stone-300 underline-offset-4 hover:text-stone-900">+ Nota de crédito</Link>
                         : f.ncTexto ? <>{f.ncTexto}{!f.cubierta && f.nc > 0 ? ` (−${formatoPesos(f.nc)})` : ""}</> : <span className="text-stone-300">—</span>}
                     </span>;
                     case "obs": return <ObsCelda key={`${c.id}-${f.obs}`} f={f} />;

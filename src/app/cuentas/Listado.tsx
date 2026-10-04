@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Cabecera } from "@/components/Cabecera";
 import { diasDeAtraso, incluirNc, partidaDe } from "@/lib/cobranza";
 import { db } from "@/lib/db";
-import { cargarFacturas, soloDigitos } from "@/lib/facturas";
+import { cargarFacturas } from "@/lib/facturas";
 import { BorrarFacturas } from "./arca/BorrarFacturas";
 import { SubirArchivo } from "./arca/SubirArchivo";
 import { hoy } from "@/lib/fechas";
@@ -12,6 +12,7 @@ import { exigirOficina } from "@/lib/session";
 import { CONTENEDOR_PEDIDOS } from "../pedidos/Encabezado";
 import { EncabezadoCuenta } from "./EncabezadoCuenta";
 import { CONTENEDOR_TABLA, Resumen } from "./estilo";
+import { filaDeArca, filaDeRemito } from "./filas";
 import { ListaComprobantes, type FilaComprobante } from "./ListaComprobantes";
 
 const POR_PAGINA = 20000;
@@ -48,14 +49,7 @@ export async function Listado({ tipo, searchParams, ruta }: { tipo: "FACTURA" | 
     include: { items: true, cliente: true, ...incluirNc },
   });
 
-  const todas: FilaComprobante[] = pedidos.flatMap((p) => {
-    if (!p.cliente) return [];
-    const x = partidaDe(p, p.cliente.condicionPago);
-    return [{
-      id: p.id, clienteId: p.cliente.id, cliente: p.cliente.nombre, tipo, numero: x.numero, cargado: x.cargado, fecha: x.fecha,
-      entregado: x.entregado, bruto: x.bruto, nc: x.nc, cubierta: x.cubierta, anulado: p.estado === "CANCELADO" ? "Anulado" : p.estado === "NO_ENTREGADO" ? "No entregado" : null, ncTexto: x.ncNumeros.map((n) => `NC ${n}`).join(" · "), monto: x.monto, vence: x.vence, atraso: x.entregado ? diasDeAtraso(x.vence, hoyStr) : 0, pagada: x.pagada, medio: x.medio, obs: p.obsCobro ?? "",
-    }];
-  });
+  const todas: FilaComprobante[] = pedidos.flatMap((p) => (p.cliente ? [filaDeRemito(p, p.cliente, hoyStr)] : []));
 
   // FACTURAS: salen de ARCA (facturas y notas de crédito), en las mismas columnas que los remitos.
   let ncSinAplicar = 0;
@@ -65,20 +59,7 @@ export async function Listado({ tipo, searchParams, ruta }: { tipo: "FACTURA" | 
     const { filas, controles, puntosDeCuit } = await cargarFacturas();
     ncSinAplicar = controles.ncSinAplicar.length;
     escritasSinArca = controles.sinArca.map((p) => p.numeroFactura ?? "");
-    const digitos = soloDigitos(q);
-    for (const f of filas) {
-      const nombreCli = f.cliente ?? f.razonSocial ?? "—";
-      if (palabras.length && !palabras.every((w) => `${nombreCli} ${f.razonSocial ?? ""} ${f.sucursal ?? ""}`.toLowerCase().includes(w.toLowerCase())) && !(digitos && (String(f.numero).includes(digitos) || (f.cuit ?? "").includes(digitos)))) continue;
-      const cubierta = !f.esNc && f.aplicado > 0 && f.saldo <= 0.01;
-      if (estado === "sin-pagar" && (f.esNc ? f.saldo <= 0.01 : f.pagada || cubierta)) continue;
-      if (estado === "pagadas" && (f.esNc || !(f.pagada || cubierta))) continue;
-      todas.push({
-        id: f.id, clienteId: f.clienteId ?? "", cliente: nombreCli, tipo, numero: f.esNc ? `NC ${f.numero}` : `F-${f.numero}`, cargado: f.fecha, fecha: f.fecha,
-        entregado: true, bruto: f.total, nc: f.aplicado, cubierta, anulado: null, ncTexto: f.creditos.map((c) => `NC ${c.ncNumero}`).join(" · "), monto: f.esNc ? 0 : f.saldo, vence: "", atraso: 0, pagada: f.pagada, medio: f.medio, obs: f.observacion ?? "",
-        arca: true, esNc: f.esNc, cuit: f.cuit, saldo: f.saldo, sucursal: f.sucursal, puntoId: f.puntoId, puntos: puntosDeCuit(f.cuit),
-        aviso: f.problemas.join(" · "), sinPedido: !f.esNc && !f.pedidoId, pedidoId: f.pedidoId, aplicaciones: f.aplicaciones.map((a) => ({ id: a.id, facturaNumero: a.facturaNumero, monto: a.monto })),
-      });
-    }
+    for (const f of filas) todas.push(filaDeArca(f, puntosDeCuit(f.cuit)));
   }
 
   // Remitos que se emitieron y el pedido pasó a llevar factura: el número existe, así que se ve (no es un hueco).
