@@ -133,7 +133,7 @@ function FilaCliente({ c }: { c: Cliente }) {
       {puntos.map((p, i) => (
         <div key={p?.id ?? "sin"}>
           {/* PC: barrio, nombre, dirección, teléfono y accesos en una fila */}
-          <div className={`hidden items-center gap-x-4 px-4 py-2 lg:grid ${COLUMNAS} ${p && !p.activo ? "opacity-60" : ""}`}>
+          <div className={`hidden items-center gap-x-4 px-4 py-2 lg:grid ${COLUMNAS} ${c.activo && p && !p.activo ? "opacity-60" : ""}`}>
             <span className={dato}>{p ? p.barrio : <span className="font-normal text-stone-400">Sin sucursal</span>}</span>
             <span className="min-w-0">
               <Link href={`/clientes/${c.id}`} className={`${dato} hover:text-verde-800 hover:underline`}>{c.nombre}</Link>
@@ -146,7 +146,7 @@ function FilaCliente({ c }: { c: Cliente }) {
           </div>
 
           {/* Celular: la misma información apilada */}
-          <div className={`space-y-1 p-4 lg:hidden ${p && !p.activo ? "opacity-60" : ""}`}>
+          <div className={`space-y-1 p-4 lg:hidden ${c.activo && p && !p.activo ? "opacity-60" : ""}`}>
             <p className={`${dato} flex flex-wrap items-center gap-2`}>{p ? p.barrio : "Sin sucursal"}{p && <Estado activa={c.activo && p.activo} />}</p>
             <div className="flex items-center">
               <Link href={`/clientes/${c.id}`} className={dato}>{c.nombre}</Link>
