@@ -13,8 +13,10 @@ export default async function ImportarClientes() {
     <>
       <Cabecera usuario={usuario} />
       <main className="mx-auto max-w-6xl space-y-4 px-4 py-6">
-        <BotonVolver fallback="/clientes" />
-        <h1 className="text-2xl font-bold">Importar clientes desde la planilla</h1>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-bold">Importar clientes desde la planilla</h1>
+          <BotonVolver fallback="/clientes" />
+        </div>
         <p className="text-sm text-stone-600">
           Primero se muestra una vista previa. No se carga nada hasta que confirmes. Los clientes que ya existen (mismo nombre) no se modifican.
         </p>

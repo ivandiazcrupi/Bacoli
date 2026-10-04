@@ -36,6 +36,7 @@ export type FilaComprobante = {
   saldo?: number;
   sucursal?: string | null;
   puntoId?: string | null;
+  razon?: string; // razón social: la que dice la factura (ARCA) o la del cliente (remitos)
   puntos?: { id: string; barrio: string; direccion: string }[];
   aviso?: string;
   sinPedido?: boolean;
@@ -53,21 +54,22 @@ const TEXTO_MEDIO: Record<string, string> = { EFECTIVO: "Efectivo", TRANSFERENCI
 const fechaCorta = (s: string) => (s ? `${s.slice(8)}/${s.slice(5, 7)}/${s.slice(2, 4)}` : "");
 const POR_VEZ = 250;
 
-type ColId = "numero" | "cliente" | "sucursal" | "fecha" | "entrega" | "vence" | "monto" | "estado" | "pedido" | "nc" | "obs";
+type ColId = "numero" | "cliente" | "razon" | "sucursal" | "fecha" | "entrega" | "vence" | "monto" | "estado" | "pedido" | "nc" | "obs";
 type Columna = { id: ColId; titulo: string; ancho: string; solo?: "arca" | "remito"; ordena?: boolean; filtro?: "texto" | "estado" | "pedido" | "lista" };
 
 const COLUMNAS: Columna[] = [
-  { id: "numero", titulo: "Número", ancho: "120px", ordena: true, filtro: "texto" },
-  { id: "cliente", titulo: "Cliente", ancho: "minmax(150px,1.3fr)", ordena: true, filtro: "lista" },
-  { id: "sucursal", titulo: "Sucursal", ancho: "128px", solo: "arca", filtro: "lista" },
-  { id: "fecha", titulo: "Fecha", ancho: "74px", ordena: true, filtro: "texto" },
-  { id: "entrega", titulo: "Entrega", ancho: "74px", solo: "remito", filtro: "texto" },
-  { id: "vence", titulo: "Vence", ancho: "74px", solo: "remito", filtro: "texto" },
-  { id: "monto", titulo: "Monto", ancho: "108px", ordena: true, filtro: "texto" },
-  { id: "estado", titulo: "Estado", ancho: "164px", ordena: true, filtro: "estado" },
-  { id: "pedido", titulo: "Pedido", ancho: "70px", filtro: "pedido" },
-  { id: "nc", titulo: "Nota de crédito", ancho: "120px", filtro: "texto" },
-  { id: "obs", titulo: "Observación", ancho: "minmax(120px,1fr)", filtro: "texto" },
+  { id: "numero", titulo: "Número", ancho: "112px", ordena: true, filtro: "texto" },
+  { id: "cliente", titulo: "Cliente", ancho: "minmax(110px,1.2fr)", ordena: true, filtro: "lista" },
+  { id: "razon", titulo: "Razón social", ancho: "minmax(110px,1fr)", filtro: "texto" },
+  { id: "sucursal", titulo: "Sucursal", ancho: "120px", solo: "arca", filtro: "lista" },
+  { id: "fecha", titulo: "Fecha", ancho: "70px", ordena: true, filtro: "texto" },
+  { id: "entrega", titulo: "Entrega", ancho: "70px", solo: "remito", filtro: "texto" },
+  { id: "vence", titulo: "Vence", ancho: "70px", solo: "remito", filtro: "texto" },
+  { id: "monto", titulo: "Monto", ancho: "104px", ordena: true, filtro: "texto" },
+  { id: "estado", titulo: "Estado", ancho: "150px", ordena: true, filtro: "estado" },
+  { id: "pedido", titulo: "Pedido", ancho: "64px", filtro: "pedido" },
+  { id: "nc", titulo: "Nota de crédito", ancho: "104px", filtro: "texto" },
+  { id: "obs", titulo: "Observación", ancho: "minmax(90px,1fr)", filtro: "texto" },
 ];
 
 function estadoDe(f: FilaComprobante): string {
@@ -86,6 +88,7 @@ function textoDe(f: FilaComprobante, c: ColId): string {
   switch (c) {
     case "numero": return f.numero ?? "";
     case "cliente": return f.cliente;
+    case "razon": return f.razon ?? "";
     case "sucursal": return f.sucursal ?? "";
     case "fecha": return fechaCorta(f.cargado);
     case "entrega": return f.entregado ? fechaCorta(f.fecha) : "";
@@ -105,7 +108,7 @@ function ObsCelda({ f }: { f: FilaComprobante }) {
   const [estado, setEstado] = useState<"" | "ok" | "error">("");
   const guardar = async () => {
     if (valor.trim() === guardado.trim()) return;
-    const r = f.arca ? await guardarDatosArca(f.id, f.puntoId ?? "", valor) : await guardarObservacion(f.id, valor);
+    const r = f.arca ? await guardarDatosArca(f.id, null, valor) : await guardarObservacion(f.id, valor);
     if (r.ok) { setGuardado(valor); setEstado("ok"); setTimeout(() => setEstado(""), 1500); } else setEstado("error");
   };
   return (
@@ -116,17 +119,18 @@ function ObsCelda({ f }: { f: FilaComprobante }) {
 
 function SucursalCelda({ f }: { f: FilaComprobante }) {
   const [punto, setPunto] = useState(f.puntoId ?? "");
-  if (!f.puntos || f.puntos.length === 0) return <span className="truncate text-stone-500">{f.sucursal ?? ""}</span>;
+  if (!f.arca) return <span className="truncate text-stone-600">{f.sucursal ?? ""}</span>; // remitos: la del pedido (solo se ve)
+  const nombres: Record<string, string> = { "-": "Ninguna", ...Object.fromEntries((f.puntos ?? []).map((p) => [p.id, p.barrio])) };
   return (
     <select aria-label="Sucursal" value={punto} onChange={async (e) => {
       const nuevo = e.target.value;
-      const nombre = f.puntos?.find((p) => p.id === nuevo)?.barrio ?? "ninguna";
-      if (!window.confirm(`¿Cambiar la sucursal de ${f.numero} a ${nombre}?`)) return; // evita cambiarla sin querer
+      if (!window.confirm(nuevo === "-" ? `¿Dejar ${f.numero} sin sucursal?` : `¿Cambiar la sucursal de ${f.numero} a ${nombres[nuevo] ?? ""}?`)) return; // evita cambiarla sin querer
       setPunto(nuevo);
-      await guardarDatosArca(f.id, nuevo, f.obs);
+      await guardarDatosArca(f.id, nuevo, null);
     }} className="h-7 w-full min-w-0 rounded border border-transparent bg-transparent px-0.5 text-center text-[12.5px] hover:border-stone-300 focus:border-verde-700 focus:outline-none">
-      <option value="">{f.sucursal ?? "—"}</option>
-      {f.puntos.map((p) => <option key={p.id} value={p.id}>{p.barrio}</option>)}
+      {!f.puntoId && <option value="">{f.sucursal ?? "Sin elegir"}</option>}
+      <option value="-">Ninguna</option>
+      {(f.puntos ?? []).map((p) => <option key={p.id} value={p.id}>{p.barrio}</option>)}
     </select>
   );
 }
@@ -317,6 +321,7 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
                       {f.arca && f.pedidoId && <Link href={`/pedidos/${f.pedidoId}`} className="ml-2 text-[12px] text-verde-800 hover:underline" title="Abrir el pedido">pedido ›</Link>}
                       {f.aviso && <span className="ml-2 text-[12px] text-rojo-700">{f.aviso}</span>}
                     </span>;
+                    case "razon": return <span key={c.id} className={`${celdaBase} text-stone-600`} title={f.razon || undefined}>{f.razon || <span className="text-stone-300">—</span>}</span>;
                     case "sucursal": return <SucursalCelda key={c.id} f={f} />;
                     case "fecha": return <span key={c.id} className="tabular-nums text-stone-600">{fechaCorta(f.cargado)}</span>;
                     case "entrega": return <span key={c.id} className="tabular-nums text-stone-600">{f.entregado ? fechaCorta(f.fecha) : <span className="text-stone-300">—</span>}</span>;

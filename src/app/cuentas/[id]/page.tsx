@@ -28,7 +28,7 @@ export default async function CuentaDeCliente({ params }: { params: Promise<{ id
   const [pedidosRemito, notas, facturas] = await Promise.all([
     db.pedido.findMany({
       where: { clienteId: id, conFactura: false, OR: [{ estado: { in: ["PENDIENTE", "ENTREGADO"] } }, { remitoNumero: { not: null } }] },
-      include: { items: true, ...incluirNc },
+      include: { items: true, punto: true, ...incluirNc },
       orderBy: [{ creadoEn: "asc" }],
     }),
     db.notaCredito.findMany({ where: { clienteId: id }, include: { aplicaciones: { include: { pedido: true } } }, orderBy: { fecha: "desc" }, take: 30 }),

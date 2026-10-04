@@ -33,11 +33,11 @@ export default async function PedidosDelCliente({ params }: { params: Promise<{ 
       <Cabecera usuario={usuario} />
       <main className="mx-auto max-w-[1600px] space-y-4 px-4 py-6 sm:px-8">
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <div className="mb-2"><BotonVolver fallback={`/clientes/${id}`} /></div>
-            <h1 className="text-2xl font-bold">Pedidos de {cliente.nombre}</h1>
+          <h1 className="text-2xl font-bold">Pedidos de {cliente.nombre}</h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href={`/cuentas/${id}`} className="rounded-md border border-stone-400 bg-white px-3.5 py-2 text-sm font-semibold text-stone-800 shadow-sm hover:bg-crema-100">Cuenta corriente</Link>
+            <BotonVolver fallback={`/clientes/${id}`} />
           </div>
-          <Link href={`/cuentas/${id}`} className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-medium">Cuenta corriente</Link>
         </div>
 
         {pedidos.length > 0 && (

@@ -21,7 +21,7 @@ export default async function RemitoPedido({ params }: { params: Promise<{ id: s
     return (
       <main className="mx-auto max-w-xl space-y-3 px-4 py-10">
         <p>Este pedido todavía no tiene remito. Volvé al pedido y tocá “Remito” para emitirlo.</p>
-        <BotonVolver fallback={`/pedidos/${id}`} />
+        <div className="flex justify-end"><BotonVolver fallback={`/pedidos/${id}`} /></div>
       </main>
     );
   }

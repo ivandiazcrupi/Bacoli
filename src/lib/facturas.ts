@@ -86,7 +86,8 @@ export async function cargarFacturas() {
       if (Math.abs(totalPedido - total) > 1) problemas.push(`Importe distinto: el pedido dice ${totalPedido.toLocaleString("es-AR", { minimumFractionDigits: 2 })} y ARCA ${total.toLocaleString("es-AR", { minimumFractionDigits: 2 })}`);
       if (pedido.estado === "CANCELADO") problemas.push("El pedido está cancelado pero la factura existe en ARCA");
     }
-    const punto = pedido?.punto ?? (a.puntoId ? puntosPorId.get(a.puntoId) : undefined);
+    // Lo que se eligió a mano manda ("-" = ninguna sucursal); si no se eligió nada, la del pedido.
+    const punto = a.puntoId === "-" ? undefined : a.puntoId ? puntosPorId.get(a.puntoId) ?? pedido?.punto : pedido?.punto;
     return {
       id: a.id, esNc: a.esNotaCredito, tipo: a.tipo, puntoVenta: a.puntoVenta, numero: a.numero, fecha: a.fecha.toISOString().slice(0, 10), cuit, razonSocial: a.razonSocial,
       clienteId: cli?.id ?? null, cliente: cli?.nombre ?? null, total, puntoId: a.puntoId, sucursal: punto?.barrio ?? null, observacion: a.observacion,

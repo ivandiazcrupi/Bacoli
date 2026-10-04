@@ -47,10 +47,17 @@ export async function importarArca(_: EstadoArca, formData: FormData): Promise<E
 }
 
 /** A qué sucursal (y con qué aclaración) va una factura de ARCA: lo decide una persona, porque ARCA solo sabe la razón social. */
-export async function guardarDatosArca(id: string, puntoId: string, observacion: string): Promise<{ ok: boolean }> {
+export async function guardarDatosArca(id: string, puntoId: string | null, observacion: string | null): Promise<{ ok: boolean }> {
   await exigirOficina();
-  await db.comprobanteArca.update({ where: { id }, data: { puntoId: puntoId || null, observacion: observacion.trim().slice(0, 150) || null } });
-  revalidatePath("/cuentas/arca");
+  // Solo se guarda lo que viene (null = no se toca), así elegir la sucursal no pisa la observación ni al revés.
+  await db.comprobanteArca.update({
+    where: { id },
+    data: {
+      ...(puntoId !== null ? { puntoId: puntoId || null } : {}),
+      ...(observacion !== null ? { observacion: observacion.trim().slice(0, 150) || null } : {}),
+    },
+  });
+  revalidatePath("/cuentas", "layout");
   return { ok: true };
 }
 
