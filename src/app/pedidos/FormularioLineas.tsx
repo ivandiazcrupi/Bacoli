@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { Fragment, useActionState, useEffect, useState } from "react";
 import { Mensajes, estiloBoton } from "@/components/campos";
 import { IVA_PCT } from "@/lib/cuenta";
 import { formatoPesos, leerMonto } from "@/lib/numeros";
@@ -32,7 +32,7 @@ export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial
   const [precios, setPrecios] = useState<Record<string, string>>(() => Object.fromEntries(productos.map((p) => [p.id, p.precio ?? ""])));
   const [sinCargos, setSinCargos] = useState<Record<string, string>>(() => Object.fromEntries(productos.map((p) => [p.id, p.sinCargo ? String(p.sinCargo) : ""])));
   const [motivos, setMotivos] = useState<Record<string, string>>(() => Object.fromEntries(productos.map((p) => [p.id, p.motivoSinCargo ?? ""])));
-  const [nuevo, setNuevo] = useState({ producto: "", cantidad: 1, motivo: "" });
+  const [edit, setEdit] = useState<{ id: string; cantidad: number; motivo: string } | null>(null); // el sin cargo que se está cargando o cambiando
   const [errorSc, setErrorSc] = useState<string | null>(null);
   const [bonifs, setBonifs] = useState<Record<string, string>>(() => Object.fromEntries(productos.map((p) => [p.id, p.bonificacion ?? ""])));
   const [conFactura, setConFactura] = useState(conFacturaInicial);
@@ -48,21 +48,24 @@ export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial
   const lineasSc = productos.filter((p) => sinCargo(p.id) > 0);
   const valorSc = lineasSc.reduce((t, p) => t + sinCargo(p.id) * (leerMonto(precios[p.id]) ?? 0), 0);
   const paquetesSc = lineasSc.reduce((t, p) => t + sinCargo(p.id), 0);
-  const agregarSc = () => {
+  const abrirSc = (id: string) => { setErrorSc(null); setEdit({ id, cantidad: sinCargo(id) || 1, motivo: motivos[id] ?? "" }); };
+  const guardarSc = () => {
+    if (!edit) return;
     setErrorSc(null);
-    if (!nuevo.producto) return setErrorSc("Elegí el producto.");
-    if (nuevo.cantidad < 1) return setErrorSc("La cantidad tiene que ser al menos 1.");
-    if (!nuevo.motivo) return setErrorSc("Elegí el motivo.");
-    setSinCargos((c) => ({ ...c, [nuevo.producto]: String(nuevo.cantidad) }));
-    setMotivos((m) => ({ ...m, [nuevo.producto]: nuevo.motivo }));
-    setNuevo({ producto: "", cantidad: 1, motivo: "" });
+    if (edit.cantidad < 1) return setErrorSc("La cantidad sin cargo tiene que ser al menos 1.");
+    if (!edit.motivo) return setErrorSc("Elegí el motivo del sin cargo.");
+    setSinCargos((c) => ({ ...c, [edit.id]: String(edit.cantidad) }));
+    setMotivos((m) => ({ ...m, [edit.id]: edit.motivo }));
+    setEdit(null);
   };
   const quitarSc = (id: string) => {
     setSinCargos((c) => ({ ...c, [id]: "" }));
     setMotivos((m) => ({ ...m, [id]: "" }));
+    setEdit(null);
   };
   // Antes de guardar: si lo regalado de un producto es más que lo que se cobra de ese producto, se pide confirmar (evita el dedazo).
   const confirmarSc = (e: React.FormEvent) => {
+    if (edit) { e.preventDefault(); setErrorSc("Terminá de cargar el sin cargo: tocá “Agregar” o “Cancelar”."); return; }
     const raro = lineasSc.filter((p) => sinCargo(p.id) > Math.max(cantidad(p.id), 1));
     if (raro.length === 0) return;
     const texto = raro.map((p) => `${sinCargo(p.id)} ${p.nombre} sin cargo (se cobran ${cantidad(p.id)})`).join("\n");
@@ -98,11 +101,13 @@ export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial
           const q = cantidad(p.id);
           const precio = leerMonto(precios[p.id]) ?? 0;
           const sinPrecio = q > 0 && !precio;
+          const editando = edit?.id === p.id;
           return (
-            <div key={p.id} className={`grid items-center gap-x-4 gap-y-2 border-t border-stone-400 px-5 py-2.5 text-center ${COLUMNAS} ${q > 0 || sc > 0 ? "bg-crema-50" : "bg-white"}`}>
+            <Fragment key={p.id}>
+            <div className={`grid items-center gap-x-4 gap-y-2 border-t border-stone-400 px-5 py-2.5 text-center ${COLUMNAS} ${q > 0 || sc > 0 ? "bg-crema-50" : "bg-white"}`}>
               <div>
                 <p className="font-semibold leading-snug">{p.nombre}</p>
-                <p className="text-xs text-stone-500">{p.sku ?? ""}</p>
+                <p className="text-xs text-stone-500">{p.sku ?? ""}{sc === 0 && !editando && <> · <button type="button" onClick={() => abrirSc(p.id)} className="underline hover:text-stone-900">+ sin cargo</button></>}</p>
               </div>
               <p className="text-sm text-stone-600">{p.unidad}</p>
               <label className="flex items-center justify-center gap-1.5 text-sm text-stone-600 lg:block">
@@ -145,47 +150,48 @@ export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial
                 />
               </label>
               <p className="text-sm font-semibold tabular-nums">
-                {sinPrecio ? <span className="text-xs font-medium text-rojo-700">Falta el precio</span> : q > 0 ? formatoPesos(importe(p.id)) : sc > 0 ? <span className="text-xs font-medium text-stone-600">{sc} sin cargo</span> : <span className="font-normal text-stone-400">—</span>}
+                {sinPrecio ? <span className="text-xs font-medium text-rojo-700">Falta el precio</span> : q > 0 ? formatoPesos(importe(p.id)) : <span className="font-normal text-stone-400">—</span>}
               </p>
             </div>
+            {(sc > 0 || editando) && (
+              <div className={`grid items-center gap-x-4 gap-y-1 border-t border-dashed border-stone-300 bg-crema-50 px-5 py-1.5 text-center text-sm ${COLUMNAS}`}>
+                {editando ? (
+                  <>
+                    <select aria-label={`Motivo del sin cargo de ${p.nombre}`} value={edit.motivo} onChange={(e) => setEdit({ ...edit, motivo: e.target.value })} className="mx-auto h-8 w-44 rounded-md border border-stone-400 bg-white px-2 text-sm">
+                      <option value="" disabled hidden>Motivo…</option>
+                      {MOTIVOS.map((m) => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                    <span className="text-stone-600">{p.unidad}</span>
+                    <span className="text-stone-500">Sin cargo</span>
+                    <div className="flex items-center justify-center gap-1">
+                      <button type="button" className={boton} onClick={() => setEdit({ ...edit, cantidad: Math.max(1, edit.cantidad - 1) })} aria-label="Menos sin cargo">−</button>
+                      <input aria-label={`Cantidad sin cargo de ${p.nombre}`} inputMode="numeric" value={edit.cantidad} onChange={(e) => setEdit({ ...edit, cantidad: Number(e.target.value.replace(/\D/g, "")) || 0 })} className="h-9 w-16 rounded-md border border-stone-400 bg-white text-center tabular-nums" />
+                      <button type="button" className={boton} onClick={() => setEdit({ ...edit, cantidad: edit.cantidad + 1 })} aria-label="Más sin cargo">+</button>
+                    </div>
+                    <span />
+                    <span className="flex items-center justify-center gap-2">
+                      <button type="button" onClick={guardarSc} className="h-8 rounded-md bg-stone-800 px-3 text-xs font-semibold text-white hover:bg-stone-700">Agregar</button>
+                      <button type="button" onClick={() => setEdit(null)} className="text-xs text-stone-500 underline hover:text-stone-900">Cancelar</button>
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-stone-700">↳ Sin cargo · {motivos[p.id]} <button type="button" onClick={() => abrirSc(p.id)} className="ml-1 text-xs text-stone-500 underline hover:text-stone-900">cambiar</button></span>
+                    <span className="text-stone-600">{p.unidad}</span>
+                    <span className="text-stone-500">Sin cargo</span>
+                    <span className="font-semibold tabular-nums">{sc}</span>
+                    <span />
+                    <span className="flex items-center justify-center gap-2 tabular-nums text-stone-600">{formatoPesos(0)}<button type="button" onClick={() => quitarSc(p.id)} aria-label={`Quitar ${p.nombre} sin cargo`} className="text-base text-stone-500 hover:text-rojo-700">✕</button></span>
+                  </>
+                )}
+              </div>
+            )}
+            </Fragment>
           );
         })}
       </div>
 
-      {/* Sin cargo: se agrega a propósito (producto + cantidad + motivo) y queda a la vista con su valor; nada se escribe suelto en la tabla. */}
-      <section className="rounded-xl border border-stone-300 bg-white p-4 shadow-sm" aria-label="Paquetes sin cargo">
-        <p className="mb-3 text-center text-xs font-semibold uppercase tracking-wide text-stone-600">Sin cargo · recambios y regalos</p>
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          <select aria-label="Producto sin cargo" value={nuevo.producto} onChange={(e) => setNuevo((n) => ({ ...n, producto: e.target.value }))} className="h-10 min-w-56 rounded-md border border-stone-400 bg-white px-2 text-sm">
-            <option value="" disabled hidden>Producto…</option>
-            {productos.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-          </select>
-          <div className="flex items-center gap-1">
-            <button type="button" className={boton} onClick={() => setNuevo((n) => ({ ...n, cantidad: Math.max(1, n.cantidad - 1) }))} aria-label="Menos">−</button>
-            <input aria-label="Cantidad sin cargo" inputMode="numeric" value={nuevo.cantidad} onChange={(e) => setNuevo((n) => ({ ...n, cantidad: Number(e.target.value.replace(/\D/g, "")) || 0 }))} className="h-9 w-16 rounded-md border border-stone-400 bg-white text-center tabular-nums" />
-            <button type="button" className={boton} onClick={() => setNuevo((n) => ({ ...n, cantidad: n.cantidad + 1 }))} aria-label="Más">+</button>
-          </div>
-          <select aria-label="Motivo" value={nuevo.motivo} onChange={(e) => setNuevo((n) => ({ ...n, motivo: e.target.value }))} className="h-10 rounded-md border border-stone-400 bg-white px-2 text-sm">
-            <option value="" disabled hidden>Motivo…</option>
-            {MOTIVOS.map((m) => <option key={m} value={m}>{m}</option>)}
-          </select>
-          <button type="button" onClick={agregarSc} className="h-10 rounded-md border border-stone-800 bg-stone-800 px-4 text-sm font-semibold text-white hover:bg-stone-700">+ Agregar sin cargo</button>
-        </div>
-        {errorSc && <p className="mt-2 text-center text-sm text-rojo-700" role="alert">{errorSc}</p>}
-        {lineasSc.length > 0 && (
-          <ul className="mt-3 divide-y divide-stone-300 overflow-hidden rounded-lg border border-stone-300 text-sm">
-            {lineasSc.map((p) => (
-              <li key={p.id} className="grid grid-cols-[4rem_1fr_9rem_9rem_2.5rem] items-center gap-x-3 bg-crema-50 px-3 py-2 text-center">
-                <b className="tabular-nums">{sinCargo(p.id)}</b>
-                <span className="font-semibold">{p.nombre}</span>
-                <span className="text-stone-700">{motivos[p.id]}</span>
-                <span className="tabular-nums text-stone-600">{formatoPesos(sinCargo(p.id) * (leerMonto(precios[p.id]) ?? 0))}</span>
-                <button type="button" onClick={() => quitarSc(p.id)} aria-label={`Quitar ${p.nombre} sin cargo`} className="text-lg text-stone-500 hover:text-rojo-700">✕</button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      {errorSc && <p className="text-center text-sm text-rojo-700" role="alert">{errorSc}</p>}
 
       <div className="grid items-stretch gap-4 lg:grid-cols-[1fr_1fr_11rem_20rem]">
         <div className="rounded-xl border border-stone-300 bg-white p-4 shadow-sm">
