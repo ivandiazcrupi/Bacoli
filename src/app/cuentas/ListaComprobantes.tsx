@@ -60,7 +60,7 @@ type Columna = { id: ColId; titulo: string; ancho: string; solo?: "arca" | "remi
 const COLUMNAS: Columna[] = [
   { id: "numero", titulo: "Número", ancho: "112px", ordena: true, filtro: "texto" },
   { id: "cliente", titulo: "Cliente", ancho: "minmax(110px,1.2fr)", ordena: true, filtro: "lista" },
-  { id: "razon", titulo: "Razón social", ancho: "minmax(110px,1fr)", filtro: "texto" },
+  { id: "razon", titulo: "Razón social", ancho: "minmax(110px,1fr)", filtro: "lista" },
   { id: "sucursal", titulo: "Sucursal", ancho: "120px", solo: "arca", filtro: "lista" },
   { id: "fecha", titulo: "Fecha", ancho: "70px", ordena: true, filtro: "texto" },
   { id: "entrega", titulo: "Entrega", ancho: "70px", solo: "remito", filtro: "texto" },
@@ -198,7 +198,7 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
 
   const opcionesLista = useMemo(() => {
     const dist = (id: ColId) => [...new Set(filas.filter((f) => !f.hueco).map((f) => textoDe(f, id)).filter(Boolean))].sort((a, b) => a.localeCompare(b, "es"));
-    return { cliente: dist("cliente"), sucursal: dist("sucursal") } as Partial<Record<ColId, string[]>>;
+    return { cliente: dist("cliente"), razon: dist("razon"), sucursal: dist("sucursal") } as Partial<Record<ColId, string[]>>;
   }, [filas]);
   const pagables = filtradas.filter((f) => !f.hueco && !f.esNc && f.entregado && !f.pagada && !f.cubierta && !f.anulado);
   const mostradas = filtradas.slice(0, cuantas);
