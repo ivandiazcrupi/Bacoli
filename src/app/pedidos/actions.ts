@@ -7,7 +7,7 @@ import { mayus, oracion, titulo } from "@/lib/mayusculas";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { Prisma } from "@prisma/client";
-import { IVA_ENVIO, anotarEntregaEnCuenta, sincronizarCuentaPedido, saldoCliente, importeVigente } from "@/lib/cuenta";
+import { IVA_ENVIO, IVA_PCT, anotarEntregaEnCuenta, sincronizarCuentaPedido, saldoCliente, importeVigente } from "@/lib/cuenta";
 import { db } from "@/lib/db";
 import { aFecha, esFechaValida, hoy } from "@/lib/fechas";
 import { formatoPesos, leerMonto } from "@/lib/numeros";
@@ -74,7 +74,7 @@ function leerIva(valor: FormDataEntryValue | null): number | null {
   return n !== null && ALICUOTAS.includes(n) ? n : null;
 }
 
-async function leerRenglones(formData: FormData, ivaCliente: number): Promise<{ renglones: Renglon[] } | { error: string }> {
+async function leerRenglones(formData: FormData): Promise<{ renglones: Renglon[] } | { error: string }> {
   const conFactura = formData.get("conFactura") === "1";
   const productos = await db.producto.findMany({ where: { activo: true } });
   const renglones: Renglon[] = [];
@@ -89,7 +89,18 @@ async function leerRenglones(formData: FormData, ivaCliente: number): Promise<{ 
     const precio = leerMonto(String(formData.get(`pr_${p.id}`) ?? ""));
     // Un renglón que es solo "sin cargo" (recambio) no necesita precio.
     if (cantidad > 0 && (precio === null || precio <= 0)) return { error: `Falta el precio de ${p.nombre}. Escribilo en el pedido.` };
-    renglones.push({ productoId: p.id, nombre: p.nombre, sku: p.sku, unidad: p.unidad, cantidad, precioUnitario: precio ?? 0, sinCargo, descuentoPct, motivoSinCargo: sinCargo > 0 ? motivoSinCargo : null, ivaPct: conFactura ? (leerIva(formData.get(`iva_${p.id}`)) ?? p.ivaPct?.toNumber() ?? ivaCliente) : null });
+    renglones.push({ productoId: p.id, nombre: p.nombre, sku: p.sku, unidad: p.unidad, cantidad, precioUnitario: precio ?? 0, sinCargo, descuentoPct, motivoSinCargo: sinCargo > 0 ? motivoSinCargo : null, ivaPct: conFactura ? (leerIva(formData.get(`iva_${p.id}`)) ?? 0) : null });
+  }
+  // Renglones escritos a mano ("Otro producto"): nombre libre + cantidad + precio (+ IVA si lleva factura). Los vacíos se ignoran.
+  const cuantos = Math.min(30, Number(formData.get("m_total") ?? 0) || 0);
+  for (let i = 0; i < cuantos; i++) {
+    const nombre = mayus(String(formData.get(`mn_${i}`) ?? "")).slice(0, 80);
+    if (!nombre) continue;
+    const cantidad = Number(String(formData.get(`mc_${i}`) ?? "").replace(/\D/g, "") || 0);
+    if (cantidad <= 0) return { error: `Falta la cantidad de “${nombre}”.` };
+    const precio = leerMonto(String(formData.get(`mp_${i}`) ?? ""));
+    if (precio === null || precio <= 0) return { error: `Falta el precio de “${nombre}”.` };
+    renglones.push({ productoId: null, nombre, sku: null, unidad: "unidad", cantidad, precioUnitario: precio, sinCargo: 0, descuentoPct: 0, motivoSinCargo: null, ivaPct: conFactura ? (leerIva(formData.get(`mi_${i}`)) ?? 0) : null });
   }
   if (renglones.length === 0) return { error: "Poné la cantidad de al menos un producto." };
   // Envío: un renglón aparte (no es un producto: no suma paquetes ni lleva bonificación) que entra en el total, el remito y la cuenta.
@@ -104,12 +115,11 @@ export async function crearPedido(_: EstadoPedidoForm, formData: FormData): Prom
   const puntoId = String(formData.get("puntoId") ?? "");
   const punto = await db.puntoEntrega.findUnique({ where: { id: puntoId }, include: { cliente: true } });
   if (!punto) return { error: "Elegí el cliente y la sucursal." };
-  const ivaCliente = Number(punto.cliente.ivaPct);
-  const leidos = await leerRenglones(formData, ivaCliente);
+  const leidos = await leerRenglones(formData);
   if ("error" in leidos) return { error: leidos.error };
 
   const conFactura = formData.get("conFactura") === "1";
-  const ivaPct = conFactura ? ivaCliente : 0;
+  const ivaPct = conFactura ? IVA_PCT : 0; // con factura: cada renglón lleva su propio IVA; este valor solo marca que el pedido lleva IVA
   const total = importeVigente(leidos.renglones.map((r) => ({ cantidad: r.cantidad, cantidadEntregada: null, precioUnitario: r.precioUnitario, descuentoPct: r.descuentoPct, ivaPct: r.ivaPct })), ivaPct, "PENDIENTE");
 
   // Límites de deuda del cliente: se avisa y solo un dueño puede autorizar (no se bloquea a "cuenta sin límite").
@@ -155,14 +165,13 @@ export async function crearPedido(_: EstadoPedidoForm, formData: FormData): Prom
 
 export async function actualizarPedido(pedidoId: string, _: EstadoPedidoForm, formData: FormData): Promise<EstadoPedidoForm> {
   const usuario = await exigirOficina();
-  const pedido = await db.pedido.findUnique({ where: { id: pedidoId }, include: { cliente: { select: { ivaPct: true } } } });
+  const pedido = await db.pedido.findUnique({ where: { id: pedidoId } });
   if (!pedido) return { error: "No encontré el pedido." };
   // Un pedido "no entregado" (de antes del flujo con silueta) también se puede corregir: al guardar vuelve a pendiente.
   if (pedido.estado !== "PENDIENTE" && pedido.estado !== "NO_ENTREGADO") return { error: "Solo se puede modificar un pedido pendiente. Reabrilo primero." };
   const hojaFija = await errorSiHojaFija(pedido.fechaEntrega);
   if (hojaFija) return { error: hojaFija };
-  const ivaCliente = Number(pedido.cliente?.ivaPct ?? 10.5);
-  const leidos = await leerRenglones(formData, ivaCliente);
+  const leidos = await leerRenglones(formData);
   if ("error" in leidos) return { error: leidos.error };
 
   const conFactura = formData.get("conFactura") === "1";
@@ -170,7 +179,7 @@ export async function actualizarPedido(pedidoId: string, _: EstadoPedidoForm, fo
     await tx.pedidoItem.deleteMany({ where: { pedidoId } });
     await tx.pedido.update({
       where: { id: pedidoId },
-      data: { conFactura, ...(pedido.estado === "NO_ENTREGADO" ? { estado: "PENDIENTE" as const } : {}), ivaPct: conFactura ? ivaCliente : 0, nota: oracion(String(formData.get("nota") ?? "")) || null, items: { create: leidos.renglones } },
+      data: { conFactura, ...(pedido.estado === "NO_ENTREGADO" ? { estado: "PENDIENTE" as const } : {}), ivaPct: conFactura ? IVA_PCT : 0, nota: oracion(String(formData.get("nota") ?? "")) || null, items: { create: leidos.renglones } },
     });
     await sincronizarCuentaPedido(tx, pedidoId, usuario.id);
   });

@@ -92,7 +92,6 @@ export async function guardarProducto(productoId: string, _: EstadoPrecios, form
         ean,
         descripcion: mayus(vacio(formData.get("descripcion"))),
         unidad: formData.get("unidad") === "unidad" ? "unidad" : "paquete",
-        ivaPct: [10.5, 21].includes(leerMonto(String(formData.get("ivaPct") ?? "")) ?? -1) ? leerMonto(String(formData.get("ivaPct") ?? "")) : null,
       },
     });
   } catch (e) {

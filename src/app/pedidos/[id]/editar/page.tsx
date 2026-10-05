@@ -13,6 +13,8 @@ import { EditorWeb } from "./EditorWeb";
 import { FormularioLineas, type LineaProducto } from "../../FormularioLineas";
 import { BotonVolver } from "@/components/BotonVolver";
 
+const ivaTexto = (v: { toString(): string } | number) => String(Number(v.toString())).replace(".", ","); // 10.50 -> "10,5"
+
 export default async function EditarPedido({ params }: { params: Promise<{ id: string }> }) {
   const usuario = await exigirOficina();
   const { id } = await params;
@@ -50,11 +52,11 @@ export default async function EditarPedido({ params }: { params: Promise<{ id: s
   const actuales = await productosParaCliente(pedido.clienteId);
   const lineas: LineaProducto[] = actuales.map((p) => {
     const item = pedido.items.find((i) => i.productoId === p.id);
-    return { ...p, iva: item ? String(item.ivaPct ?? (Number(pedido.ivaPct) > 0 ? pedido.ivaPct : p.iva)).replace(".", ",") : p.iva, precio: item ? String(item.precioUnitario).replace(".", ",") : p.precio, cantidad: item?.cantidad ?? 0, sinCargo: item?.sinCargo ?? 0, motivoSinCargo: item?.motivoSinCargo ?? null, bonificacion: item && Number(item.descuentoPct) ? String(item.descuentoPct).replace(".", ",") : "" };
+    return { ...p, iva: item ? ivaTexto(item.ivaPct ?? (Number(pedido.ivaPct) > 0 ? pedido.ivaPct : 0)) : p.iva, precio: item ? String(item.precioUnitario).replace(".", ",") : p.precio, cantidad: item?.cantidad ?? 0, sinCargo: item?.sinCargo ?? 0, motivoSinCargo: item?.motivoSinCargo ?? null, bonificacion: item && Number(item.descuentoPct) ? String(item.descuentoPct).replace(".", ",") : "" };
   });
   for (const item of pedido.items) {
     if (item.productoId && !lineas.some((l) => l.id === item.productoId)) {
-      lineas.push({ id: item.productoId, nombre: item.nombre, sku: item.sku, unidad: item.unidad, iva: String(item.ivaPct ?? (Number(pedido.ivaPct) > 0 ? pedido.ivaPct : 10.5)).replace(".", ","), precio: String(item.precioUnitario).replace(".", ","), cantidad: item.cantidad, sinCargo: item.sinCargo, motivoSinCargo: item.motivoSinCargo, bonificacion: Number(item.descuentoPct) ? String(item.descuentoPct).replace(".", ",") : "" });
+      lineas.push({ id: item.productoId, nombre: item.nombre, sku: item.sku, unidad: item.unidad, iva: ivaTexto(item.ivaPct ?? (Number(pedido.ivaPct) > 0 ? pedido.ivaPct : 0)), precio: String(item.precioUnitario).replace(".", ","), cantidad: item.cantidad, sinCargo: item.sinCargo, motivoSinCargo: item.motivoSinCargo, bonificacion: Number(item.descuentoPct) ? String(item.descuentoPct).replace(".", ",") : "" });
     }
   }
 
@@ -75,6 +77,7 @@ export default async function EditarPedido({ params }: { params: Promise<{ id: s
           productos={lineas}
           conFacturaInicial={pedido.conFactura}
           notaInicial={pedido.nota ?? ""}
+          manualesIniciales={pedido.items.filter((i) => !i.productoId && i.nombre !== "ENVÍO").map((i) => ({ nombre: i.nombre, cantidad: String(i.cantidad), precio: String(i.precioUnitario).replace(".", ","), iva: ivaTexto(i.ivaPct ?? (Number(pedido.ivaPct) > 0 ? pedido.ivaPct : 0)) }))}
           envioInicial={(() => { const e = pedido.items.find((i) => !i.productoId && i.paquetesPor === 0 && i.nombre === "ENVÍO"); return e ? String(e.precioUnitario).replace(".", ",") : ""; })()}
           esDueno={usuario.rol === "DUENO"}
           textoBoton="Guardar cambios"

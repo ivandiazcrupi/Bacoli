@@ -23,7 +23,6 @@ export const esquemaCliente = z
     facturado: z.preprocess((v) => v === "on", z.boolean()),
     condicionPago: z.enum(["CONTADO", "DIAS_7", "DIAS_15", "DIAS_30", "DIAS_45"]),
     listaPreciosId: textoOpcional,
-    ivaPct: z.preprocess((x) => (typeof x === "string" && x.trim() ? leerMonto(x) : 10.5), z.number("El IVA no es válido.").refine((n) => [0, 2.5, 5, 10.5, 21, 27].includes(n), "El IVA tiene que ser 10,5% o 21%.")),
     descuentoPct: z.preprocess(
       (v) => (typeof v === "string" && v.trim() ? leerMonto(v) : 0),
       z.number("El descuento no es válido.").min(0).max(100, "El descuento no puede pasar de 100%."),
