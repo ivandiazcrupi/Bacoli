@@ -31,9 +31,13 @@ export const diasDeSemana = (inicio: string) => [0, 1, 2, 3, 4, 6].map((n) => su
 /** Último día (lunes) de la semana que empieza ese martes. */
 export const finDeSemana = (inicio: string) => sumarDias(inicio, 6);
 
-/** Martes de la semana en que se está trabajando. */
+/**
+ * Martes de la semana que se muestra al entrar: la de hoy. Los lunes (último día de la semana, cuando ya se está armando la que
+ * viene) se abre la semana siguiente; el lunes de hoy se ve con la flecha ←.
+ */
 export function semanaDeTrabajo() {
-  return inicioSemana(hoy());
+  const h = hoy();
+  return aFecha(h).getUTCDay() === 1 ? sumarDias(h, 1) : inicioSemana(h);
 }
 
 export function esFechaValida(s: string) {
