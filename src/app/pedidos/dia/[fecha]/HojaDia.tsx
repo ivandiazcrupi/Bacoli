@@ -762,6 +762,7 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
       {/* Título del día y total de paquetes (todo el día: ubicados o no), para saber si nos pasamos de producción */}
       <div className="flex flex-col items-center gap-2 pt-3">
         <h2 className="text-base font-bold uppercase tracking-wide">{titulo}</h2>
+        <div className="flex flex-wrap items-center justify-center gap-3">
         <div className="inline-flex items-baseline gap-2 rounded-md border border-stone-400 bg-white px-5 py-2">
           <span className="text-xs font-medium uppercase tracking-wide text-stone-600">Paquetes del día</span>
           <span className="text-base font-bold tabular-nums">{filas.reduce((t, f) => t + f.bultos, 0)}</span>
@@ -769,6 +770,7 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
         <div className="inline-flex items-baseline gap-2 rounded-md border border-stone-400 bg-white px-5 py-2">
           <span className="text-xs font-medium uppercase tracking-wide text-stone-600">Unidades del día</span>
           <span className="text-base font-bold tabular-nums">{filas.reduce((t, f) => t + f.bultos, 0) * UNIDADES_POR_PAQUETE}</span>
+        </div>
         </div>
       </div>
       <BarraEstado
