@@ -11,7 +11,7 @@ export function filaDeArca(f: FilaFactura, puntos: PuntoCliente[]): FilaComproba
     id: f.id, clienteId: f.clienteId ?? "", cliente: f.cliente ?? f.razonSocial ?? "—", tipo: "FACTURA", numero: f.esNc ? `NC ${f.numero}` : `F-${f.numero}`, cargado: f.fecha, fecha: f.fecha,
     entregado: true, bruto: f.total, nc: f.aplicado, cubierta, anulado: null, ncTexto: f.creditos.map((c) => `NC ${c.ncNumero}`).join(" · "), monto: f.esNc ? 0 : f.saldo, vence: "", atraso: 0, pagada: f.pagada, medio: f.medio, obs: f.observacion ?? "",
     razon: f.razonSocial ?? "", arca: true, esNc: f.esNc, cuit: f.cuit, saldo: f.saldo, sucursal: f.sucursal, puntoId: f.puntoId, puntos,
-    aviso: f.problemas.join(" · "), sinPedido: !f.esNc && !f.pedidoId, pedidoId: f.pedidoId, aplicaciones: f.aplicaciones.map((a) => ({ id: a.id, facturaNumero: a.facturaNumero, monto: a.monto })),
+    aviso: f.problemas.join(" · "), sinPedido: !f.esNc && !f.pedidoId, pedidoId: f.pedidoId, aplicaciones: f.aplicaciones.map((a) => ({ id: a.id, facturaNumero: a.facturaNumero, monto: a.monto, motivo: a.motivo })), ncMotivos: f.creditos.filter((c) => c.motivo).map((c) => `NC ${c.ncNumero}: ${c.motivo}`).join(" · "),
   };
 }
 

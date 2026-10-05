@@ -435,6 +435,7 @@ model AplicacionNcArca {
   ncId      String
   facturaId String
   monto     Decimal  @db.Decimal(14, 2)
+  motivo    String? // por qué se emitió la nota de crédito (obligatorio al aplicarla)
   creadoEn  DateTime @default(now())
   creadoPor String?
 

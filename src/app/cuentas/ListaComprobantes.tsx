@@ -41,7 +41,8 @@ export type FilaComprobante = {
   aviso?: string;
   sinPedido?: boolean;
   pedidoId?: string | null;
-  aplicaciones?: { id: string; facturaNumero: number; monto: number }[];
+  aplicaciones?: { id: string; facturaNumero: number; monto: number; motivo?: string | null }[];
+  ncMotivos?: string; // factura: por qué se emitieron sus notas de crédito
 };
 
 const MEDIOS = [
@@ -146,6 +147,7 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
   const [obsPago, setObsPago] = useState("");
   const [trabajando, empezar] = useTransition();
   const [picker, setPicker] = useState<string | null>(null);
+  const [motivoNc, setMotivoNc] = useState("");
   const [vista, setVista] = useState(vistaInicial);
   const [filtros, setFiltros] = useState<Partial<Record<ColId, string>>>({});
   const [orden, setOrden] = useState<{ col: ColId | null; asc: boolean }>({ col: null, asc: true });
@@ -325,7 +327,7 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
                       const e = estadoDe(f);
                       const relleno = e === "Pendiente" ? "bg-rojo-100 text-rojo-800" : e === "Pagada" ? "bg-verde-100 text-verde-800" : e === "NC sin aplicar" ? "bg-[#fbf1c7] text-[#7a5f06]" : "";
                       return <span key={c.id} className={`flex h-full items-center justify-center gap-1.5 whitespace-nowrap ${relleno}`} title={e === "Pendiente" && f.atraso > 0 ? `Vencida hace ${f.atraso} días` : undefined}>
-                        {e === "NC sin aplicar" ? <button type="button" onClick={() => setPicker(picker === f.id ? null : f.id)} className="h-full w-full font-semibold hover:underline">Aplicar a factura</button>
+                        {e === "NC sin aplicar" ? <button type="button" onClick={() => { setMotivoNc(""); setPicker(picker === f.id ? null : f.id); }} className="h-full w-full font-semibold hover:underline">Aplicar a factura</button>
                           : e === "Pagada" ? <><span className="font-semibold">Pagada{f.medio ? ` · ${TEXTO_MEDIO[f.medio] ?? ""}` : ""}</span><button type="button" title="Deshacer el pago" aria-label="Deshacer el pago" onClick={() => deshacer(f.id, !!f.arca)} className="text-[12px] opacity-50 hover:opacity-100">✕</button></>
                           : e === "Pendiente" ? <span className="font-semibold">Pendiente{f.atraso > 0 ? <span className="font-normal"> · {f.atraso} d</span> : null}</span>
                           : <span className="text-stone-500">{e === "Anulado" ? f.anulado : e}</span>}
@@ -335,8 +337,8 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
                       {f.arca ? (f.esNc ? <span className="text-stone-300">—</span> : f.sinPedido ? (tipo === "CUENTA" ? <span className="text-stone-300">—</span> : <span className="font-semibold text-rojo-700">Sin pedido</span>) : f.pedidoId ? <Link href={`/pedidos/${f.pedidoId}`} className="font-medium text-verde-800 hover:underline">Abrir ›</Link> : <span className="text-stone-400">Con pedido</span>)
                         : <Link href={`/pedidos/${f.id}`} className="font-medium text-verde-800 hover:underline">Abrir ›</Link>}
                     </span>;
-                    case "nc": return <span key={c.id} className="truncate text-[12.5px] text-stone-500">
-                      {f.arca && f.esNc ? <>{(f.aplicaciones ?? []).map((a) => <span key={a.id} className="mr-2 whitespace-nowrap">→ F-{a.facturaNumero} <button type="button" title="Quitar" onClick={() => window.confirm("¿Quitar esta aplicación?") && empezar(async () => { const r = await quitarAplicacionNc(a.id); if (!r.ok) setError(r.error ?? "No se pudo."); router.refresh(); })} className="text-stone-300 hover:text-rojo-700">✕</button></span>)}{(f.aplicaciones ?? []).length === 0 && <span className="text-stone-300">—</span>}</>
+                    case "nc": return <span key={c.id} title={f.ncMotivos || undefined} className="truncate text-[12.5px] text-stone-500">
+                      {f.arca && f.esNc ? <>{(f.aplicaciones ?? []).map((a) => <span key={a.id} title={a.motivo ? `Motivo: ${a.motivo}` : undefined} className="mr-2 whitespace-nowrap">→ F-{a.facturaNumero}{a.motivo ? <span className="text-stone-400"> · {a.motivo}</span> : null} <button type="button" title="Quitar" onClick={() => window.confirm("¿Quitar esta aplicación?") && empezar(async () => { const r = await quitarAplicacionNc(a.id); if (!r.ok) setError(r.error ?? "No se pudo."); router.refresh(); })} className="text-stone-300 hover:text-rojo-700">✕</button></span>)}{(f.aplicaciones ?? []).length === 0 && <span className="text-stone-300">—</span>}</>
                         : !f.arca && f.tipo === "FACTURA" && !f.pagada && !f.cubierta && !f.anulado ? <Link href={`/cuentas/${f.clienteId}/nc?factura=${f.id}`} className="font-medium text-stone-600 underline decoration-stone-300 underline-offset-4 hover:text-stone-900">+ Nota de crédito</Link>
                         : f.ncTexto ? <>{f.ncTexto}{!f.cubierta && f.nc > 0 ? ` (−${formatoPesos(f.nc)})` : ""}</> : <span className="text-stone-300">—</span>}
                     </span>;
@@ -346,6 +348,10 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
               </div>
               {picker === f.id && f.esNc && (
                 <div className="border-b border-stone-300 bg-crema-50 px-3 py-3 pl-12 text-[13px]">
+                  <label className="mb-3 flex max-w-xl flex-col gap-1">
+                    <span className="font-medium text-stone-700">Motivo de la {f.numero} <span className="font-normal text-rojo-700">(obligatorio: por qué se emitió)</span></span>
+                    <input value={motivoNc} onChange={(e) => setMotivoNc(e.target.value)} maxLength={200} placeholder="Ej.: Devolución de mercadería, error en el precio, factura duplicada…" className="h-9 rounded-md border border-stone-400 bg-white px-3 text-[13px]" />
+                  </label>
                   <p className="mb-2 font-medium text-stone-700">¿A qué factura corresponde la {f.numero}? <span className="font-normal text-stone-400">mismo CUIT; primero las del mismo importe</span></p>
                   {(() => {
                     const candidatas = filas.filter((x) => x.arca && !x.esNc && x.cuit === f.cuit && (x.saldo ?? 0) > 0.01).sort((a, b) => Number(Math.abs((b.saldo ?? 0) - (f.saldo ?? 0)) < 0.01) - Number(Math.abs((a.saldo ?? 0) - (f.saldo ?? 0)) < 0.01) || (b.numero ?? "").localeCompare(a.numero ?? ""));
@@ -358,7 +364,7 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
                             <span className="w-16 text-stone-400">{fechaCorta(c.fecha)}</span>
                             <span className="w-28 text-right tabular-nums">{formatoPesos(c.saldo ?? 0)}</span>
                             {Math.abs((c.saldo ?? 0) - (f.saldo ?? 0)) < 0.01 && <span className="text-[11.5px] font-medium text-verde-700">mismo importe</span>}
-                            <button type="button" disabled={trabajando} onClick={() => window.confirm(`¿Aplicar la ${f.numero} a la ${c.numero} por ${formatoPesos(Math.min(f.saldo ?? 0, c.saldo ?? 0))}?`) && empezar(async () => { const r = await aplicarNc(f.id, c.id); if (!r.ok) setError(r.error ?? "No se pudo."); else setPicker(null); router.refresh(); })} className="ml-auto rounded-md border border-stone-300 bg-white px-3 py-1 text-[12px] font-medium hover:border-stone-700 hover:bg-stone-800 hover:text-white">Aplicar</button>
+                            <button type="button" disabled={trabajando || motivoNc.trim().length < 3} title={motivoNc.trim().length < 3 ? "Primero escribí el motivo de la nota de crédito" : undefined} onClick={() => window.confirm(`¿Aplicar la ${f.numero} a la ${c.numero} por ${formatoPesos(Math.min(f.saldo ?? 0, c.saldo ?? 0))}?\nMotivo: ${motivoNc.trim()}`) && empezar(async () => { const r = await aplicarNc(f.id, c.id, motivoNc); if (!r.ok) setError(r.error ?? "No se pudo."); else setPicker(null); router.refresh(); })} className="ml-auto rounded-md border border-stone-300 bg-white px-3 py-1 text-[12px] font-medium hover:border-stone-700 hover:bg-stone-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-stone-300 disabled:hover:bg-white disabled:hover:text-stone-900">Aplicar</button>
                           </li>
                         ))}
                       </ul>

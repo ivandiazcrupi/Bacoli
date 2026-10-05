@@ -97,8 +97,10 @@ export async function deshacerPagoArca(id: string): Promise<Resultado> {
 }
 
 /** Aplica una nota de crédito de ARCA a una factura del mismo cliente (mismo CUIT). Aplica lo que entre: el menor entre lo que le queda a la nota y lo que le falta a la factura. */
-export async function aplicarNc(ncId: string, facturaId: string): Promise<Resultado> {
+export async function aplicarNc(ncId: string, facturaId: string, motivo: string): Promise<Resultado> {
   const usuario = await exigirOficina();
+  const motivoLimpio = motivo.trim().replace(/\s+/g, " ").slice(0, 200);
+  if (motivoLimpio.length < 3) return { ok: false, error: "Falta el motivo de la nota de crédito (por qué se emitió)." };
   const { filas } = await cargarFacturas();
   const nc = filas.find((x) => x.id === ncId && x.esNc);
   const fc = filas.find((x) => x.id === facturaId && !x.esNc);
@@ -106,7 +108,7 @@ export async function aplicarNc(ncId: string, facturaId: string): Promise<Result
   if (!nc.cuit || nc.cuit !== fc.cuit) return { ok: false, error: "La nota y la factura tienen que ser del mismo CUIT." };
   const monto = redondear2(Math.min(nc.saldo, fc.saldo));
   if (!(monto > 0)) return { ok: false, error: nc.saldo <= 0 ? "Esta nota ya está aplicada por completo." : "Esa factura ya está cubierta por notas de crédito." };
-  await db.aplicacionNcArca.create({ data: { ncId, facturaId, monto, creadoPor: usuario.nombre } });
+  await db.aplicacionNcArca.create({ data: { ncId, facturaId, monto, motivo: motivoLimpio, creadoPor: usuario.nombre } });
   revalidatePath("/cuentas", "layout");
   return { ok: true };
 }

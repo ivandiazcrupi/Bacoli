@@ -34,9 +34,9 @@ export type FilaFactura = {
   pagada: boolean;
   medio: string | null;
   obsCobro: string | null;
-  creditos: { id: string; ncId: string; ncNumero: number; monto: number }[]; // notas que bajan esta factura
+  creditos: { id: string; ncId: string; ncNumero: number; monto: number; motivo: string | null }[]; // notas que bajan esta factura
   aplicado: number; // factura: suma de notas aplicadas · nota: cuánto de la nota ya se aplicó
-  aplicaciones: { id: string; facturaId: string; facturaNumero: number; monto: number }[]; // nota: a qué facturas se aplicó
+  aplicaciones: { id: string; facturaId: string; facturaNumero: number; monto: number; motivo: string | null }[]; // nota: a qué facturas se aplicó
   saldo: number; // factura: lo que falta cobrar · nota: lo que queda por aplicar
   problemas: string[];
 };
@@ -92,9 +92,9 @@ export async function cargarFacturas() {
       id: a.id, esNc: a.esNotaCredito, tipo: a.tipo, puntoVenta: a.puntoVenta, numero: a.numero, fecha: a.fecha.toISOString().slice(0, 10), cuit, razonSocial: a.razonSocial,
       clienteId: cli?.id ?? null, cliente: cli?.nombre ?? null, total, puntoId: a.puntoId, sucursal: punto?.barrio ?? null, observacion: a.observacion,
       pedidoId: pedido?.id ?? null, pedidoEntregado: pedido?.estado === "ENTREGADO", pagada, medio: a.medioCobro ?? (pedido?.cobro === "COBRADO" ? pedido.medioCobro : null), obsCobro: a.obsCobro,
-      creditos: a.creditosRecibidos.map((x) => ({ id: x.id, ncId: x.ncId, ncNumero: idNumero.get(x.ncId) ?? 0, monto: Number(x.monto) })),
+      creditos: a.creditosRecibidos.map((x) => ({ id: x.id, ncId: x.ncId, ncNumero: idNumero.get(x.ncId) ?? 0, monto: Number(x.monto), motivo: x.motivo })),
       aplicado,
-      aplicaciones: a.notasAplicadas.map((x) => ({ id: x.id, facturaId: x.facturaId, facturaNumero: idNumero.get(x.facturaId) ?? 0, monto: Number(x.monto) })),
+      aplicaciones: a.notasAplicadas.map((x) => ({ id: x.id, facturaId: x.facturaId, facturaNumero: idNumero.get(x.facturaId) ?? 0, monto: Number(x.monto), motivo: x.motivo })),
       saldo: redondear2(total - aplicado),
       problemas,
     };
