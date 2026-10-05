@@ -41,6 +41,7 @@ export type Fila = {
   remito: string | null;
   salidaId: string | null;
   bultos: number;
+  sabores: { tomate: number; cebolla: number; otros: number };
   webOrden: string | null; // pedido de la tienda online: sin cuenta corriente ni remito
   pagoMp: boolean; // pedido de la tienda ya pagado (Mercado Pago o transferencia confirmada)
   pagoTexto: string | null;
@@ -786,6 +787,16 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
           <span className="text-xs font-medium uppercase tracking-wide text-stone-600">Unidades del día</span>
           <span className="text-base font-bold tabular-nums">{filas.reduce((t, f) => t + f.bultos, 0) * UNIDADES_POR_PAQUETE}</span>
         </div>
+        {[["Tomate", "tomate"], ["Cebolla", "cebolla"], ["Otros", "otros"]].map(([rotulo, clave]) => {
+          const n = filas.reduce((t, f) => t + f.sabores[clave as "tomate" | "cebolla" | "otros"], 0);
+          if (clave === "otros" && n === 0) return null;
+          return (
+            <div key={clave} className="inline-flex items-baseline gap-2 rounded-md border border-stone-400 bg-white px-5 py-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-stone-600">{rotulo}</span>
+              <span className="text-base font-bold tabular-nums">{n}</span>
+            </div>
+          );
+        })}
         </div>
       </div>
       <BarraEstado

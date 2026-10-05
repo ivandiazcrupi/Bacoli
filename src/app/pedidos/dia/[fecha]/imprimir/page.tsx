@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { aFecha, deFecha, diaMes, esFechaValida, nombreDia } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
-import { UNIDADES_POR_PAQUETE, bultosDe, porReparto } from "@/lib/ruta";
+import { UNIDADES_POR_PAQUETE, bultosDe, porReparto, unidadesPorSabor } from "@/lib/ruta";
 import { exigirOficina } from "@/lib/session";
 import { titulo } from "@/lib/mayusculas";
 import { BarraImpresion } from "../../../remito/BarraImpresion";
@@ -37,6 +37,7 @@ export default async function ImprimirHojaDeRuta({ params, searchParams }: { par
           {salidas.filter((sa) => salida || pedidos.some((p) => p.salidaId === sa.id)).map((sa) => {
             const grupo = filas.filter((x) => pedidos.find((p) => p.id === x.id)?.salidaId === sa.id);
             const paquetes = pedidos.filter((p) => p.salidaId === sa.id).reduce((s, p) => s + bultosDe(p.items), 0);
+            const sabores = pedidos.filter((p) => p.salidaId === sa.id).reduce((t, p) => { const x = unidadesPorSabor(p.items); return { tomate: t.tomate + x.tomate, cebolla: t.cebolla + x.cebolla, otros: t.otros + x.otros }; }, { tomate: 0, cebolla: 0, otros: 0 });
             return (
               <section key={sa.id} className="mx-auto w-[277mm] bg-white p-[8mm] font-[Helvetica,Arial,sans-serif] text-neutral-900 shadow print:w-full print:p-0 print:shadow-none [&:not(:last-child)]:break-after-page">
                 <header className="mb-6 flex items-end justify-between border-b border-neutral-900 pb-3">
@@ -54,6 +55,20 @@ export default async function ImprimirHojaDeRuta({ params, searchParams }: { par
                         <dt className="text-[9px] font-semibold uppercase tracking-[0.2em] text-neutral-500">Unidades</dt>
                         <dd className="mt-1 text-[24px] font-bold leading-none tabular-nums">{paquetes * UNIDADES_POR_PAQUETE}</dd>
                       </div>
+                      <div>
+                        <dt className="text-[9px] font-semibold uppercase tracking-[0.2em] text-neutral-500">Tomate</dt>
+                        <dd className="mt-1 text-[24px] font-bold leading-none tabular-nums">{sabores.tomate}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-[9px] font-semibold uppercase tracking-[0.2em] text-neutral-500">Cebolla</dt>
+                        <dd className="mt-1 text-[24px] font-bold leading-none tabular-nums">{sabores.cebolla}</dd>
+                      </div>
+                      {sabores.otros > 0 && (
+                        <div>
+                          <dt className="text-[9px] font-semibold uppercase tracking-[0.2em] text-neutral-500">Otros</dt>
+                          <dd className="mt-1 text-[24px] font-bold leading-none tabular-nums">{sabores.otros}</dd>
+                        </div>
+                      )}
                     </dl>
                     <p className="border-l border-neutral-300 pl-10 text-[24px] font-semibold leading-none tracking-tight">{textoFecha}</p>
                   </div>
