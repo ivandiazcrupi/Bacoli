@@ -10,7 +10,7 @@ const campo = "mt-1 h-10 w-full rounded-md border border-stone-400 bg-white px-3
 const etiqueta = "block text-xs font-semibold uppercase tracking-wide text-stone-600";
 const boton = "flex h-11 w-11 items-center justify-center rounded-md border border-stone-400 bg-white text-xl font-medium hover:bg-crema-100 lg:h-9 lg:w-9 lg:text-lg";
 
-// Pedido minorista cargado a mano: datos de entrega, productos con cantidad, total que paga y si ya pagó por transferencia.
+// Pedido minorista cargado a mano: datos de entrega, productos con cantidad, N° de orden, total que paga y cómo pagó.
 export function NuevoPedidoWeb({ productos: todos }: { productos: Producto[] }) {
   // Solo las dos prepizzas del catálogo; cualquier otro producto de la tienda se escribe a mano en el tercer renglón.
   const productos = todos.filter((p) => p.sku === "PPT01" || p.sku === "PPC02" || /^PREPIZZA (TOMATE|CEBOLLA)$/i.test(p.nombre.trim()));
@@ -29,7 +29,8 @@ export function NuevoPedidoWeb({ productos: todos }: { productos: Producto[] }) 
     <form ref={form} action={enviar} className="space-y-4">
       <section className="rounded-xl border border-stone-300 bg-white p-4 shadow-sm">
         <p className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-stone-600">Datos de entrega</p>
-        <div className="grid gap-3 lg:grid-cols-[1fr_1fr_2fr_1fr]">
+        <div className="grid gap-3 lg:grid-cols-[9rem_1fr_1fr_2fr_1fr]">
+          <label className={etiqueta}>N° de orden<input name="orden" inputMode="numeric" maxLength={20} placeholder="Ej.: 13901" className={campo} title="El número de orden que figura en Empretienda. Si no lo tiene, se le asigna uno propio (M-1, M-2…)." /></label>
           <label className={etiqueta}>Nombre<input name="nombre" required className={`${campo} dato`} autoCapitalize="characters" /></label>
           <label className={etiqueta}>Barrio<input name="barrio" className={`${campo} dato`} autoCapitalize="characters" /></label>
           <label className={etiqueta}>Dirección<input name="direccion" required className={campo} /></label>
@@ -81,9 +82,13 @@ export function NuevoPedidoWeb({ productos: todos }: { productos: Producto[] }) 
             <span className="mb-2 block text-center text-xs font-semibold uppercase tracking-wide text-stone-600">Nota importante (se ve en rojo en la ruta)</span>
             <input name="nota" placeholder="Ej.: Entregar en portería" className="w-full rounded-md border border-stone-400 bg-white px-3 py-2.5 text-base" />
           </label>
-          <label className="flex items-center justify-center gap-2 text-sm font-medium">
-            <input type="checkbox" name="pagado" value="1" className="h-5 w-5" />
-            Ya pagó por transferencia (sin esto no sale de fábrica)
+          <label className="block">
+            <span className="mb-2 block text-center text-xs font-semibold uppercase tracking-wide text-stone-600">Pago (sin pago confirmado no sale de fábrica)</span>
+            <select name="pago" defaultValue="PENDIENTE" className="h-10 w-full rounded-md border border-stone-400 bg-white px-3 text-base">
+              <option value="PENDIENTE">Pendiente de pago (todavía no pagó)</option>
+              <option value="PAGO_TRANSFERENCIA">Ya pagó por transferencia</option>
+              <option value="PAGO_MP">Ya pagó con Mercado Pago</option>
+            </select>
           </label>
         </div>
         <div className="rounded-xl border border-stone-300 bg-white p-4 text-sm shadow-sm">

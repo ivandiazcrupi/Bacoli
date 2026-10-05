@@ -193,10 +193,14 @@ export async function crearPedidoWebManual(_: EstadoPedidoForm, formData: FormDa
   }
   if (items.length === 0) return { error: "Poné la cantidad de al menos un producto." };
 
-  const pagado = formData.get("pagado") === "1";
+  const pagoElegido = String(formData.get("pago") ?? (formData.get("pagado") === "1" ? "PAGO_TRANSFERENCIA" : "PENDIENTE"));
+  const webPago = pagoElegido === "PAGO_MP" ? "PAGO_MP" : pagoElegido === "PAGO_TRANSFERENCIA" ? "PAGO_TRANSFERENCIA" : "PENDIENTE";
+  // N° de orden de la tienda (opcional): si lo trae, se usa ese (no puede repetirse); si no, uno propio M-1, M-2…
+  const ordenTienda = String(formData.get("orden") ?? "").trim().replace(/\s+/g, "").slice(0, 20);
+  if (ordenTienda && (await db.pedido.findUnique({ where: { webOrden: ordenTienda }, select: { id: true } }))) return { error: `El N° de orden ${ordenTienda} ya está cargado. Revisá que no sea un pedido repetido.` };
   const ultimo = await db.pedido.aggregate({ where: { fechaEntrega: null }, _max: { ordenDia: true } });
   const numero = await db.$transaction(async (tx) => {
-    const n = await tx.numerador.upsert({ where: { id: "WEB_MANUAL" }, update: { ultimo: { increment: 1 } }, create: { id: "WEB_MANUAL", ultimo: 1 } });
+    const n = ordenTienda ? { ultimo: 0 } : await tx.numerador.upsert({ where: { id: "WEB_MANUAL" }, update: { ultimo: { increment: 1 } }, create: { id: "WEB_MANUAL", ultimo: 1 } });
     await tx.pedido.create({
       data: {
         origen: "WEB",
@@ -205,21 +209,22 @@ export async function crearPedidoWebManual(_: EstadoPedidoForm, formData: FormDa
         ivaPct: 0,
         creadoPorId: usuario.id,
         ordenDia: (ultimo._max.ordenDia ?? -1) + 1,
-        webOrden: `M-${n.ultimo}`,
+        webOrden: ordenTienda || `M-${n.ultimo}`,
         webNombre: nombre,
         webDireccion: direccion,
         webBarrio: mayus(String(formData.get("barrio") ?? "")) || null,
         webTelefono: String(formData.get("telefono") ?? "").trim() || null,
         webTotal: total,
-        webPago: pagado ? "PAGO_TRANSFERENCIA" : "PENDIENTE",
+        webPago,
+        ...(webPago === "PAGO_TRANSFERENCIA" ? { webPagoPor: usuario.nombre, webPagoEn: new Date() } : {}),
         nota: oracion(String(formData.get("nota") ?? "")) || null,
         items: { create: items },
       },
     });
-    return n.ultimo;
+    return ordenTienda || `M-${n.ultimo}`;
   });
   revalidatePath("/pedidos", "layout");
-  return { ok: `Pedido minorista de ${nombre} cargado (N° M-${numero}). Quedó en Pedidos → Minoristas (web), esperando día.` };
+  return { ok: `Pedido minorista de ${nombre} cargado (N° ${numero}). Quedó en Pedidos → Minoristas (web), esperando día.` };
 }
 
 /** Modifica un pedido de la tienda online: datos de entrega, cantidades de cada renglón (en 0 se saca), total pagado y nota. */
