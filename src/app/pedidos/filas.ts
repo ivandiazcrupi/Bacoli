@@ -34,6 +34,7 @@ const renglonHoja = (i: { nombre: string; cantidad: number; sinCargo: number }, 
 
 export type FilaBandeja = {
   id: string;
+  clienteId: string | null;
   barrio: string;
   cliente: string;
   direccion: string;
@@ -94,6 +95,7 @@ export function aFilaBandeja(p: PedidoCompleto, intento = ""): FilaBandeja {
   const d = datosEntrega(p);
   return {
     id: p.id,
+    clienteId: p.clienteId,
     barrio: d.barrio,
     cliente: p.webOrden ? `${d.nombre} - ${p.webOrden.replace("-", "\u2011")}` : d.nombre,
     direccion: d.direccion,

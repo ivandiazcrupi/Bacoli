@@ -1,5 +1,6 @@
 "use client";
 
+import { NombreCliente } from "./NombreCliente";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
@@ -105,7 +106,7 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
           <div className={`hidden items-center gap-x-4 text-center lg:grid ${COLUMNAS}`}>
             <span className="text-[12.5px] font-semibold">{f.barrio}</span>
             <span className="text-[12.5px] font-semibold leading-snug">
-              {f.cliente}
+              <NombreCliente clienteId={f.clienteId} nombre={f.cliente} />
               <EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} ingreso={f.ingreso} />
             </span>
             <span className="text-[12.5px] leading-snug">
@@ -131,7 +132,7 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="font-semibold">{f.barrio}</p>
-                <p className="font-semibold">{f.cliente}</p>
+                <p className="font-semibold"><NombreCliente clienteId={f.clienteId} nombre={f.cliente} /></p>
                 <EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} ingreso={f.ingreso} />
                 <p className="text-[13px]">{f.direccion}</p>
                 {f.comentario && <p className="text-[13px] font-medium text-rojo-700">{f.comentario}</p>}

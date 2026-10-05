@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { NombreCliente } from "../../NombreCliente";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { DndContext, MouseSensor, TouchSensor, closestCenter, pointerWithin, useDraggable, useDroppable, useSensor, useSensors, type CollisionDetection, type DragEndEvent } from "@dnd-kit/core";
@@ -280,7 +281,7 @@ function FilaHoja({ f, n, bloqueada, armando, fija, acc, salidas }: { f: Fila; n
       </div>
       <div role="cell" className="text-[11px] font-bold uppercase leading-tight tracking-wide text-stone-800">{f.barrio}</div>
       <div role="cell" className="leading-snug">
-        <p className="font-bold">{f.cliente}</p>
+        <p className="font-bold"><NombreCliente clienteId={f.clienteId} nombre={f.cliente} /></p>
         <EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} ingreso={f.ingreso} />
       </div>
       <div role="cell" className="min-w-0 break-words leading-snug">
@@ -413,7 +414,7 @@ function FilaUbicar({ f, salidas, bloqueada, acc }: { f: Fila; salidas: SalidaIn
       <div className={`grid items-center gap-x-4 gap-y-2 text-center ${COLUMNAS_UBICAR}`}>
         <button type="button" disabled={bloqueada} aria-label="Arrastrar el pedido a un vehículo" className="hidden cursor-grab text-lg leading-none text-stone-500 disabled:cursor-default disabled:opacity-30 lg:block" {...attributes} {...listeners}>⋮⋮</button>
         <span className="text-[13px] font-semibold">{f.barrio}</span>
-        <span className="text-[13px] font-semibold leading-snug">{f.cliente}<EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} ingreso={f.ingreso} /></span>
+        <span className="text-[13px] font-semibold leading-snug"><NombreCliente clienteId={f.clienteId} nombre={f.cliente} /><EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} ingreso={f.ingreso} /></span>
         <span className="text-[13px] leading-snug">
           {f.direccion}
           {f.comentario && <span className="mt-0.5 block text-[12px] font-medium text-rojo-700">{f.comentario}</span>}
@@ -452,7 +453,7 @@ function FilaTarjeta({ f, n, bloqueada, armando, fija, acc, salidas }: { f: Fila
       <header className="flex items-start gap-3">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-stone-800 text-sm font-semibold text-white">{n}</span>
         <div className="min-w-0 flex-1">
-          <h3 className="text-lg font-bold leading-snug">{f.cliente}</h3>
+          <h3 className="text-lg font-bold leading-snug"><NombreCliente clienteId={f.clienteId} nombre={f.cliente} /></h3>
           <EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} ingreso={f.ingreso} />
           <p className="text-sm text-stone-600">{f.barrio}</p>
         </div>
