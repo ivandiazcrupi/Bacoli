@@ -3,7 +3,7 @@ import { Cabecera } from "@/components/Cabecera";
 import { cabeceraTabla } from "@/components/campos";
 import { importeVigente } from "@/lib/cuenta";
 import { db } from "@/lib/db";
-import { aFecha, deFecha, diaMes, esFechaValida, hoy, lunesDe, nombreDia, sumarDias, semanaDeTrabajo } from "@/lib/fechas";
+import { aFecha, deFecha, diaMes, esFechaValida, diasDeSemana, finDeSemana, hoy, inicioSemana, nombreDia, sumarDias, semanaDeTrabajo } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
 import { UNIDADES_POR_PAQUETE, bultosDe } from "@/lib/ruta";
 import { exigirOficina } from "@/lib/session";
@@ -13,18 +13,17 @@ import { CONTENEDOR_PEDIDOS, EncabezadoPedidos } from "../Encabezado";
 export default async function Semana({ searchParams }: { searchParams: Promise<{ semana?: string }> }) {
   const usuario = await exigirOficina();
   const { semana } = await searchParams;
-  const lunes = semana && esFechaValida(semana) ? lunesDe(semana) : semanaDeTrabajo();
-  const domingo = sumarDias(lunes, 6);
+  const inicio = semana && esFechaValida(semana) ? inicioSemana(semana) : semanaDeTrabajo();
+  const fin = finDeSemana(inicio);
   const esta = semanaDeTrabajo();
 
   const [pedidos, salidas, cerrados] = await Promise.all([
-    db.pedido.findMany({ where: { estado: { not: "CANCELADO" }, fechaEntrega: { gte: aFecha(lunes), lte: aFecha(domingo) } }, include: { items: true } }),
-    db.salida.findMany({ where: { fecha: { gte: aFecha(lunes), lte: aFecha(domingo) } }, include: { vehiculo: true }, orderBy: { orden: "asc" } }),
-    db.diaCerrado.findMany({ where: { fecha: { gte: aFecha(lunes), lte: aFecha(domingo) } } }),
+    db.pedido.findMany({ where: { estado: { not: "CANCELADO" }, fechaEntrega: { gte: aFecha(inicio), lte: aFecha(fin) } }, include: { items: true } }),
+    db.salida.findMany({ where: { fecha: { gte: aFecha(inicio), lte: aFecha(fin) } }, include: { vehiculo: true }, orderBy: { orden: "asc" } }),
+    db.diaCerrado.findMany({ where: { fecha: { gte: aFecha(inicio), lte: aFecha(fin) } } }),
   ]);
   const cerradosSet = new Set(cerrados.map((d) => deFecha(d.fecha)));
-  const hayDomingo = pedidos.some((p) => p.fechaEntrega && deFecha(p.fechaEntrega) === domingo);
-  const fechas = Array.from({ length: hayDomingo ? 7 : 6 }, (_, n) => sumarDias(lunes, n));
+  const fechas = diasDeSemana(inicio); // MAR a SÁB y LUN: el domingo no se reparte
 
   const COLUMNAS = "lg:grid-cols-[12rem_1fr_1fr_1fr_1fr_1fr_1fr_7rem]";
 
@@ -32,13 +31,13 @@ export default async function Semana({ searchParams }: { searchParams: Promise<{
     <>
       <Cabecera usuario={usuario} />
       <main className={CONTENEDOR_PEDIDOS}>
-        <EncabezadoPedidos activa="semana" fechaRuta={esta === lunes ? undefined : lunes} />
+        <EncabezadoPedidos activa="semana" fechaRuta={esta === inicio ? undefined : inicio} />
 
         <nav className="flex flex-wrap items-center justify-center gap-2 text-sm" aria-label="Semana">
-          <Link href={`/pedidos/semana?semana=${sumarDias(lunes, -7)}`} className="rounded-md border border-stone-400 bg-white px-3 py-2 shadow-sm hover:border-verde-700" aria-label="Semana anterior">←</Link>
-          <span className="min-w-40 rounded-md border border-stone-300 bg-white px-5 py-2 text-center text-sm font-bold uppercase tracking-wide text-stone-800">Semana {diaMes(lunes)}</span>
-          <Link href={`/pedidos/semana?semana=${sumarDias(lunes, 7)}`} className="rounded-md border border-stone-400 bg-white px-3 py-2 shadow-sm hover:border-verde-700" aria-label="Semana siguiente">→</Link>
-          {lunes !== esta && <Link href="/pedidos/semana" className="rounded-md border border-stone-400 bg-white px-3 py-2 shadow-sm hover:border-verde-700">Esta semana</Link>}
+          <Link href={`/pedidos/semana?semana=${sumarDias(inicio, -7)}`} className="rounded-md border border-stone-400 bg-white px-3 py-2 shadow-sm hover:border-verde-700" aria-label="Semana anterior">←</Link>
+          <span className="min-w-40 rounded-md border border-stone-300 bg-white px-5 py-2 text-center text-sm font-bold uppercase tracking-wide text-stone-800">Semana {diaMes(inicio)}</span>
+          <Link href={`/pedidos/semana?semana=${sumarDias(inicio, 7)}`} className="rounded-md border border-stone-400 bg-white px-3 py-2 shadow-sm hover:border-verde-700" aria-label="Semana siguiente">→</Link>
+          {inicio !== esta && <Link href="/pedidos/semana" className="rounded-md border border-stone-400 bg-white px-3 py-2 shadow-sm hover:border-verde-700">Esta semana</Link>}
         </nav>
 
         <div className="overflow-hidden rounded-xl border border-stone-300 bg-white shadow-sm">

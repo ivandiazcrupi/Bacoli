@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { Cabecera } from "@/components/Cabecera";
 import { db } from "@/lib/db";
-import { aFecha, deFecha, diaMes, esFechaValida, hoy, lunesDe, nombreDia, sumarDias } from "@/lib/fechas";
+import { aFecha, deFecha, diaMes, esFechaValida, diasDeSemana, finDeSemana, hoy, inicioSemana, nombreDia, sumarDias } from "@/lib/fechas";
 import { titulo } from "@/lib/mayusculas";
 import { porReparto } from "@/lib/ruta";
 import { estadoDelDia } from "@/lib/dias";
@@ -46,17 +46,17 @@ export default async function HojaDelDia({ params }: { params: Promise<{ fecha: 
   const filas = pedidos.map((p) => aFila(p, debe));
   const salen = new Set(salidas.map((s) => s.vehiculoId));
 
-  const lunes = lunesDe(fecha);
-  const domingo = sumarDias(lunes, 6);
+  const inicio = inicioSemana(fecha);
+  const fin = finDeSemana(inicio);
   const [cuentaPedidos, cuentaSalidas, cerradosSemana] = await Promise.all([
-    db.pedido.groupBy({ by: ["fechaEntrega"], where: { estado: { not: "CANCELADO" }, fechaEntrega: { gte: aFecha(lunes), lte: aFecha(domingo) } }, _count: true }),
-    db.salida.groupBy({ by: ["fecha"], where: { fecha: { gte: aFecha(lunes), lte: aFecha(domingo) } }, _count: true }),
-    db.diaCerrado.findMany({ where: { fecha: { gte: aFecha(lunes), lte: aFecha(domingo) } } }),
+    db.pedido.groupBy({ by: ["fechaEntrega"], where: { estado: { not: "CANCELADO" }, fechaEntrega: { gte: aFecha(inicio), lte: aFecha(fin) } }, _count: true }),
+    db.salida.groupBy({ by: ["fecha"], where: { fecha: { gte: aFecha(inicio), lte: aFecha(fin) } }, _count: true }),
+    db.diaCerrado.findMany({ where: { fecha: { gte: aFecha(inicio), lte: aFecha(fin) } } }),
   ]);
   const cerradosSet = new Set(cerradosSemana.map((d) => deFecha(d.fecha)));
   const nPedidos = new Map(cuentaPedidos.map((c) => [c.fechaEntrega ? deFecha(c.fechaEntrega) : "", c._count]));
   const nSalidas = new Map(cuentaSalidas.map((c) => [deFecha(c.fecha), c._count]));
-  const fechasSemana = Array.from({ length: 6 }, (_, n) => sumarDias(lunes, n));
+  const fechasSemana = diasDeSemana(inicio);
   const diasSemana = fechasSemana.map((f) => ({ fecha: f, corta: `${nombreDia(f).slice(0, 3)} ${diaMes(f)}` }));
   const mismoDia = (semana: number) => sumarDias(fecha, 7 * semana);
 
@@ -69,10 +69,10 @@ export default async function HojaDelDia({ params }: { params: Promise<{ fecha: 
         {/* Para ir día por día: la semana y sus seis días  */}
         <DiasSemana
           fecha={fecha}
-          lunesTexto={diaMes(lunes)}
+          inicioTexto={diaMes(inicio)}
           hrefAnterior={`/pedidos/dia/${mismoDia(-1)}`}
           hrefSiguiente={`/pedidos/dia/${mismoDia(1)}`}
-          hrefSemana={`/pedidos/semana?semana=${lunes}`}
+          hrefSemana={`/pedidos/semana?semana=${inicio}`}
           dias={fechasSemana.map((f) => ({ fecha: f, texto: `${nombreDia(f).slice(0, 3)} ${Number(f.slice(8))}`, pedidos: nPedidos.get(f) ?? 0, vehiculos: nSalidas.get(f) ?? 0, cerrado: cerradosSet.has(f) }))}
         />
 

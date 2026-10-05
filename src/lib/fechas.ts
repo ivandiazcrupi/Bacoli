@@ -16,16 +16,24 @@ export function sumarDias(s: string, n: number) {
   return deFecha(d);
 }
 
-/** Lunes de la semana de esa fecha. */
-export function lunesDe(s: string) {
+/**
+ * Primer día (martes) de la semana de esa fecha. La semana de BACOLI va de MARTES a LUNES: se produce hasta el sábado y esa
+ * producción se entrega el lunes siguiente. El domingo no se reparte: queda dentro de la semana que termina el lunes.
+ */
+export function inicioSemana(s: string) {
   const dia = aFecha(s).getUTCDay(); // 0 = domingo
-  return sumarDias(s, dia === 0 ? -6 : 1 - dia);
+  return sumarDias(s, -((dia - 2 + 7) % 7));
 }
 
-/** Lunes de la semana en que se está trabajando: de lunes a sábado es la actual; el domingo ya se arma la que viene. */
+/** Los seis días de reparto de la semana que empieza ese martes: MAR · MIÉ · JUE · VIE · SÁB · LUN (el domingo no va). */
+export const diasDeSemana = (inicio: string) => [0, 1, 2, 3, 4, 6].map((n) => sumarDias(inicio, n));
+
+/** Último día (lunes) de la semana que empieza ese martes. */
+export const finDeSemana = (inicio: string) => sumarDias(inicio, 6);
+
+/** Martes de la semana en que se está trabajando. */
 export function semanaDeTrabajo() {
-  const h = hoy();
-  return aFecha(h).getUTCDay() === 0 ? sumarDias(h, 1) : lunesDe(h);
+  return inicioSemana(hoy());
 }
 
 export function esFechaValida(s: string) {
