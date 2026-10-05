@@ -44,7 +44,7 @@ export function GrillaPrecios({ lista, productos, precios }: { lista: Lista; pro
   );
 }
 
-export function EditarProducto({ producto }: { producto: Producto & { ean: string | null; descripcion: string | null } }) {
+export function EditarProducto({ producto }: { producto: Producto & { ean: string | null; descripcion: string | null; ivaPct: number | null } }) {
   const [estado, enviar, cargando] = useActionState(guardarProducto.bind(null, producto.id), undefined as EstadoPrecios);
   const v = (c: string, inicial: string) => estado?.valores?.[c] ?? inicial;
   return (
@@ -60,6 +60,13 @@ export function EditarProducto({ producto }: { producto: Producto & { ean: strin
           </select>
         </Campo>
       </div>
+      <Campo etiqueta="IVA propio del producto" ayuda="Para los que van a otra tasa (ej. 21%). Si queda en “el del cliente”, se usa el IVA de cada cliente.">
+        <select name="ivaPct" defaultValue={v("ivaPct", producto.ivaPct ? String(producto.ivaPct).replace(".", ",") : "")} className={estiloCampo}>
+          <option value="">El del cliente</option>
+          <option value="10,5">10,5%</option>
+          <option value="21">21%</option>
+        </select>
+      </Campo>
       <Campo etiqueta="Descripción para el remito"><input name="descripcion" autoCapitalize="characters" defaultValue={v("descripcion", producto.descripcion ?? "")} className={estiloDato} /></Campo>
       <Campo etiqueta="EAN (código de barras)" ayuda="Opcional. Entre 8 y 14 números."><input name="ean" inputMode="numeric" defaultValue={v("ean", producto.ean ?? "")} className={estiloCampo} /></Campo>
       <Mensajes estado={estado} />

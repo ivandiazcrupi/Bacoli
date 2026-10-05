@@ -4,7 +4,7 @@ import { oracion, titulo } from "@/lib/mayusculas";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Cabecera } from "@/components/Cabecera";
-import { importeVigente } from "@/lib/cuenta";
+import { desgloseIva, importeVigente } from "@/lib/cuenta";
 import { db } from "@/lib/db";
 import { estadoDelDia } from "@/lib/dias";
 import { deFecha, diaMes, nombreDia } from "@/lib/fechas";
@@ -167,7 +167,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
           abierto={abierto}
           entregado={pedido.estado === "ENTREGADO"}
           items={items.map((i) => ({ id: i.id, nombre: i.nombre, sku: i.sku, unidad: i.unidad, precio: Number(i.precioUnitario), cantidad: i.cantidad, entregada: i.cantidadEntregada, sinCargo: i.sinCargo, motivoSinCargo: i.motivoSinCargo, descuentoPct: Number(i.descuentoPct) }))}
-          totales={{ bruto: pedidoBruto, descuento: pedidoBruto - pedidoBase, base: pedidoBase, iva: total - pedidoBase, ivaPct, total, conFactura: pedido.conFactura, sinCargoPaquetes: pedido.items.reduce((t, i) => t + i.sinCargo, 0), sinCargoValor: pedido.items.reduce((t, i) => t + i.sinCargo * Number(i.precioUnitario), 0) }}
+          totales={{ tasas: web || pedido.webTotal !== null ? [] : desgloseIva(pedido.items, ivaPct, pedido.estado === "ENTREGADO" ? "ENTREGADO" : "PENDIENTE").tasas.map((t) => ({ tasa: t.tasa, iva: t.iva })).filter((t) => t.tasa > 0), bruto: pedidoBruto, descuento: pedidoBruto - pedidoBase, base: pedidoBase, iva: total - pedidoBase, ivaPct, total, conFactura: pedido.conFactura, sinCargoPaquetes: pedido.items.reduce((t, i) => t + i.sinCargo, 0), sinCargoValor: pedido.items.reduce((t, i) => t + i.sinCargo * Number(i.precioUnitario), 0) }}
           web={web}
           pagoMp={webPagado(pedido.webOrden, pedido.webPago)}
           pagoTexto={textoPagoWeb(pedido.webPago)}

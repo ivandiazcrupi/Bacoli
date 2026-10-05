@@ -58,6 +58,7 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
     cuit: cliente.cuit ?? "",
     facturado: cliente.facturado,
     condicionPago: cliente.condicionPago,
+    ivaPct: String(cliente.ivaPct).replace(".", ",").replace(/,00$/, ""),
     listaPreciosId: cliente.listaPreciosId ?? "",
     descuentoPct: Number(cliente.descuentoPct) ? String(cliente.descuentoPct).replace(".", ",") : "",
     imputacionPago: cliente.imputacionPago,

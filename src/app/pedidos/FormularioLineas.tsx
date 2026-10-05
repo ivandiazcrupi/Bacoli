@@ -2,11 +2,11 @@
 
 import { Fragment, useActionState, useEffect, useState } from "react";
 import { Mensajes, estiloBoton } from "@/components/campos";
-import { IVA_PCT } from "@/lib/cuenta";
+import { IVA_ENVIO } from "@/lib/cuenta";
 import { formatoPesos, leerMonto } from "@/lib/numeros";
 import type { EstadoPedidoForm } from "./actions";
 
-export type LineaProducto = { id: string; nombre: string; sku: string | null; unidad: string; precio: string | null; cantidad: number; sinCargo?: number; motivoSinCargo?: string | null; bonificacion?: string };
+export type LineaProducto = { id: string; nombre: string; sku: string | null; unidad: string; precio: string | null; iva?: string; cantidad: number; sinCargo?: number; motivoSinCargo?: string | null; bonificacion?: string };
 
 const MOTIVOS = ["Recambio", "Bonificación", "Muestra", "Otro"];
 
@@ -23,7 +23,8 @@ type Props = {
 };
 
 const boton = "flex h-11 w-11 items-center justify-center rounded-md border border-stone-400 bg-white text-xl font-medium hover:bg-crema-100 lg:h-9 lg:w-9 lg:text-lg";
-const COLUMNAS = "lg:grid-cols-[minmax(0,2fr)_5rem_9rem_11rem_6rem_9rem]";
+const COLUMNAS_SIN_IVA = "lg:grid-cols-[minmax(0,2fr)_5rem_9rem_11rem_6rem_9rem]";
+const COLUMNAS_CON_IVA = "lg:grid-cols-[minmax(0,2fr)_5rem_9rem_11rem_6rem_6rem_9rem]"; // con factura se agrega la columna IVA
 
 // Productos con cantidad y precio, en una tabla a lo ancho. Al tocar + / − o escribir el número, el total se calcula al instante.
 export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial, notaInicial, envioInicial = "", esDueno, textoBoton, alGuardar }: Props) {
@@ -37,6 +38,7 @@ export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial
   const [bonifs, setBonifs] = useState<Record<string, string>>(() => Object.fromEntries(productos.map((p) => [p.id, p.bonificacion ?? ""])));
   const [conFactura, setConFactura] = useState(conFacturaInicial);
   const [envio, setEnvio] = useState(envioInicial);
+  const [ivas, setIvas] = useState<Record<string, string>>(() => Object.fromEntries(productos.map((p) => [p.id, p.iva ?? "10,5"])));
 
   useEffect(() => {
     if (estado?.ok) alGuardar?.(estado.ok);
@@ -78,8 +80,15 @@ export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial
   const subtotalProductos = productos.reduce((s, p) => s + importe(p.id), 0);
   const subtotal = subtotalProductos + montoEnvio;
   const descuento = bruto - subtotalProductos;
-  const iva = conFactura ? subtotal * (IVA_PCT / 100) : 0;
-  const ivaTexto = String(IVA_PCT).replace(".", ",");
+  // IVA por renglón (cada producto a su tasa; el envío siempre al 21%), separado por tasa como en la factura.
+  const tasaDe = (id: string) => leerMonto(ivas[id]) ?? 10.5;
+  const porTasa = new Map<number, number>();
+  for (const p of productos) if (importe(p.id) > 0) porTasa.set(tasaDe(p.id), (porTasa.get(tasaDe(p.id)) ?? 0) + importe(p.id));
+  if (montoEnvio > 0) porTasa.set(IVA_ENVIO, (porTasa.get(IVA_ENVIO) ?? 0) + montoEnvio);
+  const lineasIva = conFactura ? [...porTasa.entries()].sort((a, b) => a[0] - b[0]).map(([tasa, base]) => ({ tasa, iva: (base * tasa) / 100 })) : [];
+  const iva = lineasIva.reduce((t, l) => t + l.iva, 0);
+  const COLUMNAS = conFactura ? COLUMNAS_CON_IVA : COLUMNAS_SIN_IVA;
+  const ivaTexto = (t: number) => String(t).replace(".", ",");
 
   return (
     <form action={enviar} onSubmit={confirmarSc} className="space-y-4">
@@ -94,7 +103,7 @@ export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial
 
       <div className="overflow-hidden rounded-xl border border-stone-300 bg-white shadow-sm">
         <div className={`hidden gap-x-4 px-5 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-stone-600 lg:grid ${COLUMNAS}`}>
-          <span>Producto</span><span>Unidad</span><span>Precio</span><span>Cantidad</span><span>Bonif. %</span><span>Subtotal</span>
+          <span>Producto</span><span>Unidad</span><span>Precio</span><span>Cantidad</span><span>Bonif. %</span>{conFactura && <span>IVA</span>}<span>Subtotal</span>
         </div>
         {productos.map((p) => {
           const sc = sinCargo(p.id);
@@ -149,6 +158,14 @@ export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial
                   className="h-9 w-16 rounded-md border border-stone-400 bg-white text-center tabular-nums text-stone-900"
                 />
               </label>
+              {conFactura && (
+                <label className="flex items-center justify-center gap-1.5 text-sm text-stone-600 lg:block">
+                  <span className="lg:hidden">IVA</span>
+                  <select name={`iva_${p.id}`} aria-label={`IVA de ${p.nombre}`} value={ivas[p.id] ?? "10,5"} onChange={(e) => setIvas((c) => ({ ...c, [p.id]: e.target.value }))} className="h-9 w-[4.5rem] rounded-md border border-stone-400 bg-white px-1 text-center text-stone-900">
+                    {[...new Set(["10,5", "21", ivas[p.id] ?? "10,5"])].map((t) => <option key={t} value={t}>{t}%</option>)}
+                  </select>
+                </label>
+              )}
               <p className="text-sm font-semibold tabular-nums">
                 {sinPrecio ? <span className="text-xs font-medium text-rojo-700">Falta el precio</span> : q > 0 ? formatoPesos(importe(p.id)) : <span className="font-normal text-stone-400">—</span>}
               </p>
@@ -169,6 +186,7 @@ export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial
                       <button type="button" className={boton} onClick={() => setEdit({ ...edit, cantidad: edit.cantidad + 1 })} aria-label="Más sin cargo">+</button>
                     </div>
                     <span />
+                    {conFactura && <span />}
                     <span className="flex items-center justify-center gap-2">
                       <button type="button" onClick={guardarSc} className="h-8 rounded-md bg-stone-800 px-3 text-xs font-semibold text-white hover:bg-stone-700">Agregar</button>
                       <button type="button" onClick={() => setEdit(null)} className="text-xs text-stone-500 underline hover:text-stone-900">Cancelar</button>
@@ -181,6 +199,7 @@ export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial
                     <span className="text-stone-500">Sin cargo</span>
                     <span className="font-semibold tabular-nums">{sc}</span>
                     <span />
+                    {conFactura && <span />}
                     <span className="flex items-center justify-center gap-2 tabular-nums text-stone-600">{formatoPesos(0)}<button type="button" onClick={() => quitarSc(p.id)} aria-label={`Quitar ${p.nombre} sin cargo`} className="text-base text-stone-500 hover:text-rojo-700">✕</button></span>
                   </>
                 )}
@@ -199,7 +218,7 @@ export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial
           <div className="grid grid-cols-2 gap-2" role="group" aria-label="Tipo de comprobante">
             {[
               { valor: false, texto: "Con remito" },
-              { valor: true, texto: `Con factura (+${ivaTexto}% IVA)` },
+              { valor: true, texto: `Con factura (+ IVA)` },
             ].map((o) => (
               <button
                 key={String(o.valor)}
@@ -232,7 +251,7 @@ export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial
           {descuento > 0.004 && <div className="flex justify-between text-rojo-700"><span>Bonificación</span><span className="tabular-nums">−{formatoPesos(descuento)}</span></div>}
           {montoEnvio > 0 && <div className="flex justify-between"><span className="text-stone-600">Envío</span><span className="tabular-nums">{formatoPesos(montoEnvio)}</span></div>}
           {(descuento > 0.004 || montoEnvio > 0) && conFactura && <div className="flex justify-between"><span className="text-stone-600">Neto</span><span className="tabular-nums">{formatoPesos(subtotal)}</span></div>}
-          {conFactura && <div className="flex justify-between"><span className="text-stone-600">IVA {ivaTexto}%</span><span className="tabular-nums">{formatoPesos(iva)}</span></div>}
+          {lineasIva.map((l) => <div key={l.tasa} className="flex justify-between"><span className="text-stone-600">IVA {ivaTexto(l.tasa)}%</span><span className="tabular-nums">{formatoPesos(l.iva)}</span></div>)}
           <div className="mt-1 flex justify-between border-t border-stone-300 pt-2 text-lg font-bold"><span>Total</span><span className="tabular-nums">{formatoPesos(subtotal + iva)}</span></div>
           {paquetesSc > 0 && <p className="mt-1 border-t border-stone-300 pt-1.5 text-xs text-stone-600">Sin cargo: <b>{paquetesSc}</b> {paquetesSc === 1 ? "paquete" : "paquetes"} · valor {formatoPesos(valorSc)} (no se cobra)</p>}
           <button disabled={cargando} className={`${estiloBoton} mt-3`}>{cargando ? "Guardando…" : textoBoton}</button>

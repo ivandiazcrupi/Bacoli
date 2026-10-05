@@ -56,6 +56,7 @@ model Zona {
 
 model Producto {
   id          String           @id @default(cuid())
+  ivaPct      Decimal?         @db.Decimal(5, 2) // IVA propio del producto (ej. 21); vacío = usa el IVA del cliente
   nombre      String           @unique
   sku         String?          @unique // código interno, ej. PPT01
   ean         String? // código de barras (opcional)
@@ -90,6 +91,7 @@ model Precio {
 
 model Cliente {
   id                String         @id @default(cuid())
+  ivaPct            Decimal        @default(10.5) @db.Decimal(5, 2) // IVA con el que se le factura (10,5 o 21), salvo los productos con IVA propio
   nombre            String
   tipo              TipoCliente
   razonSocial       String?
@@ -240,6 +242,7 @@ model Pedido {
 // Renglón del pedido. Guarda una copia del nombre y del precio: un cambio de precio no toca pedidos ya hechos.
 model PedidoItem {
   id                String    @id @default(cuid())
+  ivaPct            Decimal?  @db.Decimal(5, 2) // IVA de este renglón (el envío va siempre al 21); vacío = el del pedido (pedidos viejos)
   pedidoId          String
   productoId        String? // vacío en los productos de la tienda que no están en el catálogo (ej. el combo)
   nombre            String

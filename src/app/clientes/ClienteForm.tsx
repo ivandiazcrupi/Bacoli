@@ -12,6 +12,7 @@ export type DatosCliente = {
   cuit: string;
   facturado: boolean;
   condicionPago: string;
+  ivaPct: string;
   listaPreciosId: string;
   descuentoPct: string;
   imputacionPago: string;
@@ -24,7 +25,7 @@ export type DatosCliente = {
 };
 
 export const CLIENTE_VACIO: DatosCliente = {
-  nombre: "", tipo: "", razonSocial: "", cuit: "", facturado: false, condicionPago: "CONTADO", listaPreciosId: "",
+  nombre: "", tipo: "", razonSocial: "", cuit: "", facturado: false, condicionPago: "CONTADO", ivaPct: "10,5", listaPreciosId: "",
   descuentoPct: "", imputacionPago: "SALDO", sinLimite: false, maxPedidosImpagos: "", maxMonto: "", comisionista: "", comisionPct: "", observacion: "",
 };
 
@@ -75,10 +76,16 @@ export function ClienteForm({ accion, inicial, listas, zonas, barrios = [], text
       </Bloque>
 
       <Bloque titulo="Pago" ayuda="Cuándo paga. El precio se escribe en cada pedido.">
-        <div className="grid gap-3 sm:grid-cols-1">
+        <div className="grid gap-3 sm:grid-cols-2">
           {/* Las listas de precios no se usan por ahora; se conserva lo que el cliente ya tenía. */}
           <input type="hidden" name="listaPreciosId" value={v("listaPreciosId")} />
           <input type="hidden" name="descuentoPct" value={v("descuentoPct")} />
+          <Campo etiqueta="IVA con el que se le factura" ayuda="Cada producto puede tener su IVA propio (en Productos); si no, usa este.">
+            <select name="ivaPct" defaultValue={v("ivaPct") || "10,5"} className={estiloCampo}>
+              <option value="10,5">10,5%</option>
+              <option value="21">21%</option>
+            </select>
+          </Campo>
           <Campo etiqueta="Condición de pago">
             <select name="condicionPago" defaultValue={v("condicionPago")} className={estiloCampo}>
               {Object.entries(CONDICION_PAGO).map(([k, t]) => <option key={k} value={k}>{t}</option>)}

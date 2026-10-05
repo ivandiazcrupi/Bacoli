@@ -4,17 +4,34 @@ export const IVA_PCT = 10.5;
 
 const redondear2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
-type Renglon = { cantidad: number; cantidadEntregada: number | null; precioUnitario: Prisma.Decimal | number | string; descuentoPct?: Prisma.Decimal | number | string | null };
+/** El envío siempre va al 21% de IVA cuando el pedido lleva factura. */
+export const IVA_ENVIO = 21;
 
-/** Lo que el pedido suma hoy a la deuda del cliente (con IVA si lleva factura). */
+type Renglon = { cantidad: number; cantidadEntregada: number | null; precioUnitario: Prisma.Decimal | number | string; descuentoPct?: Prisma.Decimal | number | string | null; ivaPct?: Prisma.Decimal | number | string | null };
+
+/**
+ * Importes de un pedido separados por tasa de IVA. `ivaPct` es el IVA del pedido: 0 = sin factura (sin IVA); mayor a 0 = con factura,
+ * y cada renglón usa el suyo (`ivaPct` del renglón) o, si no tiene, el del pedido (pedidos de antes, que iban todos a la misma tasa).
+ */
+export function desgloseIva(items: Renglon[], ivaPct: number, estado: EstadoPedido) {
+  const porTasa = new Map<number, number>();
+  for (const i of items) {
+    const unidades = estado === "ENTREGADO" ? (i.cantidadEntregada ?? i.cantidad) : i.cantidad;
+    const base = unidades * Number(i.precioUnitario) * (1 - Number(i.descuentoPct ?? 0) / 100); // los paquetes sin cargo no suman
+    const tasa = ivaPct > 0 ? (i.ivaPct != null ? Number(i.ivaPct) : ivaPct) : 0;
+    porTasa.set(tasa, (porTasa.get(tasa) ?? 0) + base);
+  }
+  const tasas = [...porTasa.entries()].sort((a, b) => a[0] - b[0]).map(([tasa, base]) => ({ tasa, base: redondear2(base), iva: redondear2((base * tasa) / 100) }));
+  const base = redondear2([...porTasa.values()].reduce((t, x) => t + x, 0));
+  const total = redondear2([...porTasa.entries()].reduce((t, [tasa, b]) => t + b * (1 + tasa / 100), 0));
+  return { base, total, iva: redondear2(total - base), tasas };
+}
+
+/** Lo que el pedido suma hoy a la deuda del cliente (con IVA si lleva factura, cada renglón a su tasa). */
 export function importeVigente(items: Renglon[], ivaPct: number, estado: EstadoPedido, totalFijo?: Prisma.Decimal | number | string | null) {
   if (estado === "CANCELADO" || estado === "NO_ENTREGADO") return 0;
   if (totalFijo !== undefined && totalFijo !== null) return redondear2(Number(totalFijo)); // pedidos de la tienda: vale lo que pagó el cliente
-  const subtotal = items.reduce((suma, i) => {
-    const unidades = estado === "ENTREGADO" ? (i.cantidadEntregada ?? i.cantidad) : i.cantidad;
-    return suma + unidades * Number(i.precioUnitario) * (1 - Number(i.descuentoPct ?? 0) / 100); // los paquetes sin cargo no suman
-  }, 0);
-  return redondear2(subtotal * (1 + ivaPct / 100));
+  return desgloseIva(items, ivaPct, estado).total;
 }
 
 /**
