@@ -8,8 +8,9 @@ import { formatoPesos } from "@/lib/numeros";
 import { exigirUsuario } from "@/lib/session";
 import { puedeGestionarUsuarios } from "@/lib/roles";
 import { CONTENEDOR_PEDIDOS } from "../../pedidos/Encabezado";
+import { AplicarEnvio } from "./AplicarEnvio";
 
-// Solo para MIRAR (no cambia nada): las facturas ya hechas que llevan envío y cuánto cambiarían sus montos si el envío pasara al 21% de IVA.
+// Las facturas ya hechas que llevan envío y cuánto cambiarían sus montos si el envío pasara al 21% de IVA.
 export default async function RevisarIvaEnvio() {
   const usuario = await exigirUsuario();
   if (!puedeGestionarUsuarios(usuario.rol)) return <p className="p-10">Solo para dueños.</p>;
@@ -34,10 +35,11 @@ export default async function RevisarIvaEnvio() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Envío al 21% · facturas ya hechas</h1>
-            <p className="mt-1 max-w-3xl text-sm text-stone-600">Solo para mirar: <b>no se cambió nada</b>. Son los pedidos con factura que llevan envío cobrado a la tasa vieja. Se muestra cuánto cambiaría cada monto si el envío pasara al 21%. Las facturas que ya están en ARCA no cambian allá: si el monto del sistema cambia, van a aparecer con diferencia en CUENTA CORRIENTE → Facturas.</p>
+            <p className="mt-1 max-w-3xl text-sm text-stone-600">Son los pedidos con factura que llevan envío cobrado a la tasa vieja. Se muestra cuánto cambiaría cada monto si el envío pasara al 21%. Las facturas que ya están en ARCA no cambian allá: si el monto del sistema cambia, van a aparecer con diferencia en CUENTA CORRIENTE → Facturas. Antes de aplicar, bajá la copia de seguridad (Empresa).</p>
           </div>
           <BotonVolver fallback="/empresa" />
         </div>
+        {filas.length > 0 && usuario.rol === "DUENO" && <AplicarEnvio cantidad={filas.length} diferencia={`+${formatoPesos(totalDif)}`} />}
         {filas.length === 0 ? (
           <p className="rounded-lg border border-dashed border-stone-400 p-8 text-center text-stone-600">No hay facturas con envío a la tasa vieja. No hay nada para cambiar.</p>
         ) : (
