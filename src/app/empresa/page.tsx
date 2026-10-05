@@ -42,7 +42,6 @@ export default async function Empresa() {
             )}
           </div>
         </section>
-        <p className="text-sm"><Link href="/empresa/iva-envio" className="font-semibold text-verde-800 underline-offset-4 hover:underline">Revisar el envío al 21% en las facturas ya hechas ›</Link></p>
         <p className="text-xs text-stone-500">Versión del sistema: {version}. Sirve para comprobar que lo último ya está publicado.</p>
       </main>
     </>
