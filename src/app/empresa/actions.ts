@@ -50,9 +50,12 @@ export async function guardarEmpresa(_: EstadoEmpresa, formData: FormData): Prom
 // Solo dueños, solo si se bajó una copia de seguridad en los últimos 30 minutos y se escribió BORRAR.
 export type EstadoReinicio = { ok?: string; error?: string } | undefined;
 const CONSERVAR_MINORISTAS = 10;
+const HABILITAR_BORRADO = Boolean(process.env.HABILITAR_BORRADO_DE_DATOS); // apagado: el código queda por si algún día se vuelve a pedir
 const MINUTOS_COPIA = 30;
 
 export async function reiniciarDatos(_: EstadoReinicio, formData: FormData): Promise<EstadoReinicio> {
+  // Desactivado por pedido del dueño: no se puede borrar datos desde el sistema (ni la pantalla ni este pedido).
+  if (!HABILITAR_BORRADO) return { error: "Esta opción está desactivada." };
   const usuario = await exigirUsuario();
   if (usuario.rol !== "DUENO") return { error: "Solo un dueño puede hacer esto." };
   if (String(formData.get("confirmacion") ?? "").trim().toUpperCase() !== "BORRAR") return { error: "Escribí la palabra BORRAR para confirmar." };

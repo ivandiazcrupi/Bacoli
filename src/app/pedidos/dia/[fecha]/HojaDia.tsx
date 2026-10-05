@@ -7,6 +7,7 @@ import { DndContext, MouseSensor, TouchSensor, closestCenter, pointerWithin, use
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { formatoPesos } from "@/lib/numeros";
+import { UNIDADES_POR_PAQUETE } from "@/lib/ruta";
 import { enlaceWhatsApp } from "@/lib/telefonos";
 import { BotonRemito } from "../../BotonRemito";
 import { normalizarFactura, soloNumeroFactura } from "@/lib/remito";
@@ -528,7 +529,8 @@ const urlRuta = (filas: Fila[]) => `https://www.google.com/maps/dir/${filas.map(
 
 // Resumen de la vuelta de un vehículo (al final de su cuadro): a la izquierda la barra de paquetes contra la capacidad; a la derecha la facturación.
 function ResumenVuelta({ grupo, capacidad }: { grupo: Fila[]; capacidad: number | null }) {
-  const paquetes = grupo.reduce((t, f) => t + f.bultos, 0);
+  const paquetes = grupo.reduce((t, f) => t + f.bultos, 0) * UNIDADES_POR_PAQUETE; // la barra va en unidades (cada paquete = 2); la capacidad se carga en paquetes
+  capacidad = capacidad === null ? null : capacidad * UNIDADES_POR_PAQUETE;
   const total = grupo.reduce((t, f) => t + f.monto, 0);
   const pasado = capacidad !== null && paquetes > capacidad;
   const pct = capacidad ? Math.min(100, Math.round((paquetes / capacidad) * 100)) : 0;
@@ -537,7 +539,7 @@ function ResumenVuelta({ grupo, capacidad }: { grupo: Fila[]; capacidad: number 
     <footer aria-label="Resumen de la vuelta" className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-stone-400 bg-crema-100 px-5 py-3 text-stone-900">
       <div className="w-64" title={pasado ? "Se pasó de la capacidad (solo avisa, no frena)" : undefined}>
         <p className="flex items-baseline justify-between gap-2 text-sm font-semibold">
-          <span className="tabular-nums">{capacidad !== null ? `${paquetes} de ${capacidad} paquetes` : `${paquetes} paquetes`}</span>
+          <span className="tabular-nums">{capacidad !== null ? `${paquetes} de ${capacidad} unidades` : `${paquetes} unidades`}</span>
           {estado && <span className={`text-xs ${pasado ? "font-bold text-rojo-700" : "font-medium text-stone-600"}`}>{estado}</span>}
         </p>
         {capacidad !== null && (
@@ -763,6 +765,10 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
         <div className="inline-flex items-baseline gap-2 rounded-md border border-stone-400 bg-white px-5 py-2">
           <span className="text-xs font-medium uppercase tracking-wide text-stone-600">Paquetes del día</span>
           <span className="text-base font-bold tabular-nums">{filas.reduce((t, f) => t + f.bultos, 0)}</span>
+        </div>
+        <div className="inline-flex items-baseline gap-2 rounded-md border border-stone-400 bg-white px-5 py-2">
+          <span className="text-xs font-medium uppercase tracking-wide text-stone-600">Unidades del día</span>
+          <span className="text-base font-bold tabular-nums">{filas.reduce((t, f) => t + f.bultos, 0) * UNIDADES_POR_PAQUETE}</span>
         </div>
       </div>
       <BarraEstado

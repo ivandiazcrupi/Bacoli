@@ -1,7 +1,6 @@
-import { BorrarFacturas } from "./arca/BorrarFacturas";
 import { SubirArchivo } from "./arca/SubirArchivo";
 
-// Botón de arriba a la derecha de Facturas: subir el archivo de ARCA (y, solo dueños, borrar lo cargado).
+// Botón de arriba a la derecha de Facturas: subir el archivo de ARCA .
 export function AccionesArca({ esDueno, cantidad }: { esDueno: boolean; cantidad: number }) {
   return (
     <details className="relative">
@@ -9,7 +8,6 @@ export function AccionesArca({ esDueno, cantidad }: { esDueno: boolean; cantidad
       <div className="absolute right-0 top-9 z-30 w-[420px] rounded-md border border-stone-300 bg-white p-4 text-sm shadow-lg">
         <p className="mb-2 text-stone-600">Libro IVA Ventas (VENTAS.txt) o el CSV de Mis Comprobantes → Emitidos. No duplica lo ya cargado.</p>
         <SubirArchivo />
-        {esDueno && <BorrarFacturas cantidad={cantidad} />}
       </div>
     </details>
   );

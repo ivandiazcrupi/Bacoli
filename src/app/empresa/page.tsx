@@ -3,13 +3,11 @@ import { Cabecera } from "@/components/Cabecera";
 import { db } from "@/lib/db";
 import { exigirUsuario } from "@/lib/session";
 import { FormularioEmpresa } from "./FormularioEmpresa";
-import { ReiniciarDatos } from "./ReiniciarDatos";
 
 export default async function Empresa() {
   const usuario = await exigirUsuario();
   if (usuario.rol !== "DUENO") redirect("/");
   const [empresa, contador] = await Promise.all([db.empresa.findUnique({ where: { id: "principal" } }), db.numerador.findUnique({ where: { id: "REMITO" } })]);
-  const [totalPedidos, totalWeb] = await Promise.all([db.pedido.count(), db.pedido.count({ where: { origen: "WEB" } })]);
   const ultima = empresa?.ultimaCopia ?? null;
   const vencida = !ultima || Date.now() - ultima.getTime() > 24 * 3600 * 1000;
   const version = process.env.RAILWAY_GIT_COMMIT_SHA?.slice(0, 7) ?? "local";
@@ -43,7 +41,6 @@ export default async function Empresa() {
             )}
           </div>
         </section>
-        <ReiniciarDatos copiaReciente={!!ultima && Date.now() - ultima.getTime() < 30 * 60 * 1000} pedidos={totalPedidos} minoristasQueQuedan={Math.min(10, totalWeb)} />
         <p className="text-xs text-stone-500">Versión del sistema: {version}. Sirve para comprobar que lo último ya está publicado.</p>
       </main>
     </>

@@ -122,6 +122,8 @@ export async function quitarAplicacionNc(id: string): Promise<Resultado> {
 
 /** Borra TODAS las facturas y notas de crédito cargadas desde ARCA (con sus aplicaciones y cobros marcados ahí). No toca pedidos ni remitos. Solo dueños. */
 export async function borrarFacturasArca(): Promise<Resultado> {
+  // Desactivado por pedido del dueño: no se puede borrar datos desde el sistema.
+  if (!process.env.HABILITAR_BORRADO_DE_DATOS) return { ok: false, error: "Esta opción está desactivada." };
   const usuario = await exigirOficina();
   if (usuario.rol !== "DUENO") return { ok: false, error: "Solo un dueño puede borrar las facturas cargadas." };
   await db.$transaction([db.aplicacionNcArca.deleteMany({}), db.comprobanteArca.deleteMany({})]);

@@ -5,7 +5,7 @@ import { importeVigente } from "@/lib/cuenta";
 import { db } from "@/lib/db";
 import { aFecha, deFecha, diaMes, esFechaValida, hoy, lunesDe, nombreDia, sumarDias, semanaDeTrabajo } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
-import { bultosDe } from "@/lib/ruta";
+import { UNIDADES_POR_PAQUETE, bultosDe } from "@/lib/ruta";
 import { exigirOficina } from "@/lib/session";
 import { CONTENEDOR_PEDIDOS, EncabezadoPedidos } from "../Encabezado";
 
@@ -26,7 +26,7 @@ export default async function Semana({ searchParams }: { searchParams: Promise<{
   const hayDomingo = pedidos.some((p) => p.fechaEntrega && deFecha(p.fechaEntrega) === domingo);
   const fechas = Array.from({ length: hayDomingo ? 7 : 6 }, (_, n) => sumarDias(lunes, n));
 
-  const COLUMNAS = "lg:grid-cols-[12rem_1fr_1fr_1fr_1fr_1fr_7rem]";
+  const COLUMNAS = "lg:grid-cols-[12rem_1fr_1fr_1fr_1fr_1fr_1fr_7rem]";
 
   return (
     <>
@@ -43,7 +43,7 @@ export default async function Semana({ searchParams }: { searchParams: Promise<{
 
         <div className="overflow-hidden rounded-xl border border-stone-300 bg-white shadow-sm">
           <div className={`hidden gap-x-4 px-5 py-3 text-center lg:grid ${cabeceraTabla} ${COLUMNAS}`}>
-            <span>Día</span><span>Pedidos</span><span>Paquetes</span><span>Facturación</span><span>Entregas</span><span>Vehículos</span><span />
+            <span>Día</span><span>Pedidos</span><span>Paquetes</span><span>Unidades</span><span>Facturación</span><span>Entregas</span><span>Vehículos</span><span />
           </div>
           {fechas.map((f) => {
             const delDia = pedidos.filter((p) => p.fechaEntrega && deFecha(p.fechaEntrega) === f);
@@ -62,6 +62,7 @@ export default async function Semana({ searchParams }: { searchParams: Promise<{
                 <span className="text-base font-bold">{nombreDia(f)} <span className="font-medium text-stone-600">{diaMes(f)}</span>{esHoy && <span className="ml-1 text-xs font-semibold text-verde-800">hoy</span>}</span>
                 <span className="tabular-nums"><span className="text-xs text-stone-500 lg:hidden">Pedidos: </span>{delDia.length}</span>
                 <span className="tabular-nums"><span className="text-xs text-stone-500 lg:hidden">Paquetes: </span>{paquetes}</span>
+                <span className="tabular-nums"><span className="text-xs text-stone-500 lg:hidden">Unidades: </span>{paquetes * UNIDADES_POR_PAQUETE}</span>
                 <span className="font-semibold tabular-nums"><span className="text-xs font-normal text-stone-500 lg:hidden">Facturación: </span>{vacio ? "—" : formatoPesos(monto)}</span>
                 <span className="tabular-nums"><span className="text-xs text-stone-500 lg:hidden">Entregas: </span>{vacio ? "—" : `${entregados} de ${delDia.length}`}</span>
                 <span className="tabular-nums"><span className="text-xs text-stone-500 lg:hidden">Vehículos: </span>{vehiculos}</span>

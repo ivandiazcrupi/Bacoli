@@ -3,5 +3,8 @@ type ConRuta = { ordenDia: number; ordenRuta: number; salida: { orden: number } 
 export const porReparto = (a: ConRuta, b: ConRuta) =>
   (a.salida?.orden ?? 9999) - (b.salida?.orden ?? 9999) || a.ordenRuta - b.ordenRuta || a.ordenDia - b.ordenDia;
 
+/** Cada paquete trae 2 unidades (pedido del dueño: 500 paquetes = 1000 unidades). */
+export const UNIDADES_POR_PAQUETE = 2;
+
 /** Paquetes = lo que ocupa un pedido en el vehículo: la suma de sus unidades de venta (paquetes y unidades; el combo napolitano de la tienda cuenta 2 paquetes). */
 export const bultosDe = (items: { cantidad: number; sinCargo?: number; paquetesPor?: number }[]) => items.reduce((s, i) => s + (i.cantidad + (i.sinCargo ?? 0)) * (i.paquetesPor ?? 1), 0);
