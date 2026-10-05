@@ -49,7 +49,7 @@ export default async function HojaDelDia({ params }: { params: Promise<{ fecha: 
   const inicio = inicioSemana(fecha);
   const fin = finDeSemana(inicio);
   const [cuentaPedidos, cuentaSalidas, cerradosSemana] = await Promise.all([
-    db.pedido.groupBy({ by: ["fechaEntrega"], where: { estado: { not: "CANCELADO" }, fechaEntrega: { gte: aFecha(inicio), lte: aFecha(fin) } }, _count: true }),
+    db.pedido.groupBy({ by: ["fechaEntrega"], where: { estado: { not: "CANCELADO" }, origen: { not: "COBRANZA" }, fechaEntrega: { gte: aFecha(inicio), lte: aFecha(fin) } }, _count: true }),
     db.salida.groupBy({ by: ["fecha"], where: { fecha: { gte: aFecha(inicio), lte: aFecha(fin) } }, _count: true }),
     db.diaCerrado.findMany({ where: { fecha: { gte: aFecha(inicio), lte: aFecha(fin) } } }),
   ]);

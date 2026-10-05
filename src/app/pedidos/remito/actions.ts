@@ -37,7 +37,7 @@ export async function emitirRemitosDia(fecha: string): Promise<{ ok: boolean; ca
   await exigirOficina();
   if (!esFechaValida(fecha)) return { ok: false, cantidad: 0, error: "Fecha inválida." };
   const pedidos = (await db.pedido.findMany({
-    where: { fechaEntrega: aFecha(fecha), estado: { not: "CANCELADO" }, webOrden: null, conFactura: false },
+    where: { fechaEntrega: aFecha(fecha), estado: { not: "CANCELADO" }, webOrden: null, origen: { not: "COBRANZA" }, conFactura: false },
     select: { id: true, remitoNumero: true, ordenDia: true, ordenRuta: true, salida: { select: { orden: true } } },
   })).sort(porReparto);
   if (pedidos.length === 0) return { ok: false, cantidad: 0, error: "No hay pedidos en este día." };

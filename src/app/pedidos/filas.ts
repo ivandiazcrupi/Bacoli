@@ -42,6 +42,7 @@ export type FilaBandeja = {
   telefono: string;
   items: { nombre: string; cantidad: number }[];
   monto: number;
+  cobranza: boolean; // parada de cobranza: el monto es lo que hay que cobrar
   conFactura: boolean;
   webOrden: string | null; // N° de orden de Empretienda (solo pedidos de la tienda)
   pagoMp: boolean; // pedido de la tienda ya pagado (Mercado Pago o transferencia confirmada)
@@ -59,6 +60,7 @@ export async function clientesConDeuda(clienteIds: string[]) {
 
 export function aFila(p: PedidoCompleto, debe: Set<string>): Fila {
   const d = datosEntrega(p);
+  const cobranza = p.origen === "COBRANZA";
   const items = ordenarItems(p.items);
   return {
     id: p.id,
@@ -70,7 +72,8 @@ export function aFila(p: PedidoCompleto, debe: Set<string>): Fila {
     nota: oracion(p.nota),
     telefono: d.telefono,
     items: items.map((i) => renglonHoja(i, p.estado === "ENTREGADO" ? (i.cantidadEntregada ?? i.cantidad) : i.cantidad)),
-    monto: importeVigente(p.items, Number(p.ivaPct), p.estado === "ENTREGADO" ? "ENTREGADO" : "PENDIENTE", p.webTotal),
+    monto: cobranza ? Number(p.cobrarMonto ?? 0) : importeVigente(p.items, Number(p.ivaPct), p.estado === "ENTREGADO" ? "ENTREGADO" : "PENDIENTE", p.webTotal), // en una cobranza es lo que hay que cobrar (no suma a ningún total)
+    cobranza,
     conFactura: p.conFactura,
     numeroFactura: p.numeroFactura ?? "",
     estado: p.estado as Fila["estado"],
@@ -98,7 +101,8 @@ export function aFilaBandeja(p: PedidoCompleto, intento = ""): FilaBandeja {
     nota: oracion(p.nota),
     telefono: d.telefono,
     items: ordenarItems(p.items).map((i) => renglonHoja(i, i.cantidad)),
-    monto: importeVigente(p.items, Number(p.ivaPct), "PENDIENTE", p.webTotal),
+    monto: p.origen === "COBRANZA" ? Number(p.cobrarMonto ?? 0) : importeVigente(p.items, Number(p.ivaPct), "PENDIENTE", p.webTotal),
+    cobranza: p.origen === "COBRANZA",
     conFactura: p.conFactura,
     webOrden: p.webOrden,
     pagoMp: webPagado(p.webOrden, p.webPago),

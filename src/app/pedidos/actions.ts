@@ -15,7 +15,7 @@ import { exigirOficina } from "@/lib/session";
 import { importarPedidosWeb, type ResultadoImportacion } from "@/lib/empretienda";
 import { productosParaCliente, type ProductoPedido } from "./datos";
 
-export type Destino = { puntoId: string; clienteId: string; cliente: string; alias: string | null; direccion: string; barrio: string; zona: string };
+export type Destino = { puntoId: string; clienteId: string; cliente: string; alias: string | null; direccion: string; barrio: string; zona: string; telefono: string };
 export type EstadoPedidoForm = { ok?: string; error?: string; aviso?: string } | undefined;
 export type DatosPedido = {
   puntoId: string;
@@ -46,7 +46,7 @@ export async function buscarDestinos(q: string): Promise<Destino[]> {
     take: 20,
   });
   return puntos.map((p) => ({
-    puntoId: p.id, clienteId: p.clienteId, cliente: p.cliente.nombre, alias: p.alias, direccion: titulo(p.direccion), barrio: p.barrio, zona: p.zona.nombre,
+    puntoId: p.id, clienteId: p.clienteId, cliente: p.cliente.nombre, alias: p.alias, direccion: titulo(p.direccion), barrio: p.barrio, zona: p.zona.nombre, telefono: p.telefono ?? "",
   }));
 }
 
@@ -225,6 +225,57 @@ export async function crearPedidoWebManual(_: EstadoPedidoForm, formData: FormDa
   });
   revalidatePath("/pedidos", "layout");
   return { ok: `Pedido minorista de ${nombre} cargado (N° ${numero}). Quedó en Pedidos → Minoristas (web), esperando día.` };
+}
+
+/** Lee los datos de una cobranza del formulario (nombre, dirección y monto son obligatorios). */
+function leerCobranza(formData: FormData) {
+  const nombre = mayus(String(formData.get("nombre") ?? ""));
+  if (!nombre) return { error: "Falta el nombre de a quién se le cobra." };
+  const direccion = titulo(String(formData.get("direccion") ?? "").trim());
+  if (!direccion) return { error: "Falta la dirección donde se cobra." };
+  const monto = leerMonto(String(formData.get("monto") ?? ""));
+  if (monto === null || monto <= 0) return { error: "Poné cuánta plata hay que cobrar." };
+  return {
+    nombre, direccion, monto,
+    barrio: mayus(String(formData.get("barrio") ?? "")) || null,
+    telefono: String(formData.get("telefono") ?? "").trim() || null,
+    nota: oracion(String(formData.get("nota") ?? "")) || null,
+  };
+}
+
+/**
+ * Carga una cobranza: una parada de la hoja de ruta para ir a cobrar un monto a una dirección. No lleva productos, no suma carga ni
+ * facturación y NO pasa por la cuenta corriente (no se enlaza a ningún cliente: los datos se copian en el pedido).
+ */
+export async function crearCobranza(_: EstadoPedidoForm, formData: FormData): Promise<EstadoPedidoForm> {
+  const usuario = await exigirOficina();
+  const d = leerCobranza(formData);
+  if ("error" in d) return { error: d.error };
+  const ultimo = await db.pedido.aggregate({ where: { fechaEntrega: null }, _max: { ordenDia: true } });
+  await db.pedido.create({
+    data: {
+      origen: "COBRANZA", estado: "PENDIENTE", conFactura: false, ivaPct: 0, creadoPorId: usuario.id,
+      ordenDia: (ultimo._max.ordenDia ?? -1) + 1,
+      webNombre: d.nombre, webDireccion: d.direccion, webBarrio: d.barrio, webTelefono: d.telefono,
+      cobrarMonto: d.monto, nota: d.nota,
+    },
+  });
+  revalidatePath("/pedidos", "layout");
+  return { ok: `Cobranza de ${d.nombre} por $ ${d.monto.toLocaleString("es-AR")} cargada. Quedó en Pedidos → Cobranzas, esperando día.` };
+}
+
+/** Modifica una cobranza que todavía no se cobró (a quién, dónde, cuánto, nota). */
+export async function actualizarCobranza(pedidoId: string, _: EstadoPedidoForm, formData: FormData): Promise<EstadoPedidoForm> {
+  await exigirOficina();
+  const pedido = await db.pedido.findUnique({ where: { id: pedidoId }, select: { origen: true, estado: true, fechaEntrega: true } });
+  if (!pedido || pedido.origen !== "COBRANZA") return { error: "No encontré la cobranza." };
+  if (pedido.estado === "ENTREGADO") return { error: "Esa cobranza ya se cobró. Deshacé el cobro desde la hoja de ruta para modificarla." };
+  if (await errorSiHojaFija(pedido.fechaEntrega)) return { error: "La hoja de ruta de ese día ya está lista o cerrada: volvela a armar para modificar la cobranza." };
+  const d = leerCobranza(formData);
+  if ("error" in d) return { error: d.error };
+  await db.pedido.update({ where: { id: pedidoId }, data: { webNombre: d.nombre, webDireccion: d.direccion, webBarrio: d.barrio, webTelefono: d.telefono, cobrarMonto: d.monto, nota: d.nota } });
+  revalidatePath("/pedidos", "layout");
+  return { ok: "Cobranza guardada." };
 }
 
 /** Modifica un pedido de la tienda online: datos de entrega, cantidades de cada renglón (en 0 se saca), total pagado y nota. */

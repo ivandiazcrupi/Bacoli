@@ -220,6 +220,9 @@ model Pedido {
   webPagoPor   String? // quién confirmó la transferencia (nombre)
   webPagoEn    DateTime? // cuándo
 
+  // Cobranza (origen COBRANZA): una parada para cobrar plata. Sin productos, sin cliente enlazado y sin cuenta corriente; los datos de entrega van en los web*.
+  cobrarMonto Decimal? @db.Decimal(14, 2)
+
   cliente        Cliente?                @relation(fields: [clienteId], references: [id])
   punto          PuntoEntrega?           @relation(fields: [puntoId], references: [id])
   salida         Salida?                 @relation(fields: [salidaId], references: [id])
@@ -316,6 +319,7 @@ model Numerador {
 enum OrigenPedido {
   MAYORISTA
   WEB
+  COBRANZA // parada de cobranza: cobrar un monto en una dirección (no suma carga ni cuenta corriente)
 }
 
 // Un vehículo de la empresa (camioneta, auto…). La capacidad máxima la define el dueño, en paquetes (la suma de paquetes y unidades que lleva).

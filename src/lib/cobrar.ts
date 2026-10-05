@@ -20,6 +20,12 @@ export function leerCobro(texto: string | null | undefined): CobroAlEntregar | n
  */
 export async function marcarCobroEnTx(tx: Prisma.TransactionClient, pedidoId: string, cobro: CobroAlEntregar | null, usuarioId: string): Promise<string | null> {
   const pedido = await tx.pedido.findUniqueOrThrow({ where: { id: pedidoId }, include: { items: true, ncAplicaciones: { where: { nota: { anuladaEn: null } } } } });
+  if (pedido.origen === "COBRANZA") {
+    // Cobranza: solo se anota que se cobró (monto y medio). No toca ninguna cuenta corriente.
+    if (!cobro || cobro.tipo !== "PAGO") return "Elegí cómo se cobró: Efectivo o Transferencia.";
+    await tx.pedido.update({ where: { id: pedidoId }, data: { cobro: "COBRADO", medioCobro: cobro.medio as MedioPago, montoCobrado: pedido.cobrarMonto, pagado: true } });
+    return null;
+  }
   if (webPagado(pedido.webOrden, pedido.webPago)) {
     await tx.pedido.update({ where: { id: pedidoId }, data: { cobro: "COBRADO", medioCobro: pedido.webPago === "PAGO_MP" ? "MERCADO_PAGO" : "TRANSFERENCIA", montoCobrado: pedido.webTotal, pagado: true } });
     return null;

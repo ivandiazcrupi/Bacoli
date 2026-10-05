@@ -30,6 +30,7 @@ export type Fila = {
   telefono: string;
   items: { nombre: string; cantidad: number }[];
   monto: number;
+  cobranza: boolean; // parada de cobranza: el monto es lo que hay que cobrar; no suma carga ni facturación
   conFactura: boolean;
   numeroFactura: string;
   estado: "PENDIENTE" | "ENTREGADO" | "NO_ENTREGADO";
@@ -130,8 +131,8 @@ function SelectorEntrega({ f, bloqueada, armando, acc, grande, eligiendoCobro, o
   const apagado = bloqueada || !!armando; // las entregas se marcan recién con la hoja lista (la ruta ya salió)
   return (
     <div role="group" aria-label="Entrega" title={armando && !bloqueada ? "Dejá lista la hoja de ruta para marcar entregas" : undefined} className={`flex w-full ${grande ? "flex-row gap-2" : "flex-col gap-1"}`}>
-      <button type="button" disabled={apagado} aria-pressed={si} onClick={() => (si ? acc.entrega(f, "PENDIENTE") : onEntregar())} className={`${base} ${si ? "border-verde-700 bg-verde-700 text-white" : eligiendoCobro ? "border-verde-700 bg-verde-50 text-verde-800 ring-2 ring-verde-700/30" : "border-stone-300 bg-white text-stone-600 hover:border-verde-700 hover:text-verde-800"}`}>✓ Entregado</button>
-      <button type="button" disabled={apagado} aria-pressed={noLegado} onClick={() => (noLegado ? acc.entrega(f, "PENDIENTE") : onNoEntregar())} className={`${base} ${noLegado ? "border-rojo-700 bg-rojo-700 text-white" : "border-stone-300 bg-white text-stone-600 hover:border-rojo-700 hover:text-rojo-800"}`}>✗ No entregado</button>
+      <button type="button" disabled={apagado} aria-pressed={si} onClick={() => (si ? acc.entrega(f, "PENDIENTE") : onEntregar())} className={`${base} ${si ? "border-verde-700 bg-verde-700 text-white" : eligiendoCobro ? "border-verde-700 bg-verde-50 text-verde-800 ring-2 ring-verde-700/30" : "border-stone-300 bg-white text-stone-600 hover:border-verde-700 hover:text-verde-800"}`}>{f.cobranza ? "✓ Cobrado" : "✓ Entregado"}</button>
+      <button type="button" disabled={apagado} aria-pressed={noLegado} onClick={() => (noLegado ? acc.entrega(f, "PENDIENTE") : onNoEntregar())} className={`${base} ${noLegado ? "border-rojo-700 bg-rojo-700 text-white" : "border-stone-300 bg-white text-stone-600 hover:border-rojo-700 hover:text-rojo-800"}`}>{f.cobranza ? "✗ No se cobró" : "✗ No entregado"}</button>
     </div>
   );
 }
@@ -214,7 +215,7 @@ function CeldaCobro({ f, bloqueada, armando, acc, eligiendoCobro, onElegir, onCa
     <div role="group" aria-label="Cobro" className="relative flex w-full flex-col gap-1">
       {eligiendoCobro && <button type="button" onClick={onCancelar} aria-label="Cancelar la entrega" className="absolute -right-1.5 -top-2 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-stone-300 text-[10px] leading-none text-stone-700 hover:bg-stone-400">✕</button>}
       <button type="button" disabled={marcaOff} onClick={() => setMedio(true)} className={`${base} border-verde-700 bg-white text-verde-800 hover:bg-verde-700 hover:text-white`}>Pago</button>
-      {!f.webOrden && <button type="button" disabled={marcaOff} onClick={() => onElegir("CC")} className={`${base} border-[#1c8fd1] bg-white text-[#1475ac] hover:bg-[#1fa2e0] hover:text-white`}>Cuenta corriente</button>}
+      {!f.webOrden && !f.cobranza && <button type="button" disabled={marcaOff} onClick={() => onElegir("CC")} className={`${base} border-[#1c8fd1] bg-white text-[#1475ac] hover:bg-[#1fa2e0] hover:text-white`}>Cuenta corriente</button>}
     </div>
   );
 }
@@ -222,6 +223,7 @@ function CeldaCobro({ f, bloqueada, armando, acc, eligiendoCobro, onElegir, onCa
 // Comprobante: misma caja para los dos. Remito = R-0003 (se imprime al tocarlo); factura = F- y el número que se escribe.
 function CajaComprobante({ f, falta, bloqueada, acc }: { f: Fila; falta: boolean; bloqueada: boolean; acc: Acciones }) {
   const borde = falta ? "border-rojo-600" : "border-stone-400";
+  if (f.cobranza) return <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-stone-600">Cobranza</span>;
   if (f.webOrden) return <span className="text-stone-400">—</span>;
   if (f.conFactura) {
     return (
@@ -263,7 +265,7 @@ function SelectorMover({ f, salidas, bloqueada, acc }: { f: Fila; salidas: Salid
 function FilaHoja({ f, n, bloqueada, armando, fija, acc, salidas }: { f: Fila; n: number; bloqueada: boolean; armando: boolean; fija: boolean; acc: Acciones; salidas: SalidaInfo[] }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: f.id, disabled: fija });
   const entregado = f.estado === "ENTREGADO";
-  const falta = entregado && !f.webOrden && (f.conFactura ? !f.numeroFactura : !f.remito); // ya entregado y sin su número de comprobante
+  const falta = entregado && !f.webOrden && !f.cobranza && (f.conFactura ? !f.numeroFactura : !f.remito); // ya entregado y sin su número de comprobante
   const flujo = useFlujoEntrega(f, acc);
 
   return (
@@ -290,6 +292,7 @@ function FilaHoja({ f, n, bloqueada, armando, fija, acc, salidas }: { f: Fila; n
         {f.telefono ? (enlaceWhatsApp(f.telefono) ? <a href={enlaceWhatsApp(f.telefono)!} target="_blank" rel="noreferrer" className="hover:text-verde-800 hover:underline">{f.telefono}</a> : f.telefono) : <span className="text-stone-400">—</span>}
       </div>
       <div role="cell" className="inline-grid justify-center justify-self-center gap-x-2 gap-y-0.5 text-left [grid-template-columns:auto_auto]">
+{f.cobranza && <span className="col-span-2 text-center text-[12px] font-extrabold uppercase tracking-[0.14em] text-stone-700">Cobrar</span>}
         {f.items.map((i, k) => (
           <span key={k} className="contents"><span className="text-right font-bold tabular-nums">{i.cantidad}</span><span className="leading-snug">{i.nombre}</span></span>
         ))}
@@ -418,10 +421,11 @@ function FilaUbicar({ f, salidas, bloqueada, acc }: { f: Fila; salidas: SalidaIn
         </span>
         <span className="text-[13px] tabular-nums">{f.telefono ? (wa ? <a href={wa} target="_blank" rel="noreferrer" className="hover:text-verde-800 hover:underline">{f.telefono}</a> : f.telefono) : <span className="text-stone-400">—</span>}</span>
         <span className="inline-grid justify-center justify-self-center gap-x-2 gap-y-0.5 text-left text-[13px] [grid-template-columns:auto_auto]">
+          {f.cobranza && <span className="col-span-2 text-center text-[12px] font-extrabold uppercase tracking-[0.14em] text-stone-700">Cobrar</span>}
           {f.items.map((i, k) => <span key={k} className="contents"><span className="text-right font-semibold tabular-nums">{i.cantidad}</span><span className="leading-snug">{i.nombre}</span></span>)}
         </span>
         <span className="text-[13px] font-semibold tabular-nums">{formatoPesos(f.monto)}</span>
-        <span><span className={`inline-block rounded px-2 py-0.5 text-xs font-bold tracking-wide ${f.conFactura ? "bg-stone-700 text-white" : "bg-crema-200 text-stone-700"}`}>{f.conFactura ? "FACTURA" : "REMITO"}</span></span>
+        <span><span className={`inline-block rounded px-2 py-0.5 text-xs font-bold tracking-wide ${f.conFactura ? "bg-stone-700 text-white" : "bg-crema-200 text-stone-700"}`}>{f.cobranza ? "COBRANZA" : f.conFactura ? "FACTURA" : "REMITO"}</span></span>
         <Link href={`/pedidos/${f.id}`} className="text-sm font-semibold text-verde-800 underline-offset-4 hover:underline">Abrir ›</Link>
         {salidas.length === 1 ? (
           <button type="button" disabled={bloqueada} onClick={() => acc.mover(f, salidas[0].id)} className="h-9 rounded-md border border-stone-400 bg-white px-1 text-sm font-medium shadow-sm hover:bg-crema-100 disabled:opacity-40">↓ {salidas[0].nombre}</button>
@@ -468,6 +472,7 @@ function FilaTarjeta({ f, n, bloqueada, armando, fija, acc, salidas }: { f: Fila
       </div>
 
       <ul className="space-y-0.5 rounded-lg bg-white/70 p-2 text-base">
+        {f.cobranza && <li className="text-center text-sm font-extrabold uppercase tracking-[0.14em] text-stone-700">Cobrar</li>}
         {f.items.map((i, k) => (
           <li key={k} className="flex gap-3"><span className="w-8 shrink-0 text-right font-bold tabular-nums">{i.cantidad}</span><span>{i.nombre}</span></li>
         ))}
@@ -494,7 +499,7 @@ function FilaTarjeta({ f, n, bloqueada, armando, fija, acc, salidas }: { f: Fila
               <p className="text-center text-sm font-semibold text-stone-700">¿Cómo se cobra?</p>
               <div className="grid grid-cols-2 gap-2">
                 <button type="button" disabled={(bloqueada || armando)} onClick={() => setEligiendo(true)} className={`${grande} border-verde-700 bg-white text-verde-800`}>Pago</button>
-                {!f.webOrden && <button type="button" disabled={(bloqueada || armando)} onClick={() => flujo.elegirCobro("CC")} className={`${grande} border-[#1c8fd1] bg-white text-[#1475ac]`}>Cuenta corriente</button>}
+                {!f.webOrden && !f.cobranza && <button type="button" disabled={(bloqueada || armando)} onClick={() => flujo.elegirCobro("CC")} className={`${grande} border-[#1c8fd1] bg-white text-[#1475ac]`}>Cuenta corriente</button>}
               </div>
               {flujo.eligiendoCobro && <button type="button" onClick={flujo.cancelar} className="w-full text-sm text-stone-500 underline">Cancelar la entrega</button>}
             </div>
@@ -516,7 +521,7 @@ function FilaTarjeta({ f, n, bloqueada, armando, fija, acc, salidas }: { f: Fila
       )}
 
       <div className="grid grid-cols-2 gap-2">
-        {f.webOrden ? <span /> : <BotonRemito pedidoId={f.id} numero={f.remito} clase={`h-12 w-full rounded-lg border px-3 text-base font-semibold ${f.remito ? "border-stone-800 bg-white text-stone-900" : f.estado === "ENTREGADO" && !f.conFactura ? "border-rojo-600 bg-rojo-50 text-rojo-800 ring-1 ring-rojo-600" : "border-stone-300 bg-white text-stone-700"}`} />}
+        {f.webOrden || f.cobranza ? <span /> : <BotonRemito pedidoId={f.id} numero={f.remito} clase={`h-12 w-full rounded-lg border px-3 text-base font-semibold ${f.remito ? "border-stone-800 bg-white text-stone-900" : f.estado === "ENTREGADO" && !f.conFactura ? "border-rojo-600 bg-rojo-50 text-rojo-800 ring-1 ring-rojo-600" : "border-stone-300 bg-white text-stone-700"}`} />}
         <Link href={`/pedidos/${f.id}`} className="flex h-12 items-center justify-center rounded-lg border border-stone-300 bg-white px-3 text-base font-semibold">Abrir pedido</Link>
       </div>
       <div className="grid grid-cols-2 gap-2"><Selectores f={f} salidas={salidas} bloqueada={fija} acc={acc} clase="h-12 w-full" /></div>
@@ -530,7 +535,7 @@ const urlRuta = (filas: Fila[]) => `https://www.google.com/maps/dir/${filas.map(
 // Resumen de la vuelta de un vehículo (al final de su cuadro): a la izquierda la barra de paquetes contra la capacidad; a la derecha la facturación.
 function ResumenVuelta({ grupo, capacidad }: { grupo: Fila[]; capacidad: number | null }) {
   const paquetes = grupo.reduce((t, f) => t + f.bultos, 0);
-  const total = grupo.reduce((t, f) => t + f.monto, 0);
+  const total = grupo.filter((f) => !f.cobranza).reduce((t, f) => t + f.monto, 0); // las cobranzas no son facturación
   return (
     <footer aria-label="Resumen de la vuelta" className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-stone-400 bg-crema-100 px-5 py-3 text-stone-900">
       {/* Dos barras a la vez: una en paquetes y otra en unidades (cada paquete = 2 unidades). La capacidad se carga en paquetes. */}

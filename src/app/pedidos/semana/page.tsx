@@ -18,7 +18,7 @@ export default async function Semana({ searchParams }: { searchParams: Promise<{
   const esta = semanaDeTrabajo();
 
   const [pedidos, salidas, cerrados] = await Promise.all([
-    db.pedido.findMany({ where: { estado: { not: "CANCELADO" }, fechaEntrega: { gte: aFecha(inicio), lte: aFecha(fin) } }, include: { items: true } }),
+    db.pedido.findMany({ where: { estado: { not: "CANCELADO" }, origen: { not: "COBRANZA" }, fechaEntrega: { gte: aFecha(inicio), lte: aFecha(fin) } }, include: { items: true } }),
     db.salida.findMany({ where: { fecha: { gte: aFecha(inicio), lte: aFecha(fin) } }, include: { vehiculo: true }, orderBy: { orden: "asc" } }),
     db.diaCerrado.findMany({ where: { fecha: { gte: aFecha(inicio), lte: aFecha(fin) } } }),
   ]);

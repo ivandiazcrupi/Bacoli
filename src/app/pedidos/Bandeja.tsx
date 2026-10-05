@@ -15,8 +15,8 @@ export type DiaBoton = { fecha: string; letra: string; numero: number; nombre: s
 const COLUMNAS = "lg:grid-cols-[1fr_1.4fr_1.9fr_1fr_2fr_6.5rem_5rem_4rem_13.5rem]";
 const ENCABEZADOS = ["Barrio", "Cliente", "Dirección", "Teléfono", "Pedido", "Monto", "Factura", "", "Asignar"];
 
-function Comprobante({ conFactura }: { conFactura: boolean }) {
-  return <span className={`inline-block rounded px-2 py-0.5 text-xs font-bold tracking-wide ${conFactura ? "bg-stone-700 text-white" : "bg-crema-200 text-stone-700"}`}>{conFactura ? "FACTURA" : "REMITO"}</span>;
+function Comprobante({ conFactura, cobranza }: { conFactura: boolean; cobranza?: boolean }) {
+  return <span className={`inline-block rounded px-2 py-0.5 text-xs font-bold tracking-wide ${conFactura ? "bg-stone-700 text-white" : "bg-crema-200 text-stone-700"}`}>{cobranza ? "COBRANZA" : conFactura ? "FACTURA" : "REMITO"}</span>;
 }
 
 function Telefono({ tel }: { tel: string }) {
@@ -91,7 +91,7 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
   );
 
   if (filas.length === 0) {
-    return <p className="rounded-lg border border-dashed border-stone-400 p-10 text-center text-stone-600">No hay pedidos esperando día. Los pedidos nuevos aparecen acá.</p>;
+    return <p className="rounded-lg border border-dashed border-stone-400 p-10 text-center text-stone-600">No hay nada esperando día. Lo que se carga aparece acá.</p>;
   }
 
   return (
@@ -116,12 +116,13 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
             </span>
             <span className="text-[12.5px] tabular-nums"><Telefono tel={f.telefono} /></span>
             <span className="inline-grid justify-center justify-self-center gap-x-2 gap-y-0.5 text-left text-[12.5px] [grid-template-columns:auto_auto]">
+              {f.cobranza && <span className="col-span-2 text-center font-extrabold uppercase tracking-[0.14em] text-stone-700">Cobrar</span>}
               {f.items.map((i, k) => (
                 <span key={k} className="contents"><span className="text-right font-semibold tabular-nums">{i.cantidad}</span><span className="leading-snug">{i.nombre}</span></span>
               ))}
             </span>
             <span className="text-[12.5px] font-semibold tabular-nums">{formatoPesos(f.monto)}</span>
-            <span><Comprobante conFactura={f.conFactura} /></span>
+            <span><Comprobante conFactura={f.conFactura} cobranza={f.cobranza} /></span>
             <Link href={`/pedidos/${f.id}`} className="text-[12.5px] font-semibold text-verde-800 underline-offset-4 hover:underline">Abrir ›</Link>
             <div className="flex justify-center">{botones(f)}</div>
           </div>
@@ -138,9 +139,10 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
                 {f.intento && <p className="text-[13px] font-semibold text-stone-600">↺ {f.intento}</p>}
                 {f.telefono && <p className="text-[13px] tabular-nums"><Telefono tel={f.telefono} /></p>}
               </div>
-              <Comprobante conFactura={f.conFactura} />
+              <Comprobante conFactura={f.conFactura} cobranza={f.cobranza} />
             </div>
             <ul className="space-y-0.5 rounded-lg bg-crema-50 p-2 text-[13px]">
+              {f.cobranza && <li className="text-center font-extrabold uppercase tracking-[0.14em] text-stone-700">Cobrar</li>}
               {f.items.map((i, k) => <li key={k} className="flex gap-2"><span className="w-7 shrink-0 text-right font-semibold tabular-nums">{i.cantidad}</span><span>{i.nombre}</span></li>)}
             </ul>
             <p className="flex items-center justify-between"><b className="tabular-nums">{formatoPesos(f.monto)}</b><Link href={`/pedidos/${f.id}`} className="text-[13px] font-semibold text-verde-800">Abrir ›</Link></p>

@@ -80,12 +80,13 @@ export default async function ImprimirHojaDeRuta({ params, searchParams }: { par
                         </td>
                         <td className="whitespace-nowrap px-2 py-4 text-[13px] font-medium tabular-nums">{x.telefono || "—"}</td>
                         <td className="px-2 py-4">
+                          {x.cobranza && <div className="text-[13px] font-extrabold uppercase tracking-[0.14em]">Cobrar</div>}
                           {x.items.map((i, k) => (
                             <div key={k} className="flex gap-2.5 text-[13px] leading-snug"><span className="w-6 shrink-0 text-right text-[14px] font-bold tabular-nums">{i.cantidad}</span><span className="font-medium">{i.nombre}</span></div>
                           ))}
                         </td>
                         <td className="px-2 py-4 leading-tight">
-                          {x.webOrden ? <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-600">Tienda</span> : <>
+                          {x.cobranza ? <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-600">Cobranza</span> : x.webOrden ? <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-600">Tienda</span> : <>
                             <span className="block text-[9.5px] font-semibold uppercase tracking-[0.14em] text-neutral-500">{x.conFactura ? "Factura" : "Remito"}</span>
                             <span className="mt-0.5 block text-[13.5px] font-bold tabular-nums">{(x.conFactura ? x.numeroFactura : x.remito) || "—"}</span>
                           </>}

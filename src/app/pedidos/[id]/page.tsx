@@ -19,6 +19,8 @@ import { CONTENEDOR_PEDIDOS } from "../Encabezado";
 import { datosEntrega, ordenarItems } from "../filas";
 import { BotonConAviso, TablaPedido } from "./Acciones";
 import { BotonVolver } from "@/components/BotonVolver";
+import { FormularioCobranza } from "../FormularioCobranza";
+import { actualizarCobranza } from "../actions";
 
 const ETIQUETA = { PENDIENTE: "Pendiente", ENTREGADO: "Entregado", NO_ENTREGADO: "No entregado", CANCELADO: "Cancelado" } as const;
 const COLOR = { PENDIENTE: "text-stone-700", ENTREGADO: "text-verde-700", NO_ENTREGADO: "text-rojo-700", CANCELADO: "text-stone-500" } as const;
@@ -31,6 +33,42 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
     include: { cliente: true, punto: { include: { zona: true } }, items: { include: { producto: { select: { orden: true } } } }, ncAplicaciones: { where: { nota: { anuladaEn: null } } } },
   });
   if (!pedido) notFound();
+
+  // Cobranza: una parada para cobrar plata (sin productos ni cuenta corriente). Se ve y se edita en una pantalla simple.
+  if (pedido.origen === "COBRANZA") {
+    const cobrada = pedido.estado === "ENTREGADO";
+    return (
+      <>
+        <Cabecera usuario={usuario} />
+        <main className={CONTENEDOR_PEDIDOS}>
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">Cobranza · {pedido.webNombre}</h1>
+              <p className="mt-1 text-sm text-stone-600">
+                {pedido.estado === "CANCELADO" ? "Cancelada." : cobrada ? `Cobrada${pedido.medioCobro ? ` (${pedido.medioCobro === "EFECTIVO" ? "efectivo" : pedido.medioCobro === "TRANSFERENCIA" ? "transferencia" : "otro medio"})` : ""}. Se marca desde la hoja de ruta.` : pedido.fechaEntrega ? `Está en la hoja de ruta del ${nombreDia(deFecha(pedido.fechaEntrega)).toLowerCase()} ${diaMes(deFecha(pedido.fechaEntrega))}.` : "Esperando día. Asignale un día y una camioneta desde Pedidos."}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {pedido.estado === "PENDIENTE" && (
+                <form action={cancelarPedido}>
+                  <input type="hidden" name="id" value={pedido.id} />
+                  <BotonConAviso texto="Cancelar cobranza" aviso="¿Cancelar esta cobranza? Se saca de la hoja de ruta." clase="h-10 whitespace-nowrap rounded-md border border-rojo-600 bg-white px-4 text-sm font-semibold text-rojo-700 shadow-sm hover:bg-rojo-50" />
+                </form>
+              )}
+              <BotonVolver fallback="/pedidos?lista=cobranza" />
+            </div>
+          </div>
+          {pedido.estado === "CANCELADO" || cobrada ? null : (
+            <FormularioCobranza
+              accion={actualizarCobranza.bind(null, pedido.id)}
+              textoBoton="Guardar cambios"
+              inicial={{ nombre: pedido.webNombre ?? "", barrio: pedido.webBarrio ?? "", direccion: titulo(pedido.webDireccion), telefono: pedido.webTelefono ?? "", monto: String(pedido.cobrarMonto ?? "").replace(".", ","), nota: pedido.nota ?? "" }}
+            />
+          )}
+        </main>
+      </>
+    );
+  }
 
   const web = !pedido.clienteId;
   const entrega = datosEntrega(pedido);

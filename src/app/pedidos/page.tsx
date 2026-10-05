@@ -14,16 +14,18 @@ export default async function Pedidos({ searchParams }: { searchParams: Promise<
   const usuario = await exigirOficina();
   const { lista, semana } = await searchParams;
   const esWeb = lista === "web";
+  const esCobranza = lista === "cobranza";
   const inicio = semana && esFechaValida(semana) ? inicioSemana(semana) : semanaDeTrabajo();
   const fin = finDeSemana(inicio);
   const esta = semanaDeTrabajo();
 
   // Esperan día: los pendientes sin fecha y los que volvieron como "no entregado" (se reactivan al asignarles día).
   const esperando = { estado: { in: ["PENDIENTE", "NO_ENTREGADO"] as EstadoPedido[] }, fechaEntrega: null };
-  const [pedidos, cuentaMayoristas, cuentaWeb, cerrados] = await Promise.all([
-    db.pedido.findMany({ where: { ...esperando, origen: esWeb ? "WEB" : "MAYORISTA" }, include: incluirPedido, orderBy: [{ creadoEn: "asc" }] }),
+  const [pedidos, cuentaMayoristas, cuentaWeb, cuentaCobranzas, cerrados] = await Promise.all([
+    db.pedido.findMany({ where: { ...esperando, origen: esCobranza ? "COBRANZA" : esWeb ? "WEB" : "MAYORISTA" }, include: incluirPedido, orderBy: [{ creadoEn: "asc" }] }),
     db.pedido.count({ where: { ...esperando, origen: "MAYORISTA" } }),
     db.pedido.count({ where: { ...esperando, origen: "WEB" } }),
+    db.pedido.count({ where: { ...esperando, origen: "COBRANZA" } }),
     db.diaCerrado.findMany({ where: { fecha: { gte: aFecha(inicio), lte: aFecha(fin) } } }),
   ]);
   const cerradosSet = new Set(cerrados.map((d) => deFecha(d.fecha)));
@@ -35,7 +37,7 @@ export default async function Pedidos({ searchParams }: { searchParams: Promise<
   for (const i of intentos) if (!avisosIntento.has(i.pedidoId)) avisosIntento.set(i.pedidoId, `No se entregó el ${diaMes(deFecha(i.fecha))} · ${i.motivo}`);
 
   const enlace = (extra: Record<string, string>) => {
-    const v: Record<string, string> = { ...(esWeb ? { lista: "web" } : {}), ...(semana ? { semana } : {}), ...extra };
+    const v: Record<string, string> = { ...(esWeb ? { lista: "web" } : esCobranza ? { lista: "cobranza" } : {}), ...(semana ? { semana } : {}), ...extra };
     const q = new URLSearchParams(Object.entries(v).filter(([, x]) => x));
     return `/pedidos${q.size ? `?${q}` : ""}`;
   };
@@ -49,8 +51,9 @@ export default async function Pedidos({ searchParams }: { searchParams: Promise<
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-2">
-            <Link href={enlace({ lista: "" })} className={`${pastilla} ${!esWeb ? "bg-stone-800 text-white" : "border border-stone-400 bg-white text-stone-700 hover:border-verde-700"}`}>Mayoristas <span className={!esWeb ? "text-verde-100" : "text-stone-500"}>{cuentaMayoristas}</span></Link>
+            <Link href={enlace({ lista: "" })} className={`${pastilla} ${!esWeb && !esCobranza ? "bg-stone-800 text-white" : "border border-stone-400 bg-white text-stone-700 hover:border-verde-700"}`}>Mayoristas <span className={!esWeb && !esCobranza ? "text-verde-100" : "text-stone-500"}>{cuentaMayoristas}</span></Link>
             <Link href={enlace({ lista: "web" })} className={`${pastilla} ${esWeb ? "bg-stone-800 text-white" : "border border-stone-400 bg-white text-stone-700 hover:border-verde-700"}`}>Minoristas (web) <span className={esWeb ? "text-verde-100" : "text-stone-500"}>{cuentaWeb}</span></Link>
+            <Link href={enlace({ lista: "cobranza" })} className={`${pastilla} ${esCobranza ? "bg-stone-800 text-white" : "border border-stone-400 bg-white text-stone-700 hover:border-verde-700"}`}>Cobranzas <span className={esCobranza ? "text-verde-100" : "text-stone-500"}>{cuentaCobranzas}</span></Link>
           </div>
           <nav className="flex flex-wrap items-center gap-3 text-sm" aria-label="Semana en la que se asigna">
             <span className="text-xs font-semibold uppercase tracking-wide text-stone-600">Asignar a</span>
@@ -66,7 +69,7 @@ export default async function Pedidos({ searchParams }: { searchParams: Promise<
         {esWeb && pedidos.length === 0 ? (
           <p className="rounded-lg border border-dashed border-stone-400 p-8 text-center text-stone-600">Todavía no hay pedidos de la tienda online esperando día. Entran solos cada 15 minutos, o tocá “Traer pedidos ahora”.</p>
         ) : (
-          <Bandeja key={`${inicio}-${esWeb}`} filas={pedidos.map((p) => aFilaBandeja(p, avisosIntento.get(p.id) ?? ""))} dias={dias} />
+          <Bandeja key={`${inicio}-${lista ?? ""}`} filas={pedidos.map((p) => aFilaBandeja(p, avisosIntento.get(p.id) ?? ""))} dias={dias} />
         )}
       </main>
     </>
