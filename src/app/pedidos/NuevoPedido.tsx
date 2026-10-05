@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { buscarDestinos, crearPedido, datosNuevoPedido, type DatosPedido, type Destino } from "./actions";
 import { FormularioLineas } from "./FormularioLineas";
@@ -58,7 +59,12 @@ export function NuevoPedido({ esDueno }: { esDueno: boolean }) {
             />
           </label>
           {buscando && <p className="text-sm text-stone-500">Buscando…</p>}
-          {!buscando && q.trim() && resultados.length === 0 && <p className="text-sm text-stone-600">No encontré ningún cliente con eso.</p>}
+          {!buscando && q.trim() && resultados.length === 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-stone-300 bg-white px-5 py-4 shadow-sm">
+              <p className="text-sm text-stone-700">No encontré ningún cliente con “<b>{q.trim()}</b>”. Si es un cliente nuevo, primero hay que cargarlo.</p>
+              <Link href="/clientes/nuevo" className="rounded-md bg-verde-700 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-verde-800">Cargar cliente nuevo ›</Link>
+            </div>
+          )}
           {resultados.length > 0 && (
             <div className="overflow-hidden rounded-xl border border-stone-300 bg-white shadow-sm">
               <div className={`hidden gap-x-4 border-b border-stone-400 px-5 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-stone-600 lg:grid ${COLUMNAS}`}>
