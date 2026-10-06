@@ -30,8 +30,8 @@ type Props = {
 };
 
 const boton = "flex h-11 w-11 items-center justify-center rounded-md border border-stone-400 bg-white text-xl font-medium hover:bg-crema-100 lg:h-9 lg:w-9 lg:text-lg";
-const COLUMNAS_SIN_IVA = "lg:grid-cols-[minmax(0,2fr)_5rem_9rem_11rem_6rem_9rem]";
-const COLUMNAS_CON_IVA = "lg:grid-cols-[minmax(0,2fr)_5rem_9rem_11rem_6rem_9rem_6.5rem]"; // con factura se agrega la columna IVA, a la derecha de todo
+const COLUMNAS_SIN_IVA = "lg:grid-cols-[minmax(0,2fr)_6.5rem_9rem_11rem_6rem_9rem]";
+const COLUMNAS_CON_IVA = "lg:grid-cols-[minmax(0,2fr)_6.5rem_9rem_11rem_6rem_9rem_6.5rem]"; // con factura se agrega la columna IVA, a la derecha de todo
 
 // Productos con cantidad y precio, en una tabla a lo ancho. Al tocar + / − o escribir el número, el total se calcula al instante.
 export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial, notaInicial, envioInicial = "", manualesIniciales = [], esDueno, textoBoton, alGuardar }: Props) {
@@ -232,7 +232,7 @@ export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial
               <input name={`mn_${i}`} aria-label="Otro producto (escribilo)" placeholder="Otro producto (escribilo)" maxLength={80} value={m.nombre} onChange={(e) => cambiarManual(i, { nombre: e.target.value, ...(!m.cantidad && e.target.value.trim() ? { cantidad: "1" } : {}) })} className="h-10 w-full rounded-md border border-dashed border-stone-400 bg-white px-3 text-center text-base font-semibold text-stone-900 focus:border-verde-700 focus:outline-none" />
               <label className="flex items-center justify-center gap-1.5 text-sm text-stone-600 lg:block">
                 <span className="lg:hidden">Se pide por</span>
-                <select name={`mu_${i}`} aria-label="Se pide por paquete o por unidad" value={m.unidad} onChange={(e) => cambiarManual(i, { unidad: e.target.value })} className="h-9 w-28 rounded-md border border-stone-400 bg-white px-1 text-center text-stone-900">
+                <select name={`mu_${i}`} aria-label="Se pide por paquete o por unidad" value={m.unidad} onChange={(e) => cambiarManual(i, { unidad: e.target.value })} className="h-9 w-full min-w-0 max-w-[6rem] rounded-md border border-stone-400 bg-white px-1 text-center text-stone-900">
                   <option value="paquete">Paquete</option>
                   <option value="unidad">Unidad</option>
                 </select>
