@@ -539,15 +539,15 @@ function ResumenVuelta({ grupo, capacidad, salida, cerrado }: { grupo: Fila[]; c
   const paquetes = grupo.reduce((t, f) => t + f.bultos, 0);
   const total = grupo.filter((f) => !f.cobranza).reduce((t, f) => t + f.monto, 0); // las cobranzas no son facturación
   return (
-    <footer aria-label="Resumen de la vuelta" className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-stone-300 bg-white px-5 py-2.5 text-stone-900">
+    <footer aria-label="Resumen de la vuelta" className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-stone-300 bg-white px-5 py-3.5 text-stone-900">
       {/* Dos barras a la vez: una en paquetes y otra en unidades (cada paquete = 2 unidades). La capacidad se carga en paquetes. */}
       <div className="flex flex-wrap items-center gap-x-8 gap-y-2">
         <BarraCarga cantidad={paquetes} capacidad={capacidad} nombre="paquetes" />
         <BarraCarga cantidad={grupo.reduce((t, f) => t + f.sabores.tomate + f.sabores.cebolla + f.sabores.pizzas, 0)} capacidad={capacidad === null ? null : capacidad * UNIDADES_POR_PAQUETE} nombre="unidades" />
         <HorarioVuelta salida={salida} cerrado={cerrado} />
       </div>
-      <p className="text-xs text-stone-500">
-        Facturación <span className="ml-1 text-sm font-semibold tabular-nums text-stone-900">{formatoPesos(total)}</span>
+      <p className="text-sm text-stone-500">
+        Facturación <span className="ml-1 text-base font-semibold tabular-nums text-stone-900">{formatoPesos(total)}</span>
       </p>
     </footer>
   );
@@ -558,13 +558,13 @@ function BarraCarga({ cantidad, capacidad, nombre }: { cantidad: number; capacid
   const pct = capacidad ? Math.min(100, Math.round((cantidad / capacidad) * 100)) : 0; // el máximo que se muestra es 100%
   const estado = capacidad === null ? "" : pasado ? `+${num(cantidad - capacidad)}` : cantidad === capacidad ? "completa" : `quedan ${num(capacidad - cantidad)}`;
   return (
-    <div className="w-52" title={pasado ? "Se pasó de la capacidad (solo avisa, no frena)" : undefined}>
-      <p className="flex items-baseline justify-between gap-2 text-xs text-stone-600">
+    <div className="w-72" title={pasado ? "Se pasó de la capacidad (solo avisa, no frena)" : undefined}>
+      <p className="flex items-baseline justify-between gap-3 whitespace-nowrap text-sm text-stone-600">
         <span className="tabular-nums"><span className="font-semibold text-stone-900">{num(cantidad)}</span>{capacidad !== null ? ` de ${num(capacidad)}` : ""} {nombre}</span>
         {capacidad !== null && <span className={`tabular-nums ${pasado ? "font-semibold text-rojo-700" : ""}`}>{pct}% · {estado}</span>}
       </p>
       {capacidad !== null && (
-        <div className="mt-1 h-1 overflow-hidden rounded-full bg-stone-200">
+        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-stone-200">
           <div className={`h-full rounded-full ${pasado ? "bg-rojo-600" : "bg-stone-600"}`} style={{ width: `${pct}%` }} />
         </div>
       )}
@@ -587,11 +587,11 @@ function HorarioVuelta({ salida, cerrado }: { salida: SalidaInfo; cerrado: boole
       else router.refresh();
     });
   };
-  const campo = "h-6 w-[4.25rem] rounded border border-transparent bg-transparent px-1 text-center text-xs tabular-nums text-stone-500 hover:border-stone-300 focus:border-stone-400 focus:bg-white focus:outline-none disabled:opacity-60";
+  const campo = "h-9 w-28 rounded-md border border-stone-300 bg-white px-2 text-center text-sm tabular-nums text-stone-600 hover:border-stone-300 focus:border-stone-400 focus:bg-white focus:outline-none disabled:opacity-60";
   return (
-    <div className="flex items-center gap-1 text-xs text-stone-400 opacity-80 focus-within:opacity-100 hover:opacity-100" title="Horario del reparto: salida y regreso (opcional)">
+    <div className="flex items-center gap-2 text-sm text-stone-500" title="Horario del reparto: salida y regreso (opcional)">
       <input type="time" aria-label="Hora de salida" value={inicio} disabled={cerrado} onChange={(e) => { setInicio(e.target.value); guardar(e.target.value, fin); }} className={campo} />
-      <span aria-hidden="true" className="px-1 text-[11px] uppercase tracking-wide">opcional</span>
+      <span aria-hidden="true" className="px-1 text-xs font-medium uppercase tracking-wide text-stone-500">Horario</span>
       <input type="time" aria-label="Hora de regreso" value={fin} disabled={cerrado} onChange={(e) => { setFin(e.target.value); guardar(inicio, e.target.value); }} className={campo} />
       {error && <span className="text-rojo-700" role="alert">{error}</span>}
     </div>
