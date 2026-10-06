@@ -589,10 +589,9 @@ function HorarioVuelta({ salida, cerrado }: { salida: SalidaInfo; cerrado: boole
   };
   const campo = "h-6 w-[4.25rem] rounded border border-transparent bg-transparent px-1 text-center text-xs tabular-nums text-stone-500 hover:border-stone-300 focus:border-stone-400 focus:bg-white focus:outline-none disabled:opacity-60";
   return (
-    <div className="flex items-center gap-1 text-xs text-stone-400 opacity-80 focus-within:opacity-100 hover:opacity-100" title="Horario del reparto (opcional)">
-      <span aria-hidden="true">Horario</span>
+    <div className="flex items-center gap-1 text-xs text-stone-400 opacity-80 focus-within:opacity-100 hover:opacity-100" title="Horario del reparto: salida y regreso (opcional)">
       <input type="time" aria-label="Hora de salida" value={inicio} disabled={cerrado} onChange={(e) => { setInicio(e.target.value); guardar(e.target.value, fin); }} className={campo} />
-      <span aria-hidden="true">–</span>
+      <span aria-hidden="true" className="px-1 text-[11px] uppercase tracking-wide">opcional</span>
       <input type="time" aria-label="Hora de regreso" value={fin} disabled={cerrado} onChange={(e) => { setFin(e.target.value); guardar(inicio, e.target.value); }} className={campo} />
       {error && <span className="text-rojo-700" role="alert">{error}</span>}
     </div>
