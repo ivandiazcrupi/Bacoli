@@ -77,7 +77,7 @@ export default async function EditarPedido({ params }: { params: Promise<{ id: s
           productos={lineas}
           conFacturaInicial={pedido.conFactura}
           notaInicial={pedido.nota ?? ""}
-          manualesIniciales={pedido.items.filter((i) => !i.productoId && i.nombre !== "ENVÍO").map((i) => ({ nombre: i.nombre, cantidad: String(i.cantidad), precio: String(i.precioUnitario).replace(".", ","), iva: ivaTexto(i.ivaPct ?? (Number(pedido.ivaPct) > 0 ? pedido.ivaPct : 0)) }))}
+          manualesIniciales={pedido.items.filter((i) => !i.productoId && i.nombre !== "ENVÍO").map((i) => ({ nombre: i.nombre, unidad: i.unidad === "unidad" ? "unidad" : "paquete", cantidad: String(i.cantidad), precio: String(i.precioUnitario).replace(".", ","), iva: ivaTexto(i.ivaPct ?? (Number(pedido.ivaPct) > 0 ? pedido.ivaPct : 0)) }))}
           envioInicial={(() => { const e = pedido.items.find((i) => !i.productoId && i.paquetesPor === 0 && i.nombre === "ENVÍO"); return e ? String(e.precioUnitario).replace(".", ",") : ""; })()}
           esDueno={usuario.rol === "DUENO"}
           textoBoton="Guardar cambios"

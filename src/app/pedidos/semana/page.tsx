@@ -5,7 +5,7 @@ import { importeVigente } from "@/lib/cuenta";
 import { db } from "@/lib/db";
 import { aFecha, deFecha, diaMes, esFechaValida, diasDeSemana, finDeSemana, hoy, inicioSemana, nombreDia, sumarDias, semanaDeTrabajo } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
-import { UNIDADES_POR_PAQUETE, bultosDe } from "@/lib/ruta";
+import { bultosDe, unidadesPorSabor } from "@/lib/ruta";
 import { exigirOficina } from "@/lib/session";
 import { CONTENEDOR_PEDIDOS, EncabezadoPedidos } from "../Encabezado";
 
@@ -48,6 +48,7 @@ export default async function Semana({ searchParams }: { searchParams: Promise<{
             const delDia = pedidos.filter((p) => p.fechaEntrega && deFecha(p.fechaEntrega) === f);
             const vehiculos = salidas.filter((s) => deFecha(s.fecha) === f).length;
             const paquetes = delDia.reduce((s, p) => s + bultosDe(p.items), 0);
+            const unidades = delDia.reduce((s, p) => { const x = unidadesPorSabor(p.items); return s + x.tomate + x.cebolla; }, 0);
             const monto = delDia.reduce((s, p) => s + importeVigente(p.items, Number(p.ivaPct), p.estado === "ENTREGADO" ? "ENTREGADO" : "PENDIENTE", p.webTotal), 0);
             const entregados = delDia.filter((p) => p.estado === "ENTREGADO").length;
             const esHoy = f === hoy();
@@ -61,7 +62,7 @@ export default async function Semana({ searchParams }: { searchParams: Promise<{
                 <span className="text-base font-bold">{nombreDia(f)} <span className="font-medium text-stone-600">{diaMes(f)}</span>{esHoy && <span className="ml-1 text-xs font-semibold text-verde-800">hoy</span>}</span>
                 <span className="tabular-nums"><span className="text-xs text-stone-500 lg:hidden">Pedidos: </span>{delDia.length}</span>
                 <span className="tabular-nums"><span className="text-xs text-stone-500 lg:hidden">Paquetes: </span>{paquetes}</span>
-                <span className="tabular-nums"><span className="text-xs text-stone-500 lg:hidden">Unidades: </span>{paquetes * UNIDADES_POR_PAQUETE}</span>
+                <span className="tabular-nums"><span className="text-xs text-stone-500 lg:hidden">Unidades: </span>{unidades}</span>
                 <span className="font-semibold tabular-nums"><span className="text-xs font-normal text-stone-500 lg:hidden">Facturación: </span>{vacio ? "—" : formatoPesos(monto)}</span>
                 <span className="tabular-nums"><span className="text-xs text-stone-500 lg:hidden">Entregas: </span>{vacio ? "—" : `${entregados} de ${delDia.length}`}</span>
                 <span className="tabular-nums"><span className="text-xs text-stone-500 lg:hidden">Vehículos: </span>{vehiculos}</span>

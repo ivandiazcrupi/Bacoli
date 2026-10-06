@@ -11,8 +11,8 @@ export type LineaProducto = { id: string; nombre: string; sku: string | null; un
 const MOTIVOS = ["Recambio", "Bonificación", "Muestra", "Otro"];
 
 /** Un renglón escrito a mano (cualquier cosa que no está en la lista de productos): nombre libre, cantidad, precio e IVA. */
-export type Manual = { nombre: string; cantidad: string; precio: string; iva: string };
-const MANUAL_VACIO: Manual = { nombre: "", cantidad: "", precio: "", iva: "0" };
+export type Manual = { nombre: string; cantidad: string; precio: string; iva: string; unidad: string };
+const MANUAL_VACIO: Manual = { nombre: "", cantidad: "", precio: "", iva: "0", unidad: "paquete" };
 // Siempre queda un renglón vacío al final: apenas se escribe en el último, aparece otro.
 const conVacio = (l: Manual[]) => (l.length === 0 || l[l.length - 1].nombre.trim() ? [...l, { ...MANUAL_VACIO }] : l);
 
@@ -230,7 +230,13 @@ export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial
           return (
             <div key={i} className={`grid items-center gap-x-4 gap-y-2 border-t border-stone-400 px-5 py-2.5 text-center ${COLUMNAS} ${usado ? "bg-crema-50" : "bg-white"}`}>
               <input name={`mn_${i}`} aria-label="Otro producto (escribilo)" placeholder="Otro producto (escribilo)" maxLength={80} value={m.nombre} onChange={(e) => cambiarManual(i, { nombre: e.target.value, ...(!m.cantidad && e.target.value.trim() ? { cantidad: "1" } : {}) })} className="h-10 w-full rounded-md border border-dashed border-stone-400 bg-white px-3 text-center text-base font-semibold text-stone-900 focus:border-verde-700 focus:outline-none" />
-              <p className="text-sm text-stone-600">a mano</p>
+              <label className="flex items-center justify-center gap-1.5 text-sm text-stone-600 lg:block">
+                <span className="lg:hidden">Se pide por</span>
+                <select name={`mu_${i}`} aria-label="Se pide por paquete o por unidad" value={m.unidad} onChange={(e) => cambiarManual(i, { unidad: e.target.value })} className="h-9 w-28 rounded-md border border-stone-400 bg-white px-1 text-center text-stone-900">
+                  <option value="paquete">Paquete</option>
+                  <option value="unidad">Unidad</option>
+                </select>
+              </label>
               <label className="flex items-center justify-center gap-1.5 text-sm text-stone-600 lg:block">
                 <span className="lg:hidden">Precio</span>
                 <span className="relative inline-block">

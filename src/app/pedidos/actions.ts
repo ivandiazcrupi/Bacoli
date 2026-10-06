@@ -100,7 +100,8 @@ async function leerRenglones(formData: FormData): Promise<{ renglones: Renglon[]
     if (cantidad <= 0) return { error: `Falta la cantidad de “${nombre}”.` };
     const precio = leerMonto(String(formData.get(`mp_${i}`) ?? ""));
     if (precio === null || precio <= 0) return { error: `Falta el precio de “${nombre}”.` };
-    renglones.push({ productoId: null, nombre, sku: null, unidad: "unidad", cantidad, precioUnitario: precio, sinCargo: 0, descuentoPct: 0, motivoSinCargo: null, ivaPct: conFactura ? (leerIva(formData.get(`mi_${i}`)) ?? 0) : null });
+    const unidad = String(formData.get(`mu_${i}`) ?? "") === "unidad" ? "unidad" : "paquete"; // el cliente pide por unidad o por paquete
+    renglones.push({ productoId: null, nombre, sku: null, unidad, cantidad, precioUnitario: precio, sinCargo: 0, descuentoPct: 0, motivoSinCargo: null, ivaPct: conFactura ? (leerIva(formData.get(`mi_${i}`)) ?? 0) : null });
   }
   if (renglones.length === 0) return { error: "Poné la cantidad de al menos un producto." };
   // Envío: un renglón aparte (no es un producto: no suma paquetes ni lleva bonificación) que entra en el total, el remito y la cuenta.
