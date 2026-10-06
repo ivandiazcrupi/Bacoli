@@ -17,11 +17,11 @@ const saborDe = (nombre = ""): "tomate" | "cebolla" | null => {
 };
 
 /**
- * Paquetes = lo que ocupa un pedido en el vehículo: la suma de sus unidades de venta (paquetes y unidades; el combo napolitano de la tienda cuenta 2 paquetes).
- * Una prepizza vendida por unidad (cliente que pide por unidad) ocupa medio paquete.
+ * Paquetes = paquetes de pizza: solo cuentan PREPIZZA TOMATE y PREPIZZA CEBOLLA (el combo napolitano de la tienda cuenta 2 paquetes); cualquier otro producto no suma.
+ * Una prepizza vendida por unidad (cliente que pide por unidad) cuenta medio paquete.
  */
 export const bultosDe = (items: RenglonRuta[]) =>
-  Math.ceil(items.reduce((s, i) => s + (i.cantidad + (i.sinCargo ?? 0)) * (i.paquetesPor ?? 1) * (i.unidad === "unidad" && saborDe(i.nombre) ? 1 / UNIDADES_POR_PAQUETE : 1), 0));
+  Math.ceil(items.reduce((s, i) => s + (saborDe(i.nombre) ? (i.cantidad + (i.sinCargo ?? 0)) * (i.paquetesPor ?? 1) * (i.unidad === "unidad" ? 1 / UNIDADES_POR_PAQUETE : 1) : 0), 0));
 
 /**
  * Pizzas (unidades) de cada sabor, para producción. Solo cuentan PREPIZZA TOMATE (con el combo napolitano: 2 paquetes = 4 pizzas) y PREPIZZA CEBOLLA;
