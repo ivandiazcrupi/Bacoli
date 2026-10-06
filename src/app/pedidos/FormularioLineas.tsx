@@ -11,8 +11,8 @@ export type LineaProducto = { id: string; nombre: string; sku: string | null; un
 const MOTIVOS = ["Recambio", "Bonificación", "Muestra", "Otro"];
 
 /** Un renglón escrito a mano (cualquier cosa que no está en la lista de productos): nombre libre, cantidad, precio e IVA. */
-export type Manual = { nombre: string; cantidad: string; precio: string; iva: string; unidad: string };
-const MANUAL_VACIO: Manual = { nombre: "", cantidad: "", precio: "", iva: "0", unidad: "paquete" };
+export type Manual = { nombre: string; cantidad: string; precio: string; iva: string; unidad: string; bonif: string };
+const MANUAL_VACIO: Manual = { nombre: "", cantidad: "", precio: "", iva: "0", unidad: "paquete", bonif: "" };
 // Siempre queda un renglón vacío al final: apenas se escribe en el último, aparece otro.
 const conVacio = (l: Manual[]) => (l.length === 0 || l[l.length - 1].nombre.trim() ? [...l, { ...MANUAL_VACIO }] : l);
 
@@ -48,7 +48,9 @@ export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial
   const [manuales, setManuales] = useState<Manual[]>(() => conVacio(manualesIniciales));
   const cambiarManual = (i: number, cambio: Partial<Manual>) => setManuales((l) => conVacio(l.map((m, k) => (k === i ? { ...m, ...cambio } : m))));
   const cantManual = (m: Manual) => Number(m.cantidad.replace(/\D/g, "") || 0);
-  const importeManual = (m: Manual) => (m.nombre.trim() ? cantManual(m) * (leerMonto(m.precio) ?? 0) : 0);
+  const brutoManual = (m: Manual) => (m.nombre.trim() ? cantManual(m) * (leerMonto(m.precio) ?? 0) : 0);
+  const bonifManual = (m: Manual) => Math.min(100, Math.max(0, leerMonto(m.bonif) ?? 0));
+  const importeManual = (m: Manual) => brutoManual(m) * (1 - bonifManual(m) / 100);
   const [ivas, setIvas] = useState<Record<string, string>>(() => Object.fromEntries(productos.map((p) => [p.id, p.iva ?? "0"])));
 
   useEffect(() => {
@@ -87,7 +89,7 @@ export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial
   const bonif = (id: string) => Math.min(100, Math.max(0, leerMonto(bonifs[id]) ?? 0));
   const importe = (id: string) => cantidad(id) * (leerMonto(precios[id]) ?? 0) * (1 - bonif(id) / 100);
   const totalManuales = manuales.reduce((t, m) => t + importeManual(m), 0);
-  const bruto = productos.reduce((s, p) => s + cantidad(p.id) * (leerMonto(precios[p.id]) ?? 0), 0) + totalManuales;
+  const bruto = productos.reduce((s, p) => s + cantidad(p.id) * (leerMonto(precios[p.id]) ?? 0), 0) + manuales.reduce((t, m) => t + brutoManual(m), 0);
   const montoEnvio = Math.max(0, leerMonto(envio) ?? 0);
   const subtotalProductos = productos.reduce((s, p) => s + importe(p.id), 0) + totalManuales;
   const subtotal = subtotalProductos + montoEnvio;
@@ -249,7 +251,10 @@ export function FormularioLineas({ accion, puntoId, productos, conFacturaInicial
                 <input name={`mc_${i}`} aria-label="Cantidad del otro producto" inputMode="numeric" value={m.cantidad} onChange={(e) => cambiarManual(i, { cantidad: e.target.value.replace(/\D/g, "") })} placeholder="0" className="h-11 w-16 rounded-md border border-stone-400 bg-white text-center text-lg tabular-nums lg:h-9 lg:text-base" />
                 <button type="button" className={boton} onClick={() => cambiarManual(i, { cantidad: String(q + 1) })} aria-label="Más otro producto">+</button>
               </div>
-              <span className="text-stone-300">—</span>
+              <label className="flex items-center justify-center gap-1.5 text-sm text-stone-600 lg:block">
+                <span className="lg:hidden">Bonif. %</span>
+                <input name={`mb_${i}`} aria-label="Bonificación en % del otro producto" inputMode="decimal" value={m.bonif} onChange={(e) => cambiarManual(i, { bonif: e.target.value })} placeholder="0" className="h-9 w-16 rounded-md border border-stone-400 bg-white text-center tabular-nums text-stone-900" />
+              </label>
               <p className="text-sm font-semibold tabular-nums">{sinPrecioM ? <span className="text-xs font-medium text-rojo-700">Falta el precio</span> : usado && q > 0 ? formatoPesos(importeManual(m)) : <span className="font-normal text-stone-400">—</span>}</p>
               {conFactura && (
                 <label className="flex items-center justify-center gap-1.5 text-sm text-stone-600 lg:block">
