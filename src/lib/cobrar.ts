@@ -27,7 +27,7 @@ export async function marcarCobroEnTx(tx: Prisma.TransactionClient, pedidoId: st
     return null;
   }
   if (webPagado(pedido.webOrden, pedido.webPago)) {
-    await tx.pedido.update({ where: { id: pedidoId }, data: { cobro: "COBRADO", medioCobro: pedido.webPago === "PAGO_MP" ? "MERCADO_PAGO" : "TRANSFERENCIA", montoCobrado: pedido.webTotal, pagado: true } });
+    await tx.pedido.update({ where: { id: pedidoId }, data: { cobro: "COBRADO", medioCobro: pedido.webPago === "PAGO_MP" ? "MERCADO_PAGO" : pedido.webPago === "SIN_COSTO" ? "OTRO" : "TRANSFERENCIA", montoCobrado: pedido.webTotal, pagado: true } });
     return null;
   }
   if (!cobro) return "Elegí cómo se cobra: Pago o Cuenta corriente.";

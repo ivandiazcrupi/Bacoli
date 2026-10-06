@@ -1,5 +1,5 @@
 /** Pago de un pedido de la tienda online. Los minoristas pagan solo por transferencia y antes de salir de fábrica. */
-export type PagoWeb = "PENDIENTE" | "PAGO_MP" | "PAGO_TRANSFERENCIA";
+export type PagoWeb = "PENDIENTE" | "PAGO_MP" | "PAGO_TRANSFERENCIA" | "SIN_COSTO"; // SIN_COSTO = pedido a mano con total 0 (no paga nada)
 
 export function webPagado(webOrden: string | null, webPago: string | null): boolean {
   return !!webOrden && !!webPago && webPago !== "PENDIENTE";
@@ -8,6 +8,7 @@ export function webPagado(webOrden: string | null, webPago: string | null): bool
 export function textoPagoWeb(webPago: string | null): string | null {
   if (webPago === "PAGO_MP") return "Mercado Pago";
   if (webPago === "PAGO_TRANSFERENCIA") return "Transferencia";
+  if (webPago === "SIN_COSTO") return "Sin cargo";
   return null;
 }
 

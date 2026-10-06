@@ -16,13 +16,20 @@ export function NuevoPedidoWeb({ productos: todos }: { productos: Producto[] }) 
   const productos = todos.filter((p) => p.sku === "PPT01" || p.sku === "PPC02" || /^PREPIZZA (TOMATE|CEBOLLA)$/i.test(p.nombre.trim()));
   const [estado, enviar, cargando] = useActionState(crearPedidoWebManual, undefined as EstadoPedidoForm);
   const [cantidades, setCantidades] = useState<Record<string, string>>({});
+  // Otros productos escritos a mano: los que hagan falta (siempre queda uno vacío al final; apenas se escribe en el último aparece otro).
+  const [otros, setOtros] = useState<{ nombre: string; cantidad: string }[]>([{ nombre: "", cantidad: "" }]);
+  const cambiarOtro = (i: number, cambio: Partial<{ nombre: string; cantidad: string }>) =>
+    setOtros((l) => {
+      const n = l.map((o, k) => (k === i ? { ...o, ...cambio } : o));
+      return n[n.length - 1].nombre.trim() ? [...n, { nombre: "", cantidad: "" }] : n;
+    });
   const form = useRef<HTMLFormElement>(null);
   const cantidad = (id: string) => Number(cantidades[id]?.replace(/\D/g, "") || 0);
   const cambiar = (id: string, delta: number) => setCantidades((c) => ({ ...c, [id]: String(Math.max(0, cantidad(id) + delta) || "") }));
 
   // Al guardar bien, el formulario queda limpio para cargar el siguiente.
   useEffect(() => {
-    if (estado?.ok) { form.current?.reset(); setCantidades({}); }
+    if (estado?.ok) { form.current?.reset(); setCantidades({}); setOtros([{ nombre: "", cantidad: "" }]); }
   }, [estado]);
 
   return (
@@ -30,7 +37,7 @@ export function NuevoPedidoWeb({ productos: todos }: { productos: Producto[] }) 
       <section className="rounded-xl border border-stone-300 bg-white p-4 shadow-sm">
         <p className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-stone-600">Datos de entrega</p>
         <div className="grid gap-3 lg:grid-cols-[9rem_1fr_1fr_2fr_1fr]">
-          <label className={etiqueta}>N° de orden<input name="orden" inputMode="numeric" maxLength={20} placeholder="Ej.: 13901" className={campo} title="El número de orden que figura en Empretienda. Si no lo tiene, se le asigna uno propio (M-1, M-2…)." /></label>
+          <label className={etiqueta}>N° de orden<input name="orden" inputMode="numeric" maxLength={20} placeholder="Ej.: 13901" className={campo} title="El número de orden de Empretienda. Si no lo tiene, se le asigna uno propio (M-1, M-2…). Se puede repetir: queda como 13901-2." /></label>
           <label className={etiqueta}>Nombre<input name="nombre" required className={`${campo} dato`} autoCapitalize="characters" /></label>
           <label className={etiqueta}>Barrio<input name="barrio" className={`${campo} dato`} autoCapitalize="characters" /></label>
           <label className={etiqueta}>Dirección<input name="direccion" required className={campo} /></label>
@@ -64,16 +71,22 @@ export function NuevoPedidoWeb({ productos: todos }: { productos: Producto[] }) 
             </div>
           </div>
         ))}
-        {/* Tercer renglón: cualquier otro producto de la tienda, escrito a mano */}
-        <div className={`grid grid-cols-[minmax(0,2fr)_6rem_11rem] items-center gap-x-4 border-t border-stone-400 px-5 py-2.5 text-center max-lg:grid-cols-1 max-lg:gap-y-2 ${cantidad("otro") > 0 ? "bg-crema-50" : "bg-white"}`}>
-          <input name="otro_nombre" aria-label="Otro producto (escribilo)" placeholder="Otro producto de la tienda (escribilo)" maxLength={80} className="h-10 w-full rounded-md border border-dashed border-stone-400 bg-white px-3 text-center text-base font-semibold focus:border-verde-700 focus:outline-none" />
-          <p className="text-sm text-stone-600">a mano</p>
-          <div className="flex items-center justify-center gap-1">
-            <button type="button" className={boton} onClick={() => cambiar("otro", -1)} aria-label="Menos otro producto">−</button>
-            <input name="otro_cantidad" aria-label="Cantidad del otro producto" inputMode="numeric" value={cantidades.otro ?? ""} onChange={(e) => setCantidades((c) => ({ ...c, otro: e.target.value.replace(/\D/g, "") }))} placeholder="0" className="h-11 w-16 rounded-md border border-stone-400 bg-white text-center text-lg tabular-nums lg:h-9 lg:text-base" />
-            <button type="button" className={boton} onClick={() => cambiar("otro", 1)} aria-label="Más otro producto">+</button>
-          </div>
-        </div>
+        {/* Otros productos de la tienda, escritos a mano: los que hagan falta */}
+        <input type="hidden" name="otros_total" value={otros.length} />
+        {otros.map((o, i) => {
+          const q = Number(o.cantidad.replace(/\D/g, "") || 0);
+          return (
+            <div key={i} className={`grid grid-cols-[minmax(0,2fr)_6rem_11rem] items-center gap-x-4 border-t border-stone-400 px-5 py-2.5 text-center max-lg:grid-cols-1 max-lg:gap-y-2 ${o.nombre.trim() ? "bg-crema-50" : "bg-white"}`}>
+              <input name={`otro_nombre_${i}`} aria-label="Otro producto (escribilo)" placeholder="Otro producto de la tienda (escribilo)" maxLength={80} value={o.nombre} onChange={(e) => cambiarOtro(i, { nombre: e.target.value, ...(!o.cantidad && e.target.value.trim() ? { cantidad: "1" } : {}) })} className="h-10 w-full rounded-md border border-dashed border-stone-400 bg-white px-3 text-center text-base font-semibold focus:border-verde-700 focus:outline-none" />
+              <p className="text-sm text-stone-600">a mano</p>
+              <div className="flex items-center justify-center gap-1">
+                <button type="button" className={boton} onClick={() => cambiarOtro(i, { cantidad: String(Math.max(0, q - 1) || "") })} aria-label="Menos otro producto">−</button>
+                <input name={`otro_cantidad_${i}`} aria-label="Cantidad del otro producto" inputMode="numeric" value={o.cantidad} onChange={(e) => cambiarOtro(i, { cantidad: e.target.value.replace(/\D/g, "") })} placeholder="0" className="h-11 w-16 rounded-md border border-stone-400 bg-white text-center text-lg tabular-nums lg:h-9 lg:text-base" />
+                <button type="button" className={boton} onClick={() => cambiarOtro(i, { cantidad: String(q + 1) })} aria-label="Más otro producto">+</button>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       <div className="grid items-stretch gap-4 lg:grid-cols-[1fr_20rem]">
@@ -93,7 +106,7 @@ export function NuevoPedidoWeb({ productos: todos }: { productos: Producto[] }) 
         </div>
         <div className="rounded-xl border border-stone-300 bg-white p-4 text-sm shadow-sm">
           <label className="block text-center text-xs font-semibold uppercase tracking-wide text-stone-600">
-            Total que paga ($, con envío si lo lleva)
+            Total que paga ($, con envío si lo lleva; 0 si no paga)
             <input name="total" inputMode="decimal" required placeholder="0" className="mt-1 h-10 w-full rounded-md border border-stone-400 bg-white px-3 text-center text-lg font-bold tabular-nums text-stone-900" />
           </label>
           <button disabled={cargando} className={`${estiloBoton} mt-3`}>{cargando ? "Guardando…" : "Cargar pedido minorista"}</button>

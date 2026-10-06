@@ -5,7 +5,7 @@ export function EstadoPagoWeb({ webOrden, pagado, medio, ingreso }: { webOrden: 
   return (
     <>
       {pagado
-        ? <span className="block text-[12px] font-semibold text-verde-700">Pagado · {medio ?? "Transferencia"}</span>
+        ? <span className="block text-[12px] font-semibold text-verde-700">{medio === "Sin cargo" ? "Sin cargo · no paga" : `Pagado · ${medio ?? "Transferencia"}`}</span>
         : <span className="block text-[12px] font-semibold text-rojo-700">Pendiente de pago</span>}
       {ingreso && <span className="block text-[11px] font-normal leading-tight text-stone-400" title="Día en que entró al sistema">Ingresó {ingreso}</span>}
     </>

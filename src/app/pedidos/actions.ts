@@ -199,7 +199,7 @@ export async function crearPedidoWebManual(_: EstadoPedidoForm, formData: FormDa
   const direccion = titulo(String(formData.get("direccion") ?? "").trim());
   if (!direccion) return { error: "Falta la dirección de entrega." };
   const total = leerMonto(String(formData.get("total") ?? ""));
-  if (total === null || total <= 0) return { error: "Poné el total que paga el cliente (con el envío, si lo lleva)." };
+  if (total === null || total < 0) return { error: "Poné el total que paga el cliente (con el envío, si lo lleva). Si no paga nada, poné 0." };
 
   const productos = await db.producto.findMany({ where: { activo: true } });
   const items: Prisma.PedidoItemCreateWithoutPedidoInput[] = [];
@@ -207,19 +207,30 @@ export async function crearPedidoWebManual(_: EstadoPedidoForm, formData: FormDa
     const cantidad = Number(String(formData.get(`q_${p.id}`) ?? "0").replace(/\D/g, "") || 0);
     if (cantidad > 0) items.push({ producto: { connect: { id: p.id } }, nombre: p.nombre, sku: p.sku, unidad: p.unidad, cantidad, precioUnitario: 0 });
   }
-  // Producto de la tienda que no está en el catálogo, escrito a mano (si no pone cantidad, se toma 1).
-  const otroNombre = mayus(String(formData.get("otro_nombre") ?? "")).slice(0, 80);
-  if (otroNombre) {
-    const cantidadOtro = Number(String(formData.get("otro_cantidad") ?? "").replace(/\D/g, "") || 1);
+  // Productos de la tienda que no están en el catálogo, escritos a mano (los que haga falta; si no pone cantidad, se toma 1).
+  const cuantosOtros = Math.min(30, Number(formData.get("otros_total") ?? 0) || 0);
+  for (let i = 0; i < cuantosOtros; i++) {
+    const otroNombre = mayus(String(formData.get(`otro_nombre_${i}`) ?? "")).slice(0, 80);
+    if (!otroNombre) continue;
+    const cantidadOtro = Number(String(formData.get(`otro_cantidad_${i}`) ?? "").replace(/\D/g, "") || 1);
     items.push({ nombre: otroNombre, sku: null, unidad: "unidad", cantidad: cantidadOtro, precioUnitario: 0 });
   }
   if (items.length === 0) return { error: "Poné la cantidad de al menos un producto." };
 
   const pagoElegido = String(formData.get("pago") ?? (formData.get("pagado") === "1" ? "PAGO_TRANSFERENCIA" : "PENDIENTE"));
-  const webPago = pagoElegido === "PAGO_MP" ? "PAGO_MP" : pagoElegido === "PAGO_TRANSFERENCIA" ? "PAGO_TRANSFERENCIA" : "PENDIENTE";
-  // N° de orden de la tienda (opcional): si lo trae, se usa ese (no puede repetirse); si no, uno propio M-1, M-2…
-  const ordenTienda = String(formData.get("orden") ?? "").trim().replace(/\s+/g, "").slice(0, 20);
-  if (ordenTienda && (await db.pedido.findUnique({ where: { webOrden: ordenTienda }, select: { id: true } }))) return { error: `El N° de orden ${ordenTienda} ya está cargado. Revisá que no sea un pedido repetido.` };
+  // Sin plata (total 0: reposición, regalo…) no hay nada que confirmar: queda como "sin cargo" y puede salir sin pago.
+  const webPago = total === 0 ? "SIN_COSTO" : pagoElegido === "PAGO_MP" ? "PAGO_MP" : pagoElegido === "PAGO_TRANSFERENCIA" ? "PAGO_TRANSFERENCIA" : "PENDIENTE";
+  // N° de orden de la tienda (opcional): si no trae, uno propio M-1, M-2… Se puede repetir (ej. a un cliente le faltó algo y se carga a mano):
+  // el repetido se guarda como 13301-2, 13301-3… (en la base el número no puede estar duplicado).
+  let ordenTienda = String(formData.get("orden") ?? "").trim().replace(/\s+/g, "").slice(0, 20);
+  let avisoRepetido = "";
+  if (ordenTienda && (await db.pedido.findUnique({ where: { webOrden: ordenTienda }, select: { id: true } }))) {
+    const base = ordenTienda;
+    let k = 2;
+    while (await db.pedido.findUnique({ where: { webOrden: `${base}-${k}` }, select: { id: true } })) k++;
+    ordenTienda = `${base}-${k}`;
+    avisoRepetido = ` (el N° ${base} ya existía: se guardó como ${ordenTienda})`;
+  }
   const ultimo = await db.pedido.aggregate({ where: { fechaEntrega: null }, _max: { ordenDia: true } });
   const numero = await db.$transaction(async (tx) => {
     const n = ordenTienda ? { ultimo: 0 } : await tx.numerador.upsert({ where: { id: "WEB_MANUAL" }, update: { ultimo: { increment: 1 } }, create: { id: "WEB_MANUAL", ultimo: 1 } });
@@ -238,7 +249,7 @@ export async function crearPedidoWebManual(_: EstadoPedidoForm, formData: FormDa
         webTelefono: String(formData.get("telefono") ?? "").trim() || null,
         webTotal: total,
         webPago,
-        ...(webPago === "PAGO_TRANSFERENCIA" ? { webPagoPor: usuario.nombre, webPagoEn: new Date() } : {}),
+        ...(webPago === "PAGO_TRANSFERENCIA" || webPago === "SIN_COSTO" ? { webPagoPor: usuario.nombre, webPagoEn: new Date() } : {}),
         nota: oracion(String(formData.get("nota") ?? "")) || null,
         items: { create: items },
       },
@@ -246,7 +257,7 @@ export async function crearPedidoWebManual(_: EstadoPedidoForm, formData: FormDa
     return ordenTienda || `M-${n.ultimo}`;
   });
   revalidatePath("/pedidos", "layout");
-  return { ok: `Pedido minorista de ${nombre} cargado (N° ${numero}). Quedó en Pedidos → Minoristas (web), esperando día.` };
+  return { ok: `Pedido minorista de ${nombre} cargado (N° ${numero})${avisoRepetido}. Quedó en Pedidos → Minoristas (web), esperando día.` };
 }
 
 /** Lee los datos de una cobranza del formulario (nombre, dirección y monto son obligatorios). */
@@ -325,7 +336,9 @@ export async function actualizarPedidoWeb(pedidoId: string, _: EstadoPedidoForm,
   const otro = mayus(String(formData.get("x_otro_nombre") ?? "")).slice(0, 70);
   if (otro) nuevos.push({ nombre: `${otro} (POR FUERA)`, sku: null, unidad: "unidad", cantidad: Number(String(formData.get("x_otro_cantidad") ?? "").replace(/\D/g, "") || 1), precioUnitario: 0 });
   if (montoExtra > 0 && nuevos.length === 0) return { error: "Elegí qué producto se agregó por fuera (o dejá el monto vacío)." };
-  const volverAPendiente = montoExtra > 0 && (pedido.webPago === "PAGO_MP" || pedido.webPago === "PAGO_TRANSFERENCIA");
+  // Un pedido "sin cargo" (total 0) que pasa a tener importe necesita su pago; uno pendiente que baja a 0 pasa a sin cargo.
+  const volverAPendiente = (montoExtra > 0 && (pedido.webPago === "PAGO_MP" || pedido.webPago === "PAGO_TRANSFERENCIA")) || (pedido.webPago === "SIN_COSTO" && total + montoExtra > 0);
+  const quedaSinCosto = total + montoExtra === 0 && pedido.webPago === "PENDIENTE";
 
   await db.$transaction(async (tx) => {
     for (const c of cantidades) {
@@ -338,6 +351,7 @@ export async function actualizarPedidoWeb(pedidoId: string, _: EstadoPedidoForm,
       data: {
         ...(montoExtra > 0 ? { webExtra: Number(pedido.webExtra ?? 0) + montoExtra } : {}),
         ...(volverAPendiente ? { webPago: "PENDIENTE", webPagoPor: null, webPagoEn: null } : {}),
+        ...(quedaSinCosto ? { webPago: "SIN_COSTO" } : {}),
         webNombre: nombre,
         webBarrio: mayus(String(formData.get("barrio") ?? "")) || null,
         webDireccion: titulo(String(formData.get("direccion") ?? "").trim()) || null,
