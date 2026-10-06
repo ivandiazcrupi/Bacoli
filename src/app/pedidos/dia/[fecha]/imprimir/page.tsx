@@ -44,6 +44,7 @@ export default async function ImprimirHojaDeRuta({ params, searchParams }: { par
                   <div>
                     <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-neutral-500">Bacoli · Hoja de ruta</p>
                     <h1 className="mt-1 text-[30px] font-bold leading-none tracking-tight">{titulo(sa.vehiculo.nombre)}{sa.vehiculo.patente ? <span className="ml-3 align-middle text-[14px] font-medium tracking-[0.18em] text-neutral-500">{sa.vehiculo.patente}</span> : null}</h1>
+                    {(sa.horaInicio || sa.horaFin) && <p className="mt-2 text-[12px] font-medium tracking-wide text-neutral-600">Horario {sa.horaInicio || "—"} a {sa.horaFin || "—"}</p>}
                   </div>
                   <div className="flex items-end gap-10">
                     <dl className="flex gap-7 text-right">

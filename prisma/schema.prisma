@@ -346,6 +346,8 @@ model Salida {
   vehiculoId   String
   repartidorId String?
   orden        Int      @default(0)
+  horaInicio   String? // horario del reparto (HH:MM), opcional: solo para verlo
+  horaFin      String?
   creadoEn     DateTime @default(now())
 
   vehiculo   Vehiculo @relation(fields: [vehiculoId], references: [id])

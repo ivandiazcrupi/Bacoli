@@ -13,7 +13,7 @@ import { enlaceWhatsApp } from "@/lib/telefonos";
 import { BotonRemito } from "../../BotonRemito";
 import { normalizarFactura, soloNumeroFactura } from "@/lib/remito";
 import { asignarADia, marcarPagoWeb } from "../../actions";
-import { agregarSalida, asignarAVehiculo, devolverAPedidos, ordenarSalida, quitarSalida } from "../../ruta/actions";
+import { agregarSalida, asignarAVehiculo, devolverAPedidos, guardarHorario, ordenarSalida, quitarSalida } from "../../ruta/actions";
 import { emitirRemitosDia } from "../../remito/actions";
 import { cerrarDia, dejarEnCuentaCorriente, dejarListo, reabrirHoja, deshacerCobro, guardarNumeroFactura, marcarEntrega, reabrirDia, registrarCobro, registrarNoEntrega, type Resultado } from "../actions";
 import { NotaRapida } from "@/components/NotaRapida";
@@ -63,7 +63,7 @@ export type Silueta = {
   destino: string; // qué pasó después: "Se entregó el 9/10", "Reprogramado: Jue 9/10", "En Pedidos, esperando día"…
 };
 
-export type SalidaInfo = { id: string; nombre: string; patente: string; capacidad: number | null; repartidorId: string };
+export type SalidaInfo = { id: string; nombre: string; patente: string; capacidad: number | null; repartidorId: string; horaInicio: string; horaFin: string };
 export type Opcion = { id: string; nombre: string };
 
 // Todo entra a lo ancho (sin deslizar): columnas justas y todo centrado.
@@ -535,15 +535,16 @@ function FilaTarjeta({ f, n, bloqueada, armando, fija, acc, salidas }: { f: Fila
 const urlRuta = (filas: Fila[]) => `https://www.google.com/maps/dir/${filas.map((f) => encodeURIComponent(`${f.direccion}, ${f.barrio}`)).join("/")}`;
 
 // Resumen de la vuelta de un vehículo (al final de su cuadro): a la izquierda la barra de paquetes contra la capacidad; a la derecha la facturación.
-function ResumenVuelta({ grupo, capacidad }: { grupo: Fila[]; capacidad: number | null }) {
+function ResumenVuelta({ grupo, capacidad, salida, cerrado }: { grupo: Fila[]; capacidad: number | null; salida: SalidaInfo; cerrado: boolean }) {
   const paquetes = grupo.reduce((t, f) => t + f.bultos, 0);
   const total = grupo.filter((f) => !f.cobranza).reduce((t, f) => t + f.monto, 0); // las cobranzas no son facturación
   return (
-    <footer aria-label="Resumen de la vuelta" className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-stone-400 bg-crema-100 px-5 py-3 text-stone-900">
+    <footer aria-label="Resumen de la vuelta" className="flex flex-wrap items-center justify-between gap-x-8 gap-y-3 border-t border-stone-400 bg-crema-100 px-6 py-5 text-stone-900">
       {/* Dos barras a la vez: una en paquetes y otra en unidades (cada paquete = 2 unidades). La capacidad se carga en paquetes. */}
-      <div className="flex flex-wrap items-start gap-x-8 gap-y-2">
+      <div className="flex flex-wrap items-center gap-x-10 gap-y-3">
         <BarraCarga cantidad={paquetes} capacidad={capacidad} nombre="paquetes" />
         <BarraCarga cantidad={grupo.reduce((t, f) => t + f.sabores.tomate + f.sabores.cebolla, 0)} capacidad={capacidad === null ? null : capacidad * UNIDADES_POR_PAQUETE} nombre="unidades" />
+        <HorarioVuelta salida={salida} cerrado={cerrado} />
       </div>
       <p className="text-sm font-semibold uppercase tracking-wide text-stone-600">
         Facturación <span className="ml-1 text-base font-bold tabular-nums normal-case tracking-normal text-stone-900">{formatoPesos(total)}</span>
@@ -554,19 +555,51 @@ function ResumenVuelta({ grupo, capacidad }: { grupo: Fila[]; capacidad: number 
 
 function BarraCarga({ cantidad, capacidad, nombre }: { cantidad: number; capacidad: number | null; nombre: string }) {
   const pasado = capacidad !== null && cantidad > capacidad;
-  const pct = capacidad ? Math.min(100, Math.round((cantidad / capacidad) * 100)) : 0;
+  const pct = capacidad ? Math.min(100, Math.round((cantidad / capacidad) * 100)) : 0; // el máximo que se muestra es 100%
   const estado = capacidad === null ? "" : pasado ? `Te pasaste ${cantidad - capacidad}` : cantidad === capacidad ? "Completa" : `Quedan ${capacidad - cantidad}`;
   return (
-    <div className="w-60" title={pasado ? "Se pasó de la capacidad (solo avisa, no frena)" : undefined}>
-      <p className="flex items-baseline justify-between gap-2 text-sm font-semibold">
+    <div className="w-80" title={pasado ? "Se pasó de la capacidad (solo avisa, no frena)" : undefined}>
+      <p className="flex items-baseline justify-between gap-2 text-base font-semibold">
         <span className="tabular-nums">{capacidad !== null ? `${cantidad} de ${capacidad} ${nombre}` : `${cantidad} ${nombre}`}</span>
-        {estado && <span className={`text-xs ${pasado ? "font-bold text-rojo-700" : "font-medium text-stone-600"}`}>{estado}</span>}
+        {estado && <span className={`text-sm ${pasado ? "font-bold text-rojo-700" : "font-medium text-stone-600"}`}>{estado}</span>}
       </p>
       {capacidad !== null && (
-        <div className="mt-1 h-2 overflow-hidden rounded-full bg-stone-300">
-          <div className={`h-full ${pasado ? "bg-rojo-600" : "bg-stone-700"}`} style={{ width: `${pct}%` }} />
+        <div className="mt-2 flex items-center gap-3">
+          <div className="h-5 flex-1 overflow-hidden rounded-full bg-stone-300">
+            <div className={`h-full rounded-full transition-all ${pasado ? "bg-rojo-600" : "bg-stone-700"}`} style={{ width: `${pct}%` }} />
+          </div>
+          <span className={`w-11 text-right text-sm font-bold tabular-nums ${pasado ? "text-rojo-700" : "text-stone-700"}`}>{pct}%</span>
         </div>
       )}
+    </div>
+  );
+}
+
+// Horario del reparto (opcional, apagado a propósito: solo para ver cuándo sale y cuándo vuelve cada camioneta). Se guarda al cambiar.
+function HorarioVuelta({ salida, cerrado }: { salida: SalidaInfo; cerrado: boolean }) {
+  const router = useRouter();
+  const [inicio, setInicio] = useState(salida.horaInicio);
+  const [fin, setFin] = useState(salida.horaFin);
+  const [error, setError] = useState("");
+  const [, empezar] = useTransition();
+  const guardar = (i: string, f: string) => {
+    setError("");
+    empezar(async () => {
+      const r = await guardarHorario(salida.id, i, f);
+      if (!r.ok) setError(r.error ?? "No se pudo guardar.");
+      else router.refresh();
+    });
+  };
+  const campo = "h-9 w-[5.5rem] rounded-md border border-stone-300 bg-white/60 px-2 text-center text-sm tabular-nums text-stone-600 focus:border-stone-500 focus:bg-white focus:outline-none disabled:opacity-60";
+  return (
+    <div className="flex flex-col gap-1 opacity-70 transition-opacity focus-within:opacity-100 hover:opacity-100">
+      <p className="text-[11px] font-medium uppercase tracking-wide text-stone-500">Horario (opcional)</p>
+      <div className="flex items-center gap-2 text-sm text-stone-500">
+        <input type="time" aria-label="Hora de salida" value={inicio} disabled={cerrado} onChange={(e) => { setInicio(e.target.value); guardar(e.target.value, fin); }} className={campo} />
+        <span aria-hidden="true">a</span>
+        <input type="time" aria-label="Hora de regreso" value={fin} disabled={cerrado} onChange={(e) => { setFin(e.target.value); guardar(inicio, e.target.value); }} className={campo} />
+      </div>
+      {error && <p className="text-xs text-rojo-700" role="alert">{error}</p>}
     </div>
   );
 }
@@ -871,7 +904,7 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
             {grupo.length === 0 && siluetasDe(sa.id).length === 0 ? (
               <p className="p-6 text-center text-sm text-stone-600">Todavía no tiene pedidos. Arrastralos desde “Sin ubicar”.</p>
             ) : tabla(grupo, sa, siluetasDe(sa.id))}
-            <ResumenVuelta grupo={grupo} capacidad={sa.capacidad} />
+            <ResumenVuelta grupo={grupo} capacidad={sa.capacidad} salida={sa} cerrado={estadoDia.estado === "CERRADA"} />
           </Zona>
         );
       })}

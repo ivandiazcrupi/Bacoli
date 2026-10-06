@@ -106,6 +106,19 @@ export async function cambiarRepartidor(salidaId: string, repartidorId: string |
   return { ok: true };
 }
 
+/** Horario del reparto (opcional, solo informativo): vacío = sin horario. Se puede cargar con la hoja lista; solo se frena con el día cerrado. */
+export async function guardarHorario(salidaId: string, inicio: string, fin: string): Promise<Resultado> {
+  await exigirOficina();
+  const ok = (h: string) => h === "" || /^([01]\d|2[0-3]):[0-5]\d$/.test(h);
+  if (!ok(inicio) || !ok(fin)) return { ok: false, error: "El horario tiene que ser una hora válida." };
+  const salida = await db.salida.findUnique({ where: { id: salidaId } });
+  if (!salida) return { ok: false, error: "Ese vehículo ya no está en el día." };
+  if (await db.diaCerrado.findUnique({ where: { fecha: salida.fecha } })) return { ok: false, error: "El día está cerrado." };
+  await db.salida.update({ where: { id: salidaId }, data: { horaInicio: inicio || null, horaFin: fin || null } });
+  refrescar();
+  return { ok: true };
+}
+
 /** Pone un pedido del día en un vehículo (al final de su recorrido) o lo deja "sin vehículo" (salidaId = null). */
 export async function asignarAVehiculo(pedidoId: string, salidaId: string | null): Promise<Resultado> {
   const usuario = await exigirOficina();
