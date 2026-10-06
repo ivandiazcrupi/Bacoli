@@ -8,7 +8,7 @@ import { DndContext, MouseSensor, TouchSensor, closestCenter, pointerWithin, use
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { formatoPesos } from "@/lib/numeros";
-import { UNIDADES_POR_PAQUETE } from "@/lib/ruta";
+import { UNIDADES_POR_PAQUETE, num } from "@/lib/ruta";
 import { enlaceWhatsApp } from "@/lib/telefonos";
 import { BotonRemito } from "../../BotonRemito";
 import { normalizarFactura, soloNumeroFactura } from "@/lib/remito";
@@ -41,7 +41,7 @@ export type Fila = {
   remito: string | null;
   salidaId: string | null;
   bultos: number;
-  sabores: { tomate: number; cebolla: number };
+  sabores: { tomate: number; cebolla: number; pizzas: number };
   webOrden: string | null; // pedido de la tienda online: sin cuenta corriente ni remito
   pagoMp: boolean; // pedido de la tienda ya pagado (Mercado Pago o transferencia confirmada)
   pagoTexto: string | null;
@@ -543,7 +543,7 @@ function ResumenVuelta({ grupo, capacidad, salida, cerrado }: { grupo: Fila[]; c
       {/* Dos barras a la vez: una en paquetes y otra en unidades (cada paquete = 2 unidades). La capacidad se carga en paquetes. */}
       <div className="flex flex-wrap items-center gap-x-8 gap-y-2">
         <BarraCarga cantidad={paquetes} capacidad={capacidad} nombre="paquetes" />
-        <BarraCarga cantidad={grupo.reduce((t, f) => t + f.sabores.tomate + f.sabores.cebolla, 0)} capacidad={capacidad === null ? null : capacidad * UNIDADES_POR_PAQUETE} nombre="unidades" />
+        <BarraCarga cantidad={grupo.reduce((t, f) => t + f.sabores.tomate + f.sabores.cebolla + f.sabores.pizzas, 0)} capacidad={capacidad === null ? null : capacidad * UNIDADES_POR_PAQUETE} nombre="unidades" />
         <HorarioVuelta salida={salida} cerrado={cerrado} />
       </div>
       <p className="text-xs text-stone-500">
@@ -556,11 +556,11 @@ function ResumenVuelta({ grupo, capacidad, salida, cerrado }: { grupo: Fila[]; c
 function BarraCarga({ cantidad, capacidad, nombre }: { cantidad: number; capacidad: number | null; nombre: string }) {
   const pasado = capacidad !== null && cantidad > capacidad;
   const pct = capacidad ? Math.min(100, Math.round((cantidad / capacidad) * 100)) : 0; // el máximo que se muestra es 100%
-  const estado = capacidad === null ? "" : pasado ? `+${cantidad - capacidad}` : cantidad === capacidad ? "completa" : `quedan ${capacidad - cantidad}`;
+  const estado = capacidad === null ? "" : pasado ? `+${num(cantidad - capacidad)}` : cantidad === capacidad ? "completa" : `quedan ${num(capacidad - cantidad)}`;
   return (
     <div className="w-52" title={pasado ? "Se pasó de la capacidad (solo avisa, no frena)" : undefined}>
       <p className="flex items-baseline justify-between gap-2 text-xs text-stone-600">
-        <span className="tabular-nums"><span className="font-semibold text-stone-900">{cantidad}</span>{capacidad !== null ? ` de ${capacidad}` : ""} {nombre}</span>
+        <span className="tabular-nums"><span className="font-semibold text-stone-900">{num(cantidad)}</span>{capacidad !== null ? ` de ${num(capacidad)}` : ""} {nombre}</span>
         {capacidad !== null && <span className={`tabular-nums ${pasado ? "font-semibold text-rojo-700" : ""}`}>{pct}% · {estado}</span>}
       </p>
       {capacidad !== null && (
@@ -808,14 +808,15 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
         <div className="flex flex-wrap items-center justify-center gap-3">
         <div className="inline-flex items-baseline gap-2 rounded-md border border-stone-400 bg-white px-5 py-2">
           <span className="text-xs font-medium uppercase tracking-wide text-stone-600">Paquetes del día</span>
-          <span className="text-base font-bold tabular-nums">{filas.reduce((t, f) => t + f.bultos, 0)}</span>
+          <span className="text-base font-bold tabular-nums">{num(filas.reduce((t, f) => t + f.bultos, 0))}</span>
         </div>
         <div className="inline-flex items-baseline gap-2 rounded-md border border-stone-400 bg-white px-5 py-2">
           <span className="text-xs font-medium uppercase tracking-wide text-stone-600">Unidades del día</span>
-          <span className="text-base font-bold tabular-nums">{filas.reduce((t, f) => t + f.sabores.tomate + f.sabores.cebolla, 0)}</span>
+          <span className="text-base font-bold tabular-nums">{filas.reduce((t, f) => t + f.sabores.tomate + f.sabores.cebolla + f.sabores.pizzas, 0)}</span>
         </div>
-        {[["Tomate", "tomate"], ["Cebolla", "cebolla"]].map(([rotulo, clave]) => {
-          const n = filas.reduce((t, f) => t + f.sabores[clave as "tomate" | "cebolla"], 0);
+        {[["Tomate", "tomate"], ["Cebolla", "cebolla"], ["Pizzas", "pizzas"]].map(([rotulo, clave]) => {
+          const n = filas.reduce((t, f) => t + f.sabores[clave as "tomate" | "cebolla" | "pizzas"], 0);
+          if (clave === "pizzas" && n === 0) return null; // solo aparece si hay pizzas por unidad (muzzarella, jamón, fugazzeta)
           return (
             <div key={clave} className="inline-flex items-baseline gap-2 rounded-md border border-stone-400 bg-white px-5 py-2">
               <span className="text-xs font-medium uppercase tracking-wide text-stone-600">{rotulo}</span>

@@ -8,31 +8,40 @@ export const UNIDADES_POR_PAQUETE = 2;
 
 type RenglonRuta = { nombre?: string; unidad?: string; cantidad: number; sinCargo?: number; paquetesPor?: number };
 
-/** Prepizza de tomate (incluye el combo napolitano) o de cebolla: lo único que se cuenta como pizza para producción. */
-const saborDe = (nombre = ""): "tomate" | "cebolla" | null => {
-  const n = nombre.toUpperCase();
+/** Un número de paquetes con coma si es medio paquete (12,5). */
+export const num = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1).replace(".", ","));
+
+type Clase = "tomate" | "cebolla" | "pizzas";
+const sinTildes = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+/**
+ * Qué cuenta como pizza para producción: PREPIZZA TOMATE (con el combo napolitano) y PREPIZZA CEBOLLA, y las pizzas por unidad
+ * (PIZZA MUZZARELLA, PIZZA JAMÓN, PIZZA FUGAZZETA). Todo lo demás (pizzeta, focaccia, envío, productos de la tienda…) no cuenta.
+ */
+const claseDe = (nombre = ""): Clase | null => {
+  const n = sinTildes(nombre.toUpperCase());
   if (n.includes("PREPIZZA TOMATE") || n.includes("COMBO NAPOLITANO")) return "tomate";
   if (n.includes("PREPIZZA CEBOLLA")) return "cebolla";
+  if (/PIZZA (MUZZARELLA|JAMON|FUGAZZETA)/.test(n)) return "pizzas";
   return null;
 };
 
-/**
- * Paquetes = paquetes de pizza: solo cuentan PREPIZZA TOMATE y PREPIZZA CEBOLLA (el combo napolitano de la tienda cuenta 2 paquetes); cualquier otro producto no suma.
- * Una prepizza vendida por unidad (cliente que pide por unidad) cuenta medio paquete.
- */
-export const bultosDe = (items: RenglonRuta[]) =>
-  Math.ceil(items.reduce((s, i) => s + (saborDe(i.nombre) ? (i.cantidad + (i.sinCargo ?? 0)) * (i.paquetesPor ?? 1) * (i.unidad === "unidad" ? 1 / UNIDADES_POR_PAQUETE : 1) : 0), 0));
+/** Pizzas (unidades) de un renglón: un paquete son 2 pizzas; por unidad, 1 pizza (el combo napolitano son 2 paquetes = 4 pizzas). */
+const pizzasDe = (i: RenglonRuta) => (i.cantidad + (i.sinCargo ?? 0)) * (i.paquetesPor ?? 1) * (i.unidad === "unidad" ? 1 : UNIDADES_POR_PAQUETE);
 
 /**
- * Pizzas (unidades) de cada sabor, para producción. Solo cuentan PREPIZZA TOMATE (con el combo napolitano: 2 paquetes = 4 pizzas) y PREPIZZA CEBOLLA;
- * un paquete son 2 pizzas, salvo que se venda por unidad (1 pizza). Cualquier otro producto (de la tienda o escrito a mano) no cuenta como pizza.
+ * Pizzas (unidades) por clase, para producción. Cualquier otro producto no suma.
  */
 export function unidadesPorSabor(items: RenglonRuta[]) {
-  const r = { tomate: 0, cebolla: 0 };
+  const r = { tomate: 0, cebolla: 0, pizzas: 0 };
   for (const i of items) {
-    const sabor = saborDe(i.nombre);
-    if (!sabor) continue;
-    r[sabor] += (i.cantidad + (i.sinCargo ?? 0)) * (i.paquetesPor ?? 1) * (i.unidad === "unidad" ? 1 : UNIDADES_POR_PAQUETE);
+    const c = claseDe(i.nombre);
+    if (c) r[c] += pizzasDe(i);
   }
   return r;
 }
+
+export const totalUnidades = (x: { tomate: number; cebolla: number; pizzas: number }) => x.tomate + x.cebolla + x.pizzas;
+
+/** Paquetes de pizza = unidades ÷ 2 (una pizza por unidad es medio paquete): así Paquetes × 2 = Unidades siempre. */
+export const bultosDe = (items: RenglonRuta[]) => totalUnidades(unidadesPorSabor(items)) / UNIDADES_POR_PAQUETE;
