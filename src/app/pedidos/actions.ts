@@ -323,7 +323,6 @@ export async function actualizarPedidoWeb(pedidoId: string, _: EstadoPedidoForm,
   const total = leerMonto(String(formData.get("total") ?? ""));
   if (total === null || total < 0) return { error: "El total tiene que ser un monto válido." };
   const cantidades = pedido.items.map((i) => ({ id: i.id, cantidad: Number(String(formData.get(`q_${i.id}`) ?? i.cantidad).replace(/\D/g, "") || 0) }));
-  if (cantidades.every((c) => c.cantidad === 0)) return { error: "El pedido tiene que llevar al menos un producto." };
 
   // Agregado por fuera ("sumame 2 paquetes más"): renglones nuevos marcados "(POR FUERA)" y, si se cobra algo, el total sube y el pago vuelve a pendiente.
   const montoExtra = Math.max(0, leerMonto(String(formData.get("extra_monto") ?? "")) ?? 0);
@@ -333,8 +332,15 @@ export async function actualizarPedidoWeb(pedidoId: string, _: EstadoPedidoForm,
     const q = Number(String(formData.get(`x_${p.id}`) ?? "0").replace(/\D/g, "") || 0);
     if (q > 0) nuevos.push({ producto: { connect: { id: p.id } }, nombre: `${p.nombre} (POR FUERA)`, sku: p.sku, unidad: p.unidad, cantidad: q, precioUnitario: 0 });
   }
-  const otro = mayus(String(formData.get("x_otro_nombre") ?? "")).slice(0, 70);
-  if (otro) nuevos.push({ nombre: `${otro} (POR FUERA)`, sku: null, unidad: "unidad", cantidad: Number(String(formData.get("x_otro_cantidad") ?? "").replace(/\D/g, "") || 1), precioUnitario: 0 });
+  // Otros productos escritos a mano (los que hagan falta): quedan marcados "(POR FUERA)".
+  const cuantosOtros = Math.min(30, Number(formData.get("x_otros_total") ?? 0) || 0);
+  for (let i = 0; i < cuantosOtros; i++) {
+    const otro = mayus(String(formData.get(`x_otro_nombre_${i}`) ?? "")).slice(0, 70);
+    if (!otro) continue;
+    nuevos.push({ nombre: `${otro} (POR FUERA)`, sku: null, unidad: "unidad", cantidad: Number(String(formData.get(`x_otro_cantidad_${i}`) ?? "").replace(/\D/g, "") || 1), precioUnitario: 0 });
+  }
+  // El pedido puede quedar sin prepizzas (solo otros productos), pero no vacío.
+  if (cantidades.every((c) => c.cantidad === 0) && nuevos.length === 0) return { error: "El pedido tiene que llevar al menos un producto." };
   if (montoExtra > 0 && nuevos.length === 0) return { error: "Elegí qué producto se agregó por fuera (o dejá el monto vacío)." };
   // Un pedido "sin cargo" (total 0) que pasa a tener importe necesita su pago; uno pendiente que baja a 0 pasa a sin cargo.
   const volverAPendiente = (montoExtra > 0 && (pedido.webPago === "PAGO_MP" || pedido.webPago === "PAGO_TRANSFERENCIA")) || (pedido.webPago === "SIN_COSTO" && total + montoExtra > 0);

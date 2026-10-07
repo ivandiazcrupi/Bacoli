@@ -21,6 +21,13 @@ export function EditorWeb({ pedidoId, items, datos, extras, pagado }: { pedidoId
   const [agregados, setAgregados] = useState<Record<string, string>>({});
   const [montoExtra, setMontoExtra] = useState("");
   const agregado = (k: string) => Number(agregados[k]?.replace(/\D/g, "") || 0);
+  // Otros productos escritos a mano, los que hagan falta (siempre queda un renglón vacío al final).
+  const [otros, setOtros] = useState<{ nombre: string; cantidad: string }[]>([{ nombre: "", cantidad: "" }]);
+  const cambiarOtro = (i: number, cambio: Partial<{ nombre: string; cantidad: string }>) =>
+    setOtros((l) => {
+      const n = l.map((o, k) => (k === i ? { ...o, ...cambio } : o));
+      return n[n.length - 1].nombre.trim() ? [...n, { nombre: "", cantidad: "" }] : n;
+    });
   const mover = (k: string, d: number) => setAgregados((a) => ({ ...a, [k]: String(Math.max(0, agregado(k) + d) || "") }));
   const confirmar = (e: React.FormEvent) => {
     const monto = Number(montoExtra.replace(/\./g, "").replace(",", ".")) || 0;
@@ -78,15 +85,21 @@ export function EditorWeb({ pedidoId, items, datos, extras, pagado }: { pedidoId
             </div>
           </div>
         ))}
-        <div className="grid grid-cols-[minmax(0,2fr)_6rem_11rem] items-center gap-x-4 border-t border-stone-300 px-5 py-2 text-center max-lg:grid-cols-1 max-lg:gap-y-2">
-          <input name="x_otro_nombre" aria-label="Otro producto por fuera (escribilo)" placeholder="Otro producto (escribilo)" maxLength={70} className="h-10 w-full rounded-md border border-dashed border-stone-400 bg-white px-3 text-center font-semibold focus:border-verde-700 focus:outline-none" />
-          <p className="text-sm text-stone-600">a mano</p>
-          <div className="flex items-center justify-center gap-1">
-            <button type="button" className={boton} onClick={() => mover("otro", -1)} aria-label="Menos otro producto por fuera">−</button>
-            <input name="x_otro_cantidad" aria-label="Cantidad del otro producto por fuera" inputMode="numeric" value={agregados.otro ?? ""} onChange={(e) => setAgregados((a) => ({ ...a, otro: e.target.value.replace(/\D/g, "") }))} placeholder="0" className="h-11 w-16 rounded-md border border-stone-400 bg-white text-center text-lg tabular-nums lg:h-9 lg:text-base" />
-            <button type="button" className={boton} onClick={() => mover("otro", 1)} aria-label="Más otro producto por fuera">+</button>
-          </div>
-        </div>
+        <input type="hidden" name="x_otros_total" value={otros.length} />
+        {otros.map((o, i) => {
+          const q = Number(o.cantidad.replace(/\D/g, "") || 0);
+          return (
+            <div key={i} className="grid grid-cols-[minmax(0,2fr)_6rem_11rem] items-center gap-x-4 border-t border-stone-300 px-5 py-2 text-center max-lg:grid-cols-1 max-lg:gap-y-2">
+              <input name={`x_otro_nombre_${i}`} aria-label="Otro producto por fuera (escribilo)" placeholder="Otro producto (escribilo)" maxLength={70} value={o.nombre} onChange={(e) => cambiarOtro(i, { nombre: e.target.value, ...(!o.cantidad && e.target.value.trim() ? { cantidad: "1" } : {}) })} className="h-10 w-full rounded-md border border-dashed border-stone-400 bg-white px-3 text-center font-semibold focus:border-verde-700 focus:outline-none" />
+              <p className="text-sm text-stone-600">a mano</p>
+              <div className="flex items-center justify-center gap-1">
+                <button type="button" className={boton} onClick={() => cambiarOtro(i, { cantidad: String(Math.max(0, q - 1) || "") })} aria-label="Menos otro producto por fuera">−</button>
+                <input name={`x_otro_cantidad_${i}`} aria-label="Cantidad del otro producto por fuera" inputMode="numeric" value={o.cantidad} onChange={(e) => cambiarOtro(i, { cantidad: e.target.value.replace(/\D/g, "") })} placeholder="0" className="h-11 w-16 rounded-md border border-stone-400 bg-white text-center text-lg tabular-nums lg:h-9 lg:text-base" />
+                <button type="button" className={boton} onClick={() => cambiarOtro(i, { cantidad: String(q + 1) })} aria-label="Más otro producto por fuera">+</button>
+              </div>
+            </div>
+          );
+        })}
         <label className="flex flex-wrap items-center justify-center gap-3 border-t border-stone-300 px-5 py-2.5 text-sm">
           <span className="font-semibold text-stone-700">Lo que paga por lo agregado ($)</span>
           <input name="extra_monto" value={montoExtra} onChange={(e) => setMontoExtra(e.target.value)} inputMode="decimal" placeholder="0" aria-label="Monto que paga por lo agregado" className="h-9 w-36 rounded-md border border-stone-400 bg-white text-center text-base tabular-nums" />
