@@ -6,6 +6,7 @@ import { exigirOficina } from "@/lib/session";
 import { actualizarCliente, cambiarActivoCliente, guardarPreciosEspeciales } from "../actions";
 import { formatoPesos } from "@/lib/numeros";
 import { EliminarCliente } from "../EliminarCliente";
+import { UnirClientes } from "../UnirClientes";
 import { ClienteForm, type DatosCliente } from "../ClienteForm";
 import { PreciosEspeciales, type FilaPrecio } from "../PreciosEspeciales";
 import { EncabezadoSucursales, FilaSucursal } from "../SucursalForm";
@@ -25,6 +26,8 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
     },
   });
   if (!cliente) notFound();
+  const [nPedidos, nMovimientos, nNotas] = await Promise.all([db.pedido.count({ where: { clienteId: id } }), db.movimientoCuenta.count({ where: { clienteId: id } }), db.notaCredito.count({ where: { clienteId: id } })]);
+  const resumenUnion = `${cliente.puntos.length} sucursal(es), ${nPedidos} pedido(s), ${nMovimientos} movimiento(s) de cuenta, ${nNotas} nota(s) de crédito`;
 
   const [listas, zonas, barrios, productos] = await Promise.all([
     db.listaPrecios.findMany({ where: { OR: [{ activa: true }, { id: cliente.listaPreciosId ?? "" }] }, orderBy: [{ orden: "asc" }, { nombre: "asc" }] }),
@@ -92,6 +95,7 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
               <input type="hidden" name="id" value={cliente.id} />
               <button className="rounded-md border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 hover:bg-crema-100">{cliente.activo ? "Desactivar" : "Activar"}</button>
             </form>
+            {usuario.rol === "DUENO" && <UnirClientes id={cliente.id} nombre={cliente.nombre} resumen={resumenUnion} />}
             {usuario.rol === "DUENO" && <EliminarCliente id={cliente.id} nombre={cliente.nombre} />}
             <BotonVolver fallback="/clientes" />
           </div>

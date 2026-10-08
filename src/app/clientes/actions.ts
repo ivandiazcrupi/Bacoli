@@ -155,3 +155,64 @@ export async function guardarPreciosEspeciales(clienteId: string, _: EstadoForm,
   revalidatePath("/clientes");
   return { ok: "Precios especiales guardados." };
 }
+
+/** Busca clientes por nombre, razón social o CUIT (para elegir con cuál unir un duplicado). */
+export async function buscarClientes(q: string, excluirId: string): Promise<{ id: string; nombre: string; razonSocial: string | null; cuit: string | null; sucursales: number }[]> {
+  await exigirOficina();
+  const palabras = q.trim().split(/\s+/).filter(Boolean).slice(0, 5);
+  if (palabras.length === 0) return [];
+  const clientes = await db.cliente.findMany({
+    where: { id: { not: excluirId }, AND: palabras.map((w) => { const c = { contains: w, mode: "insensitive" as const }; return { OR: [{ nombre: c }, { razonSocial: c }, { cuit: c }] }; }) },
+    include: { _count: { select: { puntos: true } } },
+    orderBy: { nombre: "asc" },
+    take: 15,
+  });
+  return clientes.map((c) => ({ id: c.id, nombre: c.nombre, razonSocial: c.razonSocial, cuit: c.cuit, sucursales: c._count.puntos }));
+}
+
+/**
+ * Une un cliente duplicado con el que queda: todas sus sucursales, pedidos, cuenta corriente, notas de crédito y precios propios pasan al cliente
+ * de destino y el duplicado se elimina. Si el duplicado tenía otro CUIT, no se pierde: el destino lo toma (si no tenía) o las sucursales que pasan
+ * lo llevan como CUIT propio, así las facturas de ARCA de ese CUIT siguen cayendo en el cliente. Solo dueños, con la copia de los últimos 30 min.
+ */
+export async function unirClientes(origenId: string, destinoId: string): Promise<{ ok: boolean; error?: string; mensaje?: string }> {
+  const usuario = await exigirOficina();
+  if (usuario.rol !== "DUENO") return { ok: false, error: "Solo un dueño puede unir clientes." };
+  if (origenId === destinoId) return { ok: false, error: "Elegí un cliente distinto." };
+  const empresa = await db.empresa.findUnique({ where: { id: "principal" }, select: { ultimaCopia: true } });
+  if (!empresa?.ultimaCopia || Date.now() - empresa.ultimaCopia.getTime() > 30 * 60 * 1000) {
+    return { ok: false, error: "Primero bajá la copia de seguridad (Empresa → “Descargar copia ahora”): tiene que ser de los últimos 30 minutos." };
+  }
+  const [origen, destino] = await Promise.all([
+    db.cliente.findUnique({ where: { id: origenId }, include: { puntos: true, preciosEspeciales: true } }),
+    db.cliente.findUnique({ where: { id: destinoId }, include: { preciosEspeciales: true } }),
+  ]);
+  if (!origen || !destino) return { ok: false, error: "No encontré uno de los clientes." };
+  const cuitOrigen = (origen.cuit ?? "").replace(/\D/g, "");
+  const cuitDestino = (destino.cuit ?? "").replace(/\D/g, "");
+
+  const [pedidos, movimientos, notas] = await db.$transaction(async (tx) => {
+    // CUIT: si es distinto no se pierde (ver arriba).
+    const datosDestino: { cuit?: string; razonSocial?: string; observacion?: string } = {};
+    if (cuitOrigen && cuitOrigen !== cuitDestino) {
+      if (!cuitDestino) { datosDestino.cuit = cuitOrigen; if (!destino.razonSocial && origen.razonSocial) datosDestino.razonSocial = origen.razonSocial; }
+      else await tx.puntoEntrega.updateMany({ where: { clienteId: origenId, cuit: null }, data: { cuit: cuitOrigen } });
+    }
+    if (origen.observacion) datosDestino.observacion = [destino.observacion, `(de ${origen.nombre}) ${origen.observacion}`].filter(Boolean).join("\n").slice(0, 500);
+    if (Object.keys(datosDestino).length) await tx.cliente.update({ where: { id: destinoId }, data: datosDestino });
+
+    await tx.puntoEntrega.updateMany({ where: { clienteId: origenId }, data: { clienteId: destinoId } });
+    const p = await tx.pedido.updateMany({ where: { clienteId: origenId }, data: { clienteId: destinoId } });
+    const m = await tx.movimientoCuenta.updateMany({ where: { clienteId: origenId }, data: { clienteId: destinoId } });
+    const n = await tx.notaCredito.updateMany({ where: { clienteId: origenId }, data: { clienteId: destinoId } });
+    // Precios propios: los del destino mandan; solo pasan los de productos que el destino no tenía.
+    const yaTiene = new Set(destino.preciosEspeciales.map((x) => x.productoId));
+    for (const pe of origen.preciosEspeciales) if (!yaTiene.has(pe.productoId)) await tx.precioEspecial.update({ where: { clienteId_productoId: { clienteId: origenId, productoId: pe.productoId } }, data: { clienteId: destinoId } });
+    await tx.cliente.delete({ where: { id: origenId } }); // ya no le queda nada (sus sucursales pasaron al destino)
+    return [p.count, m.count, n.count] as const;
+  });
+  revalidatePath("/clientes");
+  revalidatePath("/pedidos", "layout");
+  revalidatePath("/cuentas", "layout");
+  return { ok: true, mensaje: `Listo: ${origen.nombre} se unió con ${destino.nombre}. Pasaron ${origen.puntos.length} sucursal(es), ${pedidos} pedido(s), ${movimientos} movimiento(s) de cuenta y ${notas} nota(s) de crédito.` };
+}
