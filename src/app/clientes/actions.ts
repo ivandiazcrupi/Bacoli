@@ -72,7 +72,7 @@ export async function eliminarCliente(_: EstadoForm, formData: FormData): Promis
   const cuit = (c.cuit ?? "").replace(/\D/g, "");
   const facturas = cuit ? await db.comprobanteArca.count({ where: { cuitReceptor: cuit } }) : 0;
   if (historial > 0 || facturas > 0) {
-    return { error: `Este cliente tiene historial (${c._count.pedidos} pedidos${facturas ? `, ${facturas} facturas de ARCA` : ""}), por eso no se puede eliminar sin perder información. Usá “Desactivar”: deja de aparecer para pedidos nuevos y no se pierde nada. Podés anotar el motivo en la Observación.` };
+    return { error: `Este cliente tiene historial (${[`${c._count.pedidos} pedidos`, c._count.movimientos ? `${c._count.movimientos} movimientos de cuenta corriente` : "", c._count.notasCredito ? `${c._count.notasCredito} notas de crédito` : "", facturas ? `${facturas} facturas de ARCA` : ""].filter(Boolean).join(", ")}), por eso no se puede eliminar sin perder información. Usá “Desactivar”: deja de aparecer para pedidos nuevos y no se pierde nada. Podés anotar el motivo en la Observación.` };
   }
   await db.cliente.delete({ where: { id } }); // sus sucursales y precios propios se borran con él
   revalidatePath("/clientes");
