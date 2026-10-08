@@ -68,11 +68,22 @@ export async function eliminarCliente(_: EstadoForm, formData: FormData): Promis
   const id = String(formData.get("id"));
   const c = await db.cliente.findUnique({ where: { id }, include: { _count: { select: { pedidos: true, movimientos: true, notasCredito: true } } } });
   if (!c) return { error: "El cliente ya no existe." };
-  const historial = c._count.pedidos + c._count.movimientos + c._count.notasCredito;
   const cuit = (c.cuit ?? "").replace(/\D/g, "");
   const facturas = cuit ? await db.comprobanteArca.count({ where: { cuitReceptor: cuit } }) : 0;
-  if (historial > 0 || facturas > 0) {
-    return { error: `Este cliente tiene historial (${[`${c._count.pedidos} pedidos`, c._count.movimientos ? `${c._count.movimientos} movimientos de cuenta corriente` : "", c._count.notasCredito ? `${c._count.notasCredito} notas de crédito` : "", facturas ? `${facturas} facturas de ARCA` : ""].filter(Boolean).join(", ")}), por eso no se puede eliminar sin perder información. Usá “Desactivar”: deja de aparecer para pedidos nuevos y no se pierde nada. Podés anotar el motivo en la Observación.` };
+  // Sin pedidos, notas de crédito ni facturas, y con la cuenta corriente en 0 (ej. un duplicado al que se le cargó un pedido y se lo pasaron a otro cliente),
+  // se puede eliminar junto con esos renglones que suman 0. Pide la copia de seguridad reciente.
+  const saldo = await db.movimientoCuenta.aggregate({ where: { clienteId: id }, _sum: { monto: true } });
+  const enCero = Math.abs(Number(saldo._sum.monto ?? 0)) < 0.005;
+  const soloMovimientosEnCero = c._count.pedidos === 0 && c._count.notasCredito === 0 && facturas === 0 && c._count.movimientos > 0 && enCero;
+  if (c._count.pedidos + c._count.notasCredito > 0 || facturas > 0 || (c._count.movimientos > 0 && !soloMovimientosEnCero)) {
+    return { error: `Este cliente tiene historial (${[`${c._count.pedidos} pedidos`, c._count.movimientos ? `${c._count.movimientos} movimientos de cuenta corriente${enCero ? "" : " con saldo"}` : "", c._count.notasCredito ? `${c._count.notasCredito} notas de crédito` : "", facturas ? `${facturas} facturas de ARCA` : ""].filter(Boolean).join(", ")}), por eso no se puede eliminar sin perder información. Usá “Desactivar”: deja de aparecer para pedidos nuevos y no se pierde nada. Podés anotar el motivo en la Observación.` };
+  }
+  if (soloMovimientosEnCero) {
+    const empresa = await db.empresa.findUnique({ where: { id: "principal" }, select: { ultimaCopia: true } });
+    if (!empresa?.ultimaCopia || Date.now() - empresa.ultimaCopia.getTime() > 30 * 60 * 1000) {
+      return { error: "Este cliente solo tiene renglones de cuenta corriente que suman 0 (un pedido que se pasó a otro cliente). Para eliminarlo hay que borrarlos: primero bajá la copia de seguridad (Empresa → “Descargar copia ahora”, de los últimos 30 minutos) y volvé a probar." };
+    }
+    await db.movimientoCuenta.deleteMany({ where: { clienteId: id } });
   }
   await db.cliente.delete({ where: { id } }); // sus sucursales y precios propios se borran con él
   revalidatePath("/clientes");

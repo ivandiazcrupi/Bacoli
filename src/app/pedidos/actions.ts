@@ -193,7 +193,7 @@ export async function actualizarPedido(pedidoId: string, _: EstadoPedidoForm, fo
 
 /**
  * Pasa un pedido pendiente a OTRO cliente o sucursal (se cargó al cliente equivocado). Mismo cliente = solo cambia la sucursal.
- * Otro cliente = la cuenta corriente del primero se compensa con un movimiento (no se borra nada) y el pedido pasa a sumar en el segundo.
+ * Otro cliente = los renglones de la cuenta corriente de ese pedido se mudan con él (el primer cliente queda limpio, se puede eliminar).
  * Solo si todavía no se entregó ni cobró, no tiene notas de crédito y su hoja de ruta no está lista ni cerrada.
  */
 export async function cambiarClientePedido(pedidoId: string, puntoId: string): Promise<{ ok: boolean; error?: string }> {
@@ -210,13 +210,14 @@ export async function cambiarClientePedido(pedidoId: string, puntoId: string): P
   if (punto.id === pedido.puntoId) return { ok: false, error: "El pedido ya está cargado a esa sucursal." };
 
   const viejoClienteId = pedido.clienteId;
+  const viejo = await db.cliente.findUnique({ where: { id: viejoClienteId }, select: { nombre: true } });
   await db.$transaction(async (tx) => {
     if (punto.clienteId !== viejoClienteId) {
-      // Lo que el pedido había sumado en la cuenta del cliente equivocado se compensa; después suma entero en la del correcto.
-      const previo = await tx.movimientoCuenta.aggregate({ where: { pedidoId, tipo: { in: ["CARGO_PEDIDO", "AJUSTE_PEDIDO", "ANULACION_PEDIDO"] } }, _sum: { monto: true } });
-      const sumado = Math.round(Number(previo._sum.monto ?? 0) * 100) / 100;
-      if (Math.abs(sumado) >= 0.005) {
-        await tx.movimientoCuenta.create({ data: { clienteId: viejoClienteId, pedidoId, tipo: "ANULACION_PEDIDO", monto: -sumado, nota: `Pedido pasado a otro cliente (${punto.cliente.nombre})`, usuarioId: usuario.id } });
+      // Los renglones de la cuenta corriente de este pedido se mudan con él: la cuenta del cliente equivocado queda limpia (se puede eliminar)
+      // y la del correcto suma lo mismo. El primer renglón queda anotado con de dónde vino.
+      const movs = await tx.movimientoCuenta.findMany({ where: { pedidoId } });
+      for (const m of movs) {
+        await tx.movimientoCuenta.update({ where: { id: m.id }, data: { clienteId: punto.clienteId, ...(m.tipo === "CARGO_PEDIDO" && m.clienteId === viejoClienteId ? { nota: `${m.nota ?? "Pedido cargado"} (antes cargado a ${viejo?.nombre ?? "otro cliente"})` } : {}) } });
       }
     }
     await tx.pedido.update({ where: { id: pedidoId }, data: { clienteId: punto.clienteId, puntoId: punto.id } });
