@@ -3,7 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { Cabecera } from "@/components/Cabecera";
 import { cabeceraTabla } from "@/components/campos";
 import { db } from "@/lib/db";
-import { titulo } from "@/lib/mayusculas";
+import { mayus, titulo } from "@/lib/mayusculas";
 import { enlaceWhatsApp } from "@/lib/telefonos";
 import { FiltrosClientes } from "./FiltrosClientes";
 import { exigirOficina } from "@/lib/session";
@@ -139,7 +139,7 @@ function FilaCliente({ c }: { c: Cliente }) {
               <Link href={`/clientes/${c.id}`} className={`${dato} hover:text-verde-800 hover:underline`}>{c.nombre}</Link>
               {c.observacion && <IconoObservacion texto={c.observacion} />}
             </span>
-            <span className="text-sm leading-tight">{p ? titulo(p.direccion) : ""}{p?.comentario && <span className="mt-0.5 block text-xs font-medium text-rojo-700">{p.comentario}</span>}</span>
+            <span className="text-sm leading-tight">{p ? titulo(p.direccion) : ""}{p?.comentario && <span className="mt-0.5 block text-xs font-medium text-rojo-700">{mayus(p.comentario)}</span>}</span>
             <span className="text-sm"><Telefono tel={p?.telefono ?? null} /></span>
             <span>{p ? <Estado activa={c.activo && p.activo} /> : null}</span>
             {accesos}
@@ -153,7 +153,7 @@ function FilaCliente({ c }: { c: Cliente }) {
               {c.observacion && <IconoObservacion texto={c.observacion} />}
             </div>
             {p && <p className="text-sm">{titulo(p.direccion)}</p>}
-            {p?.comentario && <p className="text-xs font-medium text-rojo-700">{p.comentario}</p>}
+            {p?.comentario && <p className="text-xs font-medium text-rojo-700">{mayus(p.comentario)}</p>}
             {p && <p className="text-sm"><Telefono tel={p.telefono} /></p>}
             <div className="pt-1">{accesos}</div>
           </div>

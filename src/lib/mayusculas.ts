@@ -15,8 +15,7 @@ export function titulo(texto: string | null | undefined) {
     .replace(/(^|[\s\-\/.(])(\p{L})/gu, (_, antes: string, letra: string) => antes + letra.toLocaleUpperCase("es"));
 }
 
-/** Para las notas importantes: primera letra en mayúscula y el resto en minúscula, se cargue como se cargue ("ENTREGAR en el VECINO" → "Entregar en el vecino"). */
+/** Notas importantes y comentarios que se ven en rojo: SIEMPRE en mayúscula, se carguen como se carguen (pedido del dueño). Se aplica al guardar y al mostrar (así también las ya cargadas). */
 export function oracion(texto: string | null | undefined) {
-  const t = (texto ?? "").replace(/\s+/g, " ").trim().toLocaleLowerCase("es");
-  return t ? t.charAt(0).toLocaleUpperCase("es") + t.slice(1) : "";
+  return (texto ?? "").replace(/\s+/g, " ").trim().toLocaleUpperCase("es");
 }

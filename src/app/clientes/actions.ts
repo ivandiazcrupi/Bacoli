@@ -9,7 +9,7 @@ import { exigirOficina } from "@/lib/session";
 import { esquemaCliente, esquemaSucursal, valoresDe, type EstadoForm } from "./validacion";
 
 type DatosSucursal = ReturnType<typeof esquemaSucursal.parse>;
-const sucursalEnMayuscula = (d: DatosSucursal) => ({ ...d, alias: mayus(d.alias), direccion: titulo(d.direccion), barrio: mayus(d.barrio) });
+const sucursalEnMayuscula = (d: DatosSucursal) => ({ ...d, alias: mayus(d.alias), direccion: titulo(d.direccion), barrio: mayus(d.barrio), comentario: d.comentario ? mayus(d.comentario) : d.comentario });
 
 function datosCliente(d: ReturnType<typeof esquemaCliente.parse>) {
   return {

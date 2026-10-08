@@ -18,7 +18,7 @@ export const ordenarItems = <T extends { producto?: { orden: number } | null }>(
 export function datosEntrega(p: { cliente: { nombre: string } | null; punto: { alias: string | null; barrio: string; direccion: string; comentario: string | null; telefono: string | null } | null; webNombre: string | null; webBarrio: string | null; webDireccion: string | null; webTelefono: string | null }) {
   if (p.cliente && p.punto) {
     // Solo el nombre del cliente: el barrio ya tiene su propia columna (el alias de la sucursal no se muestra).
-    return { nombre: p.cliente.nombre, barrio: p.punto.barrio, direccion: titulo(p.punto.direccion), comentario: p.punto.comentario ?? "", telefono: p.punto.telefono ?? "" };
+    return { nombre: p.cliente.nombre, barrio: p.punto.barrio, direccion: titulo(p.punto.direccion), comentario: oracion(p.punto.comentario), telefono: p.punto.telefono ?? "" };
   }
   return { nombre: p.webNombre ?? "", barrio: p.webBarrio ?? "", direccion: titulo(p.webDireccion), comentario: "", telefono: p.webTelefono ?? "" };
 }
