@@ -9,6 +9,7 @@ import { productosParaCliente } from "../../datos";
 import { CONTENEDOR_PEDIDOS } from "../../Encabezado";
 import { datosEntrega, ordenarItems } from "../../filas";
 import { webPagado } from "@/lib/webpago";
+import { CambiarCliente } from "./CambiarCliente";
 import { EditorWeb } from "./EditorWeb";
 import { FormularioLineas, type LineaProducto } from "../../FormularioLineas";
 import { BotonVolver } from "@/components/BotonVolver";
@@ -69,7 +70,10 @@ export default async function EditarPedido({ params }: { params: Promise<{ id: s
             <h1 className="text-2xl font-bold tracking-tight">{pedido.cliente?.nombre}</h1>
             <p className="mt-1 text-sm text-stone-600">{[pedido.punto?.alias, titulo(pedido.punto?.direccion)].filter(Boolean).join(" · ")}</p>
           </div>
-          <BotonVolver fallback={`/pedidos/${id}`} />
+          <div className="flex items-center gap-2">
+            {pedido.origen === "MAYORISTA" && !pedido.cobro && !pedido.pagado && <CambiarCliente pedidoId={id} clienteActual={pedido.cliente?.nombre ?? ""} />}
+            <BotonVolver fallback={`/pedidos/${id}`} />
+          </div>
         </div>
         <FormularioLineas
           accion={actualizarPedido.bind(null, id)}

@@ -191,6 +191,42 @@ export async function actualizarPedido(pedidoId: string, _: EstadoPedidoForm, fo
   redirect(`/pedidos/${pedidoId}`);
 }
 
+/**
+ * Pasa un pedido pendiente a OTRO cliente o sucursal (se cargó al cliente equivocado). Mismo cliente = solo cambia la sucursal.
+ * Otro cliente = la cuenta corriente del primero se compensa con un movimiento (no se borra nada) y el pedido pasa a sumar en el segundo.
+ * Solo si todavía no se entregó ni cobró, no tiene notas de crédito y su hoja de ruta no está lista ni cerrada.
+ */
+export async function cambiarClientePedido(pedidoId: string, puntoId: string): Promise<{ ok: boolean; error?: string }> {
+  const usuario = await exigirOficina();
+  const pedido = await db.pedido.findUnique({ where: { id: pedidoId }, include: { ncAplicaciones: { select: { id: true } } } });
+  if (!pedido || !pedido.clienteId) return { ok: false, error: "No encontré el pedido." };
+  if (pedido.origen !== "MAYORISTA") return { ok: false, error: "Solo se puede cambiar el cliente de un pedido de mayorista." };
+  if (pedido.estado !== "PENDIENTE" && pedido.estado !== "NO_ENTREGADO") return { ok: false, error: "El pedido ya se entregó o se canceló: no se le puede cambiar el cliente." };
+  if (pedido.cobro || pedido.pagado) return { ok: false, error: "El pedido ya tiene un cobro anotado: deshacelo primero." };
+  if (pedido.ncAplicaciones.length > 0) return { ok: false, error: "El pedido tiene una nota de crédito aplicada: no se le puede cambiar el cliente." };
+  if (await errorSiHojaFija(pedido.fechaEntrega)) return { ok: false, error: "La hoja de ruta de ese día ya está lista o cerrada: volvela a armar para cambiar el cliente." };
+  const punto = await db.puntoEntrega.findUnique({ where: { id: puntoId }, include: { cliente: true } });
+  if (!punto || !punto.activo || !punto.cliente.activo) return { ok: false, error: "Ese cliente o sucursal no está disponible." };
+  if (punto.id === pedido.puntoId) return { ok: false, error: "El pedido ya está cargado a esa sucursal." };
+
+  const viejoClienteId = pedido.clienteId;
+  await db.$transaction(async (tx) => {
+    if (punto.clienteId !== viejoClienteId) {
+      // Lo que el pedido había sumado en la cuenta del cliente equivocado se compensa; después suma entero en la del correcto.
+      const previo = await tx.movimientoCuenta.aggregate({ where: { pedidoId, tipo: { in: ["CARGO_PEDIDO", "AJUSTE_PEDIDO", "ANULACION_PEDIDO"] } }, _sum: { monto: true } });
+      const sumado = Math.round(Number(previo._sum.monto ?? 0) * 100) / 100;
+      if (Math.abs(sumado) >= 0.005) {
+        await tx.movimientoCuenta.create({ data: { clienteId: viejoClienteId, pedidoId, tipo: "ANULACION_PEDIDO", monto: -sumado, nota: `Pedido pasado a otro cliente (${punto.cliente.nombre})`, usuarioId: usuario.id } });
+      }
+    }
+    await tx.pedido.update({ where: { id: pedidoId }, data: { clienteId: punto.clienteId, puntoId: punto.id } });
+    if (punto.clienteId !== viejoClienteId) await sincronizarCuentaPedido(tx, pedidoId, usuario.id);
+  });
+  revalidatePath("/pedidos", "layout");
+  revalidatePath("/cuentas", "layout");
+  return { ok: true };
+}
+
 /** Carga a mano un pedido minorista (de la tienda, pero que llegó por otro lado, ej. WhatsApp). Queda igual que los de la tienda: pagos por transferencia, sin cuenta corriente. */
 export async function crearPedidoWebManual(_: EstadoPedidoForm, formData: FormData): Promise<EstadoPedidoForm> {
   const usuario = await exigirOficina();
