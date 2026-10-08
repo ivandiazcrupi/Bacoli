@@ -104,8 +104,10 @@ export function armarItems(renglones: RenglonPlanilla[], cat: Catalogo): ItemNue
     const texto = sinTildes(r.producto);
     const prefijo = r.producto.match(/^\s*(\d+)\s*[xX]\s+(.+)$/);
     const cantidadTexto = prefijo ? Number(prefijo[1]) : 1;
-    if (texto.includes("COMBO NAPOLITANO")) {
-      otros.push({ productoId: null, nombre: "COMBO NAPOLITANO", sku: null, unidad: "combo", cantidad: cantidadTexto, paquetesPor: 2 });
+    if (texto.includes("COMBO") && /NAPOLITANO|MADRE|FOCACCIA/.test(texto)) {
+      // Semana de la madre: la tienda le cambió el nombre y trae 2 focaccias gratis. Se carga siempre con el nombre del sistema.
+      const conFocaccia = /FOCACCIA|MADRE/.test(texto);
+      otros.push({ productoId: null, nombre: conFocaccia ? "COMBO NAPOLITANO + 2 FOCACCIA" : "COMBO NAPOLITANO", sku: null, unidad: "combo", cantidad: cantidadTexto, paquetesPor: 2 });
     } else if (texto.includes("TOMATE + CEBOLLA")) {
       sumar(cat.tomate, r.tomate || cantidadTexto);
       sumar(cat.cebolla, r.cebolla || cantidadTexto);
