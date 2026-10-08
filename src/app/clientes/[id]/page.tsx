@@ -121,7 +121,7 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
                 clienteId={cliente.id}
                 zonas={zonas}
                 barrios={listaBarrios}
-                sucursal={{ id: p.id, alias: p.alias ?? "", direccion: p.direccion, barrio: p.barrio, zonaId: p.zonaId, telefono: p.telefono ?? "", comentario: p.comentario ?? "", activo: p.activo }}
+                sucursal={{ id: p.id, alias: p.alias ?? "", direccion: p.direccion, barrio: p.barrio, zonaId: p.zonaId, telefono: p.telefono ?? "", comentario: p.comentario ?? "", cuit: p.cuit ?? "", activo: p.activo }}
               />
             ))}
             <FilaSucursal clienteId={cliente.id} zonas={zonas} barrios={listaBarrios} />

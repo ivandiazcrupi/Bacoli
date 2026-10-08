@@ -47,9 +47,12 @@ export async function cargarFacturas() {
   const [arca, pedidos, clientes] = await Promise.all([
     db.comprobanteArca.findMany({ include: { notasAplicadas: true, creditosRecibidos: true }, orderBy: [{ fecha: "asc" }, { numero: "asc" }] }),
     db.pedido.findMany({ where: { conFactura: true, numeroFactura: { not: null }, clienteId: { not: null } }, include: { items: true, cliente: true, punto: true } }),
-    db.cliente.findMany({ where: { cuit: { not: null } }, select: { id: true, nombre: true, cuit: true, puntos: { where: { activo: true }, select: { id: true, barrio: true, direccion: true }, orderBy: { barrio: "asc" } } } }),
+    // También los clientes sin CUIT propio pero con sucursales que tienen el suyo (franquicias).
+    db.cliente.findMany({ where: { OR: [{ cuit: { not: null } }, { puntos: { some: { cuit: { not: null } } } }] }, select: { id: true, nombre: true, cuit: true, puntos: { where: { OR: [{ activo: true }, { cuit: { not: null } }] }, select: { id: true, barrio: true, direccion: true, cuit: true, activo: true }, orderBy: { barrio: "asc" } } } }),
   ]);
-  const porCuit = new Map(clientes.map((c) => [soloDigitos(c.cuit), c]));
+  const porCuit = new Map(clientes.filter((c) => soloDigitos(c.cuit)).map((c) => [soloDigitos(c.cuit), { ...c, puntos: c.puntos.filter((p) => p.activo) }]));
+  // CUIT propio de una sucursal (franquicia): las facturas de ese CUIT van a su cliente y, de entrada, a esa sucursal.
+  const porCuitDePunto = new Map(clientes.flatMap((c) => c.puntos.filter((p) => soloDigitos(p.cuit)).map((p) => [soloDigitos(p.cuit), { cliente: { ...c, puntos: c.puntos.filter((x) => x.activo) }, punto: p }] as const)));
   const puntosPorId = new Map(clientes.flatMap((c) => c.puntos.map((p) => [p.id, p] as const)));
   const idNumero = new Map(arca.map((a) => [a.id, a.numero]));
 
@@ -73,21 +76,22 @@ export async function cargarFacturas() {
   const filas: FilaFactura[] = arca.map((a) => {
     const total = Number(a.total);
     const cuit = a.cuitReceptor;
-    const cli = cuit ? porCuit.get(cuit) : undefined;
+    const dePunto = cuit ? porCuitDePunto.get(cuit) : undefined;
+    const cli = cuit ? dePunto?.cliente ?? porCuit.get(cuit) : undefined;
     const pedido = a.esNotaCredito ? undefined : pedidoDe.get(a.id);
     const aplicado = redondear2(a.esNotaCredito ? a.notasAplicadas.reduce((t, x) => t + Number(x.monto), 0) : a.creditosRecibidos.reduce((t, x) => t + Number(x.monto), 0));
     const pagada = !a.esNotaCredito && (a.pagado || pedido?.cobro === "COBRADO");
     const problemas: string[] = [];
     if (pedido) {
       const totalPedido = importeVigente(pedido.items, Number(pedido.ivaPct), pedido.estado === "ENTREGADO" ? "ENTREGADO" : "PENDIENTE", pedido.webTotal);
-      const cuitPedido = soloDigitos(pedido.cliente?.cuit);
+      const cuitPedido = soloDigitos(pedido.punto?.cuit) || soloDigitos(pedido.cliente?.cuit); // la sucursal con CUIT propio manda sobre el del cliente
       if (!cuitPedido) problemas.push("El cliente del pedido no tiene CUIT cargado");
-      else if (cuit && cuitPedido !== cuit) problemas.push(`CUIT distinto: el cliente tiene ${pedido.cliente?.cuit} y ARCA ${cuit}`);
+      else if (cuit && cuitPedido !== cuit) problemas.push(`CUIT distinto: el cliente tiene ${pedido.punto?.cuit || pedido.cliente?.cuit} y ARCA ${cuit}`);
       if (Math.abs(totalPedido - total) > 1) problemas.push(`Importe distinto: el pedido dice ${totalPedido.toLocaleString("es-AR", { minimumFractionDigits: 2 })} y ARCA ${total.toLocaleString("es-AR", { minimumFractionDigits: 2 })}`);
       if (pedido.estado === "CANCELADO") problemas.push("El pedido está cancelado pero la factura existe en ARCA");
     }
     // Lo que se eligió a mano manda ("-" = ninguna sucursal); si no se eligió nada, la del pedido.
-    const punto = a.puntoId === "-" ? undefined : a.puntoId ? puntosPorId.get(a.puntoId) ?? pedido?.punto : pedido?.punto;
+    const punto = a.puntoId === "-" ? undefined : a.puntoId ? puntosPorId.get(a.puntoId) ?? pedido?.punto : pedido?.punto ?? dePunto?.punto;
     return {
       id: a.id, esNc: a.esNotaCredito, tipo: a.tipo, puntoVenta: a.puntoVenta, numero: a.numero, fecha: a.fecha.toISOString().slice(0, 10), cuit, razonSocial: a.razonSocial,
       clienteId: cli?.id ?? null, cliente: cli?.nombre ?? null, total, puntoId: a.puntoId, sucursal: punto?.barrio ?? null, observacion: a.observacion,
@@ -106,5 +110,5 @@ export async function cargarFacturas() {
     conDiferencias: filas.filter((f) => f.problemas.length > 0),
     ncSinAplicar: filas.filter((f) => f.esNc && f.saldo > 0.01),
   };
-  return { filas, controles, clientes: new Map(clientes.map((c) => [c.id, c])), puntosDeCuit: (cuit: string | null): PuntoCliente[] => (cuit ? porCuit.get(cuit)?.puntos ?? [] : []) };
+  return { filas, controles, clientes: new Map(clientes.map((c) => [c.id, c])), puntosDeCuit: (cuit: string | null): PuntoCliente[] => (cuit ? (porCuitDePunto.get(cuit)?.cliente ?? porCuit.get(cuit))?.puntos ?? [] : []) };
 }

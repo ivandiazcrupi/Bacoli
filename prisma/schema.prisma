@@ -130,6 +130,7 @@ model PuntoEntrega {
   zonaId     String
   telefono   String?
   comentario String?
+  cuit       String? // CUIT propio de la sucursal (franquicias); vacío = usa el del cliente
   activo     Boolean @default(true)
 
   pedidos Pedido[]

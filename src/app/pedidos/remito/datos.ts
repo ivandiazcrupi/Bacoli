@@ -11,7 +11,7 @@ type PedidoRemito = {
   webBarrio: string | null;
   webTelefono: string | null;
   cliente: { nombre: string; razonSocial: string | null; cuit: string | null } | null;
-  punto: { alias: string | null; direccion: string; barrio: string; telefono: string | null } | null;
+  punto: { alias: string | null; direccion: string; barrio: string; telefono: string | null; cuit?: string | null } | null;
   items: ItemRemito[];
 };
 
@@ -20,7 +20,7 @@ export function datosRemito(p: PedidoRemito) {
   const web = !p.cliente || !p.punto;
   return {
     web,
-    cliente: p.cliente ?? { nombre: p.webNombre ?? "", razonSocial: null, cuit: null },
+    cliente: p.cliente ? { ...p.cliente, cuit: p.punto?.cuit || p.cliente.cuit } : { nombre: p.webNombre ?? "", razonSocial: null, cuit: null }, // una sucursal con CUIT propio (franquicia) lo lleva en su remito
     sucursal: p.punto ?? { alias: null, direccion: titulo(p.webDireccion), barrio: p.webBarrio ?? "", telefono: p.webTelefono },
     items: ordenarItems(p.items).flatMap((i) => {
       const dto = Number(i.descuentoPct ?? 0);

@@ -9,7 +9,7 @@ import { exigirOficina } from "@/lib/session";
 import { esquemaCliente, esquemaSucursal, valoresDe, type EstadoForm } from "./validacion";
 
 type DatosSucursal = ReturnType<typeof esquemaSucursal.parse>;
-const sucursalEnMayuscula = (d: DatosSucursal) => ({ ...d, alias: mayus(d.alias), direccion: titulo(d.direccion), barrio: mayus(d.barrio), comentario: d.comentario ? mayus(d.comentario) : d.comentario });
+const sucursalEnMayuscula = (d: DatosSucursal) => ({ ...d, alias: mayus(d.alias), direccion: titulo(d.direccion), barrio: mayus(d.barrio), comentario: d.comentario ? mayus(d.comentario) : d.comentario, cuit: d.cuit ? d.cuit.replace(/\D/g, "") : null });
 
 function datosCliente(d: ReturnType<typeof esquemaCliente.parse>) {
   return {
@@ -33,7 +33,7 @@ export async function crearCliente(_: EstadoForm, formData: FormData): Promise<E
   if (!sucursal.success) return { error: sucursal.error.issues[0].message, valores };
 
   const creado = await db.cliente.create({
-    data: { ...datosCliente(cliente.data), puntos: { create: sucursalEnMayuscula(sucursal.data) } },
+    data: { ...datosCliente(cliente.data), puntos: { create: { ...sucursalEnMayuscula(sucursal.data), cuit: null } } }, // el CUIT del formulario es el del cliente, no el de la sucursal
   });
   revalidatePath("/clientes");
   redirect(`/clientes/${creado.id}`);
