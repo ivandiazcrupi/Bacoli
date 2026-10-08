@@ -8,8 +8,11 @@ import { cambiarActivoSucursal, eliminarSucursal, guardarSucursal } from "./acti
 export type DatosSucursal = { id: string; alias: string; direccion: string; barrio: string; zonaId: string; telefono: string; comentario: string; cuit: string; activo: boolean };
 type Zona = { id: string; nombre: string };
 
+// CUIT propio de la sucursal (franquicias): apagado por ahora (pedido del dueño). Los datos y la lógica siguen; para volver a mostrarlo, ponerlo en true.
+const MOSTRAR_CUIT = false;
+
 // Columnas de la fila (PC): barrio, dirección, zona, teléfono, comentario y los botones.
-const COLUMNAS = "lg:grid-cols-[1.4fr_2.1fr_1.2fr_1.3fr_1.4fr_1.5fr_19.5rem]";
+const COLUMNAS = MOSTRAR_CUIT ? "lg:grid-cols-[1.4fr_2.1fr_1.2fr_1.3fr_1.4fr_1.5fr_19.5rem]" : "lg:grid-cols-[1.5fr_2.3fr_1.3fr_1.4fr_1.5fr_19.5rem]";
 const celda = "min-w-0";
 const campo = `${estiloCampo} mt-0 py-3 text-base`;
 const boton = "rounded-md px-4 py-3 text-sm font-semibold shadow-sm";
@@ -19,7 +22,7 @@ const etiquetaChica = "mb-0.5 block text-xs font-medium text-stone-500 lg:hidden
 export function EncabezadoSucursales() {
   return (
     <div className={`hidden gap-2 px-5 py-3.5 lg:grid ${cabeceraTabla} ${COLUMNAS}`}>
-      <span>Barrio *</span><span>Dirección *</span><span>Zona *</span><span>Teléfono</span><span title="Solo si la sucursal tiene un CUIT distinto al del cliente (franquicia)">CUIT propio</span><span>Comentario</span><span className="w-[19.5rem]" />
+      <span>Barrio *</span><span>Dirección *</span><span>Zona *</span><span>Teléfono</span>{MOSTRAR_CUIT && <span title="Solo si la sucursal tiene un CUIT distinto al del cliente (franquicia)">CUIT propio</span>}<span>Comentario</span><span className="w-[19.5rem]" />
     </div>
   );
 }
@@ -56,10 +59,14 @@ export function FilaSucursal({ clienteId, sucursal, zonas, barrios }: { clienteI
           <span className={etiquetaChica}>Teléfono</span>
           <input name="telefono" aria-label="Teléfono" placeholder={sucursal ? "" : "Teléfono"} inputMode="tel" defaultValue={v("telefono")} className={campo} />
         </label>
-        <label className={celda}>
-          <span className={etiquetaChica}>CUIT propio (si es otro)</span>
-          <input name="cuit" aria-label="CUIT propio de la sucursal" placeholder={sucursal ? "" : "CUIT propio"} inputMode="numeric" defaultValue={v("cuit")} title="Solo si la sucursal tiene un CUIT distinto al del cliente (franquicia). Vacío = usa el del cliente." className={campo} />
-        </label>
+        {MOSTRAR_CUIT ? (
+          <label className={celda}>
+            <span className={etiquetaChica}>CUIT propio (si es otro)</span>
+            <input name="cuit" aria-label="CUIT propio de la sucursal" placeholder={sucursal ? "" : "CUIT propio"} inputMode="numeric" defaultValue={v("cuit")} title="Solo si la sucursal tiene un CUIT distinto al del cliente (franquicia). Vacío = usa el del cliente." className={campo} />
+          </label>
+        ) : (
+          <input type="hidden" name="cuit" value={v("cuit")} /> /* se conserva lo que ya tenía cargado */
+        )}
         <label className={celda}>
           <span className={etiquetaChica}>Comentario</span>
           <input name="comentario" aria-label="Comentario" placeholder={sucursal ? "" : "Ej: recibe hasta las 10 hs"} defaultValue={v("comentario")} className={campo} />
