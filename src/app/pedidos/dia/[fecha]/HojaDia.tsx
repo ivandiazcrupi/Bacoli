@@ -42,6 +42,7 @@ export type Fila = {
   salidaId: string | null;
   bultos: number;
   sabores: { tomate: number; cebolla: number; pizzas: number };
+  focaccias: number;
   webOrden: string | null; // pedido de la tienda online: sin cuenta corriente ni remito
   pagoMp: boolean; // pedido de la tienda ya pagado (Mercado Pago o transferencia confirmada)
   pagoTexto: string | null;
@@ -824,6 +825,15 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
             </div>
           );
         })}
+        {(() => {
+          const n = filas.reduce((t, f) => t + f.focaccias, 0); // en gris con 0 hasta que se carga una focaccia
+          return (
+            <div className={`inline-flex items-baseline gap-2 rounded-md border px-5 py-2 ${n === 0 ? "border-stone-300 bg-stone-100 text-stone-400" : "border-stone-400 bg-white"}`}>
+              <span className={`text-xs font-medium uppercase tracking-wide ${n === 0 ? "text-stone-400" : "text-stone-600"}`}>Focaccia</span>
+              <span className="text-base font-bold tabular-nums">{n}</span>
+            </div>
+          );
+        })()}
         </div>
       </div>
       <BarraEstado

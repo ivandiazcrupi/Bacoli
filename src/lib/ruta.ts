@@ -41,6 +41,17 @@ export function unidadesPorSabor(items: RenglonRuta[]) {
   return r;
 }
 
+/** Focaccias para producción: las de FOCACCIA y 2 por cada COMBO NAPOLITANO (el combo las trae gratis). */
+export function focacciasDe(items: RenglonRuta[]) {
+  let n = 0;
+  for (const i of items) {
+    const nom = sinTildes((i.nombre ?? "").toUpperCase());
+    if (nom.includes("COMBO NAPOLITANO")) n += 2 * i.cantidad;
+    else if (nom.includes("FOCACCIA")) n += i.cantidad + (i.sinCargo ?? 0);
+  }
+  return n;
+}
+
 export const totalUnidades = (x: { tomate: number; cebolla: number; pizzas: number }) => x.tomate + x.cebolla + x.pizzas;
 
 /** Paquetes de pizza = unidades ÷ 2 (una pizza por unidad es medio paquete): así Paquetes × 2 = Unidades siempre. */
