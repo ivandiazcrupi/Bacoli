@@ -41,12 +41,12 @@ export function unidadesPorSabor(items: RenglonRuta[]) {
   return r;
 }
 
-/** Focaccias para producción: las de FOCACCIA y 2 por cada COMBO NAPOLITANO (el combo las trae gratis). */
+/** Focaccias para producción: las de FOCACCIA y 2 por cada "COMBO NAPOLITANO + 2 FOCACCIA" (el combo común no trae). */
 export function focacciasDe(items: RenglonRuta[]) {
   let n = 0;
   for (const i of items) {
     const nom = sinTildes((i.nombre ?? "").toUpperCase());
-    if (nom.includes("COMBO NAPOLITANO")) n += 2 * i.cantidad;
+    if (nom.includes("COMBO NAPOLITANO")) { if (nom.includes("FOCACCIA")) n += 2 * i.cantidad; } // solo el combo "+ 2 FOCACCIA" las trae
     else if (nom.includes("FOCACCIA")) n += i.cantidad + (i.sinCargo ?? 0);
   }
   return n;
