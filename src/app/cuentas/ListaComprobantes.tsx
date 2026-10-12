@@ -60,12 +60,12 @@ type Columna = { id: ColId; titulo: string; ancho: string; solo?: "arca" | "remi
 
 const COLUMNAS: Columna[] = [
   { id: "numero", titulo: "Número", ancho: "112px", ordena: true, filtro: "texto" },
-  { id: "cliente", titulo: "Cliente", ancho: "minmax(110px,1.2fr)", ordena: true, filtro: "lista" },
-  { id: "razon", titulo: "Razón social", ancho: "minmax(110px,1fr)", filtro: "lista" },
-  { id: "sucursal", titulo: "Sucursal", ancho: "120px", filtro: "lista" },
+  { id: "razon", titulo: "Razón social", ancho: "minmax(170px,1.3fr)", filtro: "lista" },
+  { id: "cliente", titulo: "Cliente", ancho: "minmax(150px,1.2fr)", ordena: true, filtro: "lista" },
+  { id: "sucursal", titulo: "Sucursal", ancho: "136px", filtro: "lista" },
   { id: "fecha", titulo: "Fecha", ancho: "70px", ordena: true, filtro: "texto" },
   { id: "monto", titulo: "Monto", ancho: "104px", ordena: true, filtro: "texto" },
-  { id: "estado", titulo: "Estado", ancho: "150px", ordena: true, filtro: "estado" },
+  { id: "estado", titulo: "Estado", ancho: "140px", ordena: true, filtro: "estado" },
   { id: "pedido", titulo: "Pedido", ancho: "64px", filtro: "pedido" },
   { id: "nc", titulo: "Nota de crédito", ancho: "104px", filtro: "texto" },
   { id: "obs", titulo: "Observación", ancho: "minmax(90px,1fr)", filtro: "texto" },
@@ -114,9 +114,12 @@ function ObsCelda({ f }: { f: FilaComprobante }) {
   );
 }
 
+// La sucursal se ve como una pastilla (no como texto suelto), igual en facturas y remitos.
+const PILDORA = "inline-block h-6 min-w-0 max-w-full truncate rounded-full border border-stone-300 bg-crema-100 px-2.5 text-center text-[11.5px] font-semibold uppercase leading-[22px] tracking-wide text-stone-700";
+
 function SucursalCelda({ f }: { f: FilaComprobante }) {
   const [punto, setPunto] = useState(f.puntoId ?? "");
-  if (!f.arca) return <span className="truncate text-stone-600">{f.sucursal ?? ""}</span>; // remitos: la del pedido (solo se ve)
+  if (!f.arca) return f.sucursal ? <span className={`${PILDORA} justify-self-center`} title={f.sucursal}>{f.sucursal}</span> : <span className="text-stone-300">—</span>; // remitos: la del pedido (solo se ve)
   const nombres: Record<string, string> = { "-": "Ninguna", ...Object.fromEntries((f.puntos ?? []).map((p) => [p.id, p.barrio])) };
   return (
     <select aria-label="Sucursal" value={punto} onChange={async (e) => {
@@ -124,7 +127,7 @@ function SucursalCelda({ f }: { f: FilaComprobante }) {
       if (!window.confirm(nuevo === "-" ? `¿Dejar ${f.numero} sin sucursal?` : `¿Cambiar la sucursal de ${f.numero} a ${nombres[nuevo] ?? ""}?`)) return; // evita cambiarla sin querer
       setPunto(nuevo);
       await guardarDatosArca(f.id, nuevo, null);
-    }} className="h-7 w-full min-w-0 rounded border border-transparent bg-transparent px-0.5 text-center text-[12.5px] hover:border-stone-300 focus:border-verde-700 focus:outline-none">
+    }} className={`${PILDORA} w-full cursor-pointer hover:border-stone-500 focus:border-verde-700 focus:outline-none`}>
       {!f.puntoId && <option value="">{f.sucursal ?? "Sin elegir"}</option>}
       <option value="-">Ninguna</option>
       {(f.puntos ?? []).map((p) => <option key={p.id} value={p.id}>{p.barrio}</option>)}
@@ -308,28 +311,30 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
             </div>
           ) : (
             <Fragment key={f.id}>
-              <div className={`grid h-10 items-center gap-x-3 overflow-hidden border-b border-stone-200 px-3 text-center text-[13px] hover:bg-crema-50 ${f.anulado ? "text-stone-400" : "text-stone-800"} ${elegidas.has(f.id) ? "bg-verde-50" : ""}`} style={{ gridTemplateColumns: grilla }}>
+              <div className={`grid h-12 items-center gap-x-3 overflow-hidden border-b border-stone-200 px-3 text-center text-[13px] hover:bg-crema-50 ${f.anulado ? "text-stone-400" : "text-stone-800"} ${elegidas.has(f.id) ? "bg-verde-50" : ""}`} style={{ gridTemplateColumns: grilla }}>
                 <input type="checkbox" aria-label={`Elegir ${f.numero ?? "comprobante"}`} checked={elegidas.has(f.id)} disabled={!f.entregado || f.pagada || f.cubierta || !!f.anulado || f.esNc} onChange={() => alternar(f.id)} className="h-4 w-4 accent-[#026433] disabled:opacity-25" />
                 {visibles.map((c) => {
                   switch (c.id) {
                     case "numero": return <span key={c.id} className={`${celdaBase} text-[14px] font-bold tabular-nums ${f.esNc ? "text-stone-500" : "text-stone-900"}`}>{f.numero ?? <span className="text-[13px] font-semibold text-rojo-700">sin número</span>}</span>;
-                    case "cliente": return <span key={c.id} className={celdaBase} title={f.aviso || undefined}>
-                      {f.clienteId ? <Link href={`/cuentas/${f.clienteId}`} className="font-semibold hover:underline">{f.cliente}</Link> : <span className="font-semibold italic text-rojo-700" title="El CUIT no está cargado en ningún cliente">{f.cliente}</span>}
-                      {f.arca && f.sinPedido && <span className="ml-2 text-[12px] font-semibold text-rojo-700">sin pedido</span>}
-                      {f.pedidoId && <Link href={`/pedidos/${f.pedidoId}`} className="ml-2 text-[12px] text-verde-800 hover:underline" title="Abrir el pedido">pedido ›</Link>}
-                      {f.aviso && <span className="ml-2 text-[12px] text-rojo-700">{f.aviso}</span>}
+                    case "cliente": return <span key={c.id} className="flex min-w-0 flex-col items-center leading-tight" title={f.aviso || undefined}>
+                      {f.clienteId ? <Link href={`/cuentas/${f.clienteId}`} className="max-w-full truncate text-[13px] font-semibold hover:underline">{f.cliente}</Link> : <span className="max-w-full truncate text-[13px] font-semibold italic text-rojo-700" title="El CUIT no está cargado en ningún cliente">{f.cliente}</span>}
+                      {(f.pedidoId || (f.arca && f.sinPedido) || f.aviso) && <span className="mt-0.5 flex max-w-full items-center gap-2 truncate text-[11.5px]">
+                        {f.arca && f.sinPedido && <span className="font-semibold text-rojo-700">sin pedido</span>}
+                        {f.pedidoId && <Link href={`/pedidos/${f.pedidoId}`} className="text-verde-800 hover:underline" title="Abrir el pedido">pedido ›</Link>}
+                        {f.aviso && <span className="text-rojo-700">{f.aviso}</span>}
+                      </span>}
                     </span>;
-                    case "razon": return <span key={c.id} className={`${celdaBase} text-stone-600`} title={f.razon || undefined}>{f.razon || <span className="text-stone-300">—</span>}</span>;
+                    case "razon": return <span key={c.id} className="line-clamp-2 min-w-0 break-words text-[11.5px] uppercase leading-tight text-stone-600" title={f.razon || undefined}>{f.razon || <span className="text-stone-300">—</span>}</span>;
                     case "sucursal": return <SucursalCelda key={c.id} f={f} />;
                     case "fecha": return <span key={c.id} className="tabular-nums text-stone-600">{fechaCorta(f.cargado)}</span>;
                     case "monto": return <span key={c.id} className={`whitespace-nowrap text-[14px] font-bold tabular-nums ${f.cubierta || f.anulado ? "text-stone-300 line-through" : f.esNc ? "text-stone-500" : "text-stone-900"}`}>{f.esNc ? "−" : ""}{formatoPesos(f.cubierta || f.anulado || f.esNc ? f.bruto : f.monto)}</span>;
                     case "estado": {
                       const e = estadoDe(f);
-                      const relleno = e === "Pendiente" ? "bg-rojo-100 text-rojo-800" : e === "Pagada" ? "bg-verde-100 text-verde-800" : e === "NC sin aplicar" ? "bg-[#fbf1c7] text-[#7a5f06]" : "";
-                      return <span key={c.id} className={`flex h-full items-center justify-center gap-1.5 whitespace-nowrap ${relleno}`} title={e === "Pendiente" && f.atraso > 0 ? `Vencida hace ${f.atraso} días` : undefined}>
-                        {e === "NC sin aplicar" ? <button type="button" onClick={() => { setMotivoNc(""); setPicker(picker === f.id ? null : f.id); }} className="h-full w-full font-semibold hover:underline">Aplicar a factura</button>
-                          : e === "Pagada" ? <><span className="font-semibold">Pagada{f.medio ? ` · ${TEXTO_MEDIO[f.medio] ?? ""}` : ""}</span><button type="button" title="Deshacer el pago" aria-label="Deshacer el pago" onClick={() => deshacer(f.id, !!f.arca)} className="text-[12px] opacity-50 hover:opacity-100">✕</button></>
-                          : e === "Pendiente" ? <span className="font-semibold">Pendiente{f.atraso > 0 ? <span className="font-normal"> · {f.atraso} d</span> : null}</span>
+                      const color = e === "Pendiente" ? "text-rojo-700" : e === "Pagada" ? "text-verde-700" : e === "NC sin aplicar" ? "text-[#8a6a05]" : "";
+                      return <span key={c.id} className={`flex items-center justify-center gap-1.5 whitespace-nowrap font-bold ${color}`} title={e === "Pendiente" && f.atraso > 0 ? `Vencida hace ${f.atraso} días` : undefined}>
+                        {e === "NC sin aplicar" ? <button type="button" onClick={() => { setMotivoNc(""); setPicker(picker === f.id ? null : f.id); }} className="font-bold hover:underline">Aplicar a factura</button>
+                          : e === "Pagada" ? <><span className="font-bold">Pagada{f.medio ? ` · ${TEXTO_MEDIO[f.medio] ?? ""}` : ""}</span><button type="button" title="Deshacer el pago" aria-label="Deshacer el pago" onClick={() => deshacer(f.id, !!f.arca)} className="text-[12px] opacity-50 hover:opacity-100">✕</button></>
+                          : e === "Pendiente" ? <span className="font-bold">Pendiente{f.atraso > 0 ? <span className="text-[12px] font-medium opacity-80"> · {f.atraso} d</span> : null}</span>
                           : <span className="text-stone-500">{e === "Anulado" ? f.anulado : e}</span>}
                       </span>;
                     }
