@@ -1,5 +1,4 @@
 import { Cabecera } from "@/components/Cabecera";
-import { importeVigente } from "@/lib/cuenta";
 import { db } from "@/lib/db";
 import { hoy, sumarDias } from "@/lib/fechas";
 import { bultosDe } from "@/lib/ruta";
@@ -25,19 +24,18 @@ export default async function Comercial() {
     db.pedido.findMany({ where: { clienteId: { not: null }, estado: { not: "CANCELADO" }, origen: "MAYORISTA" }, include: { items: true }, orderBy: { creadoEn: "asc" } }),
   ]);
 
-  type Acum = { fechas: string[]; paqMes: number; paqAnt: number; factMes: number; factAnt: number; ped90: number; paq90: number; fact90: number };
+  type Acum = { fechas: string[]; paqMes: number; paqAnt: number; ped90: number; paq90: number };
   const porCliente = new Map<string, Acum>();
   const hace90 = sumarDias(hoyStr, -90), hace180 = sumarDias(hoyStr, -180);
   for (const p of pedidos) {
     if (p.estado === "NO_ENTREGADO") continue; // no llegó a entregarse: no cuenta como compra
     const f = fechaAR(p.creadoEn);
-    const a = porCliente.get(p.clienteId!) ?? { fechas: [], paqMes: 0, paqAnt: 0, factMes: 0, factAnt: 0, ped90: 0, paq90: 0, fact90: 0 };
+    const a = porCliente.get(p.clienteId!) ?? { fechas: [], paqMes: 0, paqAnt: 0, ped90: 0, paq90: 0 };
     const paq = bultosDe(p.items);
-    const monto = importeVigente(p.items, Number(p.ivaPct), p.estado === "ENTREGADO" ? "ENTREGADO" : "PENDIENTE", p.webTotal);
     a.fechas.push(f);
-    if (f.startsWith(mesActual)) { a.paqMes += paq; a.factMes += monto; }
-    else if (f.startsWith(mesAnterior)) { a.paqAnt += paq; a.factAnt += monto; }
-    if (f >= hace90) { a.ped90 += 1; a.paq90 += paq; a.fact90 += monto; }
+    if (f.startsWith(mesActual)) { a.paqMes += paq; }
+    else if (f.startsWith(mesAnterior)) { a.paqAnt += paq; }
+    if (f >= hace90) { a.ped90 += 1; a.paq90 += paq; }
     porCliente.set(p.clienteId!, a);
   }
 
@@ -52,8 +50,8 @@ export default async function Comercial() {
     return {
       id: c.id, nombre: c.nombre, barrios: [...new Set(c.puntos.map((p) => p.barrio).filter(Boolean))].slice(0, 2).join(" · "),
       ultimo, sinPedir, ritmo, atrasado: ritmo !== null && sinPedir !== null && sinPedir > Math.max(ritmo * 1.5, ritmo + 3),
-      ped90: a?.ped90 ?? 0, paqMes: a?.paqMes ?? 0, paqAnt: a?.paqAnt ?? 0, factMes: a?.factMes ?? 0, factAnt: a?.factAnt ?? 0,
-      paqProm: (a?.paq90 ?? 0) / 3, fact90: a?.fact90 ?? 0, total: fechas.length,
+      ped90: a?.ped90 ?? 0, paqMes: a?.paqMes ?? 0, paqAnt: a?.paqAnt ?? 0,
+      paqProm: (a?.paq90 ?? 0) / 3, total: fechas.length,
     };
   });
 
@@ -64,7 +62,6 @@ export default async function Comercial() {
     nunca: filas.filter((f) => f.ultimo === null).length,
     atrasados: filas.filter((f) => f.atrasado).length,
     paqMes: filas.reduce((s, f) => s + f.paqMes, 0), paqAnt: filas.reduce((s, f) => s + f.paqAnt, 0),
-    factMes: filas.reduce((s, f) => s + f.factMes, 0), factAnt: filas.reduce((s, f) => s + f.factAnt, 0),
   };
 
   return (
