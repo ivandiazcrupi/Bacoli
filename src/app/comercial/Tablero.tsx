@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { num } from "@/lib/ruta";
 export type FilaCliente = {
   id: string; nombre: string; barrios: string;
@@ -37,13 +37,27 @@ const dentro = (f: FilaCliente, k: Filtro) => {
 };
 type Col = "nombre" | "ultimo" | "sinPedir" | "ritmo" | "paq30";
 
-function Dato({ titulo, valor, detalle, rojo, ayuda }: { titulo: string; valor: React.ReactNode; detalle?: React.ReactNode; rojo?: boolean; ayuda?: string }) {
+// Tono de cada tarjeta: verde = pidieron; rojo (cada vez más fuerte con los días) = hay clientes sin pedir; gris = nada para mirar.
+const TONOS: Record<string, { caja: string; numero: string; barra: string }> = {
+  neutro: { caja: "border-stone-300 bg-white", numero: "text-stone-900", barra: "bg-stone-300" },
+  apagado: { caja: "border-stone-200 bg-crema-50", numero: "text-stone-400", barra: "bg-stone-200" },
+  verde: { caja: "border-verde-300 bg-verde-50", numero: "text-verde-700", barra: "bg-verde-600" },
+  rojo1: { caja: "border-rojo-200 bg-rojo-50", numero: "text-rojo-700", barra: "bg-rojo-300" },
+  rojo2: { caja: "border-rojo-300 bg-rojo-50", numero: "text-rojo-700", barra: "bg-rojo-400" },
+  rojo3: { caja: "border-rojo-400 bg-rojo-100", numero: "text-rojo-700", barra: "bg-rojo-500" },
+  rojo4: { caja: "border-rojo-600 bg-rojo-100", numero: "text-rojo-800", barra: "bg-rojo-700" },
+};
+
+function Tarjeta({ titulo, valor, tono, activa, ayuda, onClick }: { titulo: string; valor: number; tono: keyof typeof TONOS; activa: boolean; ayuda: string; onClick: () => void }) {
+  const t = TONOS[tono];
   return (
-    <div className="flex min-w-[190px] flex-1 flex-col items-center justify-start px-4 py-4 text-center" title={ayuda}>
-      <p className="flex min-h-[2.1rem] items-center text-[12px] font-bold uppercase leading-tight tracking-wide text-stone-600">{titulo}</p>
-      <p className={`text-3xl font-bold tabular-nums leading-none ${rojo ? "text-rojo-700" : "text-stone-900"}`}>{valor}</p>
-      {detalle && <p className="mt-1.5 text-[12.5px] leading-snug text-stone-600">{detalle}</p>}
-    </div>
+    <button type="button" onClick={onClick} title={ayuda} aria-pressed={activa}
+      className={`group relative flex flex-col items-center overflow-hidden rounded-xl border px-3 pb-3 pt-4 text-center transition hover:-translate-y-0.5 hover:shadow-md ${t.caja} ${activa ? "ring-2 ring-stone-800 ring-offset-2 ring-offset-[#f6f5f2]" : ""}`}>
+      <span className={`absolute inset-x-0 top-0 h-1.5 ${t.barra}`} />
+      <span className="flex min-h-[2rem] w-full items-center justify-center whitespace-normal text-[11.5px] font-bold uppercase leading-tight tracking-wide text-stone-600">{titulo}</span>
+      <span className={`mt-1 text-4xl font-extrabold tabular-nums leading-none ${t.numero}`}>{valor}</span>
+      <span className="mt-2 text-[12px] font-medium text-stone-500 group-hover:text-stone-800">{valor === 0 ? "Ninguno" : "Ver clientes ›"}</span>
+    </button>
   );
 }
 
@@ -51,6 +65,9 @@ export function Tablero({ filas, resumen }: { filas: FilaCliente[]; resumen: Res
   const [q, setQ] = useState("");
   const [filtro, setFiltro] = useState<Filtro>("todos");
   const [orden, setOrden] = useState<{ col: Col; asc: boolean }>({ col: "sinPedir", asc: false });
+  const tabla = useRef<HTMLDivElement>(null);
+  // Al tocar una tarjeta se filtra la tabla y se baja hasta ella.
+  const elegir = (k: Filtro) => { setFiltro(k); setTimeout(() => tabla.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50); };
 
   const lista = useMemo(() => {
     const palabras = q.toLowerCase().split(/\s+/).filter(Boolean);
@@ -75,31 +92,27 @@ export function Tablero({ filas, resumen }: { filas: FilaCliente[]; resumen: Res
     </button>
   );
   const GRILLA = "grid-cols-[minmax(260px,2.6fr)_120px_110px_110px_130px_130px]";
-  const cuentaFiltro = (k: Filtro) => filas.filter((f) => dentro(f, k)).length;
 
   return (
     <div className="space-y-4">
-      {/* Resumen: cada cuadro dice qué cuenta */}
-      <section aria-label="Resumen" className="grid grid-cols-2 divide-stone-200 overflow-hidden rounded-lg border border-stone-300 bg-white sm:grid-cols-4 lg:grid-cols-7 lg:divide-x">
-        <Dato titulo="Clientes activos" valor={resumen.activos} ayuda={AYUDA.todos} />
-        <Dato titulo="Pidieron en los últimos 7 días" valor={resumen.d7} ayuda={AYUDA.d7} />
-        <Dato titulo="Sin pedir hace 7 días" valor={resumen.s7} ayuda={AYUDA.s7} />
-        <Dato titulo="Sin pedir hace 15 días" valor={resumen.s15} ayuda={AYUDA.s15} />
-        <Dato titulo="Sin pedir hace 30 días" valor={resumen.s30} rojo={resumen.s30 > 0} ayuda={AYUDA.s30} />
-        <Dato titulo="Sin pedir hace 45 días" valor={resumen.s45} rojo={resumen.s45 > 0} ayuda={AYUDA.s45} />
-        <Dato titulo="Inactivos" valor={resumen.inactivos} ayuda={AYUDA.inactivos} />
+      {/* Tarjetas: cada una filtra la tabla de abajo y baja hasta ella */}
+      <section aria-label="Resumen" className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+        <Tarjeta titulo="Clientes activos" valor={resumen.activos} tono="neutro" activa={filtro === "todos"} ayuda={AYUDA.todos} onClick={() => elegir("todos")} />
+        <Tarjeta titulo="Pidieron en los últimos 7 días" valor={resumen.d7} tono={resumen.d7 > 0 ? "verde" : "apagado"} activa={filtro === "d7"} ayuda={AYUDA.d7} onClick={() => elegir("d7")} />
+        <Tarjeta titulo="Sin pedir hace 7 días" valor={resumen.s7} tono={resumen.s7 > 0 ? "rojo1" : "apagado"} activa={filtro === "s7"} ayuda={AYUDA.s7} onClick={() => elegir("s7")} />
+        <Tarjeta titulo="Sin pedir hace 15 días" valor={resumen.s15} tono={resumen.s15 > 0 ? "rojo2" : "apagado"} activa={filtro === "s15"} ayuda={AYUDA.s15} onClick={() => elegir("s15")} />
+        <Tarjeta titulo="Sin pedir hace 30 días" valor={resumen.s30} tono={resumen.s30 > 0 ? "rojo3" : "apagado"} activa={filtro === "s30"} ayuda={AYUDA.s30} onClick={() => elegir("s30")} />
+        <Tarjeta titulo="Sin pedir hace 45 días" valor={resumen.s45} tono={resumen.s45 > 0 ? "rojo4" : "apagado"} activa={filtro === "s45"} ayuda={AYUDA.s45} onClick={() => elegir("s45")} />
+        <Tarjeta titulo="Inactivos" valor={resumen.inactivos} tono={resumen.inactivos > 0 ? "neutro" : "apagado"} activa={filtro === "inactivos"} ayuda={AYUDA.inactivos} onClick={() => elegir("inactivos")} />
       </section>
 
-      {/* Filtros */}
-      <div className="flex flex-wrap items-center gap-2">
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar cliente o barrio…" aria-label="Buscar cliente" className="h-9 w-full max-w-xs rounded-md border border-stone-300 bg-white px-3 text-sm focus:border-verde-700 focus:outline-none" />
-        <div role="group" aria-label="Mostrar" className="flex flex-wrap gap-1.5">
-          {FILTROS.map(([k, t, ayuda]) => (
-            <button key={k} type="button" title={ayuda} aria-pressed={filtro === k} onClick={() => setFiltro(k)} className={`h-9 rounded-full border px-3.5 text-[13px] ${filtro === k ? "border-stone-800 bg-stone-800 font-semibold text-white" : "border-stone-300 bg-white text-stone-700 hover:border-stone-500"}`}>
-              {t} <span className={filtro === k ? "text-stone-300" : "text-stone-400"}>{cuentaFiltro(k)}</span>
-            </button>
-          ))}
-        </div>
+      {/* Buscador y qué se está mostrando */}
+      <div ref={tabla} className="flex scroll-mt-4 flex-wrap items-center gap-3">
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar cliente o barrio…" aria-label="Buscar cliente" className="h-10 w-full max-w-xs rounded-md border border-stone-300 bg-white px-3 text-sm focus:border-verde-700 focus:outline-none" />
+        <p className="text-[14px] text-stone-700">
+          Mostrando: <b>{FILTROS.find((f) => f[0] === filtro)![1]}</b> · {lista.length} {lista.length === 1 ? "cliente" : "clientes"}
+          {filtro !== "todos" && <button type="button" onClick={() => setFiltro("todos")} className="ml-3 rounded-full border border-stone-300 bg-white px-3 py-1 text-[12.5px] font-semibold text-stone-700 hover:border-stone-600">Ver todos ✕</button>}
+        </p>
       </div>
 
       {/* Tabla de clientes */}
