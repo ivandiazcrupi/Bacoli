@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Cabecera } from "@/components/Cabecera";
 import { db } from "@/lib/db";
 import { hoy, sumarDias } from "@/lib/fechas";
@@ -64,6 +65,7 @@ export default async function Comercial() {
       <main className={CONTENEDOR_PEDIDOS}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-bold tracking-tight">Comercial</h1>
+          <Link href="/comercial/graficos" className="flex h-10 items-center gap-2 rounded-lg bg-stone-800 px-5 text-sm font-bold uppercase tracking-wide text-white hover:bg-stone-700">Gráficos ›</Link>
         </div>
         <Tablero filas={filas} resumen={resumen} />
       </main>

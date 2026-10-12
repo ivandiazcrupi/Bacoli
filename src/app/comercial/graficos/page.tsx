@@ -1,0 +1,179 @@
+import Link from "next/link";
+import { Cabecera } from "@/components/Cabecera";
+import { desgloseIva } from "@/lib/cuenta";
+import { db } from "@/lib/db";
+import { esFechaValida, hoy, sumarDias } from "@/lib/fechas";
+import { bultosDe, focacciasDe, unidadesPorSabor } from "@/lib/ruta";
+import { exigirOficina } from "@/lib/session";
+import { CONTENEDOR_PEDIDOS } from "../../pedidos/Encabezado";
+import { Barras, BarrasH, Donut, Leyenda, PALETA, Panel, SinDatos } from "./Graficos";
+import { TopClientes } from "./TopClientes";
+
+const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+const nombreMes = (m: string) => `${MESES[Number(m.slice(5)) - 1]} ${m.slice(0, 4)}`;
+const mesDe = (f: string) => f.slice(0, 7);
+const mesSiguiente = (m: string) => sumarDias(`${m}-01`, 32).slice(0, 7);
+const mesAnterior = (m: string) => sumarDias(`${m}-01`, -1).slice(0, 7);
+const fechaAR = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" });
+const pesos = (n: number) => n.toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
+const paq = (n: number) => n.toLocaleString("es-AR", { maximumFractionDigits: 1 });
+const corto = (n: number) => (n >= 1_000_000 ? `${(n / 1_000_000).toLocaleString("es-AR", { maximumFractionDigits: 1 })} M` : n >= 1000 ? `${Math.round(n / 1000)} mil` : String(Math.round(n)));
+
+// GRÁFICOS: tablero general del mes (como una cabina). Todo sale de los pedidos cargados; no cambia nada.
+export default async function Graficos({ searchParams }: { searchParams: Promise<{ mes?: string }> }) {
+  const usuario = await exigirOficina();
+  const { mes: mesParam } = await searchParams;
+  const actual = hoy().slice(0, 7);
+  const mes = mesParam && /^\d{4}-\d{2}$/.test(mesParam) && esFechaValida(`${mesParam}-01`) ? mesParam : actual;
+  const meses6 = Array.from({ length: 6 }, (_, i) => { let m = mes; for (let k = 0; k < 5 - i; k++) m = mesAnterior(m); return m; });
+  const desde = new Date(`${meses6[0]}-01T00:00:00Z`);
+
+  const pedidos = await db.pedido.findMany({
+    where: { estado: { in: ["PENDIENTE", "ENTREGADO"] }, origen: { in: ["MAYORISTA", "WEB"] }, OR: [{ creadoEn: { gte: desde } }, { fechaEntrega: { gte: desde } }] },
+    include: { items: true, cliente: { select: { id: true, nombre: true, comisionista: true, comisionPct: true } }, punto: { select: { zona: { select: { nombre: true } } } } },
+  });
+
+  // Cada pedido cuenta en el mes de su día de reparto (o, si todavía no lo tiene, el día en que se cargó).
+  type P = { f: string; web: boolean; clienteId: string | null; cliente: string; zona: string; tipo: string; paq: number; neto: number; entregado: boolean; comisionista: string | null; pct: number; sabores: ReturnType<typeof unidadesPorSabor>; foc: number };
+  const filas: P[] = pedidos.map((p) => {
+    const web = p.origen === "WEB";
+    const base = desgloseIva(p.items, Number(p.ivaPct), p.estado).base;
+    const fijo = p.webTotal != null ? Number(p.webTotal) : null; // tienda online / comprobantes cargados directo: valen su total
+    const neto = fijo != null ? (!web && Number(p.ivaPct) > 0 ? fijo / (1 + Number(p.ivaPct) / 100) : fijo) : base;
+    return {
+      f: p.fechaEntrega ? p.fechaEntrega.toISOString().slice(0, 10) : fechaAR(p.creadoEn), web, clienteId: p.clienteId, cliente: p.cliente?.nombre ?? "", zona: p.punto?.zona.nombre ?? "",
+      tipo: web ? "Tienda online" : p.conFactura ? "Con factura" : "Con remito", paq: bultosDe(p.items), neto, entregado: p.estado === "ENTREGADO",
+      comisionista: p.cliente?.comisionista ?? null, pct: Number(p.cliente?.comisionPct ?? 0), sabores: unidadesPorSabor(p.items), foc: focacciasDe(p.items),
+    };
+  });
+  const delMes = filas.filter((p) => mesDe(p.f) === mes);
+  const mayoristas = delMes.filter((p) => !p.web);
+
+  // Resumen (instrumentos de arriba)
+  const total = { pedidos: delMes.length, paq: delMes.reduce((t, p) => t + p.paq, 0), neto: delMes.reduce((t, p) => t + p.neto, 0) };
+  const ant = filas.filter((p) => mesDe(p.f) === mesAnterior(mes));
+  const antPaq = ant.reduce((t, p) => t + p.paq, 0), antNeto = ant.reduce((t, p) => t + p.neto, 0);
+  const clientesQuePidieron = new Set(mayoristas.map((p) => p.clienteId)).size;
+
+  // Pedidos por día
+  const diasDelMes = Number(sumarDias(`${mesSiguiente(mes)}-01`, -1).slice(8));
+  const porDia = Array.from({ length: diasDelMes }, (_, i) => { const f = `${mes}-${String(i + 1).padStart(2, "0")}`; const d = delMes.filter((p) => p.f === f); return { may: d.filter((p) => !p.web).length, web: d.filter((p) => p.web).length }; });
+  const diaTop = porDia.reduce((m, d, i) => (d.may + d.web > porDia[m].may + porDia[m].web ? i : m), 0);
+
+  // Zonas y tipo de comprobante
+  const cuenta = (xs: string[]) => [...xs.reduce((m, x) => m.set(x, (m.get(x) ?? 0) + 1), new Map<string, number>())].map(([nombre, valor]) => ({ nombre, valor })).sort((a, b) => b.valor - a.valor);
+  const porZona = cuenta(mayoristas.map((p) => p.zona || "Sin zona"));
+  const porTipo = cuenta(delMes.map((p) => p.tipo));
+
+  // Clientes (cada cliente junto, sumando todas sus sucursales)
+  const porCliente = new Map<string, { nombre: string; paquetes: number; neto: number; pedidos: number }>();
+  for (const p of mayoristas) {
+    const c = porCliente.get(p.clienteId ?? "") ?? { nombre: p.cliente, paquetes: 0, neto: 0, pedidos: 0 };
+    c.paquetes += p.paq; c.neto += p.neto; c.pedidos += 1;
+    porCliente.set(p.clienteId ?? "", c);
+  }
+
+  // Comisiones: ventas sin IVA de pedidos ENTREGADOS en el mes, por comisionista
+  const comis = new Map<string, { nombre: string; pct: number; clientes: Set<string | null>; ventas: number; comision: number }>();
+  for (const p of mayoristas) {
+    if (!p.entregado || !p.comisionista || p.pct <= 0) continue;
+    const c = comis.get(p.comisionista) ?? { nombre: p.comisionista, pct: p.pct, clientes: new Set(), ventas: 0, comision: 0 };
+    c.clientes.add(p.clienteId); c.ventas += p.neto; c.comision += (p.neto * p.pct) / 100;
+    comis.set(p.comisionista, c);
+  }
+  const comisiones = [...comis.values()].sort((a, b) => b.comision - a.comision);
+  const totalComision = comisiones.reduce((t, c) => t + c.comision, 0);
+
+  // Evolución de 6 meses
+  const evo = meses6.map((m) => { const d = filas.filter((p) => mesDe(p.f) === m); return { m, paq: d.reduce((t, p) => t + p.paq, 0), neto: d.reduce((t, p) => t + p.neto, 0) }; });
+  const etiqMes = (m: string) => MESES[Number(m.slice(5)) - 1].slice(0, 3);
+
+  // Mix de productos (en pizzas) del mes
+  const mix = [
+    { nombre: "Prepizza tomate", valor: delMes.reduce((t, p) => t + p.sabores.tomate, 0) },
+    { nombre: "Prepizza cebolla", valor: delMes.reduce((t, p) => t + p.sabores.cebolla, 0) },
+    { nombre: "Pizzas por unidad", valor: delMes.reduce((t, p) => t + p.sabores.pizzas, 0) },
+    { nombre: "Focaccias", valor: delMes.reduce((t, p) => t + p.foc, 0) },
+  ].filter((x) => x.valor > 0);
+
+  const variacion = (a: number, b: number) => (b > 0 ? Math.round(((a - b) / b) * 100) : null);
+  const vPaq = variacion(total.paq, antPaq), vNeto = variacion(total.neto, antNeto);
+  const nav = "flex h-9 items-center rounded-md border border-stone-300 bg-white px-3 text-sm font-semibold hover:border-stone-600";
+
+  return (
+    <>
+      <Cabecera usuario={usuario} />
+      <main className={CONTENEDOR_PEDIDOS}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-4">
+            <h1 className="text-2xl font-bold tracking-tight">Gráficos</h1>
+            <Link href="/comercial" className="text-sm font-semibold text-stone-600 underline decoration-stone-300 underline-offset-4 hover:text-stone-900">← Volver a Comercial</Link>
+          </div>
+          <nav className="flex items-center gap-2" aria-label="Mes">
+            <Link href={`/comercial/graficos?mes=${mesAnterior(mes)}`} className={nav} aria-label="Mes anterior">←</Link>
+            <span className="min-w-44 rounded-md border border-stone-800 bg-stone-800 px-4 py-2 text-center text-sm font-bold uppercase tracking-wide text-white">{nombreMes(mes)}</span>
+            <Link href={`/comercial/graficos?mes=${mesSiguiente(mes)}`} className={nav} aria-label="Mes siguiente">→</Link>
+            {mes !== actual && <Link href="/comercial/graficos" className={nav}>Este mes</Link>}
+          </nav>
+        </div>
+
+        {/* Instrumentos: lo principal del mes de un vistazo */}
+        <section aria-label="Resumen del mes" className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-stone-700 bg-stone-700 sm:grid-cols-3 lg:grid-cols-6">
+          {[
+            { t: "Pedidos", v: String(total.pedidos), d: "en el mes" },
+            { t: "Paquetes", v: paq(total.paq), d: vPaq === null ? "mes anterior sin datos" : `${vPaq >= 0 ? "▲" : "▼"} ${Math.abs(vPaq)}% vs mes anterior`, c: vPaq === null ? "" : vPaq >= 0 ? "text-emerald-400" : "text-red-400" },
+            { t: "Facturación sin IVA", v: pesos(total.neto), d: vNeto === null ? "mes anterior sin datos" : `${vNeto >= 0 ? "▲" : "▼"} ${Math.abs(vNeto)}% vs mes anterior`, c: vNeto === null ? "" : vNeto >= 0 ? "text-emerald-400" : "text-red-400" },
+            { t: "Clientes que pidieron", v: String(clientesQuePidieron), d: "mayoristas, sumando sucursales" },
+            { t: "Ticket promedio", v: mayoristas.length ? pesos(mayoristas.reduce((t, p) => t + p.neto, 0) / mayoristas.length) : "—", d: "por pedido mayorista" },
+            { t: "Comisiones", v: pesos(totalComision), d: "de pedidos entregados" },
+          ].map((x) => (
+            <div key={x.t} className="bg-stone-900 px-4 py-4 text-center">
+              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-stone-400">{x.t}</p>
+              <p className="mt-1 truncate text-[26px] font-extrabold leading-tight tabular-nums text-white">{x.v}</p>
+              <p className={`mt-0.5 text-[12px] ${x.c || "text-stone-400"}`}>{x.d}</p>
+            </div>
+          ))}
+        </section>
+
+        <div className="grid gap-4 lg:grid-cols-3">
+          <Panel titulo="Pedidos por día" nota={total.pedidos ? `el día más cargado: ${diaTop + 1}` : undefined} className="lg:col-span-2">
+            {total.pedidos === 0 ? <SinDatos /> : <Barras etiquetas={porDia.map((_, i) => String(i + 1))} resaltar={diaTop} series={[{ nombre: "Mayoristas", color: PALETA[0], valores: porDia.map((d) => d.may) }, { nombre: "Tienda online", color: PALETA[1], valores: porDia.map((d) => d.web) }]} />}
+          </Panel>
+          <Panel titulo="Pedidos por zona" nota="mayoristas"><Donut partes={porZona} /></Panel>
+
+          <Panel titulo="Clientes que más piden" nota="cada cliente, todas sus sucursales juntas" className="lg:col-span-2"><TopClientes filas={[...porCliente.values()]} /></Panel>
+          <Panel titulo="Tipo de comprobante"><Donut partes={porTipo} /></Panel>
+
+          <Panel titulo="Comisiones de vendedores" nota={`facturación sin IVA de pedidos entregados · ${nombreMes(mes)}`} className="lg:col-span-2">
+            {comisiones.length === 0 ? <SinDatos texto="Ningún pedido entregado este mes de un cliente con comisionista y porcentaje cargado." /> : (
+              <div className="overflow-hidden rounded-md border border-stone-200">
+                <div className="grid grid-cols-[minmax(0,1.4fr)_70px_80px_minmax(0,1fr)_minmax(0,1fr)] gap-x-3 bg-crema-100 px-3 py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-stone-500">
+                  <span className="text-left">Vendedor</span><span>%</span><span>Clientes</span><span>Ventas sin IVA</span><span>Comisión</span>
+                </div>
+                {comisiones.map((c) => (
+                  <div key={c.nombre} className="grid grid-cols-[minmax(0,1.4fr)_70px_80px_minmax(0,1fr)_minmax(0,1fr)] items-center gap-x-3 border-t border-stone-200 px-3 py-2.5 text-center text-[13.5px]">
+                    <span className="truncate text-left font-bold text-stone-800">{c.nombre}</span>
+                    <span className="tabular-nums text-stone-600">{c.pct.toLocaleString("es-AR")}%</span>
+                    <span className="tabular-nums">{c.clientes.size}</span>
+                    <span className="tabular-nums text-stone-700">{pesos(c.ventas)}</span>
+                    <span className="font-extrabold tabular-nums text-verde-700">{pesos(c.comision)}</span>
+                  </div>
+                ))}
+                <div className="grid grid-cols-[minmax(0,1.4fr)_70px_80px_minmax(0,1fr)_minmax(0,1fr)] gap-x-3 border-t-2 border-stone-300 bg-crema-50 px-3 py-2.5 text-center text-[13.5px] font-bold">
+                  <span className="text-left">Total</span><span /><span /><span className="tabular-nums">{pesos(comisiones.reduce((t, c) => t + c.ventas, 0))}</span><span className="tabular-nums text-verde-700">{pesos(totalComision)}</span>
+                </div>
+              </div>
+            )}
+          </Panel>
+          <Panel titulo="Qué se vende" nota="pizzas del mes">
+            {mix.length === 0 ? <SinDatos /> : <><BarrasH filas={mix} formato={(n) => n.toLocaleString("es-AR")} color="#c08a1e" /><p className="mt-3 text-[12px] text-stone-500">Prepizzas y pizzas se cuentan en unidades de pizza; las focaccias, por unidad.</p></>}
+          </Panel>
+
+          <Panel titulo="Paquetes por mes" nota="últimos 6 meses"><Barras etiquetas={evo.map((e) => etiqMes(e.m))} resaltar={5} formato={paq} series={[{ nombre: "Paquetes", color: PALETA[0], valores: evo.map((e) => e.paq) }]} alto={170} ancho={340} /></Panel>
+          <Panel titulo="Facturación por mes" nota="sin IVA · últimos 6 meses" className="lg:col-span-2"><Barras etiquetas={evo.map((e) => etiqMes(e.m))} resaltar={5} formato={corto} series={[{ nombre: "Facturación", color: PALETA[1], valores: evo.map((e) => e.neto) }]} alto={170} /></Panel>
+        </div>
+        <p className="text-[12px] text-stone-500">Cada pedido cuenta en el mes de su día de reparto (o, si todavía no tiene día, el de carga). No se cuentan pedidos cancelados ni sin entregar. Las comisiones se calculan con el porcentaje cargado en cada cliente.</p>
+      </main>
+    </>
+  );
+}

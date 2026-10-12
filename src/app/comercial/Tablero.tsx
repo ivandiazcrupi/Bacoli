@@ -64,14 +64,18 @@ const TONOS: Record<string, { caja: string; numero: string; barra: string }> = {
 
 function Tarjeta({ titulo, valor, tono, activa, ayuda, onClick }: { titulo: string; valor: number; tono: keyof typeof TONOS; activa: boolean; ayuda: string; onClick: () => void }) {
   const t = TONOS[tono];
+  // La tarjeta elegida se marca con un borde grueso negro (outline: las sombras están apagadas en todo el sistema), una flechita hacia la tabla y el texto "Mostrando abajo".
   return (
-    <button type="button" onClick={onClick} title={ayuda} aria-pressed={activa}
-      className={`group relative flex flex-col items-center overflow-hidden rounded-xl border px-3 pb-3 pt-4 text-center transition hover:-translate-y-0.5 hover:shadow-md ${t.caja} ${activa ? "ring-2 ring-stone-800 ring-offset-2 ring-offset-[#f6f5f2]" : ""}`}>
-      <span className={`absolute inset-x-0 top-0 h-1.5 ${t.barra}`} />
-      <span className="flex min-h-[2rem] w-full items-center justify-center whitespace-normal text-[11.5px] font-bold uppercase leading-tight tracking-wide text-stone-600">{titulo}</span>
-      <span className={`mt-1 text-4xl font-extrabold tabular-nums leading-none ${t.numero}`}>{valor}</span>
-      <span className="mt-2 text-[12px] font-medium text-stone-500 group-hover:text-stone-800">{valor === 0 ? "Ninguno" : "Ver clientes ›"}</span>
-    </button>
+    <div className="relative">
+      <button type="button" onClick={onClick} title={ayuda} aria-pressed={activa}
+        className={`group relative flex h-full w-full flex-col items-center overflow-hidden rounded-xl border px-3 pb-3 pt-4 text-center transition hover:-translate-y-0.5 hover:shadow-md ${t.caja} ${activa ? "outline outline-[3px] outline-offset-2 outline-stone-800" : ""}`}>
+        <span className={`absolute inset-x-0 top-0 h-1.5 ${t.barra}`} />
+        <span className="flex min-h-[2rem] w-full items-center justify-center whitespace-normal text-[11.5px] font-bold uppercase leading-tight tracking-wide text-stone-600">{titulo}</span>
+        <span className={`mt-1 text-4xl font-extrabold tabular-nums leading-none ${t.numero}`}>{valor}</span>
+        <span className={`mt-2 text-[12px] ${activa ? "font-bold text-stone-900" : "font-medium text-stone-500 group-hover:text-stone-800"}`}>{activa ? "● Mostrando abajo" : valor === 0 ? "Ninguno" : "Ver clientes ›"}</span>
+      </button>
+      {activa && <span aria-hidden className="absolute -bottom-[15px] left-1/2 h-0 w-0 -translate-x-1/2 border-x-[10px] border-t-[10px] border-x-transparent border-t-stone-800" />}
+    </div>
   );
 }
 
