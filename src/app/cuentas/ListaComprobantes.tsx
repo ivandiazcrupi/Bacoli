@@ -315,7 +315,7 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
                 <input type="checkbox" aria-label={`Elegir ${f.numero ?? "comprobante"}`} checked={elegidas.has(f.id)} disabled={!f.entregado || f.pagada || f.cubierta || !!f.anulado || f.esNc} onChange={() => alternar(f.id)} className="h-4 w-4 accent-[#026433] disabled:opacity-25" />
                 {visibles.map((c) => {
                   switch (c.id) {
-                    case "numero": return <span key={c.id} className={`${celdaBase} text-[14px] font-bold tabular-nums ${f.esNc ? "text-stone-500" : "text-stone-900"}`}>{f.numero ?? <span className="text-[13px] font-semibold text-rojo-700">sin número</span>}</span>;
+                    case "numero": return <span key={c.id} className={`${celdaBase} text-[14px] font-bold tabular-nums ${f.esNc ? "text-stone-500" : "text-stone-900"}`}>{f.numero ? (!f.arca && f.tipo === "REMITO" ? <Link href={`/pedidos/${f.id}/remito`} target="_blank" title="Abrir el remito" className="hover:underline">{f.numero}</Link> : f.numero) : <span className="text-[13px] font-semibold text-rojo-700">sin número</span>}</span>;
                     case "cliente": return <span key={c.id} className="flex min-w-0 flex-col items-center leading-tight" title={f.aviso || undefined}>
                       {f.clienteId ? <Link href={`/cuentas/${f.clienteId}`} className="max-w-full truncate text-[13px] font-semibold hover:underline">{f.cliente}</Link> : <span className="max-w-full truncate text-[13px] font-semibold italic text-rojo-700" title="El CUIT no está cargado en ningún cliente">{f.cliente}</span>}
                       {(f.pedidoId || (f.arca && f.sinPedido) || f.aviso) && <span className="mt-0.5 flex max-w-full items-center gap-2 truncate text-[11.5px]">
@@ -331,11 +331,14 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
                     case "estado": {
                       const e = estadoDe(f);
                       const color = e === "Pendiente" ? "bg-rojo-50 text-rojo-700" : e === "Pagada" ? "bg-verde-50 text-verde-700" : e === "NC sin aplicar" ? "bg-[#fdf8e3] text-[#8a6a05]" : "";
-                      return <span key={c.id} className={`mx-auto flex h-7 w-fit max-w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 font-bold ${color}`} title={e === "Pendiente" && f.atraso > 0 ? `Vencida hace ${f.atraso} días` : undefined}>
-                        {e === "NC sin aplicar" ? <button type="button" onClick={() => { setMotivoNc(""); setPicker(picker === f.id ? null : f.id); }} className="font-bold hover:underline">Aplicar a factura</button>
-                          : e === "Pagada" ? <><span className="font-bold">Pagada{f.medio ? ` · ${TEXTO_MEDIO[f.medio] ?? ""}` : ""}</span><button type="button" title="Deshacer el pago" aria-label="Deshacer el pago" onClick={() => deshacer(f.id, !!f.arca)} className="text-[12px] opacity-50 hover:opacity-100">✕</button></>
-                          : e === "Pendiente" ? <span className="font-bold">Pendiente{f.atraso > 0 ? <span className="text-[12px] font-medium opacity-80"> · {f.atraso} d</span> : null}</span>
-                          : <span className="text-stone-500">{e === "Anulado" ? f.anulado : e}</span>}
+                      return <span key={c.id} className="flex min-w-0 flex-col items-center leading-tight" title={e === "Pendiente" && f.atraso > 0 ? `Vencida hace ${f.atraso} días` : undefined}>
+                        <span className={`flex h-7 w-fit max-w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 font-bold ${color}`}>
+                          {e === "NC sin aplicar" ? <button type="button" onClick={() => { setMotivoNc(""); setPicker(picker === f.id ? null : f.id); }} className="font-bold hover:underline">Aplicar a factura</button>
+                            : e === "Pagada" ? <><span>Pagada</span><button type="button" title="Deshacer el pago" aria-label="Deshacer el pago" onClick={() => deshacer(f.id, !!f.arca)} className="text-[11px] opacity-50 hover:opacity-100">✕</button></>
+                            : e === "Pendiente" ? <span>Pendiente{f.atraso > 0 ? <span className="text-[12px] font-medium opacity-80"> · {f.atraso} d</span> : null}</span>
+                            : <span className="font-medium text-stone-500">{e === "Anulado" ? f.anulado : e}</span>}
+                        </span>
+                        {e === "Pagada" && f.medio && <span className="mt-0.5 text-[11px] text-stone-500">{TEXTO_MEDIO[f.medio] ?? ""}</span>}
                       </span>;
                     }
                     case "pedido": return <span key={c.id} className="text-[12.5px]">
