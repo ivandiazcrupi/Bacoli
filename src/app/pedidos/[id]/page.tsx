@@ -83,7 +83,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
   // Entregado / no entregado solo se marcan con la ruta ya lista (salió); los comprobantes cargados a mano no pasan por la ruta.
   const rutaSalio = pedido.manual || (pedido.fechaEntrega ? (await estadoDelDia(pedido.fechaEntrega)).estado !== "ARMANDO" : false);
   const motivoApagado = !pedido.fechaEntrega ? "Asignale un día y un vehículo, y dejá lista la hoja de ruta, para marcar la entrega." : "Dejá lista la hoja de ruta de ese día para marcar la entrega.";
-  const btn = "flex h-10 w-full items-center gap-2 whitespace-nowrap rounded-md border px-3 text-sm font-semibold";
+  const btn = "flex h-10 w-full items-center gap-2 whitespace-nowrap rounded-md border px-3 text-sm font-medium";
   const fechaLarga = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}`;
   const cargado = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Argentina/Buenos_Aires" }).format(pedido.creadoEn);
   const horaCarga = pedido.creadoEn.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Argentina/Buenos_Aires" });
@@ -91,30 +91,30 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
   const direccion = web ? [entrega.direccion, entrega.barrio].filter(Boolean).join(" · ") : [titulo(pedido.punto?.direccion), pedido.punto?.barrio, pedido.punto?.zona.nombre].filter(Boolean).join(" · ");
   const pastilla = { PENDIENTE: "bg-[#fdf8e3] text-[#8a6a05]", ENTREGADO: "bg-verde-50 text-verde-700", NO_ENTREGADO: "bg-rojo-50 text-rojo-700", CANCELADO: "bg-rojo-50 text-rojo-700" } as const;
   const celda = (etiqueta: string, valor: React.ReactNode, detalle?: React.ReactNode) => (
-    <div className="min-w-0 px-5 py-3">
-      <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-stone-500">{etiqueta}</p>
-      <div className="mt-1 text-[17px] font-bold leading-tight text-stone-900">{valor}</div>
+    <div className="min-w-0 px-6 py-4">
+      <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-stone-400">{etiqueta}</p>
+      <div className="mt-1 text-[16px] font-medium leading-tight text-stone-800">{valor}</div>
       {detalle && <div className="mt-0.5 text-[12.5px] font-normal text-stone-500">{detalle}</div>}
     </div>
   );
-  const cobroTexto = pedido.estado !== "ENTREGADO" ? <span className="text-[15px] font-semibold text-stone-400">Sin entregar</span>
+  const cobroTexto = pedido.estado !== "ENTREGADO" ? <span className="text-[15px] font-medium text-stone-400">Sin entregar</span>
     : pedido.cobro === "COBRADO" ? <span className="text-verde-700">Pagado{pedido.medioCobro ? ` · ${pedido.medioCobro === "EFECTIVO" ? "Efectivo" : pedido.medioCobro === "TRANSFERENCIA" ? "Transferencia" : pedido.medioCobro === "MERCADO_PAGO" ? "Mercado Pago" : pedido.medioCobro === "CHEQUE" ? "Cheque" : "Otro"}` : ""}</span>
     : pedido.cobro === "CUENTA_CORRIENTE" ? <span className="text-sky-700">En cuenta corriente</span> : <span className="text-rojo-700">Sin cobrar</span>;
 
   // Acciones del costado (formularios aparte del de la entrega).
   const lateral = (
-    <section className="rounded-xl border border-stone-300 bg-white p-4 shadow-sm" aria-label="Acciones del pedido">
-      <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.12em] text-stone-500">Acciones</h2>
-      <div className="space-y-2">
+    <section className="rounded-xl border border-stone-200 bg-white p-5" aria-label="Acciones del pedido">
+      <h2 className="mb-3 text-[11px] font-medium uppercase tracking-[0.1em] text-stone-400">Acciones</h2>
+      <div className="space-y-2.5">
         {!web && !pedido.conFactura && pedido.estado !== "CANCELADO" && (
-          <BotonRemito pedidoId={pedido.id} numero={pedido.remitoNumero ? `Imprimir remito ${formatoRemito(pedido.remitoNumero)}` : null} textoSinNumero="Emitir remito" clase={`${btn} border-stone-400 bg-white text-stone-800 hover:bg-crema-100`} />
+          <BotonRemito pedidoId={pedido.id} numero={pedido.remitoNumero ? `Imprimir remito ${formatoRemito(pedido.remitoNumero)}` : null} textoSinNumero="Emitir remito" clase={`${btn} border-stone-300 bg-white text-stone-700 hover:bg-crema-100`} />
         )}
-        {(abierto || pedido.estado === "NO_ENTREGADO") && <Link href={`/pedidos/${pedido.id}/editar`} className={`${btn} border-stone-400 bg-white text-stone-800 hover:bg-crema-100`}>✎ Editar pedido</Link>}
-        {abierto && fecha && rutaSalio && <BotonNoEntregado pedidoId={pedido.id} clase={`${btn} border-stone-400 bg-white text-rojo-700 hover:bg-rojo-50`} />}
+        {(abierto || pedido.estado === "NO_ENTREGADO") && <Link href={`/pedidos/${pedido.id}/editar`} className={`${btn} border-stone-300 bg-white text-stone-700 hover:bg-crema-100`}>✎ Editar pedido</Link>}
+        {abierto && fecha && rutaSalio && <BotonNoEntregado pedidoId={pedido.id} clase={`${btn} border-stone-300 bg-white text-rojo-700 hover:bg-rojo-50`} />}
         {!abierto && (
           <form action={reabrirPedido}>
             <input type="hidden" name="id" value={pedido.id} />
-            <BotonConAviso texto="↺ Reabrir pedido" aviso="¿Volver el pedido a pendiente?" clase={`${btn} border-stone-400 bg-white text-stone-800 hover:bg-crema-100`} />
+            <BotonConAviso texto="↺ Reabrir pedido" aviso="¿Volver el pedido a pendiente?" clase={`${btn} border-stone-300 bg-white text-stone-700 hover:bg-crema-100`} />
           </form>
         )}
         {pedido.estado !== "CANCELADO" && (
@@ -143,20 +143,20 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
       <Cabecera usuario={usuario} />
       <main className={CONTENEDOR_PEDIDOS}>
         {/* Encabezado: quién, dónde y en qué estado está */}
-        <section className="overflow-hidden rounded-xl border border-stone-300 bg-white shadow-sm" aria-label="Datos del pedido">
-          <div className="flex flex-wrap items-start justify-between gap-3 px-5 py-4">
+        <section className="overflow-hidden rounded-xl border border-stone-200 bg-white" aria-label="Datos del pedido">
+          <div className="flex flex-wrap items-start justify-between gap-3 px-6 py-5">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-3">
-                <h1 className="text-2xl font-bold tracking-tight">{entrega.nombre}</h1>
-                <span className={`inline-flex h-7 items-center rounded-full px-3 text-[13px] font-bold ${pastilla[pedido.estado]}`}>{ETIQUETA[pedido.estado]}</span>
-                <span className="inline-flex h-7 items-center rounded-full border border-stone-300 bg-crema-100 px-3 text-[12px] font-bold uppercase tracking-wide text-stone-600">{web ? "Tienda online" : pedido.conFactura ? "Con factura" : "Con remito"}</span>
+                <h1 className="text-[22px] font-semibold tracking-tight text-stone-900">{entrega.nombre}</h1>
+                <span className={`inline-flex h-7 items-center rounded-full px-3 text-[12.5px] font-medium ${pastilla[pedido.estado]}`}>{ETIQUETA[pedido.estado]}</span>
+                <span className="inline-flex h-7 items-center rounded-full border border-stone-200 bg-white px-3 text-[11.5px] font-medium uppercase tracking-wide text-stone-500">{web ? "Tienda online" : pedido.conFactura ? "Con factura" : "Con remito"}</span>
               </div>
-              <p className="mt-1.5 text-[14px] text-stone-700">{direccion}</p>
+              <p className="mt-2 text-[14px] text-stone-600">{direccion}</p>
               {entrega.telefono && <p className="mt-0.5 text-[13.5px] text-stone-600">Tel. {wa ? <a href={wa} target="_blank" rel="noreferrer" className="font-semibold text-verde-800 hover:underline">{entrega.telefono} · WhatsApp</a> : entrega.telefono}</p>}
             </div>
             <BotonVolver fallback={fecha ? `/pedidos/dia/${fecha}` : "/pedidos"} />
           </div>
-          <div className={`grid grid-cols-2 divide-x divide-y divide-stone-200 border-t border-stone-300 sm:divide-y-0 ${web ? "sm:grid-cols-4" : "sm:grid-cols-4"}`}>
+          <div className={`grid grid-cols-2 divide-x divide-y divide-stone-200 border-t border-stone-200 sm:divide-y-0 ${web ? "sm:grid-cols-4" : "sm:grid-cols-4"}`}>
             {celda("Fecha de carga", fechaLarga(cargado), `${horaCarga} hs`)}
             {celda("Fecha de entrega", fecha ? fechaLarga(fecha) : <span className="text-stone-400">Sin día</span>, fecha ? nombreDia(fecha) : "todavía sin asignar")}
             {web ? celda("Pedido de la tienda", <>N° {pedido.webOrden}</>, Number(pedido.webExtra ?? 0) > 0 ? `Incluye ${formatoPesos(Number(pedido.webExtra))} agregado por fuera` : undefined) : celda(
