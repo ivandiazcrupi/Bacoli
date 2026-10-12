@@ -324,14 +324,14 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
                         {f.aviso && <span className="text-rojo-700">{f.aviso}</span>}
                       </span>}
                     </span>;
-                    case "razon": return <span key={c.id} className="line-clamp-2 min-w-0 break-words text-[11.5px] uppercase leading-tight text-stone-600" title={f.razon || undefined}>{f.razon || <span className="text-stone-300">—</span>}</span>;
+                    case "razon": return <span key={c.id} className="line-clamp-2 min-w-0 break-words text-[12.5px] font-bold uppercase leading-tight text-stone-800" title={f.razon || undefined}>{f.razon || <span className="text-stone-300">—</span>}</span>;
                     case "sucursal": return <SucursalCelda key={c.id} f={f} />;
                     case "fecha": return <span key={c.id} className="tabular-nums text-stone-600">{fechaCorta(f.cargado)}</span>;
                     case "monto": return <span key={c.id} className={`whitespace-nowrap text-[14px] font-bold tabular-nums ${f.cubierta || f.anulado ? "text-stone-300 line-through" : f.esNc ? "text-stone-500" : "text-stone-900"}`}>{f.esNc ? "−" : ""}{formatoPesos(f.cubierta || f.anulado || f.esNc ? f.bruto : f.monto)}</span>;
                     case "estado": {
                       const e = estadoDe(f);
-                      const color = e === "Pendiente" ? "text-rojo-700" : e === "Pagada" ? "text-verde-700" : e === "NC sin aplicar" ? "text-[#8a6a05]" : "";
-                      return <span key={c.id} className={`flex items-center justify-center gap-1.5 whitespace-nowrap font-bold ${color}`} title={e === "Pendiente" && f.atraso > 0 ? `Vencida hace ${f.atraso} días` : undefined}>
+                      const color = e === "Pendiente" ? "bg-rojo-50 text-rojo-700" : e === "Pagada" ? "bg-verde-50 text-verde-700" : e === "NC sin aplicar" ? "bg-[#fdf8e3] text-[#8a6a05]" : "";
+                      return <span key={c.id} className={`mx-auto flex h-7 w-fit max-w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 font-bold ${color}`} title={e === "Pendiente" && f.atraso > 0 ? `Vencida hace ${f.atraso} días` : undefined}>
                         {e === "NC sin aplicar" ? <button type="button" onClick={() => { setMotivoNc(""); setPicker(picker === f.id ? null : f.id); }} className="font-bold hover:underline">Aplicar a factura</button>
                           : e === "Pagada" ? <><span className="font-bold">Pagada{f.medio ? ` · ${TEXTO_MEDIO[f.medio] ?? ""}` : ""}</span><button type="button" title="Deshacer el pago" aria-label="Deshacer el pago" onClick={() => deshacer(f.id, !!f.arca)} className="text-[12px] opacity-50 hover:opacity-100">✕</button></>
                           : e === "Pendiente" ? <span className="font-bold">Pendiente{f.atraso > 0 ? <span className="text-[12px] font-medium opacity-80"> · {f.atraso} d</span> : null}</span>
