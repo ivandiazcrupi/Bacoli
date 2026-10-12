@@ -2,27 +2,22 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-// Paquetes con punto de miles y coma decimal (10.320,5).
-const num = (n: number) => n.toLocaleString("es-AR", { maximumFractionDigits: 1 });
-
 export type FilaCliente = {
   id: string; nombre: string; barrios: string;
   ultimo: string | null; sinPedir: number | null;
-  ped90: number; paqMes: number; paqAnt: number; paqProm: number; total: number;
+  ped90: number; total: number;
 };
-type Resumen = { activos: number; d7: number; d15: number; sin15: number; inactivos: number; paqMes: number; paqAnt: number };
+type Resumen = { activos: number; d7: number; sin7: number; sin15: number; sin30: number; sin45: number; inactivos: number };
 
 const fechaCorta = (s: string | null) => (s ? `${s.slice(8)}/${s.slice(5, 7)}/${s.slice(2, 4)}` : "—");
-const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
-
-// Cada cliente cae en UN solo grupo, según hace cuántos días fue su último pedido.
+// "Sin pedir hace +N días" suma a todos los que llevan N días o más sin pedir (un cliente sin pedir hace 20 días está en +7 y en +15).
 const FILTROS = [
   ["todos", "Todos"],
   ["d7", "Pidieron en los últimos 7 días"],
-  ["d15", "Pidieron hace 8 a 15 días"],
-  ["s15", "Sin pedir hace 16 a 30 días"],
-  ["s30", "Sin pedir hace 31 a 45 días"],
-  ["s45", "Sin pedir hace más de 45 días"],
+  ["s7", "Sin pedir hace +7 días"],
+  ["s15", "Sin pedir hace +15 días"],
+  ["s30", "Sin pedir hace +30 días"],
+  ["s45", "Sin pedir hace +45 días"],
   ["inactivos", "Inactivos"],
 ] as const;
 type Filtro = (typeof FILTROS)[number][0];
@@ -30,23 +25,15 @@ const dentro = (f: FilaCliente, k: Filtro) => {
   const d = f.sinPedir;
   switch (k) {
     case "d7": return d !== null && d <= 7;
-    case "d15": return d !== null && d >= 8 && d <= 15;
-    case "s15": return d !== null && d >= 16 && d <= 30;
-    case "s30": return d !== null && d >= 31 && d <= 45;
+    case "s7": return d !== null && d > 7;
+    case "s15": return d !== null && d > 15;
+    case "s30": return d !== null && d > 30;
     case "s45": return d !== null && d > 45;
     case "inactivos": return f.ultimo === null; // nunca hicieron un pedido
     default: return true;
   }
 };
-type Col = "nombre" | "ultimo" | "sinPedir" | "ped90" | "paqProm" | "paqMes" | "paqAnt";
-
-// Variación contra el mes anterior (completo): ▲ verde si sube, ▼ rojo si baja. El mes en curso todavía no terminó.
-function Tendencia({ actual, anterior }: { actual: number; anterior: number }) {
-  if (anterior <= 0) return null;
-  const p = Math.round(((actual - anterior) / anterior) * 100);
-  if (p === 0) return null;
-  return <span className={`ml-1.5 text-[11px] font-semibold ${p > 0 ? "text-verde-700" : "text-rojo-700"}`}>{p > 0 ? "▲" : "▼"} {Math.abs(p)}%</span>;
-}
+type Col = "nombre" | "ultimo" | "sinPedir" | "ped90" | "total";
 
 function Dato({ titulo, valor, detalle, rojo, ayuda }: { titulo: string; valor: React.ReactNode; detalle?: React.ReactNode; rojo?: boolean; ayuda?: string }) {
   return (
@@ -58,11 +45,10 @@ function Dato({ titulo, valor, detalle, rojo, ayuda }: { titulo: string; valor: 
   );
 }
 
-export function Tablero({ filas, resumen, mes }: { filas: FilaCliente[]; resumen: Resumen; mes: string }) {
+export function Tablero({ filas, resumen }: { filas: FilaCliente[]; resumen: Resumen }) {
   const [q, setQ] = useState("");
   const [filtro, setFiltro] = useState<Filtro>("todos");
   const [orden, setOrden] = useState<{ col: Col; asc: boolean }>({ col: "sinPedir", asc: false });
-  const nombreMes = MESES[Number(mes.slice(5)) - 1];
 
   const lista = useMemo(() => {
     const palabras = q.toLowerCase().split(/\s+/).filter(Boolean);
@@ -86,19 +72,20 @@ export function Tablero({ filas, resumen, mes }: { filas: FilaCliente[]; resumen
       {children}{orden.col === col && <span className="text-verde-700">{orden.asc ? "▲" : "▼"}</span>}
     </button>
   );
-  const GRILLA = "grid-cols-[minmax(260px,2.6fr)_120px_130px_120px_130px_130px_150px]";
+  const GRILLA = "grid-cols-[minmax(260px,2.6fr)_130px_140px_130px_130px]";
   const cuentaFiltro = (k: Filtro) => filas.filter((f) => dentro(f, k)).length;
 
   return (
     <div className="space-y-4">
       {/* Resumen: cada cuadro dice qué cuenta */}
-      <section aria-label="Resumen" className="grid grid-cols-2 divide-stone-200 overflow-hidden rounded-lg border border-stone-300 bg-white sm:grid-cols-3 lg:grid-cols-6 lg:divide-x">
-        <Dato titulo="Clientes activos" valor={resumen.activos} detalle="en la lista de clientes" />
+      <section aria-label="Resumen" className="grid grid-cols-2 divide-stone-200 overflow-hidden rounded-lg border border-stone-300 bg-white sm:grid-cols-4 lg:grid-cols-7 lg:divide-x">
+        <Dato titulo="Clientes activos" valor={resumen.activos} detalle="en la lista" />
         <Dato titulo="Pidieron en los últimos 7 días" valor={resumen.d7} detalle="esta semana" />
-        <Dato titulo="Pidieron hace 8 a 15 días" valor={resumen.d15} detalle="no pidieron esta semana, pero sí la anterior" />
-        <Dato titulo="Sin pedir hace más de 15 días" valor={resumen.sin15} rojo={resumen.sin15 > 0} detalle="compraron antes y hace rato que no piden" />
-        <Dato titulo="Inactivos" valor={resumen.inactivos} detalle="cargados como cliente, todavía sin ninguna compra" />
-        <Dato titulo={`Paquetes en ${nombreMes}`} valor={<>{num(resumen.paqMes)}<Tendencia actual={resumen.paqMes} anterior={resumen.paqAnt} /></>} detalle={resumen.paqAnt > 0 ? `mes anterior: ${num(resumen.paqAnt)}` : "mes anterior: sin datos cargados"} />
+        <Dato titulo="Sin pedir hace +7 días" valor={resumen.sin7} />
+        <Dato titulo="Sin pedir hace +15 días" valor={resumen.sin15} />
+        <Dato titulo="Sin pedir hace +30 días" valor={resumen.sin30} rojo={resumen.sin30 > 0} />
+        <Dato titulo="Sin pedir hace +45 días" valor={resumen.sin45} rojo={resumen.sin45 > 0} />
+        <Dato titulo="Inactivos" valor={resumen.inactivos} detalle="todavía sin ninguna compra" />
       </section>
 
       {/* Filtros */}
@@ -114,21 +101,19 @@ export function Tablero({ filas, resumen, mes }: { filas: FilaCliente[]; resumen
       </div>
 
       <p className="-mt-2 text-[12.5px] leading-relaxed text-stone-600">
-        Cada cliente aparece en <b>un solo grupo</b>, según hace cuántos días fue su último pedido. <b>Inactivos</b> son los que figuran como cliente pero todavía no hicieron ningún pedido.
-        Se cuentan los pedidos mayoristas cargados que no se cancelaron ni quedaron sin entregar. Paquetes = pizzas ÷ 2, como en la hoja de ruta.
+        <b>Sin pedir hace +N días</b> incluye a todos los que llevan N días o más sin pedir: un cliente que no pide hace 20 días figura en +7 y en +15. <b>Inactivos</b> son los que figuran como cliente pero todavía no hicieron ningún pedido.
+        Se cuentan los pedidos mayoristas cargados que no se cancelaron ni quedaron sin entregar.
       </p>
 
       {/* Tabla de clientes */}
       <div className="overflow-x-auto rounded-lg border border-stone-300 bg-white">
-        <div className="min-w-[1000px]">
+        <div className="min-w-[760px]">
           <div className={`grid items-center gap-x-3 border-b border-stone-300 bg-crema-100 px-4 py-2.5 text-center text-[11px] font-semibold uppercase tracking-wide text-stone-500 ${GRILLA}`}>
             <Titulo col="nombre">Cliente</Titulo>
             <Titulo col="ultimo">Último pedido</Titulo>
             <Titulo col="sinPedir">Días sin pedir</Titulo>
             <Titulo col="ped90">Pedidos 90 d</Titulo>
-            <Titulo col="paqProm">Paq. por mes</Titulo>
-            <Titulo col="paqMes">Paq. {nombreMes}</Titulo>
-            <Titulo col="paqAnt">Paq. mes anterior</Titulo>
+            <Titulo col="total">Pedidos en total</Titulo>
           </div>
           {lista.length === 0 && <p className="p-10 text-center text-sm text-stone-500">No hay clientes con ese filtro.</p>}
           {lista.map((f) => (
@@ -143,9 +128,7 @@ export function Tablero({ filas, resumen, mes }: { filas: FilaCliente[]; resumen
                   : <span className={`inline-block rounded-full px-2.5 py-0.5 font-bold tabular-nums ${f.sinPedir > 45 ? "bg-rojo-50 text-rojo-700" : f.sinPedir > 15 ? "bg-[#fdf8e3] text-[#8a6a05]" : "text-stone-800"}`}>{f.sinPedir === 0 ? "Hoy" : f.sinPedir}</span>}
               </span>
               <span className="tabular-nums">{f.ped90 || <span className="text-stone-300">0</span>}</span>
-              <span className="tabular-nums">{f.paqProm > 0 ? num(Math.round(f.paqProm * 2) / 2) : <span className="text-stone-300">—</span>}</span>
-              <span className="tabular-nums">{f.paqMes > 0 ? num(f.paqMes) : <span className="text-stone-300">—</span>}<Tendencia actual={f.paqMes} anterior={f.paqAnt} /></span>
-              <span className="tabular-nums text-stone-600">{f.paqAnt > 0 ? num(f.paqAnt) : <span className="text-stone-300">—</span>}</span>
+              <span className="tabular-nums">{f.total || <span className="text-stone-300">0</span>}</span>
             </div>
           ))}
         </div>

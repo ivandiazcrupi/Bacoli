@@ -1,7 +1,6 @@
 import { Cabecera } from "@/components/Cabecera";
 import { db } from "@/lib/db";
 import { hoy, sumarDias } from "@/lib/fechas";
-import { bultosDe } from "@/lib/ruta";
 import { exigirOficina } from "@/lib/session";
 import { CONTENEDOR_PEDIDOS } from "../pedidos/Encabezado";
 import { Tablero, type FilaCliente } from "./Tablero";
@@ -9,33 +8,26 @@ import { Tablero, type FilaCliente } from "./Tablero";
 const dias = (a: string, b: string) => Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / 86_400_000);
 const fechaAR = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }); // AAAA-MM-DD
 
-// COMERCIAL: tablero general de clientes. Quién pide, quién dejó de pedir, cuánto compra cada uno y cómo viene el mes.
+// COMERCIAL: tablero general de clientes. Quién pide, quién dejó de pedir, qué clientes llevan tiempo sin pedir.
 // Todo sale de los pedidos ya cargados (no cancelados): no cambia nada, solo se mira.
 export default async function Comercial() {
   const usuario = await exigirOficina();
   const hoyStr = hoy();
-  const mesActual = hoyStr.slice(0, 7);
-  const primeroMes = `${mesActual}-01`;
-  const ultimoMesAnt = sumarDias(primeroMes, -1);
-  const mesAnterior = ultimoMesAnt.slice(0, 7);
 
   const [clientes, pedidos] = await Promise.all([
     db.cliente.findMany({ where: { activo: true }, include: { puntos: { where: { activo: true }, select: { barrio: true } } }, orderBy: { nombre: "asc" } }),
-    db.pedido.findMany({ where: { clienteId: { not: null }, estado: { not: "CANCELADO" }, origen: "MAYORISTA" }, include: { items: true }, orderBy: { creadoEn: "asc" } }),
+    db.pedido.findMany({ where: { clienteId: { not: null }, estado: { not: "CANCELADO" }, origen: "MAYORISTA" }, select: { clienteId: true, estado: true, creadoEn: true }, orderBy: { creadoEn: "asc" } }),
   ]);
 
-  type Acum = { fechas: string[]; paqMes: number; paqAnt: number; ped90: number; paq90: number };
+  type Acum = { fechas: string[]; ped90: number };
   const porCliente = new Map<string, Acum>();
   const hace90 = sumarDias(hoyStr, -90);
   for (const p of pedidos) {
     if (p.estado === "NO_ENTREGADO") continue; // no llegó a entregarse: no cuenta como compra
     const f = fechaAR(p.creadoEn);
-    const a = porCliente.get(p.clienteId!) ?? { fechas: [], paqMes: 0, paqAnt: 0, ped90: 0, paq90: 0 };
-    const paq = bultosDe(p.items);
+    const a = porCliente.get(p.clienteId!) ?? { fechas: [], ped90: 0 };
     a.fechas.push(f);
-    if (f.startsWith(mesActual)) { a.paqMes += paq; }
-    else if (f.startsWith(mesAnterior)) { a.paqAnt += paq; }
-    if (f >= hace90) { a.ped90 += 1; a.paq90 += paq; }
+    if (f >= hace90) a.ped90 += 1;
     porCliente.set(p.clienteId!, a);
   }
 
@@ -47,19 +39,16 @@ export default async function Comercial() {
     return {
       id: c.id, nombre: c.nombre, barrios: [...new Set(c.puntos.map((p) => p.barrio).filter(Boolean))].slice(0, 2).join(" · "),
       ultimo, sinPedir,
-      ped90: a?.ped90 ?? 0, paqMes: a?.paqMes ?? 0, paqAnt: a?.paqAnt ?? 0,
-      paqProm: (a?.paq90 ?? 0) / 3, total: fechas.length,
+      ped90: a?.ped90 ?? 0, total: fechas.length,
     };
   });
 
-  const entre = (f: FilaCliente, desde: number, hasta: number) => f.sinPedir !== null && f.sinPedir >= desde && f.sinPedir <= hasta;
+  const mas = (n: number) => filas.filter((f) => f.sinPedir !== null && f.sinPedir > n).length; // acumulado: n días o más sin pedir
   const resumen = {
     activos: filas.length,
-    d7: filas.filter((f) => entre(f, 0, 7)).length,
-    d15: filas.filter((f) => entre(f, 8, 15)).length,
-    sin15: filas.filter((f) => f.sinPedir !== null && f.sinPedir > 15).length,
+    d7: filas.filter((f) => f.sinPedir !== null && f.sinPedir <= 7).length,
+    sin7: mas(7), sin15: mas(15), sin30: mas(30), sin45: mas(45),
     inactivos: filas.filter((f) => f.ultimo === null).length,
-    paqMes: filas.reduce((s, f) => s + f.paqMes, 0), paqAnt: filas.reduce((s, f) => s + f.paqAnt, 0),
   };
 
   return (
@@ -69,7 +58,7 @@ export default async function Comercial() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-bold tracking-tight">Comercial</h1>
         </div>
-        <Tablero filas={filas} resumen={resumen} mes={mesActual} />
+        <Tablero filas={filas} resumen={resumen} />
       </main>
     </>
   );
