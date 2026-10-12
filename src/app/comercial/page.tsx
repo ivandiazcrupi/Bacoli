@@ -26,7 +26,7 @@ export default async function Comercial() {
 
   type Acum = { fechas: string[]; paqMes: number; paqAnt: number; ped90: number; paq90: number };
   const porCliente = new Map<string, Acum>();
-  const hace90 = sumarDias(hoyStr, -90), hace180 = sumarDias(hoyStr, -180);
+  const hace90 = sumarDias(hoyStr, -90);
   for (const p of pedidos) {
     if (p.estado === "NO_ENTREGADO") continue; // no llegó a entregarse: no cuenta como compra
     const f = fechaAR(p.creadoEn);
@@ -43,24 +43,22 @@ export default async function Comercial() {
     const a = porCliente.get(c.id);
     const fechas = a?.fechas ?? [];
     const ultimo = fechas.length ? fechas[fechas.length - 1] : null;
-    // Ritmo habitual: cada cuántos días suele pedir (pedidos de los últimos 180 días, un día = un pedido).
-    const recientes = [...new Set(fechas.filter((f) => f >= hace180))];
-    const ritmo = recientes.length >= 3 ? Math.round(dias(recientes[recientes.length - 1], recientes[0]) / (recientes.length - 1)) : null;
-    const sinPedir = ultimo ? dias(hoyStr, ultimo) : null;
+    const sinPedir = ultimo ? dias(hoyStr, ultimo) : null; // días desde su último pedido (null = nunca pidió)
     return {
       id: c.id, nombre: c.nombre, barrios: [...new Set(c.puntos.map((p) => p.barrio).filter(Boolean))].slice(0, 2).join(" · "),
-      ultimo, sinPedir, ritmo, atrasado: ritmo !== null && sinPedir !== null && sinPedir > Math.max(ritmo * 1.5, ritmo + 3),
+      ultimo, sinPedir,
       ped90: a?.ped90 ?? 0, paqMes: a?.paqMes ?? 0, paqAnt: a?.paqAnt ?? 0,
       paqProm: (a?.paq90 ?? 0) / 3, total: fechas.length,
     };
   });
 
+  const entre = (f: FilaCliente, desde: number, hasta: number) => f.sinPedir !== null && f.sinPedir >= desde && f.sinPedir <= hasta;
   const resumen = {
     activos: filas.length,
-    pidieron30: filas.filter((f) => f.sinPedir !== null && f.sinPedir <= 30).length,
-    sin30: filas.filter((f) => f.sinPedir !== null && f.sinPedir > 30).length,
-    nunca: filas.filter((f) => f.ultimo === null).length,
-    atrasados: filas.filter((f) => f.atrasado).length,
+    d7: filas.filter((f) => entre(f, 0, 7)).length,
+    d15: filas.filter((f) => entre(f, 8, 15)).length,
+    sin15: filas.filter((f) => f.sinPedir !== null && f.sinPedir > 15).length,
+    inactivos: filas.filter((f) => f.ultimo === null).length,
     paqMes: filas.reduce((s, f) => s + f.paqMes, 0), paqAnt: filas.reduce((s, f) => s + f.paqAnt, 0),
   };
 
