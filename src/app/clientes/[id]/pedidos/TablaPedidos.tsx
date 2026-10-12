@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { formatoPesos } from "@/lib/numeros";
 import { CABECERA_TABLA } from "@/app/cuentas/estilo";
+import { FiltroLista, SEP } from "@/app/cuentas/FiltroLista";
+import { coincideNumero } from "@/lib/filtroNumero";
 
 export type FilaPedido = {
   id: string;
@@ -32,42 +34,69 @@ const fecha = (s: string | null) => (s ? `${s.slice(8, 10)}/${s.slice(5, 7)}/${s
 type Col = "cargado" | "entrega" | "sucursal" | "monto" | "estado";
 
 // Historial de pedidos del cliente en una hoja: fecha completa (dd/mm/aaaa), orden al tocar el título y filtros rápidos.
+const textoPago = (f: FilaPedido) => (f.pagado ? "Pagado" : f.estado === "ENTREGADO" ? "Pendiente" : "Sin entregar");
+const textoSucursal = (f: FilaPedido) => (f.barrio || f.direccion ? `${f.barrio} · ${f.direccion}` : "—");
+const entradaFiltro = "h-7 w-full min-w-0 rounded border border-stone-300 bg-white px-1.5 text-center text-[12px] font-normal normal-case tracking-normal text-stone-800 placeholder:text-stone-300 focus:border-verde-700 focus:outline-none";
+
 export function TablaPedidos({ filas }: { filas: FilaPedido[] }) {
   const [orden, setOrden] = useState<{ col: Col; asc: boolean }>({ col: "cargado", asc: false });
-  const [estadoF, setEstadoF] = useState<"" | FilaPedido["estado"]>("");
-  const [pagoF, setPagoF] = useState<"" | "PAGADO" | "PENDIENTE">("");
+  // Filtros arriba de cada columna (como en Cuenta corriente): los de lista permiten elegir varios.
+  const [fCargado, setFCargado] = useState("");
+  const [fEntrega, setFEntrega] = useState("");
+  const [fSucursal, setFSucursal] = useState("");
+  const [fPedido, setFPedido] = useState("");
+  const [fMonto, setFMonto] = useState("");
+  const [fComprobante, setFComprobante] = useState("");
+  const [fEstado, setFEstado] = useState("");
+  const [fPago, setFPago] = useState("");
+  const hayFiltros = !!(fCargado.trim() || fEntrega.trim() || fSucursal || fPedido.trim() || fMonto.trim() || fComprobante.trim() || fEstado || fPago);
+  const quitar = () => { setFCargado(""); setFEntrega(""); setFSucursal(""); setFPedido(""); setFMonto(""); setFComprobante(""); setFEstado(""); setFPago(""); };
+  const sucursales = useMemo(() => [...new Set(filas.map(textoSucursal))].sort((a, b) => a.localeCompare(b, "es")), [filas]);
 
   const visibles = useMemo(() => {
-    const r = filas.filter((f) => (!estadoF || f.estado === estadoF) && (!pagoF || (pagoF === "PAGADO" ? f.pagado : f.estado === "ENTREGADO" && !f.pagado)));
+    const incluye = (texto: string, v: string) => !v.trim() || texto.toLowerCase().includes(v.trim().toLowerCase());
+    const r = filas.filter((f) =>
+      incluye(fecha(f.cargado), fCargado) && incluye(f.entrega ? fecha(f.entrega) : "Sin día", fEntrega) &&
+      (!fSucursal || fSucursal.split(SEP).includes(textoSucursal(f))) &&
+      incluye(f.items.map((i) => `${i.cantidad} ${i.nombre}`).join(" "), fPedido) && coincideNumero(f.monto, fMonto) &&
+      incluye(f.comprobante || f.comprobanteFalta, fComprobante) &&
+      (!fEstado || fEstado.split(SEP).includes(ESTADOS[f.estado])) && (!fPago || fPago.split(SEP).includes(textoPago(f))));
     const clave = (f: FilaPedido): string | number => orden.col === "cargado" ? f.cargado : orden.col === "entrega" ? f.entrega ?? "9999-99-99" : orden.col === "sucursal" ? `${f.barrio} ${f.direccion}`.toLowerCase() : orden.col === "monto" ? f.monto : ESTADOS[f.estado];
     return [...r].sort((a, b) => { const x = clave(a), y = clave(b); return (x < y ? -1 : x > y ? 1 : 0) * (orden.asc ? 1 : -1) || b.cargado.localeCompare(a.cargado); });
-  }, [filas, orden, estadoF, pagoF]);
+  }, [filas, orden, fCargado, fEntrega, fSucursal, fPedido, fMonto, fComprobante, fEstado, fPago]);
 
-  const filtroTitulo = "w-full cursor-pointer appearance-none bg-transparent text-center text-[11px] font-semibold uppercase tracking-wide text-stone-500 hover:text-stone-900 focus:outline-none";
   const titulo = (col: Col, texto: string) => (
     <button type="button" onClick={() => setOrden((o) => ({ col, asc: o.col === col ? !o.asc : col === "sucursal" || col === "estado" }))} className="flex items-center justify-center gap-1 uppercase hover:text-stone-900">
       {texto}{orden.col === col && <span className="text-verde-700">{orden.asc ? "▲" : "▼"}</span>}
     </button>
   );
+  const texto = (valor: string, set: (v: string) => void, nombre: string, ejemplo: string) => <input aria-label={`Filtrar ${nombre}`} value={valor} onChange={(e) => set(e.target.value)} placeholder={ejemplo} className={entradaFiltro} />;
 
   return (
     <div className="rounded-lg border border-stone-300 bg-white">
+      <div className="flex flex-wrap items-center gap-3 border-b border-stone-200 px-4 py-2 text-[13px] text-stone-600">
+        <span>{visibles.length} {visibles.length === 1 ? "pedido" : "pedidos"}{hayFiltros ? ` de ${filas.length}` : ""}</span>
+        {hayFiltros && <button type="button" onClick={quitar} className="rounded-full border border-stone-300 bg-white px-3 py-0.5 text-[12.5px] font-semibold text-stone-700 hover:border-stone-600">Quitar filtros ✕</button>}
+      </div>
       <div className="overflow-x-auto">
         <div className="min-w-[1300px]">
-          <div className={`grid text-center ${CABECERA_TABLA} ${COLUMNAS}`}>
-            {titulo("cargado", "Cargado")}{titulo("entrega", "Entrega")}{titulo("sucursal", "Sucursal")}<span>Pedido</span>{titulo("monto", "Monto")}<span>Comprobante</span>
-            <select aria-label="Filtrar por estado" value={estadoF} onChange={(e) => setEstadoF(e.target.value as typeof estadoF)} className={filtroTitulo}>
-              <option value="">Estado ▾</option>
-              {(Object.keys(ESTADOS) as (keyof typeof ESTADOS)[]).map((k) => <option key={k} value={k}>{ESTADOS[k]}</option>)}
-            </select>
-            <select aria-label="Filtrar por pago" value={pagoF} onChange={(e) => setPagoF(e.target.value as typeof pagoF)} className={filtroTitulo}>
-              <option value="">Pago ▾</option>
-              <option value="PAGADO">Pagado</option>
-              <option value="PENDIENTE">Pendiente</option>
-            </select>
-            <span />
+          <div className="border-b border-stone-300 bg-crema-100">
+            <div className={`grid items-center gap-x-3 px-4 pt-2.5 text-center text-[11px] font-semibold uppercase tracking-wide text-stone-500 ${COLUMNAS}`}>
+              {titulo("cargado", "Cargado")}{titulo("entrega", "Entrega")}{titulo("sucursal", "Sucursal")}<span>Pedido</span>{titulo("monto", "Monto")}<span>Comprobante</span>{titulo("estado", "Estado")}<span>Pago</span><span />
+            </div>
+            <div className={`grid items-center gap-x-3 px-4 pb-2.5 pt-1.5 ${COLUMNAS}`}>
+              {texto(fCargado, setFCargado, "fecha de carga", "Ej: 12/10")}
+              {texto(fEntrega, setFEntrega, "fecha de entrega", "Ej: 16/10")}
+              <FiltroLista varios titulo="Sucursal" opciones={sucursales} valor={fSucursal} onCambio={setFSucursal} />
+              {texto(fPedido, setFPedido, "pedido", "Ej: tomate")}
+              {texto(fMonto, setFMonto, "monto", "Ej: >200000")}
+              {texto(fComprobante, setFComprobante, "comprobante", "Ej: F-49")}
+              <FiltroLista varios titulo="Estado" opciones={Object.values(ESTADOS)} valor={fEstado} onCambio={setFEstado} />
+              <FiltroLista varios titulo="Pago" opciones={["Pagado", "Pendiente", "Sin entregar"]} valor={fPago} onCambio={setFPago} />
+              <span />
+            </div>
           </div>
-          {visibles.length === 0 && <p className="p-8 text-center text-sm text-stone-500">No hay pedidos con ese filtro.</p>}
+          {visibles.length === 0 && <p className="p-8 text-center text-sm text-stone-500">No hay pedidos con esos filtros.</p>}
           {visibles.map((f) => {
             const cancelado = f.estado === "CANCELADO";
             const vistos = f.items.length > 2 ? f.items.slice(0, 1) : f.items; // con 3 o más renglones: el primero y "+N más"

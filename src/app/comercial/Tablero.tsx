@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { num } from "@/lib/ruta";
+import { coincideNumero } from "@/lib/filtroNumero";
 import { FiltroLista, SEP } from "../cuentas/FiltroLista";
 export type FilaCliente = {
   id: string; nombre: string; barrios: string;
@@ -36,16 +37,6 @@ const dentro = (f: FilaCliente, k: Filtro) => {
     default: return true;
   }
 };
-// Filtro numérico: "15" (exacto), ">15", ">=15", "<7", "<=7". Una celda sin dato (—) no cumple ningún número.
-function coincideNumero(valor: number | null, filtro: string) {
-  const t = filtro.trim();
-  if (!t) return true;
-  const m = t.match(/^(>=|<=|>|<|=)?\s*(\d+(?:[.,]\d+)?)$/);
-  if (!m) return true; // todavía escribiendo (ej. ">"): no filtra
-  if (valor === null) return false;
-  const n = Number(m[2].replace(",", "."));
-  switch (m[1]) { case ">": return valor > n; case ">=": return valor >= n; case "<": return valor < n; case "<=": return valor <= n; default: return valor === n; }
-}
 const estadoContacto = (f: FilaCliente) => (f.wa ? "Con WhatsApp" : f.telefono ? "Teléfono no válido" : "Sin teléfono");
 const entradaFiltro = "h-7 w-full min-w-0 rounded border border-stone-300 bg-white px-1.5 text-center text-[12px] font-normal normal-case tracking-normal text-stone-800 placeholder:text-stone-300 focus:border-verde-700 focus:outline-none";
 
