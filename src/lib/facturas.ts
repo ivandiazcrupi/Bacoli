@@ -30,6 +30,7 @@ export type FilaFactura = {
   sucursal: string | null; // barrio de la sucursal (del pedido, o la que se eligió a mano)
   observacion: string | null;
   pedidoId: string | null;
+  diaRuta: string | null; // AAAA-MM-DD de la hoja de ruta del pedido (para ir a verla)
   pedidoEntregado: boolean;
   pagada: boolean;
   medio: string | null;
@@ -95,7 +96,7 @@ export async function cargarFacturas() {
     return {
       id: a.id, esNc: a.esNotaCredito, tipo: a.tipo, puntoVenta: a.puntoVenta, numero: a.numero, fecha: a.fecha.toISOString().slice(0, 10), cuit, razonSocial: a.razonSocial,
       clienteId: cli?.id ?? null, cliente: cli?.nombre ?? null, total, puntoId: a.puntoId, sucursal: punto?.barrio ?? null, observacion: a.observacion,
-      pedidoId: pedido?.id ?? null, pedidoEntregado: pedido?.estado === "ENTREGADO", pagada, medio: a.medioCobro ?? (pedido?.cobro === "COBRADO" ? pedido.medioCobro : null), obsCobro: a.obsCobro,
+      pedidoId: pedido?.id ?? null, diaRuta: pedido?.fechaEntrega ? pedido.fechaEntrega.toISOString().slice(0, 10) : null, pedidoEntregado: pedido?.estado === "ENTREGADO", pagada, medio: a.medioCobro ?? (pedido?.cobro === "COBRADO" ? pedido.medioCobro : null), obsCobro: a.obsCobro,
       creditos: a.creditosRecibidos.map((x) => ({ id: x.id, ncId: x.ncId, ncNumero: idNumero.get(x.ncId) ?? 0, monto: Number(x.monto), motivo: x.motivo })),
       aplicado,
       aplicaciones: a.notasAplicadas.map((x) => ({ id: x.id, facturaId: x.facturaId, facturaNumero: idNumero.get(x.facturaId) ?? 0, monto: Number(x.monto), motivo: x.motivo })),

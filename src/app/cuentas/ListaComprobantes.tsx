@@ -41,6 +41,7 @@ export type FilaComprobante = {
   aviso?: string;
   sinPedido?: boolean;
   pedidoId?: string | null;
+  diaRuta?: string | null; // hoja de ruta (AAAA-MM-DD) donde está el pedido
   aplicaciones?: { id: string; facturaNumero: number; monto: number; motivo?: string | null }[];
   ncMotivos?: string; // factura: por qué se emitieron sus notas de crédito
 };
@@ -318,9 +319,10 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
                     case "numero": return <span key={c.id} className={`${celdaBase} text-[14px] font-bold tabular-nums ${f.esNc ? "text-stone-500" : "text-stone-900"}`}>{f.numero ? (!f.arca && f.tipo === "REMITO" ? <Link href={`/pedidos/${f.id}/remito`} target="_blank" title="Abrir el remito" className="hover:underline">{f.numero}</Link> : f.numero) : <span className="text-[13px] font-semibold text-rojo-700">sin número</span>}</span>;
                     case "cliente": return <span key={c.id} className="flex min-w-0 flex-col items-center leading-tight" title={f.aviso || undefined}>
                       {f.clienteId ? <Link href={`/cuentas/${f.clienteId}`} className="max-w-full truncate text-[13px] font-semibold hover:underline">{f.cliente}</Link> : <span className="max-w-full truncate text-[13px] font-semibold italic text-rojo-700" title="El CUIT no está cargado en ningún cliente">{f.cliente}</span>}
-                      {(f.pedidoId || (f.arca && f.sinPedido) || f.aviso) && <span className="mt-0.5 flex max-w-full items-center gap-2 truncate text-[11.5px]">
+                      {(f.pedidoId || f.diaRuta || (f.arca && f.sinPedido) || f.aviso) && <span className="mt-0.5 flex max-w-full items-center gap-2 truncate text-[11.5px]">
                         {f.arca && f.sinPedido && <span className="font-semibold text-rojo-700">sin pedido</span>}
                         {f.pedidoId && <Link href={`/pedidos/${f.pedidoId}`} className="text-verde-800 hover:underline" title="Abrir el pedido">pedido ›</Link>}
+                        {f.diaRuta && <Link href={`/pedidos/dia/${f.diaRuta}`} className="text-stone-500 hover:text-stone-900 hover:underline" title={`Ver la hoja de ruta del ${fechaCorta(f.diaRuta)}: camioneta, entrega y cobro`}>ruta ›</Link>}
                         {f.aviso && <span className="text-rojo-700">{f.aviso}</span>}
                       </span>}
                     </span>;
