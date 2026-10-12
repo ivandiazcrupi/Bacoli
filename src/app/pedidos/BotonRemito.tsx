@@ -26,7 +26,7 @@ export function BotonRemito({ pedidoId, numero, clase, textoSinNumero = "Remito"
   };
 
   return (
-    <span className="inline-flex flex-col gap-1">
+    <span className="inline-flex w-full flex-col gap-1">
       <button type="button" onClick={abrir} disabled={trabajando} className={clase}>{trabajando ? "…" : numero ?? textoSinNumero}</button>
       {error && <span className="text-xs text-rojo-700" role="alert">{error}</span>}
     </span>
