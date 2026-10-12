@@ -6,7 +6,7 @@ import { num } from "@/lib/ruta";
 export type FilaCliente = {
   id: string; nombre: string; barrios: string;
   ultimo: string | null; sinPedir: number | null;
-  ped90: number; paq30: number; total: number; telefono: string | null; wa: string | null;
+  ritmo: number | null; paq30: number; total: number; telefono: string | null; wa: string | null;
 };
 type Resumen = { activos: number; d7: number; s7: number; s15: number; s30: number; s45: number; inactivos: number };
 
@@ -35,7 +35,7 @@ const dentro = (f: FilaCliente, k: Filtro) => {
     default: return true;
   }
 };
-type Col = "nombre" | "ultimo" | "sinPedir" | "ped90" | "paq30";
+type Col = "nombre" | "ultimo" | "sinPedir" | "ritmo" | "paq30";
 
 function Dato({ titulo, valor, detalle, rojo, ayuda }: { titulo: string; valor: React.ReactNode; detalle?: React.ReactNode; rojo?: boolean; ayuda?: string }) {
   return (
@@ -69,12 +69,12 @@ export function Tablero({ filas, resumen }: { filas: FilaCliente[]; resumen: Res
   }, [filas, q, filtro, orden]);
 
   const ordenarPor = (col: Col) => setOrden((o) => (o.col === col ? { col, asc: !o.asc } : { col, asc: col === "nombre" }));
-  const Titulo = ({ col, children, ancho }: { col: Col; children: React.ReactNode; ancho?: string }) => (
-    <button type="button" onClick={() => ordenarPor(col)} className={`flex items-center justify-center gap-1 uppercase hover:text-stone-900 ${ancho ?? ""}`}>
+  const Titulo = ({ col, children, ancho, ayuda }: { col: Col; children: React.ReactNode; ancho?: string; ayuda?: string }) => (
+    <button type="button" title={ayuda} onClick={() => ordenarPor(col)} className={`flex items-center justify-center gap-1 uppercase hover:text-stone-900 ${ancho ?? ""}`}>
       {children}{orden.col === col && <span className="text-verde-700">{orden.asc ? "▲" : "▼"}</span>}
     </button>
   );
-  const GRILLA = "grid-cols-[minmax(260px,2.6fr)_130px_140px_130px_170px_130px]";
+  const GRILLA = "grid-cols-[minmax(260px,2.6fr)_120px_110px_110px_130px_130px]";
   const cuentaFiltro = (k: Filtro) => filas.filter((f) => dentro(f, k)).length;
 
   return (
@@ -107,10 +107,10 @@ export function Tablero({ filas, resumen }: { filas: FilaCliente[]; resumen: Res
         <div className="min-w-[900px]">
           <div className={`grid items-center gap-x-3 border-b border-stone-300 bg-crema-100 px-4 py-2.5 text-center text-[11px] font-semibold uppercase tracking-wide text-stone-500 ${GRILLA}`}>
             <Titulo col="nombre">Cliente</Titulo>
-            <Titulo col="ultimo">Último pedido</Titulo>
-            <Titulo col="sinPedir">Días sin pedir</Titulo>
-            <Titulo col="ped90">Pedidos 90 d</Titulo>
-            <Titulo col="paq30">Paquetes últimos 30 días</Titulo>
+            <Titulo col="ultimo" ayuda="Fecha del último pedido cargado.">Último pedido</Titulo>
+            <Titulo col="sinPedir" ayuda="Días que pasaron desde su último pedido.">Sin pedir</Titulo>
+            <Titulo col="ritmo" ayuda="Cada cuántos días suele pedir, según sus pedidos de los últimos 6 meses. Hacen falta al menos 2 pedidos.">Pide cada</Titulo>
+            <Titulo col="paq30" ayuda="Paquetes pedidos en los últimos 30 días (pizzas ÷ 2).">Paquetes 30 días</Titulo>
             <span>Contactar</span>
           </div>
           {lista.length === 0 && <p className="p-10 text-center text-sm text-stone-500">No hay clientes con ese filtro.</p>}
@@ -125,7 +125,7 @@ export function Tablero({ filas, resumen }: { filas: FilaCliente[]; resumen: Res
                 {f.sinPedir === null ? <span className="rounded-full bg-crema-100 px-2.5 py-0.5 text-[12px] font-semibold text-stone-500">Inactivo</span>
                   : <span className={`inline-block rounded-full px-2.5 py-0.5 font-bold tabular-nums ${f.sinPedir > 45 ? "bg-rojo-50 text-rojo-700" : f.sinPedir > 15 ? "bg-[#fdf8e3] text-[#8a6a05]" : "text-stone-800"}`}>{f.sinPedir === 0 ? "Hoy" : f.sinPedir}</span>}
               </span>
-              <span className="tabular-nums">{f.ped90 || <span className="text-stone-300">0</span>}</span>
+              <span className="tabular-nums text-stone-700" title={f.ritmo !== null ? `Suele pedir cada ${f.ritmo} días` : "Todavía no hay pedidos suficientes para saberlo"}>{f.ritmo !== null ? `${f.ritmo} ${f.ritmo === 1 ? "día" : "días"}` : <span className="text-stone-300">—</span>}</span>
               <span className="tabular-nums">{f.paq30 > 0 ? num(f.paq30) : <span className="text-stone-300">0</span>}</span>
               <span>
                 {f.wa ? <a href={f.wa} target="_blank" rel="noreferrer" title={`Escribirle por WhatsApp${f.telefono ? ` · ${f.telefono}` : ""}`} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-verde-700 bg-white px-3 text-[12.5px] font-semibold text-verde-800 hover:bg-verde-700 hover:text-white">

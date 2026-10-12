@@ -21,15 +21,14 @@ export default async function Comercial() {
     db.pedido.findMany({ where: { clienteId: { not: null }, estado: { not: "CANCELADO" }, origen: "MAYORISTA" }, select: { clienteId: true, estado: true, creadoEn: true, items: { select: { nombre: true, unidad: true, cantidad: true, sinCargo: true, paquetesPor: true } } }, orderBy: { creadoEn: "asc" } }),
   ]);
 
-  type Acum = { fechas: string[]; ped90: number; paq30: number };
+  type Acum = { fechas: string[]; paq30: number };
   const porCliente = new Map<string, Acum>();
-  const hace90 = sumarDias(hoyStr, -90), hace30 = sumarDias(hoyStr, -30);
+  const hace180 = sumarDias(hoyStr, -180), hace30 = sumarDias(hoyStr, -30);
   for (const p of pedidos) {
     if (p.estado === "NO_ENTREGADO") continue; // no llegó a entregarse: no cuenta como compra
     const f = fechaAR(p.creadoEn);
-    const a = porCliente.get(p.clienteId!) ?? { fechas: [], ped90: 0, paq30: 0 };
+    const a = porCliente.get(p.clienteId!) ?? { fechas: [], paq30: 0 };
     a.fechas.push(f);
-    if (f >= hace90) a.ped90 += 1;
     if (f >= hace30) a.paq30 += bultosDe(p.items);
     porCliente.set(p.clienteId!, a);
   }
@@ -39,11 +38,14 @@ export default async function Comercial() {
     const fechas = a?.fechas ?? [];
     const ultimo = fechas.length ? fechas[fechas.length - 1] : null;
     const tel = c.puntos.find((p) => enlaceWhatsApp(p.telefono)) ?? c.puntos.find((p) => p.telefono); // primer teléfono de WhatsApp válido de sus sucursales
+    // Cada cuántos días suele pedir: de sus pedidos de los últimos 180 días (un día = un pedido), el tiempo entre el primero y el último dividido por la cantidad de intervalos.
+    const dias180 = [...new Set(fechas.filter((f) => f >= hace180))];
+    const ritmo = dias180.length >= 2 ? Math.max(1, Math.round(dias(dias180[dias180.length - 1], dias180[0]) / (dias180.length - 1))) : null;
     const sinPedir = ultimo ? dias(hoyStr, ultimo) : null; // días desde su último pedido (null = nunca pidió)
     return {
       id: c.id, nombre: c.nombre, barrios: [...new Set(c.puntos.map((p) => p.barrio).filter(Boolean))].slice(0, 2).join(" · "),
       ultimo, sinPedir,
-      ped90: a?.ped90 ?? 0, paq30: a?.paq30 ?? 0, total: fechas.length,
+      ritmo, paq30: a?.paq30 ?? 0, total: fechas.length,
       telefono: tel?.telefono ?? null, wa: tel ? enlaceWhatsApp(tel.telefono) : null,
     };
   });
