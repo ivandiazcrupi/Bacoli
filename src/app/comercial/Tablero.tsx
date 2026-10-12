@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { num } from "@/lib/ruta";
 import { FiltroLista, SEP } from "../cuentas/FiltroLista";
 export type FilaCliente = {
@@ -51,31 +51,16 @@ const entradaFiltro = "h-7 w-full min-w-0 rounded border border-stone-300 bg-whi
 
 type Col = "nombre" | "ultimo" | "sinPedir" | "ritmo" | "paq30";
 
-// Tono de cada tarjeta: verde = pidieron; rojo (cada vez más fuerte con los días) = hay clientes sin pedir; gris = nada para mirar.
-const TONOS: Record<string, { caja: string; numero: string; barra: string }> = {
-  neutro: { caja: "border-stone-300 bg-white", numero: "text-stone-900", barra: "bg-stone-300" },
-  apagado: { caja: "border-stone-200 bg-crema-50", numero: "text-stone-400", barra: "bg-stone-200" },
-  verde: { caja: "border-verde-300 bg-verde-50", numero: "text-verde-700", barra: "bg-verde-600" },
-  rojo1: { caja: "border-rojo-200 bg-rojo-50", numero: "text-rojo-700", barra: "bg-rojo-300" },
-  rojo2: { caja: "border-rojo-300 bg-rojo-50", numero: "text-rojo-700", barra: "bg-rojo-400" },
-  rojo3: { caja: "border-rojo-400 bg-rojo-100", numero: "text-rojo-700", barra: "bg-rojo-500" },
-  rojo4: { caja: "border-rojo-600 bg-rojo-100", numero: "text-rojo-800", barra: "bg-rojo-700" },
-};
+// Tarjetas minimalistas: blancas, con el número en color (verde = pidieron, rojo = hay clientes sin pedir). La elegida se pinta en gris oscuro.
+const COLOR_NUM: Record<string, string> = { neutro: "text-stone-900", apagado: "text-stone-300", verde: "text-verde-700", rojo1: "text-rojo-600", rojo2: "text-rojo-600", rojo3: "text-rojo-700", rojo4: "text-rojo-800" };
 
-function Tarjeta({ titulo, valor, tono, activa, ayuda, onClick }: { titulo: string; valor: number; tono: keyof typeof TONOS; activa: boolean; ayuda: string; onClick: () => void }) {
-  const t = TONOS[tono];
-  // La tarjeta elegida se marca con un borde grueso negro (outline: las sombras están apagadas en todo el sistema), una flechita hacia la tabla y el texto "Mostrando abajo".
+function Tarjeta({ titulo, valor, tono, activa, ayuda, onClick }: { titulo: string; valor: number; tono: string; activa: boolean; ayuda: string; onClick: () => void }) {
   return (
-    <div className="relative">
-      <button type="button" onClick={onClick} title={ayuda} aria-pressed={activa}
-        className={`group relative flex h-full w-full flex-col items-center overflow-hidden rounded-xl border px-3 pb-3 pt-4 text-center transition hover:-translate-y-0.5 hover:shadow-md ${t.caja} ${activa ? "outline outline-[3px] outline-offset-2 outline-stone-800" : ""}`}>
-        <span className={`absolute inset-x-0 top-0 h-1.5 ${t.barra}`} />
-        <span className="flex min-h-[2rem] w-full items-center justify-center whitespace-normal text-[11.5px] font-bold uppercase leading-tight tracking-wide text-stone-600">{titulo}</span>
-        <span className={`mt-1 text-4xl font-extrabold tabular-nums leading-none ${t.numero}`}>{valor}</span>
-        <span className={`mt-2 text-[12px] ${activa ? "font-bold text-stone-900" : "font-medium text-stone-500 group-hover:text-stone-800"}`}>{activa ? "● Mostrando abajo" : valor === 0 ? "Ninguno" : "Ver clientes ›"}</span>
-      </button>
-      {activa && <span aria-hidden className="absolute -bottom-[15px] left-1/2 h-0 w-0 -translate-x-1/2 border-x-[10px] border-t-[10px] border-x-transparent border-t-stone-800" />}
-    </div>
+    <button type="button" onClick={onClick} title={ayuda} aria-pressed={activa}
+      className={`flex flex-col items-center justify-center rounded-lg border px-2 py-3 text-center transition ${activa ? "border-stone-800 bg-stone-800" : "border-stone-300 bg-white hover:border-stone-500"}`}>
+      <span className={`flex min-h-[1.9rem] w-full items-center justify-center whitespace-normal text-[11px] font-semibold uppercase leading-tight tracking-wide ${activa ? "text-stone-300" : "text-stone-500"}`}>{titulo}</span>
+      <span className={`text-3xl font-bold tabular-nums leading-tight ${activa ? "text-white" : COLOR_NUM[tono]}`}>{valor}</span>
+    </button>
   );
 }
 
@@ -83,7 +68,6 @@ export function Tablero({ filas, resumen }: { filas: FilaCliente[]; resumen: Res
   const [q, setQ] = useState("");
   const [filtro, setFiltro] = useState<Filtro>("todos");
   const [orden, setOrden] = useState<{ col: Col; asc: boolean }>({ col: "sinPedir", asc: false });
-  const tabla = useRef<HTMLDivElement>(null);
   // Filtros de la tabla (como los de Cuenta corriente): arriba de cada columna.
   const [fCliente, setFCliente] = useState("");   // varios clientes (unidos con SEP)
   const [fUltimo, setFUltimo] = useState("");
@@ -93,8 +77,7 @@ export function Tablero({ filas, resumen }: { filas: FilaCliente[]; resumen: Res
   const [fContacto, setFContacto] = useState(""); // varios (unidos con SEP)
   const hayFiltros = !!(fCliente || fUltimo.trim() || fSin.trim() || fRitmo.trim() || fPaq.trim() || fContacto);
   const quitarFiltros = () => { setFCliente(""); setFUltimo(""); setFSin(""); setFRitmo(""); setFPaq(""); setFContacto(""); };
-  // Al tocar una tarjeta se filtra la tabla y se baja hasta ella.
-  const elegir = (k: Filtro) => { setFiltro(k); setTimeout(() => tabla.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50); };
+  const elegir = (k: Filtro) => setFiltro(k); // al tocar una tarjeta solo cambia la tabla: la pantalla no se mueve
 
   const lista = useMemo(() => {
     const palabras = q.toLowerCase().split(/\s+/).filter(Boolean);
@@ -128,8 +111,8 @@ export function Tablero({ filas, resumen }: { filas: FilaCliente[]; resumen: Res
 
   return (
     <div className="space-y-4">
-      {/* Tarjetas: cada una filtra la tabla de abajo y baja hasta ella */}
-      <section aria-label="Resumen" className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+      {/* Tarjetas: cada una filtra la tabla de abajo (la pantalla no se mueve) */}
+      <section aria-label="Resumen" className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
         <Tarjeta titulo="Clientes activos" valor={resumen.activos} tono="neutro" activa={filtro === "todos"} ayuda={AYUDA.todos} onClick={() => elegir("todos")} />
         <Tarjeta titulo="Pidieron en los últimos 7 días" valor={resumen.d7} tono={resumen.d7 > 0 ? "verde" : "apagado"} activa={filtro === "d7"} ayuda={AYUDA.d7} onClick={() => elegir("d7")} />
         <Tarjeta titulo="Sin pedir hace 7 días" valor={resumen.s7} tono={resumen.s7 > 0 ? "rojo1" : "apagado"} activa={filtro === "s7"} ayuda={AYUDA.s7} onClick={() => elegir("s7")} />
@@ -140,7 +123,7 @@ export function Tablero({ filas, resumen }: { filas: FilaCliente[]; resumen: Res
       </section>
 
       {/* Buscador y qué se está mostrando */}
-      <div ref={tabla} className="flex scroll-mt-4 flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar cliente o barrio…" aria-label="Buscar cliente" className="h-10 w-full max-w-xs rounded-md border border-stone-300 bg-white px-3 text-sm focus:border-verde-700 focus:outline-none" />
         <p className="text-[14px] text-stone-700">
           Mostrando: <b>{FILTROS.find((f) => f[0] === filtro)![1]}</b> · {lista.length} {lista.length === 1 ? "cliente" : "clientes"}
