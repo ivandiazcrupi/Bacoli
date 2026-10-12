@@ -9,8 +9,9 @@ export type FilaPedido = {
   id: string;
   cargado: string; // AAAA-MM-DD
   entrega: string | null; // AAAA-MM-DD
-  sucursal: string;
-  pedido: string;
+  barrio: string;
+  direccion: string;
+  items: { cantidad: number; nombre: string; sinCargo: number }[];
   monto: number;
   comprobante: string; // "F-4818", "R-0001" o ""
   comprobanteFalta: string; // "Factura sin número" / "Remito sin emitir"
@@ -20,9 +21,12 @@ export type FilaPedido = {
   aCuenta: boolean; // entregado y quedó en cuenta corriente
 };
 
-const COLUMNAS = "grid-cols-[104px_104px_minmax(130px,1fr)_minmax(220px,2.8fr)_112px_92px_112px_172px_60px]";
+const COLUMNAS = "grid-cols-[100px_100px_minmax(250px,1.7fr)_minmax(230px,1.7fr)_112px_100px_112px_168px_72px]";
 const ESTADOS = { PENDIENTE: "Pendiente", ENTREGADO: "Entregado", NO_ENTREGADO: "No entregado", CANCELADO: "Cancelado" } as const;
 const MEDIOS: Record<string, string> = { EFECTIVO: "Efectivo", TRANSFERENCIA: "Transferencia", CHEQUE: "Cheque", MERCADO_PAGO: "Mercado Pago", OTRO: "Otro" };
+// Pastillas clarísimas con texto en negrita, como en Cuenta corriente: verde = bien, rojo = problema, amarillo suave = en espera.
+const PASTILLA_ESTADO = { PENDIENTE: "bg-[#fdf8e3] text-[#8a6a05]", ENTREGADO: "bg-verde-50 text-verde-700", NO_ENTREGADO: "bg-rojo-50 text-rojo-700", CANCELADO: "bg-rojo-50 text-rojo-700" } as const;
+const pastilla = "inline-flex h-7 items-center whitespace-nowrap rounded-full px-3 text-[12.5px] font-bold";
 const fecha = (s: string | null) => (s ? `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(0, 4)}` : "");
 
 type Col = "cargado" | "entrega" | "sucursal" | "monto" | "estado";
@@ -35,7 +39,7 @@ export function TablaPedidos({ filas }: { filas: FilaPedido[] }) {
 
   const visibles = useMemo(() => {
     const r = filas.filter((f) => (!estadoF || f.estado === estadoF) && (!pagoF || (pagoF === "PAGADO" ? f.pagado : f.estado === "ENTREGADO" && !f.pagado)));
-    const clave = (f: FilaPedido): string | number => orden.col === "cargado" ? f.cargado : orden.col === "entrega" ? f.entrega ?? "9999-99-99" : orden.col === "sucursal" ? f.sucursal.toLowerCase() : orden.col === "monto" ? f.monto : ESTADOS[f.estado];
+    const clave = (f: FilaPedido): string | number => orden.col === "cargado" ? f.cargado : orden.col === "entrega" ? f.entrega ?? "9999-99-99" : orden.col === "sucursal" ? `${f.barrio} ${f.direccion}`.toLowerCase() : orden.col === "monto" ? f.monto : ESTADOS[f.estado];
     return [...r].sort((a, b) => { const x = clave(a), y = clave(b); return (x < y ? -1 : x > y ? 1 : 0) * (orden.asc ? 1 : -1) || b.cargado.localeCompare(a.cargado); });
   }, [filas, orden, estadoF, pagoF]);
 
@@ -49,7 +53,7 @@ export function TablaPedidos({ filas }: { filas: FilaPedido[] }) {
   return (
     <div className="rounded-lg border border-stone-300 bg-white">
       <div className="overflow-x-auto">
-        <div className="min-w-[1000px]">
+        <div className="min-w-[1300px]">
           <div className={`grid text-center ${CABECERA_TABLA} ${COLUMNAS}`}>
             {titulo("cargado", "Cargado")}{titulo("entrega", "Entrega")}{titulo("sucursal", "Sucursal")}<span>Pedido</span>{titulo("monto", "Monto")}<span>Comprobante</span>
             <select aria-label="Filtrar por estado" value={estadoF} onChange={(e) => setEstadoF(e.target.value as typeof estadoF)} className={filtroTitulo}>
@@ -64,21 +68,37 @@ export function TablaPedidos({ filas }: { filas: FilaPedido[] }) {
             <span />
           </div>
           {visibles.length === 0 && <p className="p-8 text-center text-sm text-stone-500">No hay pedidos con ese filtro.</p>}
-          {visibles.map((f) => (
-            <div key={f.id} className={`grid h-10 items-center gap-x-4 overflow-hidden border-b border-stone-200 px-4 text-center text-[13.5px] text-stone-800 hover:bg-crema-50 ${COLUMNAS} ${f.estado === "CANCELADO" ? "text-stone-400" : ""}`}>
-              <span className="tabular-nums text-stone-700">{fecha(f.cargado)}</span>
-              <span className="tabular-nums text-stone-700">{f.entrega ? fecha(f.entrega) : <span className="text-stone-400">Sin día</span>}</span>
-              <span className="truncate" title={f.sucursal}>{f.sucursal}</span>
-              <span className="truncate" title={f.pedido}>{f.pedido}</span>
-              <span className={`font-bold tabular-nums ${f.estado === "CANCELADO" ? "line-through" : ""}`}>{formatoPesos(f.monto)}</span>
-              <span className="font-semibold tabular-nums">{f.comprobante || <span className="text-xs font-normal text-stone-400">{f.comprobanteFalta}</span>}</span>
-              <span className={f.estado === "NO_ENTREGADO" ? "text-rojo-700" : f.estado === "CANCELADO" ? "text-stone-500" : ""}>{ESTADOS[f.estado]}</span>
-              <span className={`whitespace-nowrap ${f.pagado ? "font-semibold text-verde-700" : f.estado === "ENTREGADO" ? "font-semibold text-rojo-700" : "text-stone-300"}`}>
-                {f.pagado ? `Pagado${f.medio ? ` · ${MEDIOS[f.medio] ?? ""}` : ""}` : f.estado === "ENTREGADO" ? "Pendiente" : "—"}
-              </span>
-              <Link href={`/pedidos/${f.id}`} className="text-[12.5px] font-semibold text-verde-800 hover:underline">Abrir ›</Link>
-            </div>
-          ))}
+          {visibles.map((f) => {
+            const cancelado = f.estado === "CANCELADO";
+            const vistos = f.items.length > 2 ? f.items.slice(0, 1) : f.items; // con 3 o más renglones: el primero y "+N más"
+            return (
+              <div key={f.id} className={`grid h-14 items-center gap-x-3 overflow-hidden border-b border-stone-200 px-4 text-center text-[13.5px] text-stone-800 hover:bg-crema-50 ${COLUMNAS} ${cancelado ? "text-stone-400" : ""}`}>
+                <span className="tabular-nums text-stone-700">{fecha(f.cargado)}</span>
+                <span className="tabular-nums text-stone-700">{f.entrega ? fecha(f.entrega) : <span className="text-stone-400">Sin día</span>}</span>
+                <span className="min-w-0 text-left leading-tight" title={`${f.barrio} · ${f.direccion}`}>
+                  {f.barrio || f.direccion ? <>
+                    <span className="block truncate font-bold text-stone-800">{f.barrio}</span>
+                    <span className="block truncate text-[12.5px] text-stone-600">{f.direccion}</span>
+                  </> : <span className="text-stone-300">—</span>}
+                </span>
+                <span className="min-w-0 text-left leading-tight" title={f.items.map((i) => `${i.cantidad} ${i.nombre}${i.sinCargo ? ` (${i.sinCargo} sin cargo)` : ""}`).join("\n")}>
+                  {vistos.map((i, k) => (
+                    <span key={k} className="flex items-baseline gap-2 truncate"><b className="min-w-[2.2rem] text-right tabular-nums text-stone-900">{i.cantidad}</b><span className="truncate text-[12.5px]">{i.nombre}{i.sinCargo > 0 && <span className="text-stone-400"> (+{i.sinCargo} sin cargo)</span>}</span></span>
+                  ))}
+                  {f.items.length > 2 && <span className="block pl-[2.7rem] text-[12px] font-semibold text-stone-500">+ {f.items.length - 1} productos más</span>}
+                </span>
+                <span className={`font-bold tabular-nums ${cancelado ? "line-through" : ""}`}>{formatoPesos(f.monto)}</span>
+                <span className="font-semibold tabular-nums">{f.comprobante || <span className="text-xs font-normal text-stone-400">{f.comprobanteFalta}</span>}</span>
+                <span><span className={`${pastilla} ${PASTILLA_ESTADO[f.estado]}`}>{ESTADOS[f.estado]}</span></span>
+                <span>
+                  {f.pagado ? <span className={`${pastilla} bg-verde-50 text-verde-700`}>Pagado{f.medio ? ` · ${MEDIOS[f.medio] ?? ""}` : ""}</span>
+                    : f.estado === "ENTREGADO" ? <span className={`${pastilla} bg-rojo-50 text-rojo-700`}>Pendiente</span>
+                    : <span className="text-stone-300">—</span>}
+                </span>
+                <Link href={`/pedidos/${f.id}`} className="inline-flex h-8 items-center justify-center rounded-md border border-stone-300 bg-white px-2.5 text-[12.5px] font-semibold text-stone-700 hover:border-stone-700 hover:bg-stone-800 hover:text-white">Abrir ›</Link>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

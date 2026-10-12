@@ -56,8 +56,9 @@ export default async function PedidosDelCliente({ params }: { params: Promise<{ 
               id: p.id,
               cargado: new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Argentina/Buenos_Aires" }).format(p.creadoEn),
               entrega: p.fechaEntrega ? deFecha(p.fechaEntrega) : null,
-              sucursal: p.punto ? `${p.punto.barrio} · ${titulo(p.punto.direccion)}` : "—",
-              pedido: p.items.map((i) => `${i.cantidad} ${i.nombre}`).join(" · "),
+              barrio: p.punto?.barrio ?? "",
+              direccion: p.punto ? titulo(p.punto.direccion) : "",
+              items: p.items.map((i) => ({ cantidad: i.cantidad, nombre: i.nombre, sinCargo: i.sinCargo })),
               monto: importeVigente(p.items, Number(p.ivaPct), "PENDIENTE"), // lo pedido, con IVA si lleva factura
               comprobante: p.conFactura ? (p.numeroFactura ?? "") : p.remitoNumero ? formatoRemito(p.remitoNumero) : "",
               comprobanteFalta: p.conFactura ? "Factura sin número" : "Remito sin emitir",
