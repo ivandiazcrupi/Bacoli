@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { num } from "@/lib/ruta";
+import { FiltroLista, SEP } from "../cuentas/FiltroLista";
 export type FilaCliente = {
   id: string; nombre: string; barrios: string;
   ultimo: string | null; sinPedir: number | null;
@@ -35,6 +36,19 @@ const dentro = (f: FilaCliente, k: Filtro) => {
     default: return true;
   }
 };
+// Filtro numérico: "15" (exacto), ">15", ">=15", "<7", "<=7". Una celda sin dato (—) no cumple ningún número.
+function coincideNumero(valor: number | null, filtro: string) {
+  const t = filtro.trim();
+  if (!t) return true;
+  const m = t.match(/^(>=|<=|>|<|=)?\s*(\d+(?:[.,]\d+)?)$/);
+  if (!m) return true; // todavía escribiendo (ej. ">"): no filtra
+  if (valor === null) return false;
+  const n = Number(m[2].replace(",", "."));
+  switch (m[1]) { case ">": return valor > n; case ">=": return valor >= n; case "<": return valor < n; case "<=": return valor <= n; default: return valor === n; }
+}
+const estadoContacto = (f: FilaCliente) => (f.wa ? "Con WhatsApp" : f.telefono ? "Teléfono no válido" : "Sin teléfono");
+const entradaFiltro = "h-7 w-full min-w-0 rounded border border-stone-300 bg-white px-1.5 text-center text-[12px] font-normal normal-case tracking-normal text-stone-800 placeholder:text-stone-300 focus:border-verde-700 focus:outline-none";
+
 type Col = "nombre" | "ultimo" | "sinPedir" | "ritmo" | "paq30";
 
 // Tono de cada tarjeta: verde = pidieron; rojo (cada vez más fuerte con los días) = hay clientes sin pedir; gris = nada para mirar.
@@ -66,6 +80,15 @@ export function Tablero({ filas, resumen }: { filas: FilaCliente[]; resumen: Res
   const [filtro, setFiltro] = useState<Filtro>("todos");
   const [orden, setOrden] = useState<{ col: Col; asc: boolean }>({ col: "sinPedir", asc: false });
   const tabla = useRef<HTMLDivElement>(null);
+  // Filtros de la tabla (como los de Cuenta corriente): arriba de cada columna.
+  const [fCliente, setFCliente] = useState("");   // varios clientes (unidos con SEP)
+  const [fUltimo, setFUltimo] = useState("");
+  const [fSin, setFSin] = useState("");           // número: ej. 15, >15, <=7
+  const [fRitmo, setFRitmo] = useState("");
+  const [fPaq, setFPaq] = useState("");
+  const [fContacto, setFContacto] = useState(""); // varios (unidos con SEP)
+  const hayFiltros = !!(fCliente || fUltimo.trim() || fSin.trim() || fRitmo.trim() || fPaq.trim() || fContacto);
+  const quitarFiltros = () => { setFCliente(""); setFUltimo(""); setFSin(""); setFRitmo(""); setFPaq(""); setFContacto(""); };
   // Al tocar una tarjeta se filtra la tabla y se baja hasta ella.
   const elegir = (k: Filtro) => { setFiltro(k); setTimeout(() => tabla.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50); };
 
@@ -73,7 +96,12 @@ export function Tablero({ filas, resumen }: { filas: FilaCliente[]; resumen: Res
     const palabras = q.toLowerCase().split(/\s+/).filter(Boolean);
     let r = filas.filter((f) => {
       if (!palabras.every((w) => `${f.nombre} ${f.barrios}`.toLowerCase().includes(w))) return false;
-      return dentro(f, filtro);
+      if (!dentro(f, filtro)) return false;
+      if (fCliente && !fCliente.split(SEP).includes(f.nombre)) return false;
+      if (fUltimo.trim() && !fechaCorta(f.ultimo).includes(fUltimo.trim())) return false;
+      if (!coincideNumero(f.sinPedir, fSin) || !coincideNumero(f.ritmo, fRitmo) || !coincideNumero(f.paq30, fPaq)) return false;
+      if (fContacto && !fContacto.split(SEP).includes(estadoContacto(f))) return false;
+      return true;
     });
     const clave = (f: FilaCliente): string | number => {
       if (orden.col === "nombre") return f.nombre.toLowerCase();
@@ -83,7 +111,7 @@ export function Tablero({ filas, resumen }: { filas: FilaCliente[]; resumen: Res
     };
     r = [...r].sort((a, b) => { const x = clave(a), y = clave(b); return (x < y ? -1 : x > y ? 1 : a.nombre.localeCompare(b.nombre)) * (orden.asc ? 1 : -1); });
     return r;
-  }, [filas, q, filtro, orden]);
+  }, [filas, q, filtro, orden, fCliente, fUltimo, fSin, fRitmo, fPaq, fContacto]);
 
   const ordenarPor = (col: Col) => setOrden((o) => (o.col === col ? { col, asc: !o.asc } : { col, asc: col === "nombre" }));
   const Titulo = ({ col, children, ancho, ayuda }: { col: Col; children: React.ReactNode; ancho?: string; ayuda?: string }) => (
@@ -91,6 +119,7 @@ export function Tablero({ filas, resumen }: { filas: FilaCliente[]; resumen: Res
       {children}{orden.col === col && <span className="text-verde-700">{orden.asc ? "▲" : "▼"}</span>}
     </button>
   );
+  const nombres = useMemo(() => filas.map((f) => f.nombre).sort((a, b) => a.localeCompare(b, "es")), [filas]);
   const GRILLA = "grid-cols-[minmax(260px,2.6fr)_120px_110px_110px_130px_130px]";
 
   return (
@@ -112,19 +141,30 @@ export function Tablero({ filas, resumen }: { filas: FilaCliente[]; resumen: Res
         <p className="text-[14px] text-stone-700">
           Mostrando: <b>{FILTROS.find((f) => f[0] === filtro)![1]}</b> · {lista.length} {lista.length === 1 ? "cliente" : "clientes"}
           {filtro !== "todos" && <button type="button" onClick={() => setFiltro("todos")} className="ml-3 rounded-full border border-stone-300 bg-white px-3 py-1 text-[12.5px] font-semibold text-stone-700 hover:border-stone-600">Ver todos ✕</button>}
+          {hayFiltros && <button type="button" onClick={quitarFiltros} className="ml-3 rounded-full border border-stone-300 bg-white px-3 py-1 text-[12.5px] font-semibold text-stone-700 hover:border-stone-600">Quitar filtros de la tabla ✕</button>}
         </p>
       </div>
 
       {/* Tabla de clientes */}
       <div className="overflow-x-auto rounded-lg border border-stone-300 bg-white">
         <div className="min-w-[900px]">
-          <div className={`grid items-center gap-x-3 border-b border-stone-300 bg-crema-100 px-4 py-2.5 text-center text-[11px] font-semibold uppercase tracking-wide text-stone-500 ${GRILLA}`}>
+          <div className="border-b border-stone-300 bg-crema-100">
+          <div className={`grid items-center gap-x-3 px-4 pt-2.5 text-center text-[11px] font-semibold uppercase tracking-wide text-stone-500 ${GRILLA}`}>
             <Titulo col="nombre">Cliente</Titulo>
             <Titulo col="ultimo" ayuda="Fecha del último pedido cargado.">Último pedido</Titulo>
             <Titulo col="sinPedir" ayuda="Días que pasaron desde su último pedido.">Sin pedir</Titulo>
             <Titulo col="ritmo" ayuda="Cada cuántos días suele pedir, según sus pedidos de los últimos 6 meses. Hacen falta al menos 2 pedidos.">Pide cada</Titulo>
             <Titulo col="paq30" ayuda="Paquetes pedidos en los últimos 30 días (pizzas ÷ 2).">Paquetes 30 días</Titulo>
             <span>Contactar</span>
+          </div>
+            <div className={`grid items-center gap-x-3 px-4 pb-2.5 pt-1.5 ${GRILLA}`}>
+              <FiltroLista varios titulo="Cliente" opciones={nombres} valor={fCliente} onCambio={setFCliente} />
+              <input aria-label="Filtrar último pedido" value={fUltimo} onChange={(e) => setFUltimo(e.target.value)} placeholder="Ej: 03/10" className={entradaFiltro} />
+              <input aria-label="Filtrar días sin pedir" value={fSin} onChange={(e) => setFSin(e.target.value)} placeholder="Ej: >15" title="Número exacto o con signo: 15, >15, >=15, <7" className={entradaFiltro} />
+              <input aria-label="Filtrar cada cuánto pide" value={fRitmo} onChange={(e) => setFRitmo(e.target.value)} placeholder="Ej: <10" title="Número exacto o con signo: 7, >7, <=10" className={entradaFiltro} />
+              <input aria-label="Filtrar paquetes" value={fPaq} onChange={(e) => setFPaq(e.target.value)} placeholder="Ej: >=50" title="Número exacto o con signo: 50, >50, <10" className={entradaFiltro} />
+              <FiltroLista varios titulo="Contactar" opciones={["Con WhatsApp", "Sin teléfono", "Teléfono no válido"]} valor={fContacto} onCambio={setFContacto} />
+            </div>
           </div>
           {lista.length === 0 && <p className="p-10 text-center text-sm text-stone-500">No hay clientes con ese filtro.</p>}
           {lista.map((f) => (
