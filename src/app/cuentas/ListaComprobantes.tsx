@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useMemo, useState, useTransition } from "react";
 import { formatoPesos } from "@/lib/numeros";
-import { FiltroLista } from "./FiltroLista";
+import { FiltroLista, SEP } from "./FiltroLista";
 import { deshacerPago, guardarObservacion, registrarPagos } from "./actions";
 import { aplicarNc, deshacerPagoArca, guardarDatosArca, quitarAplicacionNc, registrarPagosArca } from "./arca/actions";
 
@@ -60,16 +60,16 @@ type ColId = "numero" | "cliente" | "razon" | "sucursal" | "fecha" | "monto" | "
 type Columna = { id: ColId; titulo: string; ancho: string; solo?: "arca" | "remito"; ordena?: boolean; filtro?: "texto" | "estado" | "pedido" | "lista" };
 
 const COLUMNAS: Columna[] = [
-  { id: "numero", titulo: "Número", ancho: "112px", ordena: true, filtro: "texto" },
-  { id: "razon", titulo: "Razón social", ancho: "minmax(170px,1.3fr)", filtro: "lista" },
-  { id: "cliente", titulo: "Cliente", ancho: "minmax(150px,1.2fr)", ordena: true, filtro: "lista" },
-  { id: "sucursal", titulo: "Sucursal", ancho: "136px", filtro: "lista" },
+  { id: "numero", titulo: "Número", ancho: "100px", ordena: true, filtro: "texto" },
+  { id: "razon", titulo: "Razón social", ancho: "minmax(170px,1.5fr)", filtro: "lista" },
+  { id: "cliente", titulo: "Cliente", ancho: "minmax(130px,1.1fr)", ordena: true, filtro: "lista" },
+  { id: "sucursal", titulo: "Sucursal", ancho: "124px", filtro: "lista" },
   { id: "fecha", titulo: "Fecha", ancho: "70px", ordena: true, filtro: "texto" },
   { id: "monto", titulo: "Monto", ancho: "104px", ordena: true, filtro: "texto" },
-  { id: "estado", titulo: "Estado", ancho: "208px", ordena: true, filtro: "estado" },
-  { id: "pedido", titulo: "Ubicar", ancho: "132px", filtro: "pedido" },
-  { id: "nc", titulo: "Nota de crédito", ancho: "104px", filtro: "texto" },
-  { id: "obs", titulo: "Observación", ancho: "minmax(90px,1fr)", filtro: "texto" },
+  { id: "estado", titulo: "Estado", ancho: "196px", ordena: true, filtro: "estado" },
+  { id: "pedido", titulo: "Ubicar", ancho: "92px", filtro: "pedido" },
+  { id: "nc", titulo: "Nota de crédito", ancho: "96px", filtro: "texto" },
+  { id: "obs", titulo: "Observación", ancho: "minmax(150px,1.6fr)", filtro: "texto" },
 ];
 
 function estadoDe(f: FilaComprobante): string {
@@ -93,7 +93,7 @@ function textoDe(f: FilaComprobante, c: ColId): string {
     case "fecha": return fechaCorta(f.cargado);
     case "monto": return formatoPesos(Math.abs(montoDe(f))).replace(/\s/g, "");
     case "estado": return estadoDe(f);
-    case "pedido": return f.arca ? (f.sinPedido ? "Sin pedido" : f.esNc ? "" : "Con pedido") : "";
+    case "pedido": return f.ubicar?.startsWith("/pedidos/dia/") ? "En hoja de ruta" : f.ubicar ? "Esperando día" : f.arca && f.sinPedido ? "Sin pedido" : "";
     case "nc": return f.ncTexto + " " + (f.aplicaciones ?? []).map((a) => `F-${a.facturaNumero}`).join(" ");
     case "obs": return f.obs;
   }
@@ -111,7 +111,7 @@ function ObsCelda({ f }: { f: FilaComprobante }) {
   };
   return (
     <input aria-label="Observación" value={valor} maxLength={200} placeholder="—" onChange={(e) => setValor(e.target.value)} onBlur={guardar} onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
-      className={`h-7 w-full min-w-0 rounded border bg-transparent px-1.5 text-center text-[12.5px] placeholder:text-stone-300 hover:border-stone-300 focus:border-verde-700 focus:bg-white focus:outline-none ${estado === "ok" ? "border-verde-600" : estado === "error" ? "border-rojo-600" : "border-transparent"}`} />
+      className={`h-7 w-full min-w-0 rounded border bg-transparent px-2 text-center text-[13.5px] placeholder:text-stone-300 hover:border-stone-300 focus:border-verde-700 focus:bg-white focus:outline-none ${estado === "ok" ? "border-verde-600" : estado === "error" ? "border-rojo-600" : "border-transparent"}`} />
   );
 }
 
@@ -184,7 +184,7 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
         const v = (filtros[c.id] ?? "").trim();
         if (!v) continue;
         const t = textoDe(f, c.id);
-        if (c.filtro === "estado" || c.filtro === "pedido" || c.filtro === "lista") { if (t !== v) return false; continue; }
+        if (c.filtro === "estado" || c.filtro === "pedido" || c.filtro === "lista") { if (!v.split(SEP).includes(t)) return false; continue; }
         if (c.id === "monto" || c.id === "numero") { if (!digitos(t).includes(digitos(v)) && !t.toLowerCase().includes(v.toLowerCase())) return false; continue; }
         if (!t.toLowerCase().includes(v.toLowerCase())) return false;
       }
@@ -292,13 +292,11 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
             <div className="grid items-center gap-x-3 px-3 pb-2 pt-1" style={{ gridTemplateColumns: grilla }}>
               <span />
               {visibles.map((c) => c.filtro === "lista" ? (
-                <FiltroLista key={c.id} titulo={c.titulo} opciones={opcionesLista[c.id] ?? []} valor={filtros[c.id] ?? ""} onCambio={(v) => setFiltros({ ...filtros, [c.id]: v })} />
+                <FiltroLista key={c.id} varios titulo={c.titulo} opciones={opcionesLista[c.id] ?? []} valor={filtros[c.id] ?? ""} onCambio={(v) => setFiltros({ ...filtros, [c.id]: v })} />
               ) : c.filtro === "estado" ? (
-                <FiltroLista key={c.id} titulo="Estado" opciones={opcionesEstado} valor={filtros.estado ?? ""} onCambio={(v) => setFiltros({ ...filtros, estado: v })} />
+                <FiltroLista key={c.id} varios titulo="Estado" opciones={opcionesEstado} valor={filtros.estado ?? ""} onCambio={(v) => setFiltros({ ...filtros, estado: v })} />
               ) : c.filtro === "pedido" ? (
-                esArca ? <select key={c.id} aria-label="Filtrar pedido" value={filtros.pedido ?? ""} onChange={(e) => setFiltros({ ...filtros, pedido: e.target.value })} className={entrada}>
-                  <option value="">Todos</option><option value="Sin pedido">Sin pedido</option><option value="Con pedido">Con pedido</option>
-                </select> : <span key={c.id} />
+                <FiltroLista key={c.id} varios titulo="Ubicar" opciones={["En hoja de ruta", "Esperando día", ...(esArca ? ["Sin pedido"] : [])]} valor={filtros.pedido ?? ""} onCambio={(v) => setFiltros({ ...filtros, pedido: v })} />
               ) : (
                 <input key={c.id} aria-label={`Filtrar ${c.titulo}`} value={filtros[c.id] ?? ""} placeholder="Filtrar…" onChange={(e) => setFiltros({ ...filtros, [c.id]: e.target.value })} className={entrada} />
               ))}
@@ -325,7 +323,7 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
                         {f.aviso && <span className="text-rojo-700">{f.aviso}</span>}
                       </span>}
                     </span>;
-                    case "razon": return <span key={c.id} className="line-clamp-2 min-w-0 break-words text-[12.5px] font-bold uppercase leading-tight text-stone-800" title={f.razon || undefined}>{f.razon || <span className="text-stone-300">—</span>}</span>;
+                    case "razon": return <span key={c.id} className="line-clamp-2 min-w-0 break-words text-[13px] font-semibold leading-snug text-stone-800" title={f.razon || undefined}>{f.razon || <span className="text-stone-300">—</span>}</span>;
                     case "sucursal": return <SucursalCelda key={c.id} f={f} />;
                     case "fecha": return <span key={c.id} className="tabular-nums text-stone-600">{fechaCorta(f.cargado)}</span>;
                     case "monto": return <span key={c.id} className={`whitespace-nowrap text-[14px] font-bold tabular-nums ${f.cubierta || f.anulado ? "text-stone-300 line-through" : f.esNc ? "text-stone-500" : "text-stone-900"}`}>{f.esNc ? "−" : ""}{formatoPesos(f.cubierta || f.anulado || f.esNc ? f.bruto : f.monto)}</span>;
@@ -335,16 +333,15 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
                       return <span key={c.id} className="flex min-w-0 items-center justify-center gap-2" title={e === "Pendiente" && f.atraso > 0 ? `Vencida hace ${f.atraso} días` : undefined}>
                         <span className={`flex h-7 w-fit max-w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 font-bold ${color}`}>
                           {e === "NC sin aplicar" ? <button type="button" onClick={() => { setMotivoNc(""); setPicker(picker === f.id ? null : f.id); }} className="font-bold hover:underline">Aplicar a factura</button>
-                            : e === "Pagada" ? <><span>Pagada</span><button type="button" title="Deshacer el pago" aria-label="Deshacer el pago" onClick={() => deshacer(f.id, !!f.arca)} className="text-[11px] opacity-50 hover:opacity-100">✕</button></>
+                            : e === "Pagada" ? <><span>Pagada{f.medio ? <span className="text-[11.5px] font-medium"> · {TEXTO_MEDIO[f.medio] ?? ""}</span> : null}</span><button type="button" title="Deshacer el pago" aria-label="Deshacer el pago" onClick={() => deshacer(f.id, !!f.arca)} className="text-[11px] opacity-50 hover:opacity-100">✕</button></>
                             : e === "Pendiente" ? <span>Pendiente{f.atraso > 0 ? <span className="text-[12px] font-medium opacity-80"> · {f.atraso} d</span> : null}</span>
                             : <span className="font-medium text-stone-500">{e === "Anulado" ? f.anulado : e}</span>}
                         </span>
-                        {e === "Pagada" && f.medio && <span className="whitespace-nowrap text-[11.5px] font-medium text-stone-600">{TEXTO_MEDIO[f.medio] ?? ""}</span>}
                       </span>;
                     }
                     case "pedido": return f.ubicar
-                      ? <Link key={c.id} href={f.ubicar} title="Te lleva al pedido: a su hoja de ruta (resaltado) o, si todavía espera día, a la lista de Pedidos" className="mx-auto inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-md border border-stone-300 bg-white px-3 text-[12.5px] font-semibold text-stone-700 shadow-sm hover:border-stone-700 hover:bg-stone-800 hover:text-white">Ubicar pedido <span aria-hidden>›</span></Link>
-                      : <span key={c.id} className="text-[12.5px] text-stone-300">{f.arca && f.sinPedido && tipo !== "CUENTA" ? <span className="font-semibold text-rojo-700">Sin pedido</span> : "—"}</span>;
+                      ? <Link key={c.id} href={f.ubicar} title="Te lleva al pedido: a su hoja de ruta (resaltado) o, si todavía espera día, a la lista de Pedidos" className="mx-auto inline-flex h-7 items-center gap-1 whitespace-nowrap rounded-md border border-stone-300 bg-white px-2.5 text-[12px] font-semibold text-stone-700 hover:border-stone-700 hover:bg-stone-800 hover:text-white">Ubicar <span aria-hidden>›</span></Link>
+                      : <span key={c.id} className="text-[12.5px] text-stone-300">—</span>;
                     case "nc": return <span key={c.id} title={f.ncMotivos || undefined} className="truncate text-[12.5px] text-stone-500">
                       {f.arca && f.esNc ? <>{(f.aplicaciones ?? []).map((a) => <span key={a.id} title={a.motivo ? `Motivo: ${a.motivo}` : undefined} className="mr-2 whitespace-nowrap">→ F-{a.facturaNumero}{a.motivo ? <span className="text-stone-400"> · {a.motivo}</span> : null} <button type="button" title="Quitar" onClick={() => window.confirm("¿Quitar esta aplicación?") && empezar(async () => { const r = await quitarAplicacionNc(a.id); if (!r.ok) setError(r.error ?? "No se pudo."); router.refresh(); })} className="text-stone-300 hover:text-rojo-700">✕</button></span>)}{(f.aplicaciones ?? []).length === 0 && <span className="text-stone-300">—</span>}</>
                         : !f.arca && f.tipo === "FACTURA" && !f.pagada && !f.cubierta && !f.anulado ? <Link href={`/cuentas/${f.clienteId}/nc?factura=${f.id}`} className="font-medium text-stone-600 underline decoration-stone-300 underline-offset-4 hover:text-stone-900">+ Nota de crédito</Link>
