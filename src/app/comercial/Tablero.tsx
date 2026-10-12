@@ -54,13 +54,16 @@ type Col = "nombre" | "ultimo" | "sinPedir" | "ritmo" | "paq30";
 // Tarjetas minimalistas: blancas, con el número en color (verde = pidieron, rojo = hay clientes sin pedir). La elegida se pinta en gris oscuro.
 const COLOR_NUM: Record<string, string> = { neutro: "text-stone-900", apagado: "text-stone-300", verde: "text-verde-700", rojo1: "text-rojo-600", rojo2: "text-rojo-600", rojo3: "text-rojo-700", rojo4: "text-rojo-800" };
 
-function Tarjeta({ titulo, valor, tono, activa, ayuda, onClick }: { titulo: string; valor: number; tono: string; activa: boolean; ayuda: string; onClick: () => void }) {
+function Tarjeta({ titulo, valor, tono, activa, ayuda, onClick, onQuitar }: { titulo: string; valor: number; tono: string; activa: boolean; ayuda: string; onClick: () => void; onQuitar?: () => void }) {
   return (
-    <button type="button" onClick={onClick} title={ayuda} aria-pressed={activa}
-      className={`flex flex-col items-center justify-center rounded-lg border px-2 py-3 text-center transition ${activa ? "border-stone-800 bg-stone-800" : "border-stone-300 bg-white hover:border-stone-500"}`}>
-      <span className={`flex min-h-[1.9rem] w-full items-center justify-center whitespace-normal text-[11px] font-semibold uppercase leading-tight tracking-wide ${activa ? "text-stone-300" : "text-stone-500"}`}>{titulo}</span>
-      <span className={`text-3xl font-bold tabular-nums leading-tight ${activa ? "text-white" : COLOR_NUM[tono]}`}>{valor}</span>
-    </button>
+    <div className="relative">
+      <button type="button" onClick={onClick} title={ayuda} aria-pressed={activa}
+        className={`flex h-[92px] w-full flex-col items-center justify-between rounded-lg border px-6 pb-2 pt-2 text-center transition ${activa ? "border-stone-800 bg-stone-800" : "border-stone-300 bg-white hover:border-stone-500"}`}>
+        <span className={`flex h-8 w-full items-center justify-center whitespace-normal text-[11px] font-semibold uppercase leading-tight tracking-wide ${activa ? "text-stone-300" : "text-stone-500"}`}>{titulo}</span>
+        <span className={`flex flex-1 items-center text-3xl font-bold tabular-nums leading-none ${activa ? "text-white" : COLOR_NUM[tono]}`}>{valor}</span>
+      </button>
+      {activa && onQuitar && <button type="button" onClick={onQuitar} aria-label="Salir de este filtro" title="Salir de este filtro" className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded text-[15px] font-bold leading-none text-stone-300 hover:bg-stone-600 hover:text-white">✕</button>}
+    </div>
   );
 }
 
@@ -114,12 +117,12 @@ export function Tablero({ filas, resumen }: { filas: FilaCliente[]; resumen: Res
       {/* Tarjetas: cada una filtra la tabla de abajo (la pantalla no se mueve) */}
       <section aria-label="Resumen" className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
         <Tarjeta titulo="Clientes activos" valor={resumen.activos} tono="neutro" activa={filtro === "todos"} ayuda={AYUDA.todos} onClick={() => elegir("todos")} />
-        <Tarjeta titulo="Pidieron en los últimos 7 días" valor={resumen.d7} tono={resumen.d7 > 0 ? "verde" : "apagado"} activa={filtro === "d7"} ayuda={AYUDA.d7} onClick={() => elegir("d7")} />
-        <Tarjeta titulo="Sin pedir hace 7 días" valor={resumen.s7} tono={resumen.s7 > 0 ? "rojo1" : "apagado"} activa={filtro === "s7"} ayuda={AYUDA.s7} onClick={() => elegir("s7")} />
-        <Tarjeta titulo="Sin pedir hace 15 días" valor={resumen.s15} tono={resumen.s15 > 0 ? "rojo2" : "apagado"} activa={filtro === "s15"} ayuda={AYUDA.s15} onClick={() => elegir("s15")} />
-        <Tarjeta titulo="Sin pedir hace 30 días" valor={resumen.s30} tono={resumen.s30 > 0 ? "rojo3" : "apagado"} activa={filtro === "s30"} ayuda={AYUDA.s30} onClick={() => elegir("s30")} />
-        <Tarjeta titulo="Sin pedir hace 45 días" valor={resumen.s45} tono={resumen.s45 > 0 ? "rojo4" : "apagado"} activa={filtro === "s45"} ayuda={AYUDA.s45} onClick={() => elegir("s45")} />
-        <Tarjeta titulo="Inactivos" valor={resumen.inactivos} tono={resumen.inactivos > 0 ? "neutro" : "apagado"} activa={filtro === "inactivos"} ayuda={AYUDA.inactivos} onClick={() => elegir("inactivos")} />
+        <Tarjeta titulo="Pidieron en los últimos 7 días" valor={resumen.d7} tono={resumen.d7 > 0 ? "verde" : "apagado"} activa={filtro === "d7"} ayuda={AYUDA.d7} onClick={() => elegir("d7")} onQuitar={() => elegir("todos")} />
+        <Tarjeta titulo="Sin pedir hace 7 días" valor={resumen.s7} tono={resumen.s7 > 0 ? "rojo1" : "apagado"} activa={filtro === "s7"} ayuda={AYUDA.s7} onClick={() => elegir("s7")} onQuitar={() => elegir("todos")} />
+        <Tarjeta titulo="Sin pedir hace 15 días" valor={resumen.s15} tono={resumen.s15 > 0 ? "rojo2" : "apagado"} activa={filtro === "s15"} ayuda={AYUDA.s15} onClick={() => elegir("s15")} onQuitar={() => elegir("todos")} />
+        <Tarjeta titulo="Sin pedir hace 30 días" valor={resumen.s30} tono={resumen.s30 > 0 ? "rojo3" : "apagado"} activa={filtro === "s30"} ayuda={AYUDA.s30} onClick={() => elegir("s30")} onQuitar={() => elegir("todos")} />
+        <Tarjeta titulo="Sin pedir hace 45 días" valor={resumen.s45} tono={resumen.s45 > 0 ? "rojo4" : "apagado"} activa={filtro === "s45"} ayuda={AYUDA.s45} onClick={() => elegir("s45")} onQuitar={() => elegir("todos")} />
+        <Tarjeta titulo="Inactivos" valor={resumen.inactivos} tono={resumen.inactivos > 0 ? "neutro" : "apagado"} activa={filtro === "inactivos"} ayuda={AYUDA.inactivos} onClick={() => elegir("inactivos")} onQuitar={() => elegir("todos")} />
       </section>
 
       {/* Buscador y qué se está mostrando */}
