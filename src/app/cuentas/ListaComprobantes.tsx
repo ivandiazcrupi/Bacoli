@@ -60,16 +60,16 @@ type ColId = "numero" | "cliente" | "razon" | "sucursal" | "fecha" | "monto" | "
 type Columna = { id: ColId; titulo: string; ancho: string; solo?: "arca" | "remito"; ordena?: boolean; filtro?: "texto" | "estado" | "pedido" | "lista" };
 
 const COLUMNAS: Columna[] = [
-  { id: "numero", titulo: "Número", ancho: "100px", ordena: true, filtro: "texto" },
-  { id: "razon", titulo: "Razón social", ancho: "minmax(170px,1.5fr)", filtro: "lista" },
-  { id: "cliente", titulo: "Cliente", ancho: "minmax(130px,1.1fr)", ordena: true, filtro: "lista" },
-  { id: "sucursal", titulo: "Sucursal", ancho: "124px", filtro: "lista" },
-  { id: "fecha", titulo: "Fecha", ancho: "70px", ordena: true, filtro: "texto" },
-  { id: "monto", titulo: "Monto", ancho: "104px", ordena: true, filtro: "texto" },
-  { id: "estado", titulo: "Estado", ancho: "196px", ordena: true, filtro: "estado" },
-  { id: "pedido", titulo: "Ubicar", ancho: "92px", filtro: "pedido" },
-  { id: "nc", titulo: "Nota de crédito", ancho: "96px", filtro: "texto" },
-  { id: "obs", titulo: "Observación", ancho: "minmax(150px,1.6fr)", filtro: "texto" },
+  { id: "numero", titulo: "Número", ancho: "80px", ordena: true, filtro: "texto" },
+  { id: "razon", titulo: "Razón social", ancho: "minmax(262px,1.4fr)", filtro: "lista" },
+  { id: "cliente", titulo: "Cliente", ancho: "minmax(200px,1.1fr)", ordena: true, filtro: "lista" },
+  { id: "sucursal", titulo: "Sucursal", ancho: "118px", filtro: "lista" },
+  { id: "fecha", titulo: "Fecha", ancho: "62px", ordena: true, filtro: "texto" },
+  { id: "monto", titulo: "Monto", ancho: "100px", ordena: true, filtro: "texto" },
+  { id: "estado", titulo: "Estado", ancho: "176px", ordena: true, filtro: "estado" },
+  { id: "pedido", titulo: "Ubicar", ancho: "72px", filtro: "pedido" },
+  { id: "nc", titulo: "NC", ancho: "56px", filtro: "texto" },
+  { id: "obs", titulo: "Observación", ancho: "minmax(150px,1fr)", filtro: "texto" },
 ];
 
 function estadoDe(f: FilaComprobante): string {
@@ -145,7 +145,8 @@ function Punto({ color, texto, children }: { color: string; texto?: string; chil
 export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas" }: { filas: FilaComprobante[]; tipo: "FACTURA" | "REMITO" | "CUENTA"; acciones?: React.ReactNode; vistaInicial?: "todas" | "sin-pagar" | "pagadas" }) {
   const router = useRouter();
   const esArca = filas.some((f) => f.arca);
-  const disponibles = COLUMNAS.filter((c) => tipo === "CUENTA" || !c.solo || (c.solo === "arca" ? esArca : !esArca)); // en la cuenta de un cliente conviven facturas (ARCA) y remitos
+  const hayNc = filas.some((f) => !!f.ncTexto || (f.aplicaciones?.length ?? 0) > 0 || (!f.arca && f.tipo === "FACTURA")); // la columna Nota de crédito solo aparece si alguna fila la usa: así Observación tiene más lugar
+  const disponibles = COLUMNAS.filter((c) => (c.id !== "nc" || hayNc) && (tipo === "CUENTA" || !c.solo || (c.solo === "arca" ? esArca : !esArca))); // en la cuenta de un cliente conviven facturas (ARCA) y remitos
   const [elegidas, setElegidas] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [obsPago, setObsPago] = useState("");
@@ -280,7 +281,7 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
         <div className="min-w-[900px]">
           {/* Títulos (se ordena al tocar) y, debajo, el filtro de cada columna. */}
           <div className="sticky top-0 z-20 border-b border-stone-300 bg-crema-100">
-            <div className="grid items-center gap-x-3 px-3 pt-2 text-[11px] font-semibold uppercase tracking-wide text-stone-500" style={{ gridTemplateColumns: grilla }}>
+            <div className="grid items-center gap-x-1.5 px-3 pt-2 text-[11px] font-semibold uppercase tracking-wide text-stone-500" style={{ gridTemplateColumns: grilla }}>
               <input type="checkbox" aria-label="Elegir todos los pendientes de la lista" checked={pagables.length > 0 && pagables.every((f) => elegidas.has(f.id))} onChange={() => setElegidas(pagables.every((f) => elegidas.has(f.id)) ? new Set() : new Set(pagables.map((f) => f.id)))} className="h-4 w-4 accent-[#026433]" />
               {visibles.map((c) => (
                 <button key={c.id} type="button" disabled={!c.ordena} onClick={() => ordenarPor(c.id)} className={`flex items-center justify-center gap-1 uppercase ${c.ordena ? "hover:text-stone-900" : "cursor-default"}`}>
@@ -289,7 +290,7 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
                 </button>
               ))}
             </div>
-            <div className="grid items-center gap-x-3 px-3 pb-2 pt-1" style={{ gridTemplateColumns: grilla }}>
+            <div className="grid items-center gap-x-1.5 px-3 pb-2 pt-1" style={{ gridTemplateColumns: grilla }}>
               <span />
               {visibles.map((c) => c.filtro === "lista" ? (
                 <FiltroLista key={c.id} varios titulo={c.titulo} opciones={opcionesLista[c.id] ?? []} valor={filtros[c.id] ?? ""} onCambio={(v) => setFiltros({ ...filtros, [c.id]: v })} />
@@ -310,20 +311,18 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
             </div>
           ) : (
             <Fragment key={f.id}>
-              <div className={`grid h-12 items-center gap-x-3 overflow-hidden border-b border-stone-200 px-3 text-center text-[13px] hover:bg-crema-50 ${f.anulado ? "text-stone-400" : "text-stone-800"} ${elegidas.has(f.id) ? "bg-verde-50" : ""}`} style={{ gridTemplateColumns: grilla }}>
+              <div className={`grid h-11 items-center gap-x-1.5 overflow-hidden border-b border-stone-200 px-3 text-center text-[13px] hover:bg-crema-50 ${f.anulado ? "text-stone-400" : "text-stone-800"} ${elegidas.has(f.id) ? "bg-verde-50" : ""}`} style={{ gridTemplateColumns: grilla }}>
                 <input type="checkbox" aria-label={`Elegir ${f.numero ?? "comprobante"}`} checked={elegidas.has(f.id)} disabled={!f.entregado || f.pagada || f.cubierta || !!f.anulado || f.esNc} onChange={() => alternar(f.id)} className="h-4 w-4 accent-[#026433] disabled:opacity-25" />
                 {visibles.map((c) => {
                   switch (c.id) {
                     case "numero": return <span key={c.id} className={`${celdaBase} text-[14px] font-bold tabular-nums ${f.esNc ? "text-stone-500" : "text-stone-900"}`}>{f.numero ? (!f.arca && f.tipo === "REMITO" ? <Link href={`/pedidos/${f.id}/remito`} target="_blank" title="Abrir el remito" className="hover:underline">{f.numero}</Link> : f.numero) : <span className="text-[13px] font-semibold text-rojo-700">sin número</span>}</span>;
-                    case "cliente": return <span key={c.id} className="flex min-w-0 flex-col items-center leading-tight" title={f.aviso || undefined}>
-                      {f.clienteId ? <Link href={`/cuentas/${f.clienteId}`} className="max-w-full truncate text-[13px] font-semibold hover:underline">{f.cliente}</Link> : <span className="max-w-full truncate text-[13px] font-semibold italic text-rojo-700" title="El CUIT no está cargado en ningún cliente">{f.cliente}</span>}
-                      {(f.pedidoId || !f.arca || (f.arca && f.sinPedido) || f.aviso) && <span className="mt-0.5 flex max-w-full items-center gap-2 truncate text-[11.5px]">
-                        {f.arca && f.sinPedido && <span className="font-semibold text-rojo-700">sin pedido</span>}
-                        {(f.pedidoId || !f.arca) && <Link href={`/pedidos/${f.pedidoId ?? f.id}`} className="text-verde-800 hover:underline" title="Abrir el pedido">pedido ›</Link>}
-                        {f.aviso && <span className="text-rojo-700">{f.aviso}</span>}
-                      </span>}
-                    </span>;
-                    case "razon": return <span key={c.id} className="line-clamp-2 min-w-0 break-words text-[13px] font-semibold leading-snug text-stone-800" title={f.razon || undefined}>{f.razon || <span className="text-stone-300">—</span>}</span>;
+                    case "cliente": {
+                      const rojo = !f.clienteId || (f.arca && f.sinPedido); // sin cliente cargado o sin pedido: el nombre va en rojo
+                      const nombre = <span className={`block truncate text-left text-[12.5px] font-semibold ${rojo ? "text-rojo-700" : ""} ${!f.clienteId ? "italic" : ""}`}>{f.cliente}</span>;
+                      const ayuda = [!f.clienteId ? "El CUIT no está cargado en ningún cliente" : "", f.arca && f.sinPedido ? "Sin pedido" : "", f.aviso].filter(Boolean).join(" · ") || f.cliente;
+                      return <span key={c.id} className="min-w-0" title={ayuda}>{f.clienteId ? <Link href={`/cuentas/${f.clienteId}`} className="block min-w-0 hover:underline">{nombre}</Link> : nombre}</span>;
+                    }
+                    case "razon": return <span key={c.id} className="block min-w-0 truncate text-left text-[12.5px] font-semibold text-stone-800" title={f.razon || undefined}>{f.razon || <span className="text-stone-300">—</span>}</span>;
                     case "sucursal": return <SucursalCelda key={c.id} f={f} />;
                     case "fecha": return <span key={c.id} className="tabular-nums text-stone-600">{fechaCorta(f.cargado)}</span>;
                     case "monto": return <span key={c.id} className={`whitespace-nowrap text-[14px] font-bold tabular-nums ${f.cubierta || f.anulado ? "text-stone-300 line-through" : f.esNc ? "text-stone-500" : "text-stone-900"}`}>{f.esNc ? "−" : ""}{formatoPesos(f.cubierta || f.anulado || f.esNc ? f.bruto : f.monto)}</span>;
