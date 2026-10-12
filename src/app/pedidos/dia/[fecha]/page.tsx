@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { Cabecera } from "@/components/Cabecera";
+import { UbicarPedido } from "@/components/UbicarPedido";
 import { db } from "@/lib/db";
 import { aFecha, deFecha, diaMes, esFechaValida, diasDeSemana, finDeSemana, hoy, inicioSemana, nombreDia, sumarDias } from "@/lib/fechas";
 import { titulo } from "@/lib/mayusculas";
@@ -64,6 +65,7 @@ export default async function HojaDelDia({ params }: { params: Promise<{ fecha: 
     <>
       <Cabecera usuario={usuario} />
       <main className={CONTENEDOR_PEDIDOS}>
+        <UbicarPedido />
         <EncabezadoPedidos activa="ruta" fechaRuta={fecha} />
 
         {/* Para ir día por día: la semana y sus seis días  */}

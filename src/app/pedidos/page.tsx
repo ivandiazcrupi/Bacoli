@@ -4,6 +4,7 @@ import { Cabecera } from "@/components/Cabecera";
 import { db } from "@/lib/db";
 import { aFecha, deFecha, diaMes, esFechaValida, diasDeSemana, finDeSemana, hoy, inicioSemana, nombreDia, sumarDias, semanaDeTrabajo } from "@/lib/fechas";
 import { exigirOficina } from "@/lib/session";
+import { UbicarPedido } from "@/components/UbicarPedido";
 import { Bandeja } from "./Bandeja";
 import { TraerPedidosWeb } from "./TraerPedidosWeb";
 import { aFilaBandeja, incluirPedido } from "./filas";
@@ -47,6 +48,7 @@ export default async function Pedidos({ searchParams }: { searchParams: Promise<
     <>
       <Cabecera usuario={usuario} />
       <main className={CONTENEDOR_PEDIDOS}>
+        <UbicarPedido />
         <EncabezadoPedidos activa="pedidos" />
 
         <div className="flex flex-wrap items-center justify-between gap-3">

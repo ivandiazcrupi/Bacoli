@@ -273,6 +273,7 @@ function FilaHoja({ f, n, bloqueada, armando, fija, acc, salidas }: { f: Fila; n
 
   return (
     <div
+      data-pedido={f.id}
       ref={setNodeRef}
       role="row"
       style={{ gridTemplateColumns: COLUMNAS, transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
@@ -409,6 +410,7 @@ function FilaUbicar({ f, salidas, bloqueada, acc }: { f: Fila; salidas: SalidaIn
   const wa = f.telefono ? enlaceWhatsApp(f.telefono) : null;
   return (
     <div
+      data-pedido={f.id}
       ref={setNodeRef}
       style={{ transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 20 : undefined, position: "relative" }}
       className="rounded-lg border border-stone-300 bg-white px-4 py-2"
@@ -451,7 +453,7 @@ function FilaTarjeta({ f, n, bloqueada, armando, fija, acc, salidas }: { f: Fila
   const fondo = `bg-white ${BORDE_FILA[f.estado]}`;
   const grande = "h-12 rounded-lg border px-3 text-base font-semibold disabled:opacity-40";
   return (
-    <article className={`space-y-3 rounded-xl border p-3 ${fondo}`}>
+    <article data-pedido={f.id} className={`space-y-3 rounded-xl border p-3 ${fondo}`}>
       <header className="flex items-start gap-3">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-stone-800 text-sm font-semibold text-white">{n}</span>
         <div className="min-w-0 flex-1">

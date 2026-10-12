@@ -56,3 +56,11 @@ export const totalUnidades = (x: { tomate: number; cebolla: number; pizzas: numb
 
 /** Paquetes de pizza = unidades ÷ 2 (una pizza por unidad es medio paquete): así Paquetes × 2 = Unidades siempre. */
 export const bultosDe = (items: RenglonRuta[]) => totalUnidades(unidadesPorSabor(items)) / UNIDADES_POR_PAQUETE;
+
+/** A dónde ir para "ubicar" un pedido: la hoja de ruta de su día (resaltado) o, si espera día, la lista de Pedidos. Cancelado: ningún lado. */
+export function enlaceUbicar(p: { id: string; estado: string; fechaEntrega: Date | null }): string | null {
+  if (p.estado === "CANCELADO") return null;
+  if (p.fechaEntrega) return `/pedidos/dia/${p.fechaEntrega.toISOString().slice(0, 10)}?ver=${p.id}`;
+  if (p.estado === "PENDIENTE" || p.estado === "NO_ENTREGADO") return `/pedidos?ver=${p.id}`;
+  return null;
+}

@@ -102,7 +102,7 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
         {ENCABEZADOS.map((h, i) => <span key={i} className="text-center">{h}</span>)}
       </div>
       {filas.map((f) => (
-        <div key={f.id} className="rounded-lg border border-stone-300 bg-white px-4 py-2">
+        <div key={f.id} data-pedido={f.id} className="rounded-lg border border-stone-300 bg-white px-4 py-2">
           <div className={`hidden items-center gap-x-4 text-center lg:grid ${COLUMNAS}`}>
             <span className="text-[12.5px] font-semibold">{f.barrio}</span>
             <span className="text-[12.5px] font-semibold leading-snug">

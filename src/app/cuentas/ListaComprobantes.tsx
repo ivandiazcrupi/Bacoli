@@ -41,7 +41,7 @@ export type FilaComprobante = {
   aviso?: string;
   sinPedido?: boolean;
   pedidoId?: string | null;
-  diaRuta?: string | null; // hoja de ruta (AAAA-MM-DD) donde está el pedido
+  ubicar?: string | null; // enlace que lleva al pedido: su hoja de ruta (resaltado) o la lista de Pedidos si espera día
   aplicaciones?: { id: string; facturaNumero: number; monto: number; motivo?: string | null }[];
   ncMotivos?: string; // factura: por qué se emitieron sus notas de crédito
 };
@@ -66,8 +66,8 @@ const COLUMNAS: Columna[] = [
   { id: "sucursal", titulo: "Sucursal", ancho: "136px", filtro: "lista" },
   { id: "fecha", titulo: "Fecha", ancho: "70px", ordena: true, filtro: "texto" },
   { id: "monto", titulo: "Monto", ancho: "104px", ordena: true, filtro: "texto" },
-  { id: "estado", titulo: "Estado", ancho: "140px", ordena: true, filtro: "estado" },
-  { id: "pedido", titulo: "Pedido", ancho: "64px", filtro: "pedido" },
+  { id: "estado", titulo: "Estado", ancho: "208px", ordena: true, filtro: "estado" },
+  { id: "pedido", titulo: "Ubicar", ancho: "132px", filtro: "pedido" },
   { id: "nc", titulo: "Nota de crédito", ancho: "104px", filtro: "texto" },
   { id: "obs", titulo: "Observación", ancho: "minmax(90px,1fr)", filtro: "texto" },
 ];
@@ -158,11 +158,11 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
   const [ocultas, setOcultas] = useState<Set<ColId>>(new Set());
   const [verColumnas, setVerColumnas] = useState(false);
   const [cuantas, setCuantas] = useState(POR_VEZ);
-  const claveCols = `cc-columnas-v3-${tipo}`; // v2: se reinician las columnas que el navegador había guardado antes de unificar las hojas
+  const claveCols = `cc-columnas-v4-${tipo}`; // v2: se reinician las columnas que el navegador había guardado antes de unificar las hojas
 
   useEffect(() => {
     try { const g = localStorage.getItem(claveCols); if (g) { setOcultas(new Set(JSON.parse(g) as ColId[])); return; } } catch { /* sin almacenamiento */ }
-    setOcultas(new Set<ColId>(["pedido"])); // en Facturas, "sin pedido" se ve junto al nombre; la columna se prende desde Columnas
+    setOcultas(new Set<ColId>()); // todas a la vista, incluida "Ubicar" (el botón que lleva al pedido)
   }, [claveCols, tipo]);
   const alternarColumna = (id: ColId) => setOcultas((a) => {
     const n = new Set(a);
@@ -319,10 +319,9 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
                     case "numero": return <span key={c.id} className={`${celdaBase} text-[14px] font-bold tabular-nums ${f.esNc ? "text-stone-500" : "text-stone-900"}`}>{f.numero ? (!f.arca && f.tipo === "REMITO" ? <Link href={`/pedidos/${f.id}/remito`} target="_blank" title="Abrir el remito" className="hover:underline">{f.numero}</Link> : f.numero) : <span className="text-[13px] font-semibold text-rojo-700">sin número</span>}</span>;
                     case "cliente": return <span key={c.id} className="flex min-w-0 flex-col items-center leading-tight" title={f.aviso || undefined}>
                       {f.clienteId ? <Link href={`/cuentas/${f.clienteId}`} className="max-w-full truncate text-[13px] font-semibold hover:underline">{f.cliente}</Link> : <span className="max-w-full truncate text-[13px] font-semibold italic text-rojo-700" title="El CUIT no está cargado en ningún cliente">{f.cliente}</span>}
-                      {(f.pedidoId || f.diaRuta || (f.arca && f.sinPedido) || f.aviso) && <span className="mt-0.5 flex max-w-full items-center gap-2 truncate text-[11.5px]">
+                      {(f.pedidoId || !f.arca || (f.arca && f.sinPedido) || f.aviso) && <span className="mt-0.5 flex max-w-full items-center gap-2 truncate text-[11.5px]">
                         {f.arca && f.sinPedido && <span className="font-semibold text-rojo-700">sin pedido</span>}
-                        {f.pedidoId && <Link href={`/pedidos/${f.pedidoId}`} className="text-verde-800 hover:underline" title="Abrir el pedido">pedido ›</Link>}
-                        {f.diaRuta && <Link href={`/pedidos/dia/${f.diaRuta}`} className="text-stone-500 hover:text-stone-900 hover:underline" title={`Ver la hoja de ruta del ${fechaCorta(f.diaRuta)}: camioneta, entrega y cobro`}>ruta ›</Link>}
+                        {(f.pedidoId || !f.arca) && <Link href={`/pedidos/${f.pedidoId ?? f.id}`} className="text-verde-800 hover:underline" title="Abrir el pedido">pedido ›</Link>}
                         {f.aviso && <span className="text-rojo-700">{f.aviso}</span>}
                       </span>}
                     </span>;
@@ -333,20 +332,19 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
                     case "estado": {
                       const e = estadoDe(f);
                       const color = e === "Pendiente" ? "bg-rojo-50 text-rojo-700" : e === "Pagada" ? "bg-verde-50 text-verde-700" : e === "NC sin aplicar" ? "bg-[#fdf8e3] text-[#8a6a05]" : "";
-                      return <span key={c.id} className="flex min-w-0 flex-col items-center leading-tight" title={e === "Pendiente" && f.atraso > 0 ? `Vencida hace ${f.atraso} días` : undefined}>
+                      return <span key={c.id} className="flex min-w-0 items-center justify-center gap-2" title={e === "Pendiente" && f.atraso > 0 ? `Vencida hace ${f.atraso} días` : undefined}>
                         <span className={`flex h-7 w-fit max-w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 font-bold ${color}`}>
                           {e === "NC sin aplicar" ? <button type="button" onClick={() => { setMotivoNc(""); setPicker(picker === f.id ? null : f.id); }} className="font-bold hover:underline">Aplicar a factura</button>
                             : e === "Pagada" ? <><span>Pagada</span><button type="button" title="Deshacer el pago" aria-label="Deshacer el pago" onClick={() => deshacer(f.id, !!f.arca)} className="text-[11px] opacity-50 hover:opacity-100">✕</button></>
                             : e === "Pendiente" ? <span>Pendiente{f.atraso > 0 ? <span className="text-[12px] font-medium opacity-80"> · {f.atraso} d</span> : null}</span>
                             : <span className="font-medium text-stone-500">{e === "Anulado" ? f.anulado : e}</span>}
                         </span>
-                        {e === "Pagada" && f.medio && <span className="mt-0.5 text-[11px] text-stone-500">{TEXTO_MEDIO[f.medio] ?? ""}</span>}
+                        {e === "Pagada" && f.medio && <span className="whitespace-nowrap text-[11.5px] font-medium text-stone-600">{TEXTO_MEDIO[f.medio] ?? ""}</span>}
                       </span>;
                     }
-                    case "pedido": return <span key={c.id} className="text-[12.5px]">
-                      {f.arca ? (f.esNc ? <span className="text-stone-300">—</span> : f.sinPedido ? (tipo === "CUENTA" ? <span className="text-stone-300">—</span> : <span className="font-semibold text-rojo-700">Sin pedido</span>) : f.pedidoId ? <Link href={`/pedidos/${f.pedidoId}`} className="font-medium text-verde-800 hover:underline">Abrir ›</Link> : <span className="text-stone-400">Con pedido</span>)
-                        : <Link href={`/pedidos/${f.id}`} className="font-medium text-verde-800 hover:underline">Abrir ›</Link>}
-                    </span>;
+                    case "pedido": return f.ubicar
+                      ? <Link key={c.id} href={f.ubicar} title="Te lleva al pedido: a su hoja de ruta (resaltado) o, si todavía espera día, a la lista de Pedidos" className="mx-auto inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-md border border-stone-300 bg-white px-3 text-[12.5px] font-semibold text-stone-700 shadow-sm hover:border-stone-700 hover:bg-stone-800 hover:text-white">Ubicar pedido <span aria-hidden>›</span></Link>
+                      : <span key={c.id} className="text-[12.5px] text-stone-300">{f.arca && f.sinPedido && tipo !== "CUENTA" ? <span className="font-semibold text-rojo-700">Sin pedido</span> : "—"}</span>;
                     case "nc": return <span key={c.id} title={f.ncMotivos || undefined} className="truncate text-[12.5px] text-stone-500">
                       {f.arca && f.esNc ? <>{(f.aplicaciones ?? []).map((a) => <span key={a.id} title={a.motivo ? `Motivo: ${a.motivo}` : undefined} className="mr-2 whitespace-nowrap">→ F-{a.facturaNumero}{a.motivo ? <span className="text-stone-400"> · {a.motivo}</span> : null} <button type="button" title="Quitar" onClick={() => window.confirm("¿Quitar esta aplicación?") && empezar(async () => { const r = await quitarAplicacionNc(a.id); if (!r.ok) setError(r.error ?? "No se pudo."); router.refresh(); })} className="text-stone-300 hover:text-rojo-700">✕</button></span>)}{(f.aplicaciones ?? []).length === 0 && <span className="text-stone-300">—</span>}</>
                         : !f.arca && f.tipo === "FACTURA" && !f.pagada && !f.cubierta && !f.anulado ? <Link href={`/cuentas/${f.clienteId}/nc?factura=${f.id}`} className="font-medium text-stone-600 underline decoration-stone-300 underline-offset-4 hover:text-stone-900">+ Nota de crédito</Link>
