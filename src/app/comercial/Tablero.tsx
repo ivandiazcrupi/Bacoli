@@ -90,7 +90,7 @@ export function Tablero({ filas, resumen }: { filas: FilaCliente[]; resumen: Res
       const v = f[orden.col];
       return v === null ? -1 : v; // los que nunca pidieron van al final al ordenar por días sin pedir
     };
-    r = [...r].sort((a, b) => { const x = clave(a), y = clave(b); return (x < y ? -1 : x > y ? 1 : a.nombre.localeCompare(b.nombre)) * (orden.asc ? 1 : -1); });
+    r = [...r].sort((a, b) => { const x = clave(a), y = clave(b); const principal = x < y ? -1 : x > y ? 1 : 0; return principal * (orden.asc ? 1 : -1) || a.nombre.localeCompare(b.nombre, "es"); }); // los empates siempre quedan de la A a la Z
     return r;
   }, [filas, q, filtro, orden, fCliente, fUltimo, fSin, fRitmo, fPaq, fContacto]);
 

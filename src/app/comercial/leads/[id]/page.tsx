@@ -18,7 +18,7 @@ const PASTILLA: Record<string, string> = {
 };
 const ICONO: Record<string, string> = { WHATSAPP: "💬", LLAMADA: "📞", RESPUESTA: "↩", VISITA: "📍", MUESTRA: "🎁", NOTA: "✎", ESTADO: "●" };
 const fmt = (s: string) => `${s.slice(8)}/${s.slice(5, 7)}/${s.slice(0, 4)}`;
-const fechaHora = (d: Date) => d.toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+const fechaHora = (d: Date) => d.toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", hourCycle: "h23", minute: "2-digit" });
 const dias = (a: string, b: string) => Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / 86_400_000);
 
 export default async function FichaLead({ params }: { params: Promise<{ id: string }> }) {

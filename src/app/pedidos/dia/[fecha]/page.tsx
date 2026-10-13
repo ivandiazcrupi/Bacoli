@@ -29,7 +29,7 @@ export default async function HojaDelDia({ params }: { params: Promise<{ fecha: 
   pedidos.sort(porReparto);
   const est = await estadoDelDia(fecha);
   const quien = est.por ? (await db.usuario.findUnique({ where: { id: est.por }, select: { nombre: true } }))?.nombre ?? "" : "";
-  const cuando = est.cuando ? new Intl.DateTimeFormat("es-AR", { hour: "2-digit", minute: "2-digit", day: "numeric", month: "numeric", timeZone: "America/Argentina/Buenos_Aires" }).format(est.cuando).replace(",", " ·") : "";
+  const cuando = est.cuando ? new Intl.DateTimeFormat("es-AR", { hour: "2-digit", hourCycle: "h23", minute: "2-digit", day: "numeric", month: "numeric", timeZone: "America/Argentina/Buenos_Aires" }).format(est.cuando).replace(",", " ·") : "";
 
   // Qué pasó después con cada pedido que no se entregó este día.
   const destinoDe = (p: { estado: string; fechaEntrega: Date | null }) => {

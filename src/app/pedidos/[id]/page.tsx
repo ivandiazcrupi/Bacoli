@@ -87,7 +87,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
   const btn = "flex h-10 w-full items-center gap-2 whitespace-nowrap rounded-md border px-3 text-sm font-medium";
   const fechaLarga = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}`;
   const cargado = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Argentina/Buenos_Aires" }).format(pedido.creadoEn);
-  const horaCarga = pedido.creadoEn.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Argentina/Buenos_Aires" });
+  const horaCarga = pedido.creadoEn.toLocaleTimeString("es-AR", { hour: "2-digit", hourCycle: "h23", minute: "2-digit", timeZone: "America/Argentina/Buenos_Aires" });
   const wa = enlaceWhatsApp(entrega.telefono);
   const direccion = web ? [entrega.direccion, entrega.barrio].filter(Boolean).join(" · ") : [titulo(pedido.punto?.direccion), pedido.punto?.barrio, pedido.punto?.zona.nombre].filter(Boolean).join(" · ");
   const pastilla = { PENDIENTE: "bg-[#fdf8e3] text-[#8a6a05]", ENTREGADO: "bg-verde-50 text-verde-700", NO_ENTREGADO: "bg-rojo-50 text-rojo-700", CANCELADO: "bg-rojo-50 text-rojo-700" } as const;
@@ -158,7 +158,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
             <BotonVolver fallback={fecha ? `/pedidos/dia/${fecha}` : "/pedidos"} />
           </div>
           <div className={`grid grid-cols-2 divide-x divide-y divide-stone-200 border-t border-stone-200 sm:divide-y-0 ${web ? "sm:grid-cols-4" : "sm:grid-cols-4"}`}>
-            {celda("Fecha de carga", fechaLarga(cargado), `${horaCarga} hs${creadoPor?.rol === "VENDEDOR" ? ` · Vendedor: ${creadoPor.nombre}` : ""}`)}
+            {celda("Fecha de carga", fechaLarga(cargado), `${horaCarga} hs${creadoPor ? ` · ${creadoPor.rol === "VENDEDOR" ? "Vendedor" : "Cargó"}: ${creadoPor.nombre}` : ""}`)}
             {celda("Fecha de entrega", fecha ? fechaLarga(fecha) : <span className="text-stone-400">Sin día</span>, fecha ? nombreDia(fecha) : "todavía sin asignar")}
             {web ? celda("Pedido de la tienda", <>N° {pedido.webOrden}</>, Number(pedido.webExtra ?? 0) > 0 ? `Incluye ${formatoPesos(Number(pedido.webExtra))} agregado por fuera` : undefined) : celda(
               pedido.conFactura ? "N° de factura" : "N° de remito",
@@ -172,7 +172,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
               monto={formatoPesos(Number(pedido.webTotal ?? 0))}
               pagado={webPagado(pedido.webOrden, pedido.webPago)}
               medio={textoPagoWeb(pedido.webPago)}
-              detalle={pedido.webPagoPor && pedido.webPagoEn ? `Confirmó ${pedido.webPagoPor} · ${pedido.webPagoEn.toLocaleString("es-AR", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "America/Argentina/Buenos_Aires" })}` : null}
+              detalle={pedido.webPagoPor && pedido.webPagoEn ? `Confirmó ${pedido.webPagoPor} · ${pedido.webPagoEn.toLocaleString("es-AR", { day: "numeric", month: "numeric", hour: "2-digit", hourCycle: "h23", minute: "2-digit", timeZone: "America/Argentina/Buenos_Aires" })}` : null}
               puedeCambiar={pedido.estado === "PENDIENTE" && pedido.webPago !== "PAGO_MP"}
             /></div>) : celda("Cobro", cobroTexto)}
           </div>
