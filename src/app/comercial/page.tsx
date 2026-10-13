@@ -6,6 +6,7 @@ import { bultosDe } from "@/lib/ruta";
 import { exigirOficina } from "@/lib/session";
 import { enlaceWhatsApp } from "@/lib/telefonos";
 import { CONTENEDOR_PEDIDOS } from "../pedidos/Encabezado";
+import { EncabezadoComercial } from "./EncabezadoComercial";
 import { Tablero, type FilaCliente } from "./Tablero";
 
 const dias = (a: string, b: string) => Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / 86_400_000);
@@ -63,10 +64,7 @@ export default async function Comercial() {
     <>
       <Cabecera usuario={usuario} />
       <main className={CONTENEDOR_PEDIDOS}>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold tracking-tight">Comercial</h1>
-          <Link href="/comercial/graficos" className="flex h-10 items-center gap-2 rounded-lg bg-stone-800 px-5 text-sm font-bold uppercase tracking-wide text-white hover:bg-stone-700">Gráficos ›</Link>
-        </div>
+        <EncabezadoComercial activa="clientes" derecha={<Link href="/comercial/graficos" className="flex h-10 items-center gap-2 rounded-lg bg-stone-800 px-5 text-sm font-bold uppercase tracking-wide text-white hover:bg-stone-700">Gráficos ›</Link>} />
         <Tablero filas={filas} resumen={resumen} />
       </main>
     </>

@@ -455,3 +455,47 @@ model AplicacionNcArca {
   @@index([ncId])
   @@index([facturaId])
 }
+
+// LEADS (COMERCIAL, etapa 2): posibles clientes que todavía no pidieron. Mini CRM: ficha + historial de contactos.
+enum LeadEstado {
+  NUEVO
+  CONTACTADO
+  MUESTRA
+  NEGOCIANDO
+  GANADO
+  PERDIDO
+}
+
+model Lead {
+  id             String     @id @default(cuid())
+  nombre         String // comercio o persona
+  contacto       String? // con quién se habla
+  telefono       String?
+  email          String?
+  barrio         String?
+  direccion      String?
+  origen         String? // cómo llegó: WhatsApp, Instagram, Referido, Web, Visita, Otro
+  interes        String? // qué le interesa / cuánto podría pedir
+  notas          String?
+  estado         LeadEstado @default(NUEVO)
+  proximoContacto String? // AAAA-MM-DD: cuándo hay que volver a escribirle
+  motivoPerdida  String?
+  vendedor       String? // quién lo atiende (texto libre)
+  clienteId      String? // si se convirtió en cliente
+  creadoEn       DateTime   @default(now())
+  actualizadoEn  DateTime   @updatedAt
+
+  contactos LeadContacto[]
+}
+
+model LeadContacto {
+  id       String   @id @default(cuid())
+  leadId   String
+  lead     Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tipo     String // WHATSAPP, LLAMADA, VISITA, MUESTRA, RESPUESTA, NOTA, ESTADO
+  texto    String?
+  usuario  String? // quién lo anotó
+  creadoEn DateTime @default(now())
+
+  @@index([leadId, creadoEn])
+}
