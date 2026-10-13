@@ -1,13 +1,14 @@
 import Link from "next/link";
 import type { Usuario } from "@prisma/client";
 import { db } from "@/lib/db";
-import { esPersonalDeOficina, puedeGestionarUsuarios } from "@/lib/roles";
+import { esPersonalDeOficina, esVendedor, puedeGestionarUsuarios } from "@/lib/roles";
 import { salir } from "@/app/actions";
 
 // PC: a la izquierda la marca, en el centro el menú (lo importante grande, el resto más discreto) y a la derecha los botones
 // para cargar pedido / cliente. Celular: marca + "Salir" arriba, botones de carga y el menú en una fila que se desliza.
 export async function Cabecera({ usuario }: { usuario: Usuario }) {
   const oficina = esPersonalDeOficina(usuario.rol);
+  const vendedor = esVendedor(usuario.rol); // el vendedor solo ve sus pedidos y sus clientes
   // Para los dueños: punto rojo en EMPRESA si hace más de un día que no se descarga una copia de seguridad.
   let copiaVencida = false;
   if (usuario.rol === "DUENO") {
@@ -17,7 +18,9 @@ export async function Cabecera({ usuario }: { usuario: Usuario }) {
   const principal = "shrink-0 rounded-lg px-2 py-2 text-base font-bold uppercase tracking-wide";
   const secundario = "shrink-0 rounded-lg px-1.5 py-2 text-xs font-medium uppercase tracking-wide text-stone-500 hover:text-stone-900";
   const botonCargar = "rounded-lg px-3 py-2 text-center text-xs font-bold uppercase tracking-wide";
-  const acciones = oficina && (
+  const acciones = vendedor ? (
+    <Link href="/vendedor/nuevo" className={`${botonCargar} bg-verde-700 text-white hover:bg-verde-800`}>Cargar pedido</Link>
+  ) : oficina && (
     <>
       <Link href="/pedidos/nuevo" className={`${botonCargar} bg-verde-700 text-white hover:bg-verde-800`}>Cargar pedido</Link>
       <Link href="/clientes/nuevo" className={`${botonCargar} bg-verde-700 text-white hover:bg-verde-800`}>Cargar cliente</Link>
@@ -31,6 +34,8 @@ export async function Cabecera({ usuario }: { usuario: Usuario }) {
         </Link>
 
         <nav aria-label="Menú principal" className="order-[98] -mx-4 flex w-[calc(100%+2rem)] items-center gap-3 overflow-x-auto whitespace-nowrap px-4 pb-1 lg:order-none lg:mx-0 lg:w-auto lg:justify-center lg:gap-2 lg:overflow-visible lg:px-0 lg:pb-0">
+          {vendedor && <Link href="/vendedor" className={principal}>Mis pedidos</Link>}
+          {vendedor && <Link href="/vendedor/clientes" className={principal}>Mis clientes</Link>}
           {oficina && <Link href="/clientes" className={principal}>Clientes</Link>}
           {oficina && <Link href="/pedidos" className={principal}>Pedidos</Link>}
           {oficina && <Link href="/cuentas" className={principal}>Cuenta corriente</Link>}
@@ -49,7 +54,7 @@ export async function Cabecera({ usuario }: { usuario: Usuario }) {
           </form>
         </div>
 
-        {oficina && <div className="order-[97] grid w-full grid-cols-2 gap-2 pb-1 lg:hidden">{acciones}</div>}
+        {(oficina || vendedor) && <div className={`order-[97] grid w-full gap-2 pb-1 lg:hidden ${vendedor ? "grid-cols-1" : "grid-cols-2"}`}>{acciones}</div>}
       </div>
     </header>
   );

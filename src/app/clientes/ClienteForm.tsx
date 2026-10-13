@@ -19,13 +19,14 @@ export type DatosCliente = {
   maxPedidosImpagos: string;
   maxMonto: string;
   comisionista: string;
+  vendedorId: string;
   comisionPct: string;
   observacion: string;
 };
 
 export const CLIENTE_VACIO: DatosCliente = {
   nombre: "", tipo: "", razonSocial: "", cuit: "", facturado: false, condicionPago: "CONTADO", listaPreciosId: "",
-  descuentoPct: "", imputacionPago: "SALDO", sinLimite: false, maxPedidosImpagos: "", maxMonto: "", comisionista: "", comisionPct: "", observacion: "",
+  descuentoPct: "", imputacionPago: "SALDO", sinLimite: false, maxPedidosImpagos: "", maxMonto: "", comisionista: "", vendedorId: "", comisionPct: "", observacion: "",
 };
 
 type Props = {
@@ -34,10 +35,11 @@ type Props = {
   listas: { id: string; nombre: string }[];
   zonas?: { id: string; nombre: string }[]; // solo al crear: pide la primera sucursal
   barrios?: string[];
+  vendedores?: { id: string; nombre: string }[]; // usuarios con rol Vendedor, para asignarles el cliente
   textoBoton: string;
 };
 
-export function ClienteForm({ accion, inicial, listas, zonas, barrios = [], textoBoton }: Props) {
+export function ClienteForm({ accion, inicial, listas, zonas, barrios = [], vendedores = [], textoBoton }: Props) {
   const [estado, enviar, cargando] = useActionState(accion, undefined);
   const v = (campo: keyof DatosCliente) => estado?.valores?.[campo] ?? (inicial[campo] as string);
   const [facturado, setFacturado] = useState(inicial.facturado);
@@ -94,6 +96,17 @@ export function ClienteForm({ accion, inicial, listas, zonas, barrios = [], text
           </Campo>
           <Campo etiqueta="Pedidos sin pagar (máx.)">
             <input name="maxPedidosImpagos" inputMode="numeric" placeholder="Sin límite" defaultValue={v("maxPedidosImpagos")} className={estiloCampo} />
+          </Campo>
+        </div>
+      </Bloque>
+
+      <Bloque titulo="Vendedor" ayuda="El vendedor que atiende a este cliente. Ese vendedor, al entrar con su usuario, ve solo sus clientes y sus pedidos.">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Campo etiqueta="Vendedor asignado">
+            <select name="vendedorId" defaultValue={v("vendedorId")} className={estiloCampo}>
+              <option value="">Sin vendedor</option>
+              {vendedores.map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}
+            </select>
           </Campo>
         </div>
       </Bloque>

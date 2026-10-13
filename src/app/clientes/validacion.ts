@@ -36,6 +36,7 @@ export const esquemaCliente = z
     ),
     maxMonto: z.preprocess((v) => leerMonto(v as string), z.number().nullable()),
     comisionista: textoOpcional,
+    vendedorId: textoOpcional, // vendedor (usuario) que atiende al cliente
     comisionPct: z.preprocess(
       (v) => (typeof v === "string" && v.trim() ? leerMonto(v) : null),
       z.number("La comisión no es válida.").min(0).max(100).nullable(),

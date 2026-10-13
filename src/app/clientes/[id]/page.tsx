@@ -29,11 +29,12 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
   const [nPedidos, nMovimientos, nNotas] = await Promise.all([db.pedido.count({ where: { clienteId: id } }), db.movimientoCuenta.count({ where: { clienteId: id } }), db.notaCredito.count({ where: { clienteId: id } })]);
   const resumenUnion = `${cliente.puntos.length} sucursal(es), ${nPedidos} pedido(s), ${nMovimientos} movimiento(s) de cuenta, ${nNotas} nota(s) de crédito`;
 
-  const [listas, zonas, barrios, productos] = await Promise.all([
+  const [listas, zonas, barrios, productos, vendedores] = await Promise.all([
     db.listaPrecios.findMany({ where: { OR: [{ activa: true }, { id: cliente.listaPreciosId ?? "" }] }, orderBy: [{ orden: "asc" }, { nombre: "asc" }] }),
     db.zona.findMany({ orderBy: { orden: "asc" } }),
     db.puntoEntrega.findMany({ distinct: ["barrio"], select: { barrio: true }, orderBy: { barrio: "asc" } }),
     db.producto.findMany({ where: { activo: true }, orderBy: [{ orden: "asc" }, { nombre: "asc" }] }),
+    db.usuario.findMany({ where: { rol: "VENDEDOR", OR: [{ activo: true }, { id: cliente.vendedorId ?? "" }] }, select: { id: true, nombre: true }, orderBy: { nombre: "asc" } }),
   ]);
   const filasPrecios: FilaPrecio[] = productos.map((p) => {
     const propio = cliente.preciosEspeciales.find((x) => x.productoId === p.id);
@@ -68,6 +69,7 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
     maxPedidosImpagos: cliente.maxPedidosImpagos?.toString() ?? "",
     maxMonto: cliente.maxMonto?.toString().replace(".", ",") ?? "",
     comisionista: cliente.comisionista ?? "",
+    vendedorId: cliente.vendedorId ?? "",
     comisionPct: cliente.comisionPct?.toString().replace(".", ",") ?? "",
     observacion: cliente.observacion ?? "",
   };
@@ -102,7 +104,7 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
         </div>
 
         <section className="space-y-3">
-          <ClienteForm accion={actualizarCliente.bind(null, cliente.id)} inicial={inicial} listas={listas} textoBoton="Guardar cambios" />
+          <ClienteForm accion={actualizarCliente.bind(null, cliente.id)} inicial={inicial} listas={listas} vendedores={vendedores} textoBoton="Guardar cambios" />
         </section>
 
         {cliente.preciosEspeciales.length > 0 && MOSTRAR_PRECIOS_PROPIOS && ( // los precios propios no se usan por ahora (el precio se escribe en cada pedido)

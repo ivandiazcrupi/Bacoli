@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Cabecera } from "@/components/Cabecera";
-import { esPersonalDeOficina } from "@/lib/roles";
+import { esPersonalDeOficina, esVendedor } from "@/lib/roles";
 import { exigirUsuario } from "@/lib/session";
 
 // Mensajes de bienvenida: uno al azar cada vez que se entra, según la hora de Argentina.
@@ -40,6 +40,11 @@ export default async function Inicio() {
             <Link href="/clientes/nuevo" className="rounded-lg bg-verde-700 px-6 py-6 text-center text-lg font-bold uppercase tracking-wide text-white hover:bg-verde-800">
               Cargar cliente
             </Link>
+          </div>
+        ) : esVendedor(usuario.rol) ? (
+          <div className="mt-2 grid w-full gap-3 sm:grid-cols-2">
+            <Link href="/vendedor/nuevo" className="rounded-lg bg-verde-700 px-6 py-6 text-center text-lg font-bold uppercase tracking-wide text-white hover:bg-verde-800">Cargar pedido</Link>
+            <Link href="/vendedor" className="rounded-lg bg-verde-700 px-6 py-6 text-center text-lg font-bold uppercase tracking-wide text-white hover:bg-verde-800">Mis pedidos</Link>
           </div>
         ) : (
           <p className="text-stone-600">Tu ruta del día va a aparecer acá.</p>

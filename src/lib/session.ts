@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { jwtVerify, SignJWT } from "jose";
 import type { Rol } from "@prisma/client";
-import { esPersonalDeOficina } from "./roles";
+import { esPersonalDeOficina, esVendedor } from "./roles";
 
 const COOKIE = "bacoli_sesion";
 const DURACION_HORAS = 12;
@@ -62,5 +62,19 @@ export async function exigirUsuario() {
 export async function exigirOficina() {
   const usuario = await exigirUsuario();
   if (!esPersonalDeOficina(usuario.rol)) redirect("/");
+  return usuario;
+}
+
+/** Pantallas del vendedor (/vendedor): solo entra quien tiene rol Vendedor; el resto vuelve al inicio. */
+export async function exigirVendedor() {
+  const usuario = await exigirUsuario();
+  if (!esVendedor(usuario.rol)) redirect("/");
+  return usuario;
+}
+
+/** Cargar pedidos: oficina o vendedor. Un vendedor solo puede cargarle pedidos a SUS clientes (cada acción lo verifica con soloSusClientes). */
+export async function exigirCarga() {
+  const usuario = await exigirUsuario();
+  if (!esPersonalDeOficina(usuario.rol) && !esVendedor(usuario.rol)) redirect("/");
   return usuario;
 }

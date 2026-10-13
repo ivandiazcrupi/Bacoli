@@ -8,7 +8,7 @@ import { FormularioLineas } from "./FormularioLineas";
 const COLUMNAS = "lg:grid-cols-[1fr_1.6fr_2fr_1fr]";
 
 // Paso 1: escribir y elegir el cliente (y su sucursal) de la lista. Paso 2: cargar productos y cantidades.
-export function NuevoPedido({ esDueno }: { esDueno: boolean }) {
+export function NuevoPedido({ esDueno, esVendedor = false }: { esDueno: boolean; esVendedor?: boolean }) {
   const [q, setQ] = useState("");
   const [resultados, setResultados] = useState<Destino[]>([]);
   const [buscando, setBuscando] = useState(false);
@@ -61,8 +61,8 @@ export function NuevoPedido({ esDueno }: { esDueno: boolean }) {
           {buscando && <p className="text-sm text-stone-500">Buscando…</p>}
           {!buscando && q.trim() && resultados.length === 0 && (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-stone-300 bg-white px-5 py-4 shadow-sm">
-              <p className="text-sm text-stone-700">No encontré ningún cliente con “<b>{q.trim()}</b>”. Si es un cliente nuevo, primero hay que cargarlo.</p>
-              <Link href="/clientes/nuevo" className="rounded-md bg-verde-700 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-verde-800">Cargar cliente nuevo ›</Link>
+              <p className="text-sm text-stone-700">No encontré ningún cliente con “<b>{q.trim()}</b>”. {esVendedor ? "Solo podés cargar pedidos a tus clientes; si falta alguno, pedile a la oficina que te lo asigne." : "Si es un cliente nuevo, primero hay que cargarlo."}</p>
+              {!esVendedor && <Link href="/clientes/nuevo" className="rounded-md bg-verde-700 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-verde-800">Cargar cliente nuevo ›</Link>}
             </div>
           )}
           {resultados.length > 0 && (

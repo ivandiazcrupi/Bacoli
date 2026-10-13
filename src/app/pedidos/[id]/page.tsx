@@ -34,6 +34,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
     include: { cliente: true, punto: { include: { zona: true } }, items: { include: { producto: { select: { orden: true } } } }, ncAplicaciones: { where: { nota: { anuladaEn: null } } } },
   });
   if (!pedido) notFound();
+  const creadoPor = await db.usuario.findUnique({ where: { id: pedido.creadoPorId }, select: { nombre: true, rol: true } }); // si lo cargó un vendedor, se anota
 
   // Cobranza: una parada para cobrar plata (sin productos ni cuenta corriente). Se ve y se edita en una pantalla simple.
   if (pedido.origen === "COBRANZA") {
@@ -157,7 +158,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
             <BotonVolver fallback={fecha ? `/pedidos/dia/${fecha}` : "/pedidos"} />
           </div>
           <div className={`grid grid-cols-2 divide-x divide-y divide-stone-200 border-t border-stone-200 sm:divide-y-0 ${web ? "sm:grid-cols-4" : "sm:grid-cols-4"}`}>
-            {celda("Fecha de carga", fechaLarga(cargado), `${horaCarga} hs`)}
+            {celda("Fecha de carga", fechaLarga(cargado), `${horaCarga} hs${creadoPor?.rol === "VENDEDOR" ? ` · Vendedor: ${creadoPor.nombre}` : ""}`)}
             {celda("Fecha de entrega", fecha ? fechaLarga(fecha) : <span className="text-stone-400">Sin día</span>, fecha ? nombreDia(fecha) : "todavía sin asignar")}
             {web ? celda("Pedido de la tienda", <>N° {pedido.webOrden}</>, Number(pedido.webExtra ?? 0) > 0 ? `Incluye ${formatoPesos(Number(pedido.webExtra))} agregado por fuera` : undefined) : celda(
               pedido.conFactura ? "N° de factura" : "N° de remito",

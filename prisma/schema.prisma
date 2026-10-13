@@ -26,6 +26,7 @@ model Usuario {
   actualizadoEn DateTime @updatedAt
 
   salidas Salida[]
+  clientesVendidos Cliente[] @relation("ClientesDelVendedor")
 }
 
 enum TipoCliente {
@@ -105,6 +106,8 @@ model Cliente {
   sinLimite         Boolean        @default(false)
   maxPedidosImpagos Int?
   maxMonto          Decimal?       @db.Decimal(14, 2)
+  vendedorId        String? // vendedor que atiende a este cliente (ve solo sus clientes)
+  vendedor          Usuario? @relation("ClientesDelVendedor", fields: [vendedorId], references: [id], onDelete: SetNull)
   comisionista      String?
   comisionPct       Decimal?       @db.Decimal(5, 2)
   activo            Boolean        @default(true)
