@@ -29,6 +29,7 @@ export function TablaPedidosVendedor({ filas, pct, comision = true, modo }: { fi
   const [filtros, setFiltros] = useState<Partial<Record<Col, string>>>({});
   const [orden, setOrden] = useState<{ col: Col; dir: 1 | -1 }>({ col: "cargado", dir: -1 });
   const [error, setError] = useState("");
+  const [buscar, setBuscar] = useState(""); // buscador del celular (cliente, barrio o producto)
 
   const com = (x: FilaVendedor) => (x.estado === "ENTREGADO" ? (x.neto * pct) / 100 : null);
   const valor = (x: FilaVendedor, c: Col): string | number => {
@@ -48,6 +49,7 @@ export function TablaPedidosVendedor({ filas, pct, comision = true, modo }: { fi
 
   const visibles = useMemo(() => {
     const lista = filas.filter((x) => {
+      if (buscar.trim() && !`${x.cliente} ${x.barrio} ${x.items.map((i) => i.nombre).join(" ")}`.toLowerCase().includes(buscar.trim().toLowerCase())) return false;
       for (const [c, f] of Object.entries(filtros) as [Col, string][]) {
         const t = f.trim();
         if (!t) continue;
@@ -66,7 +68,7 @@ export function TablaPedidosVendedor({ filas, pct, comision = true, modo }: { fi
       return r * dir || a.cliente.localeCompare(b.cliente, "es");
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filas, filtros, orden, pct]);
+  }, [filas, filtros, orden, pct, buscar]);
 
   const entregadas = visibles.filter((x) => x.estado === "ENTREGADO");
   const totalMonto = entregadas.reduce((t, x) => t + x.total, 0);
@@ -93,7 +95,50 @@ export function TablaPedidosVendedor({ filas, pct, comision = true, modo }: { fi
         {hayFiltros && <button type="button" onClick={() => setFiltros({})} className="text-[12.5px] font-semibold text-stone-600 underline decoration-stone-300 underline-offset-4 hover:text-stone-900">Quitar filtros ✕</button>}
         {error && <span className="ml-auto text-sm font-medium text-rojo-700">{error}</span>}
       </header>
-      <div className="overflow-x-auto">
+      {/* Celular: una tarjeta por pedido (buscador, pago y el botón grande para avisar que pagó) */}
+      <div className="space-y-2 p-3 lg:hidden">
+        <div className="flex gap-2">
+          <input value={buscar} onChange={(e) => setBuscar(e.target.value)} placeholder="Buscar cliente, barrio o producto" className="h-12 min-w-0 flex-1 rounded-lg border border-stone-400 bg-white px-3 text-base focus:border-verde-700 focus:outline-none" />
+          <select aria-label="Filtrar por pago" value={(filtros.pago ?? "").split(SEP)[0] ?? ""} onChange={(e) => setFiltros({ ...filtros, pago: e.target.value })} className="h-12 w-[7.5rem] rounded-lg border border-stone-400 bg-white px-2 text-sm">
+            <option value="">Todos</option>
+            {["Sin pagar", "Cuenta corriente", "Avisó pago", "Pagado", "Sin entregar"].map((o) => <option key={o} value={o}>{o}</option>)}
+          </select>
+        </div>
+        {visibles.map((x) => {
+          const p = pagoDe(x);
+          return (
+            <article key={x.id} className="rounded-xl border border-stone-300 bg-white p-3.5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[16px] font-semibold leading-tight text-stone-900">{x.cliente}</p>
+                  <p className="text-[13px] text-stone-500">{x.barrio}{x.barrio ? " · " : ""}cargado {fecha(x.cargado)}{x.estado === "ENTREGADO" && x.entrega ? ` · entregado ${fecha(x.entrega)}` : ""}</p>
+                </div>
+                <p className="shrink-0 text-[17px] font-bold tabular-nums">{formatoPesos(x.total)}</p>
+              </div>
+              <ul className="mt-2 text-[14px] text-stone-800">{x.items.map((i, k) => <li key={k}><b>{i.cantidad}</b> {i.nombre}</li>)}</ul>
+              <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                <span className={`${pastilla} ${PASTILLA_ESTADO[x.estado]}`}>{ESTADOS[x.estado]}</span>
+                {p === "Pagado" && <span className={`${pastilla} bg-verde-50 text-verde-700`}>Pagado{x.medio ? ` · ${MEDIOS[x.medio] ?? ""}` : ""}</span>}
+                {(p === "Sin pagar" || p === "Cuenta corriente") && <span className={`${pastilla} bg-rojo-50 text-rojo-700`}>{p}</span>}
+                {p === "Avisó pago" && <span className={`${pastilla} bg-[#fdf8e3] text-[#8a6a05]`}>{modo === "vendedor" ? "Avisaste el pago" : `${x.avisadoPor?.split(" ")[0]} avisó pago`}</span>}
+                {p === "Sin entregar" && x.estado !== "NO_ENTREGADO" && <span className="text-[13px] text-stone-400">Sin entregar</span>}
+                {x.comprobante && <span className="ml-auto text-[13px] font-medium tabular-nums text-stone-500">{x.comprobante}</span>}
+              </div>
+              {modo === "vendedor" && (p === "Sin pagar" || p === "Cuenta corriente") && (
+                <button type="button" disabled={pendiente} onClick={() => avisar(x)} className="mt-3 h-12 w-full rounded-xl border border-stone-400 bg-white text-[15px] font-semibold text-stone-800 active:bg-stone-100 disabled:opacity-50">Avisar que pagó</button>
+              )}
+              {modo === "vendedor" && p === "Avisó pago" && (
+                <button type="button" disabled={pendiente} onClick={() => ejecutar(() => quitarAvisoPago(x.id))} className="mt-3 h-11 w-full rounded-xl border border-stone-300 bg-white text-sm font-medium text-stone-600 disabled:opacity-50">Quitar el aviso</button>
+              )}
+              {modo === "oficina" && p === "Avisó pago" && <Link href={`/cuentas/${x.clienteId}`} className="mt-3 flex h-11 items-center justify-center rounded-xl border border-stone-300 text-sm font-semibold text-stone-700">Confirmar en Cuenta corriente ›</Link>}
+            </article>
+          );
+        })}
+        {visibles.length === 0 && <p className="py-10 text-center text-sm text-stone-500">{filas.length === 0 ? "Todavía no hay pedidos." : "No hay pedidos con ese filtro."}</p>}
+        {visibles.length > 0 && <p className="pt-1 text-right text-[13px] font-semibold text-stone-600">Total entregado: {formatoPesos(totalMonto)}</p>}
+      </div>
+
+      <div className="hidden overflow-x-auto lg:block">
         <table className={`w-full min-w-[1150px] text-center text-[13px] ${pendiente ? "opacity-70" : ""}`}>
           <thead className="bg-stone-100 text-[11px] text-stone-600">
             <tr className="align-bottom">

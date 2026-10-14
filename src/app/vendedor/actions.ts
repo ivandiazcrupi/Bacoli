@@ -1,7 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
+import { mayus, titulo } from "@/lib/mayusculas";
+import { cuitValido } from "@/lib/numeros";
 import { exigirVendedor, vendedorDeUsuario } from "@/lib/session";
 
 type Resultado = { ok: boolean; error?: string };
@@ -40,4 +43,41 @@ export async function quitarAvisoPago(pedidoId: string): Promise<Resultado> {
   revalidatePath("/vendedor", "layout");
   revalidatePath("/cuentas", "layout");
   return { ok: true };
+}
+
+export type EstadoCliente = { error?: string } | undefined;
+
+/**
+ * El vendedor carga un cliente nuevo (cuando cierra uno): queda asignado a él, con una sucursal, y sigue directo a cargarle el pedido.
+ * No toca precios ni límites: eso lo ve la oficina en la ficha del cliente.
+ */
+export async function crearClienteVendedor(_: EstadoCliente, f: FormData): Promise<EstadoCliente> {
+  const usuario = await exigirVendedor();
+  const vendedor = await vendedorDeUsuario(usuario.id);
+  if (!vendedor) return { error: "Todavía no te enlazaron con tu ficha de vendedor. Pedile a la oficina que lo haga." };
+  const nombre = mayus(String(f.get("nombre") ?? "").trim());
+  const direccion = titulo(String(f.get("direccion") ?? "").trim());
+  const barrio = mayus(String(f.get("barrio") ?? "").trim());
+  const zonaId = String(f.get("zonaId") ?? "");
+  const cuitTxt = String(f.get("cuit") ?? "").trim();
+  if (nombre.length < 2) return { error: "Falta el nombre del comercio." };
+  if (!direccion) return { error: "Falta la dirección de entrega." };
+  if (!barrio) return { error: "Falta el barrio." };
+  if (!(await db.zona.findUnique({ where: { id: zonaId } }))) return { error: "Elegí la zona." };
+  if (cuitTxt && !cuitValido(cuitTxt)) return { error: "El CUIT no es válido (son 11 números)." };
+  const repetido = await db.puntoEntrega.findFirst({ where: { direccion: { equals: direccion, mode: "insensitive" }, cliente: { nombre: { equals: nombre, mode: "insensitive" } } } });
+  if (repetido) return { error: "Ese cliente ya está cargado con esa dirección. Buscalo en tus clientes o consultá con la oficina." };
+  const telefono = String(f.get("telefono") ?? "").trim() || null;
+  const comentario = mayus(String(f.get("comentario") ?? "").trim()) || null;
+  const creado = await db.cliente.create({
+    data: {
+      nombre, tipo: "MAYORISTA", razonSocial: mayus(String(f.get("razonSocial") ?? "").trim()) || null,
+      cuit: cuitTxt ? cuitTxt.replace(/\D/g, "") : null, vendedorId: vendedor.id,
+      puntos: { create: { direccion, barrio, zonaId, telefono, comentario } },
+    },
+    include: { puntos: { select: { id: true } } },
+  });
+  revalidatePath("/vendedor", "layout");
+  revalidatePath("/clientes");
+  redirect(`/vendedor/nuevo?punto=${creado.puntos[0].id}`);
 }

@@ -32,7 +32,7 @@ export async function buscarDestinos(q: string): Promise<Destino[]> {
   const usuario = await exigirCarga();
   const propio = usuario.rol === "VENDEDOR" ? (await vendedorDeUsuario(usuario.id))?.id ?? "-" : null; // un vendedor solo ve sus clientes
   const palabras = q.trim().split(/\s+/).filter(Boolean).slice(0, 6);
-  if (palabras.length === 0) return [];
+  if (palabras.length === 0 && !propio) return []; // el vendedor, sin escribir nada, ve la lista de sus clientes
   const puntos = await db.puntoEntrega.findMany({
     where: {
       activo: true,
@@ -44,7 +44,7 @@ export async function buscarDestinos(q: string): Promise<Destino[]> {
     },
     include: { cliente: true, zona: true },
     orderBy: [{ cliente: { nombre: "asc" } }, { alias: "asc" }],
-    take: 20,
+    take: propio ? 40 : 20,
   });
   return puntos.map((p) => ({
     puntoId: p.id, clienteId: p.clienteId, cliente: p.cliente.nombre, alias: p.alias, direccion: titulo(p.direccion), barrio: p.barrio, zona: p.zona.nombre, telefono: p.telefono ?? "",

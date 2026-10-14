@@ -19,7 +19,10 @@ export async function Cabecera({ usuario }: { usuario: Usuario }) {
   const secundario = "shrink-0 rounded-lg px-1.5 py-2 text-xs font-medium uppercase tracking-wide text-stone-500 hover:text-stone-900";
   const botonCargar = "rounded-lg px-3 py-2 text-center text-xs font-bold uppercase tracking-wide";
   const acciones = vendedor ? (
-    <Link href="/vendedor/nuevo" className={`${botonCargar} bg-verde-700 text-white hover:bg-verde-800`}>Cargar pedido</Link>
+    <>
+      <Link href="/vendedor/nuevo" className={`${botonCargar} bg-verde-700 text-white hover:bg-verde-800`}>Cargar pedido</Link>
+      <Link href="/vendedor/clientes/nuevo" className={`${botonCargar} bg-verde-700 text-white hover:bg-verde-800`}>Cargar cliente</Link>
+    </>
   ) : oficina && (
     <>
       <Link href="/pedidos/nuevo" className={`${botonCargar} bg-verde-700 text-white hover:bg-verde-800`}>Cargar pedido</Link>
@@ -55,7 +58,7 @@ export async function Cabecera({ usuario }: { usuario: Usuario }) {
           </form>
         </div>
 
-        {(oficina || vendedor) && <div className={`order-[97] grid w-full gap-2 pb-1 lg:hidden ${vendedor ? "grid-cols-1" : "grid-cols-2"}`}>{acciones}</div>}
+        {(oficina || vendedor) && <div className={`order-[97] grid w-full gap-2 pb-1 lg:hidden grid-cols-2`}>{acciones}</div>}
       </div>
     </header>
   );

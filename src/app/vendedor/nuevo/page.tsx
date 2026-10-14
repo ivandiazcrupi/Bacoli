@@ -1,24 +1,23 @@
-import { BotonVolver } from "@/components/BotonVolver";
+import Link from "next/link";
 import { Cabecera } from "@/components/Cabecera";
 import { exigirVendedor } from "@/lib/session";
-import { NuevoPedido } from "../../pedidos/NuevoPedido";
-import { CONTENEDOR_PEDIDOS } from "../../pedidos/Encabezado";
+import { datosNuevoPedido } from "../../pedidos/actions";
+import { PedidoMovil } from "../PedidoMovil";
 
-// El vendedor carga un pedido a uno de SUS clientes. Entra directo a Pedidos (la oficina le asigna el día).
-export default async function CargarPedidoVendedor() {
+// El vendedor carga un pedido a uno de SUS clientes (pensado para el celular). Entra directo a Pedidos: la oficina le asigna el día.
+export default async function CargarPedidoVendedor({ searchParams }: { searchParams: Promise<{ punto?: string }> }) {
   const usuario = await exigirVendedor();
+  const { punto } = await searchParams;
+  const inicial = punto ? await datosNuevoPedido(punto) : null; // viene de "cargar cliente": ya queda elegido
   return (
     <>
       <Cabecera usuario={usuario} />
-      <main className={CONTENEDOR_PEDIDOS}>
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Cargar pedido</h1>
-            <p className="mt-1 text-sm text-stone-600">Elegí uno de tus clientes y cargá lo que pidió. La oficina le asigna el día de entrega.</p>
-          </div>
-          <BotonVolver fallback="/vendedor" />
+      <main className="mx-auto w-full max-w-xl space-y-4 px-4 py-4">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-2xl font-bold tracking-tight">Cargar pedido</h1>
+          <Link href="/vendedor" className="text-sm font-semibold text-stone-500 underline decoration-stone-300 underline-offset-4">Salir</Link>
         </div>
-        <NuevoPedido esDueno={false} esVendedor />
+        <PedidoMovil inicial={inicial} />
       </main>
     </>
   );
