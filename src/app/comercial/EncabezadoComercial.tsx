@@ -1,18 +1,35 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-// Título + pestañas de COMERCIAL (Clientes / Leads) + un espacio a la derecha para botones.
-export function EncabezadoComercial({ activa, derecha, verVendedores = true }: { activa: "clientes" | "leads" | "vendedores"; derecha?: ReactNode; verVendedores?: boolean }) {
-  const pest = (k: "clientes" | "leads" | "vendedores", href: string, texto: string) => (
-    <Link href={href} className={`rounded-md px-4 py-1.5 text-sm font-semibold uppercase tracking-wide ${activa === k ? "bg-stone-800 text-white" : "border border-stone-300 bg-white text-stone-600 hover:border-stone-500"}`}>{texto}</Link>
-  );
+export type PestañaComercial = "clientes" | "leads" | "vendedores" | "estadisticas";
+
+const PESTAÑAS: { k: PestañaComercial; href: string; texto: string }[] = [
+  { k: "clientes", href: "/comercial", texto: "Clientes" },
+  { k: "leads", href: "/comercial/leads", texto: "Leads" },
+  { k: "vendedores", href: "/comercial/vendedores", texto: "Vendedores" },
+  { k: "estadisticas", href: "/comercial/estadisticas", texto: "Estadísticas" },
+];
+
+// Título de COMERCIAL (con botones a la derecha) y debajo el submenú: cuatro solapas con una línea que cruza la hoja.
+export function EncabezadoComercial({ activa, derecha, titulo = "Comercial" }: { activa: PestañaComercial; derecha?: ReactNode; titulo?: string; verVendedores?: boolean }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div className="flex flex-wrap items-center gap-4">
-        <h1 className="text-2xl font-bold tracking-tight">Comercial</h1>
-        <div className="flex gap-2">{pest("clientes", "/comercial", "Clientes")}{pest("leads", "/comercial/leads", "Leads")}{verVendedores && pest("vendedores", "/comercial/vendedores", "Vendedores")}</div>
+    <div>
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-3">
+        <h1 className="text-2xl font-bold tracking-tight">{titulo}</h1>
+        <div className="flex flex-wrap items-center gap-2">{derecha}</div>
       </div>
-      <div className="flex items-center gap-2">{derecha}</div>
+      <nav aria-label="Secciones de Comercial" className="flex gap-1 overflow-x-auto border-b border-stone-300">
+        {PESTAÑAS.map((p) => (
+          <Link
+            key={p.k}
+            href={p.href}
+            aria-current={activa === p.k ? "page" : undefined}
+            className={`-mb-px whitespace-nowrap border-b-[3px] px-5 py-2.5 text-sm font-bold uppercase tracking-wide ${activa === p.k ? "border-stone-800 text-stone-900" : "border-transparent text-stone-500 hover:border-[#c6c2b7] hover:text-stone-800"}`}
+          >
+            {p.texto}
+          </Link>
+        ))}
+      </nav>
     </div>
   );
 }
