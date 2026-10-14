@@ -36,11 +36,6 @@ export const esquemaCliente = z
       z.number("El máximo de pedidos no es válido.").int().min(1).nullable(),
     ),
     maxMonto: z.preprocess((v) => leerMonto(v as string), z.number().nullable()),
-    comisionista: textoOpcional,
-    comisionPct: z.preprocess(
-      (v) => (typeof v === "string" && v.trim() ? leerMonto(v) : null),
-      z.number("La comisión no es válida.").min(0).max(100).nullable(),
-    ),
   })
   .refine((c) => !c.cuit || cuitValido(c.cuit), { message: "El CUIT no es válido (11 dígitos).", path: ["cuit"] })
   .refine((c) => !c.facturado || !!c.cuit, { message: "Un cliente con factura necesita CUIT.", path: ["cuit"] });

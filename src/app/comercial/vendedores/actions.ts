@@ -145,11 +145,11 @@ export async function guardarClientesDeVendedor(vendedorId: string, _: EstadoVen
 }
 
 /** Pasa un comisionista que estaba escrito en las fichas (ej. Migue 8%) a la lista de vendedores con todos sus clientes. */
-export async function importarComisionista(comisionista: string): Promise<EstadoVend> {
+export async function importarComisionista(comisionista: string, nuevoNombre?: string): Promise<EstadoVend> {
   const u = await exigirAcceso();
   const clientes = await db.cliente.findMany({ where: { comisionista: { equals: comisionista, mode: "insensitive" } }, select: { id: true, comisionPct: true } });
   if (clientes.length === 0) return { error: "No encontré clientes con ese comisionista." };
-  const nombre = titulo(comisionista);
+  const nombre = titulo((nuevoNombre ?? "").trim() || comisionista);
   let v = await db.vendedor.findFirst({ where: { nombre: { equals: nombre, mode: "insensitive" } } });
   const pct = Math.max(...clientes.map((c) => Number(c.comisionPct ?? 0)));
   if (!v) v = await db.vendedor.create({ data: { nombre, comisionPct: pct || null } });

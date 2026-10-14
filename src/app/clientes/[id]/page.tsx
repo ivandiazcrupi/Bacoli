@@ -68,8 +68,6 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
     sinLimite: cliente.sinLimite,
     maxPedidosImpagos: cliente.maxPedidosImpagos?.toString() ?? "",
     maxMonto: cliente.maxMonto?.toString().replace(".", ",") ?? "",
-    comisionista: cliente.comisionista ?? "",
-    comisionPct: cliente.comisionPct?.toString().replace(".", ",") ?? "",
     observacion: cliente.observacion ?? "",
   };
 

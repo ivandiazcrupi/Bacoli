@@ -16,7 +16,6 @@ function datosCliente(d: ReturnType<typeof esquemaCliente.parse>) {
     ...d,
     nombre: mayus(d.nombre),
     razonSocial: mayus(d.razonSocial),
-    comisionista: mayus(d.comisionista),
     cuit: d.cuit ? d.cuit.replace(/\D/g, "") : null,
     // Si "sin límite", no se guardan los topes.
     maxPedidosImpagos: d.sinLimite ? null : d.maxPedidosImpagos,

@@ -157,14 +157,16 @@ export function AsignarClientes({ vendedorId, nombre, activo, clientes, propios 
   );
 }
 
-// ── Comisionista escrito en las fichas (ej. Migue): un botón y queda como vendedor ──
+// ── Comisionista viejo escrito en las fichas (ej. Migue): se pasa a vendedor con el nombre que se quiera (ej. Miguel) ──
 export function BotonImportar({ comisionista, clientes, pct }: { comisionista: string; clientes: number; pct: string }) {
   const [pendiente, empezar] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
+  const [nombre, setNombre] = useState(comisionista);
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-stone-200 bg-white px-5 py-4">
-      <p className="text-[15px] text-stone-700"><b>{comisionista}</b> figura como comisionista en {clientes} {clientes === 1 ? "ficha" : "fichas"}{pct ? ` (${pct}%)` : ""}.</p>
-      <button type="button" disabled={pendiente} onClick={() => { if (window.confirm(`¿Pasar a ${comisionista} a la lista de vendedores con sus ${clientes} clientes?`)) empezar(async () => { const r = await importarComisionista(comisionista); setMsg(r?.error ?? r?.ok ?? null); }); }}
+      <p className="text-[15px] text-stone-700"><b>{comisionista}</b> está anotado en {clientes} {clientes === 1 ? "ficha" : "fichas"}{pct ? ` (${pct}%)` : ""}. Pasarlo a vendedor con el nombre:</p>
+      <input value={nombre} onChange={(e) => setNombre(e.target.value)} className="min-w-[160px] rounded-lg border border-stone-300 px-3 py-2 text-[15px]" />
+      <button type="button" disabled={pendiente || !nombre.trim()} onClick={() => { if (window.confirm(`¿Crear al vendedor ${nombre.trim()} con sus ${clientes} clientes?`)) empezar(async () => { const r = await importarComisionista(comisionista, nombre); setMsg(r?.error ?? r?.ok ?? null); }); }}
         className="rounded-lg bg-stone-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-stone-700 disabled:opacity-60">{pendiente ? "…" : "Pasar a vendedor"}</button>
       {msg && <span className="w-full text-sm text-stone-600">{msg}</span>}
     </div>

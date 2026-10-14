@@ -72,8 +72,7 @@ export function Importador({ zonas }: { zonas: string[] }) {
                   <p className="font-medium">{c.nombre}{!c.activo && <span className="font-normal text-stone-500"> · desactivado</span>}</p>
                   <p className="text-stone-600">
                     Lista {c.lista} · {c.sucursales.length} {c.sucursales.length === 1 ? "sucursal" : "sucursales"}
-                    {c.cuit && ` · CUIT ${c.cuit}`}{c.comisionista && ` · comisión ${c.comisionPct}% (${c.comisionista})`}
-                  </p>
+                    {c.cuit && ` · CUIT ${c.cuit}`}                  </p>
                 </li>
               ))}
             </ul>

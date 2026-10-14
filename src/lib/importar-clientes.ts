@@ -138,8 +138,6 @@ export type ClienteImport = {
   razonSocial: string | null;
   cuit: string | null;
   activo: boolean;
-  comisionista: string | null;
-  comisionPct: number | null;
   sucursales: SucursalImport[];
 };
 export type Analisis = {
@@ -276,8 +274,6 @@ export function analizar(filasCsv: Record<string, string>[], opciones: Opciones)
       razonSocial: razon,
       cuit: cuits[0] ?? null,
       activo: sucursales.some((s) => s.activo),
-      comisionista: migue ? "Migue" : null,
-      comisionPct: migue ? 8 : null,
       sucursales,
     });
   }

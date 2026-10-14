@@ -32,11 +32,11 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
 
   const pedidos = await db.pedido.findMany({
     where: { estado: { in: ["PENDIENTE", "ENTREGADO"] }, origen: { in: ["MAYORISTA", "WEB"] }, OR: [{ creadoEn: { gte: desde } }, { fechaEntrega: { gte: desde } }] },
-    include: { items: true, cliente: { select: { id: true, nombre: true, comisionista: true, comisionPct: true } }, punto: { select: { zona: { select: { nombre: true } } } } },
+    include: { items: true, cliente: { select: { id: true, nombre: true } }, punto: { select: { zona: { select: { nombre: true } } } } },
   });
 
   // Cada pedido cuenta en el mes de su día de reparto (o, si todavía no lo tiene, el día en que se cargó).
-  type P = { f: string; web: boolean; clienteId: string | null; cliente: string; zona: string; tipo: string; paq: number; neto: number; entregado: boolean; comisionista: string | null; pct: number; sabores: ReturnType<typeof unidadesPorSabor>; foc: number };
+  type P = { f: string; web: boolean; clienteId: string | null; cliente: string; zona: string; tipo: string; paq: number; neto: number; entregado: boolean; sabores: ReturnType<typeof unidadesPorSabor>; foc: number };
   const filas: P[] = pedidos.map((p) => {
     const web = p.origen === "WEB";
     const base = desgloseIva(p.items, Number(p.ivaPct), p.estado).base;
@@ -45,7 +45,7 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
     return {
       f: p.fechaEntrega ? p.fechaEntrega.toISOString().slice(0, 10) : fechaAR(p.creadoEn), web, clienteId: p.clienteId, cliente: p.cliente?.nombre ?? "", zona: p.punto?.zona.nombre ?? "",
       tipo: web ? "Tienda online" : p.conFactura ? "Con factura" : "Con remito", paq: bultosDe(p.items), neto, entregado: p.estado === "ENTREGADO",
-      comisionista: p.cliente?.comisionista ?? null, pct: Number(p.cliente?.comisionPct ?? 0), sabores: unidadesPorSabor(p.items), foc: focacciasDe(p.items),
+      sabores: unidadesPorSabor(p.items), foc: focacciasDe(p.items),
     };
   });
   const delMes = filas.filter((p) => mesDe(p.f) === mes);

@@ -18,14 +18,12 @@ export type DatosCliente = {
   sinLimite: boolean;
   maxPedidosImpagos: string;
   maxMonto: string;
-  comisionista: string;
-  comisionPct: string;
   observacion: string;
 };
 
 export const CLIENTE_VACIO: DatosCliente = {
   nombre: "", tipo: "", razonSocial: "", cuit: "", facturado: false, condicionPago: "CONTADO", listaPreciosId: "",
-  descuentoPct: "", imputacionPago: "SALDO", sinLimite: false, maxPedidosImpagos: "", maxMonto: "", comisionista: "", comisionPct: "", observacion: "",
+  descuentoPct: "", imputacionPago: "SALDO", sinLimite: false, maxPedidosImpagos: "", maxMonto: "", observacion: "",
 };
 
 type Props = {
@@ -97,10 +95,6 @@ export function ClienteForm({ accion, inicial, listas, zonas, barrios = [], text
           </Campo>
         </div>
       </Bloque>
-
-      {/* La comisión ahora se maneja en Comercial → Vendedores. Los datos viejos (comisionista y %) se conservan acá, ocultos, para poder pasarlos a vendedores. */}
-      <input type="hidden" name="comisionista" value={v("comisionista")} />
-      <input type="hidden" name="comisionPct" value={v("comisionPct")} />
 
       {zonas && (
         <Bloque titulo="Primera sucursal" ayuda="Después se pueden agregar más.">

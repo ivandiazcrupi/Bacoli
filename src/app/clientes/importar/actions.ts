@@ -94,8 +94,6 @@ export async function importar(_: EstadoImport, formData: FormData): Promise<Est
           razonSocial: c.razonSocial,
           cuit: c.cuit,
           activo: c.activo,
-          comisionista: c.comisionista,
-          comisionPct: c.comisionPct,
           listaPreciosId: listaId(c.lista),
           puntos: {
             create: c.sucursales.map((s) => ({
