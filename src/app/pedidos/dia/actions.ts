@@ -17,10 +17,11 @@ export type Resultado = { ok: boolean; error?: string };
 const MEDIOS: MedioPago[] = ["EFECTIVO", "TRANSFERENCIA", "CHEQUE", "MERCADO_PAGO", "OTRO"];
 const redondear2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
-async function pedidoAbierto(id: string) {
+/** `ignorarCierre`: cobrar o deshacer un cobro desde Cuenta corriente no depende de si el día está cerrado (es plata, no la ruta). */
+async function pedidoAbierto(id: string, ignorarCierre = false) {
   const pedido = await db.pedido.findUnique({ where: { id }, include: { items: true, ncAplicaciones: { where: { nota: { anuladaEn: null } } } } });
   if (!pedido) return { error: "No encontré el pedido." } as const;
-  if (pedido.fechaEntrega && (await db.diaCerrado.findUnique({ where: { fecha: pedido.fechaEntrega } }))) {
+  if (!ignorarCierre && pedido.fechaEntrega && (await db.diaCerrado.findUnique({ where: { fecha: pedido.fechaEntrega } }))) {
     return { error: "Ese día está cerrado. Un dueño puede reabrirlo." } as const;
   }
   return { pedido } as const;
@@ -138,10 +139,10 @@ export async function registrarNoEntrega(pedidoId: string, motivo: string): Prom
 }
 
 /** Cobrado: baja la deuda del cliente con un movimiento de pago y deja el pedido como pagado. */
-export async function registrarCobro(pedidoId: string, medio: string, monto?: number): Promise<Resultado> {
+export async function registrarCobro(pedidoId: string, medio: string, monto?: number, ignorarCierre = false): Promise<Resultado> {
   const usuario = await exigirOficina();
   if (!MEDIOS.includes(medio as MedioPago)) return { ok: false, error: "Elegí el medio de pago." };
-  const r = await pedidoAbierto(pedidoId);
+  const r = await pedidoAbierto(pedidoId, ignorarCierre);
   if ("error" in r) return { ok: false, error: r.error };
   const { pedido } = r;
   if (pedido.estado !== "ENTREGADO") return { ok: false, error: "Primero marcá el pedido como entregado." };
@@ -179,9 +180,9 @@ export async function dejarEnCuentaCorriente(pedidoId: string): Promise<Resultad
 }
 
 /** Deshace el cobro. Si había un pago, se agrega un movimiento que lo anula (los movimientos no se borran). */
-export async function deshacerCobro(pedidoId: string): Promise<Resultado> {
+export async function deshacerCobro(pedidoId: string, ignorarCierre = false): Promise<Resultado> {
   const usuario = await exigirOficina();
-  const r = await pedidoAbierto(pedidoId);
+  const r = await pedidoAbierto(pedidoId, ignorarCierre);
   if ("error" in r) return { ok: false, error: r.error };
   const { pedido } = r;
   await db.$transaction(async (tx) => {

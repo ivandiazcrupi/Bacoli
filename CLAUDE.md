@@ -222,6 +222,7 @@ y ~1000 minoristas.
 - La lista de Clientes y los Pedidos del cliente usan la misma barra de encabezado. Ya aplicado en Pedidos, Usuarios, Empresa, Mi cuenta y Precios (tablas con barra verde; formularios con `Bloque` de `campos.tsx`). Pendiente: afinar la tabla de cada vehículo en la hoja de ruta.
 
 ## Confirmar pagos (pedido del dueño)
+- **Cobrar desde Cuenta corriente no depende del día cerrado** (pedido del dueño): un remito entregado y dejado en cuenta corriente se puede cobrar (y deshacer el cobro) desde Facturas/Remitos/cuenta del cliente aunque la hoja de ruta de ese día esté cerrada; el pedido pasa solo a "Pagado · medio" sin reabrir el día (`registrarCobro(..., ignorarCierre)`/`deshacerCobro(..., ignorarCierre)`). Desde la hoja de ruta sigue bloqueado con el día cerrado.
 - **Todo pago pide un aviso de confirmación** antes de registrarse (porque la fila desaparece de pendientes): "Registrar pago" en Cuenta corriente (lista y cuenta del cliente: cantidad, monto y medio), el cobro Efectivo/Transferencia en la hoja de ruta ("¿Confirmás que se COBRÓ $X de CLIENTE en efectivo?") y "Confirmar entrega" con pago en el detalle del pedido. La cuenta corriente (no es un pago) no pregunta.
 
 ## Copias de seguridad (decisión del dueño)

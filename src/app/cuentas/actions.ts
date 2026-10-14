@@ -14,9 +14,10 @@ export async function registrarPagos(pedidoIds: string[], medio: string, obs = "
   await exigirOficina();
   if (pedidoIds.length === 0) return { ok: false, error: "Elegí al menos un comprobante." };
   for (const id of pedidoIds) {
-    const r = await registrarCobro(id, medio);
+    const r = await registrarCobro(id, medio, undefined, true);
     if (!r.ok) {
       revalidatePath("/cuentas", "layout");
+      revalidatePath("/pedidos", "layout");
       return { ok: false, error: r.error ?? "No se pudo registrar el pago." };
     }
     if (obs.trim()) {
@@ -25,13 +26,15 @@ export async function registrarPagos(pedidoIds: string[], medio: string, obs = "
     }
   }
   revalidatePath("/cuentas", "layout");
+  revalidatePath("/pedidos", "layout");
   return { ok: true };
 }
 
 export async function deshacerPago(pedidoId: string): Promise<Resultado> {
   await exigirOficina();
-  const r = await deshacerCobro(pedidoId);
+  const r = await deshacerCobro(pedidoId, true);
   revalidatePath("/cuentas", "layout");
+  revalidatePath("/pedidos", "layout");
   return r.ok ? { ok: true } : { ok: false, error: r.error ?? "No se pudo deshacer." };
 }
 

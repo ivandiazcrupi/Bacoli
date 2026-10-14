@@ -75,7 +75,7 @@ export async function registrarPagosArca(ids: string[], medio: string, obs: stri
     const f = filas.find((x) => x.id === id);
     if (!f || f.esNc) return { ok: false, error: "Una de las facturas elegidas no existe." };
     if (f.pagada) continue;
-    if (f.pedidoId && f.pedidoEntregado) await registrarCobro(f.pedidoId, medio); // si el pedido no se puede cobrar ahora, igual se marca la factura
+    if (f.pedidoId && f.pedidoEntregado) await registrarCobro(f.pedidoId, medio, undefined, true); // si el pedido no se puede cobrar ahora, igual se marca la factura
     // La observación del pago (ej. N° de OP) queda en la columna Observación de la hoja.
     const nueva = obs.trim() ? [f.observacion, obs.trim()].filter(Boolean).join(" · ").slice(0, 150) : f.observacion;
     await db.comprobanteArca.update({ where: { id }, data: { pagado: true, medioCobro: medio as MedioPago, pagadoEn: new Date(), obsCobro: obs.trim().slice(0, 150) || null, observacion: nueva || null } });
@@ -90,7 +90,7 @@ export async function deshacerPagoArca(id: string): Promise<Resultado> {
   const { filas } = await cargarFacturas();
   const f = filas.find((x) => x.id === id);
   if (!f) return { ok: false, error: "No encontré la factura." };
-  if (f.pedidoId) await deshacerCobro(f.pedidoId);
+  if (f.pedidoId) await deshacerCobro(f.pedidoId, true);
   await db.comprobanteArca.update({ where: { id }, data: { pagado: false, medioCobro: null, pagadoEn: null, obsCobro: null } });
   revalidatePath("/cuentas", "layout");
   return { ok: true };
