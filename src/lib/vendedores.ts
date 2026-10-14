@@ -1,7 +1,9 @@
 import { desgloseIva } from "@/lib/cuenta";
 import { db } from "@/lib/db";
 import { sumarDias } from "@/lib/fechas";
-import { bultosDe } from "@/lib/ruta";
+import { formatoRemito } from "@/lib/remito";
+import { bultosDe, UNIDADES_POR_PAQUETE } from "@/lib/ruta";
+import { importeVigente } from "@/lib/cuenta";
 
 const fechaAR = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" });
 
@@ -52,3 +54,59 @@ export const nombreMes = (m: string) => `${MESES[Number(m.slice(5)) - 1]} ${m.sl
 export const mesSiguiente = (m: string) => sumarDias(`${m}-01`, 32).slice(0, 7);
 export const mesAnterior = (m: string) => sumarDias(`${m}-01`, -1).slice(0, 7);
 export const etiquetaMes = (m: string) => MESES[Number(m.slice(5)) - 1].slice(0, 3);
+
+export type FilaVendedor = {
+  id: string; f: string; cargado: string; entrega: string | null; clienteId: string; cliente: string; barrio: string;
+  items: { cantidad: number; nombre: string }[]; neto: number; total: number; unidades: number;
+  estado: "PENDIENTE" | "ENTREGADO" | "NO_ENTREGADO"; pagado: boolean; medio: string | null; aCuenta: boolean; comprobante: string | null; vendedorId: string | null;
+};
+
+/**
+ * Todos los pedidos mayoristas (sin los cancelados) de un período, con su estado, entrega y pago: la "hoja" de cada vendedor.
+ * Cada pedido cuenta para el vendedor que tenía el cliente ese día (igual que las comisiones). Período: desde incluida, hasta excluida.
+ */
+export async function filasDelPeriodo(desde: string, hasta: string): Promise<FilaVendedor[]> {
+  const d0 = new Date(`${desde}T00:00:00Z`), d1 = new Date(`${hasta}T00:00:00Z`);
+  const c0 = new Date(`${desde}T03:00:00Z`), c1 = new Date(`${hasta}T03:00:00Z`);
+  const pedidos = await db.pedido.findMany({
+    where: {
+      estado: { in: ["PENDIENTE", "ENTREGADO", "NO_ENTREGADO"] }, origen: "MAYORISTA", clienteId: { not: null },
+      OR: [{ fechaEntrega: { gte: d0, lt: d1 } }, { fechaEntrega: null, creadoEn: { gte: c0, lt: c1 } }],
+    },
+    include: { items: true, cliente: { select: { id: true, nombre: true, vendedorId: true } }, punto: { select: { barrio: true } } },
+  });
+  const ids = [...new Set(pedidos.map((p) => p.clienteId!))];
+  const cambios = await db.asignacionVendedor.findMany({ where: { clienteId: { in: ids }, estado: "APROBADA" }, orderBy: { resueltoEn: "asc" } });
+  const porCliente = new Map<string, typeof cambios>();
+  for (const c of cambios) porCliente.set(c.clienteId, [...(porCliente.get(c.clienteId) ?? []), c]);
+
+  return pedidos.map((p) => {
+    const f = p.fechaEntrega ? p.fechaEntrega.toISOString().slice(0, 10) : fechaAR(p.creadoEn);
+    const base = desgloseIva(p.items, Number(p.ivaPct), p.estado).base;
+    const fijo = p.webTotal != null ? Number(p.webTotal) : null;
+    const neto = fijo != null ? (Number(p.ivaPct) > 0 ? fijo / (1 + Number(p.ivaPct) / 100) : fijo) : base;
+    return {
+      id: p.id, f, cargado: fechaAR(p.creadoEn), entrega: p.fechaEntrega ? p.fechaEntrega.toISOString().slice(0, 10) : null,
+      clienteId: p.clienteId!, cliente: p.cliente!.nombre, barrio: p.punto?.barrio ?? "",
+      items: p.items.filter((i) => i.paquetesPor !== 0).map((i) => ({ cantidad: i.cantidad, nombre: i.nombre })),
+      neto, total: importeVigente(p.items, Number(p.ivaPct), p.estado === "ENTREGADO" ? "ENTREGADO" : "PENDIENTE", p.webTotal),
+      unidades: bultosDe(p.items) * UNIDADES_POR_PAQUETE,
+      estado: p.estado as FilaVendedor["estado"], pagado: p.pagado, medio: p.medioCobro, aCuenta: p.cobro === "CUENTA_CORRIENTE",
+      comprobante: p.conFactura ? p.numeroFactura : p.remitoNumero ? formatoRemito(p.remitoNumero) : null,
+      vendedorId: vendedorEn(porCliente.get(p.clienteId!) ?? [], f, p.cliente!.vendedorId),
+    };
+  });
+}
+
+/** Resumen de un vendedor en un mes (lo vendido es lo ENTREGADO, sin IVA; por cobrar = entregado y sin pagar, con IVA). */
+export function resumenDe(filas: FilaVendedor[], pct: number) {
+  const ent = filas.filter((x) => x.estado === "ENTREGADO");
+  const neto = ent.reduce((t, x) => t + x.neto, 0);
+  return {
+    neto, comision: (neto * pct) / 100, pedidos: filas.length, entregados: ent.length,
+    unidades: ent.reduce((t, x) => t + x.unidades, 0),
+    porEntregar: filas.filter((x) => x.estado !== "ENTREGADO").length,
+    porCobrar: ent.filter((x) => !x.pagado).reduce((t, x) => t + x.total, 0),
+    sinPagar: ent.filter((x) => !x.pagado).length,
+  };
+}

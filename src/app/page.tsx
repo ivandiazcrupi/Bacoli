@@ -44,7 +44,7 @@ export default async function Inicio() {
         ) : esVendedor(usuario.rol) ? (
           <div className="mt-2 grid w-full gap-3 sm:grid-cols-2">
             <Link href="/vendedor/nuevo" className="rounded-lg bg-verde-700 px-6 py-6 text-center text-lg font-bold uppercase tracking-wide text-white hover:bg-verde-800">Cargar pedido</Link>
-            <Link href="/vendedor" className="rounded-lg bg-verde-700 px-6 py-6 text-center text-lg font-bold uppercase tracking-wide text-white hover:bg-verde-800">Mis pedidos</Link>
+            <Link href="/vendedor" className="rounded-lg bg-verde-700 px-6 py-6 text-center text-lg font-bold uppercase tracking-wide text-white hover:bg-verde-800">Mi hoja</Link>
           </div>
         ) : (
           <p className="text-stone-600">Tu ruta del día va a aparecer acá.</p>

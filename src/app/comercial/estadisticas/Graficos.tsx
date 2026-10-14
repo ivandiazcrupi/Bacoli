@@ -20,8 +20,8 @@ export function SinDatos({ texto = "Todavía no hay datos en este mes." }: { tex
 }
 
 /** Barras verticales (una por día o por mes). `series` apila varias partes en cada barra. */
-export function Barras({ etiquetas, series, formato = (n) => String(n), alto = 190, ancho: W = 720, resaltar }: {
-  etiquetas: string[]; series: { nombre: string; color: string; valores: number[] }[]; formato?: (n: number) => string; alto?: number; ancho?: number; resaltar?: number;
+export function Barras({ etiquetas, series, formato = (n) => String(n), alto = 190, ancho: W = 720, resaltar, valoresSiempre = false }: {
+  etiquetas: string[]; series: { nombre: string; color: string; valores: number[] }[]; formato?: (n: number) => string; alto?: number; ancho?: number; resaltar?: number; valoresSiempre?: boolean;
 }) {
   const n = etiquetas.length;
   const totales = etiquetas.map((_, i) => series.reduce((t, s) => t + (s.valores[i] ?? 0), 0));
@@ -43,7 +43,7 @@ export function Barras({ etiquetas, series, formato = (n) => String(n), alto = 1
                 y -= h;
                 return v > 0 ? <rect key={s.nombre} x={x} y={y} width={anchoBarra} height={h} rx="2" fill={s.color} opacity={resaltar === undefined || resaltar === i ? 1 : 0.55}><title>{`${e} · ${s.nombre}: ${formato(v)}`}</title></rect> : null;
               })}
-              {totales[i] > 0 && n <= 14 && <text x={x + anchoBarra / 2} y={y - 4} textAnchor="middle" fontSize="11" fontWeight="700" fill="#44403c">{formato(totales[i])}</text>}
+              {totales[i] > 0 && (n <= 14 || valoresSiempre) && <text x={x + anchoBarra / 2} y={y - 4} textAnchor="middle" fontSize="11" fontWeight="700" fill="#44403c">{formato(totales[i])}</text>}
               {(n <= 14 || i % 2 === 0) && <text x={x + anchoBarra / 2} y={H - 8} textAnchor="middle" fontSize="10.5" fill="#78716c">{e}</text>}
             </g>
           );

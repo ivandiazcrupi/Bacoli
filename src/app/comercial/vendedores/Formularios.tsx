@@ -2,7 +2,7 @@
 
 import { useActionState, useMemo, useRef, useState, useTransition } from "react";
 import { estiloCampo } from "@/components/campos";
-import { cambiarActivoVendedor, eliminarVendedor, entrarVendedores, guardarClaveVendedores, guardarClientesDeVendedor, guardarVendedor, importarComisionista, salirVendedores } from "./actions";
+import { cambiarActivoVendedor, eliminarVendedor, entrarVendedores, guardarClaveVendedores, guardarClientesDeVendedor, guardarVendedor, importarComisionista, salirVendedores, unirVendedores } from "./actions";
 
 type Opc = { id: string; nombre: string };
 const hoyAR = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }).format(new Date());
@@ -17,7 +17,7 @@ const Mensaje = ({ e }: { e: { ok?: string; error?: string } | undefined }) => (
 );
 
 // ── Contraseña del apartado ──
-export function FormClave({ hayClave, esDueno }: { hayClave: boolean; esDueno: boolean }) {
+export function FormClave({ hayClave, esDueno, volver = "/comercial/vendedores" }: { hayClave: boolean; esDueno: boolean; volver?: string }) {
   const [entrar, accionEntrar, entrando] = useActionState(entrarVendedores, undefined);
   const [crear, accionCrear, creando] = useActionState(guardarClaveVendedores, undefined);
   const [olvide, setOlvide] = useState(false);
@@ -27,6 +27,7 @@ export function FormClave({ hayClave, esDueno }: { hayClave: boolean; esDueno: b
     <div className="mx-auto w-full max-w-sm space-y-4">
       {nueva ? (
         <form action={accionCrear} className="space-y-4">
+          <input type="hidden" name="volver" value={volver} />
           <label className={etiqueta}>{hayClave ? "Nueva contraseña" : "Elegí una contraseña para este apartado"}
             <input name="nueva" type="password" autoFocus autoComplete="new-password" className={`${estiloCampo} mt-1`} />
           </label>
@@ -36,6 +37,7 @@ export function FormClave({ hayClave, esDueno }: { hayClave: boolean; esDueno: b
         </form>
       ) : (
         <form action={accionEntrar} className="space-y-4">
+          <input type="hidden" name="volver" value={volver} />
           <label className={etiqueta}>Contraseña
             <input name="clave" type="password" autoFocus autoComplete="current-password" className={`${estiloCampo} mt-1`} />
           </label>
@@ -73,7 +75,7 @@ export function FormVendedor({ vendedor, usuarios }: { vendedor?: { id: string; 
     <form action={enviar} className="space-y-5">
       <div className="flex flex-wrap gap-5">
         <label className={`${etiqueta} min-w-56 flex-1`}>Nombre
-          <input name="nombre" required defaultValue={vendedor?.nombre} placeholder="Ej: Migue" autoFocus={!vendedor} className={`${estiloCampo} mt-1`} />
+          <input name="nombre" required defaultValue={vendedor?.nombre} placeholder="Ej: Miguel" autoFocus={!vendedor} className={`${estiloCampo} mt-1`} />
         </label>
         <label className={`${etiqueta} w-36`}>Comisión (%)
           <input name="pct" inputMode="decimal" defaultValue={vendedor?.pct} placeholder="Ej: 8" className={`${estiloCampo} mt-1`} />
@@ -109,6 +111,28 @@ export function AccionesVendedor({ id, nombre, activo, clientes }: { id: string;
     <div className="flex flex-wrap items-center gap-3">
       <button type="button" disabled={pendiente} onClick={baja} className="rounded-lg border border-stone-300 bg-white px-5 py-2.5 text-sm font-semibold hover:border-stone-600 disabled:opacity-50">{activo ? "Dar de baja" : "Dar de alta"}</button>
       <button type="button" disabled={pendiente} onClick={borrar} className="rounded-lg border border-rojo-600 bg-white px-5 py-2.5 text-sm font-semibold text-rojo-700 hover:bg-rojo-50 disabled:opacity-50">Eliminar</button>
+    </div>
+  );
+}
+
+// ── Unir con otro vendedor (la misma persona cargada dos veces) ──
+export function UnirVendedor({ id, nombre, otros }: { id: string; nombre: string; otros: Opc[] }) {
+  const [destino, setDestino] = useState("");
+  const [pendiente, empezar] = useTransition();
+  const [msg, setMsg] = useState<string | null>(null);
+  if (otros.length === 0) return null;
+  const elegido = otros.find((o) => o.id === destino);
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <span className="text-sm text-stone-600">¿Es la misma persona que otro vendedor?</span>
+      <select value={destino} onChange={(e) => setDestino(e.target.value)} className="h-10 rounded-lg border border-stone-300 bg-white px-3 text-sm">
+        <option value="" disabled hidden>Elegí con quién unirlo</option>
+        {otros.map((o) => <option key={o.id} value={o.id}>{o.nombre}</option>)}
+      </select>
+      <button type="button" disabled={!elegido || pendiente}
+        onClick={() => { if (elegido && window.confirm(`¿Unir a ${nombre} con ${elegido.nombre}?\n\nTodos sus clientes, su historial y su usuario pasan a ${elegido.nombre}, y ${nombre} se elimina. Las ventas de antes cuentan para ${elegido.nombre}.`)) empezar(async () => { const r = await unirVendedores(id, elegido.id); setMsg(r?.error ?? null); }); }}
+        className="rounded-lg border border-stone-300 bg-white px-5 py-2.5 text-sm font-semibold hover:border-stone-600 disabled:opacity-50">{pendiente ? "…" : "Unir"}</button>
+      {msg && <span className="text-sm font-medium text-rojo-700">{msg}</span>}
     </div>
   );
 }

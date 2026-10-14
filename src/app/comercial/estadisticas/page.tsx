@@ -9,6 +9,7 @@ import { exigirOficina } from "@/lib/session";
 import { vendedoresDesbloqueado } from "@/lib/claveVendedores";
 import { ventasEntregadas } from "@/lib/vendedores";
 import { CONTENEDOR_PEDIDOS } from "../../pedidos/Encabezado";
+import { PantallaBloqueada } from "../vendedores/Bloqueo";
 import { Barras, BarrasH, Donut, Leyenda, PALETA, Panel, SinDatos } from "./Graficos";
 import { TopClientes } from "./TopClientes";
 
@@ -25,6 +26,8 @@ const corto = (n: number) => (n >= 1_000_000 ? `${(n / 1_000_000).toLocaleString
 // ESTADÍSTICAS: tablero general del mes (como una cabina). Todo sale de los pedidos cargados; no cambia nada.
 export default async function Graficos({ searchParams }: { searchParams: Promise<{ mes?: string }> }) {
   const usuario = await exigirOficina();
+  const desbloqueado = await vendedoresDesbloqueado();
+  if (!desbloqueado) return <PantallaBloqueada usuario={usuario} activa="estadisticas" titulo="Estadísticas" volver="/comercial/estadisticas" />;
   const { mes: mesParam } = await searchParams;
   const actual = hoy().slice(0, 7);
   const mes = mesParam && /^\d{4}-\d{2}$/.test(mesParam) && esFechaValida(`${mesParam}-01`) ? mesParam : actual;
@@ -78,7 +81,7 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
 
   // Comisiones por vendedor (los de Comercial → Vendedores): ventas sin IVA de pedidos ENTREGADOS del mes × el % de cada vendedor.
   // Cada venta cuenta para el vendedor que tenía el cliente ese día (ver src/lib/vendedores.ts).
-  const verComisiones = await vendedoresDesbloqueado(); // las comisiones se ven solo con la contraseña del apartado Vendedores
+  const verComisiones = desbloqueado; // las comisiones se ven solo con la contraseña del apartado Vendedores
   const [listaVendedores, ventasMes] = verComisiones ? await Promise.all([
     db.vendedor.findMany({ where: { comisionPct: { not: null } }, select: { id: true, nombre: true, comisionPct: true } }),
     ventasEntregadas(`${mes}-01`, `${mesSiguiente(mes)}-01`),

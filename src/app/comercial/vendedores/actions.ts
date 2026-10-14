@@ -19,6 +19,9 @@ async function exigirAcceso() {
 }
 const refrescar = (extra?: string) => { revalidatePath("/comercial/vendedores"); if (extra) revalidatePath(extra); };
 
+/** A dónde volver tras entrar: solo pantallas de Comercial (el campo viene del formulario, así que se revisa). */
+const destino = (f: FormData) => { const v = String(f.get("volver") ?? ""); return /^\/comercial(\/[a-z0-9-]*)*$/.test(v) ? v : "/comercial/vendedores"; };
+
 // ── Contraseña del apartado ──────────────────────────────────────────────────────────────────────
 const intentos = new Map<string, { n: number; hasta: number }>(); // bloqueo de 15 min tras 5 errores (en memoria, como el login)
 
@@ -32,7 +35,7 @@ export async function entrarVendedores(_: EstadoVend, f: FormData): Promise<Esta
     return { error: "Contraseña incorrecta." };
   }
   intentos.delete(u.id);
-  redirect("/comercial/vendedores");
+  redirect(destino(f));
 }
 
 /** Primera vez (la crea un dueño), o cambiarla: la puede cambiar quien ya entró y, si se olvidó, un dueño. */
@@ -44,7 +47,7 @@ export async function guardarClaveVendedores(_: EstadoVend, f: FormData): Promis
   const nueva = String(f.get("nueva") ?? "");
   if (nueva.length < MIN_CLAVE_VENDEDORES) return { error: `Tiene que tener al menos ${MIN_CLAVE_VENDEDORES} caracteres.` };
   await ponerClaveVendedores(nueva);
-  redirect("/comercial/vendedores");
+  redirect(destino(f));
 }
 
 export async function salirVendedores() {
@@ -144,10 +147,33 @@ export async function guardarClientesDeVendedor(vendedorId: string, _: EstadoVen
   return { ok: a + b === 0 ? "No había cambios." : `Listo: ${a} ${a === 1 ? "cliente agregado" : "clientes agregados"}${b ? `, ${b} ${b === 1 ? "quitado" : "quitados"}` : ""}.` };
 }
 
+/**
+ * Une dos vendedores que en realidad son la misma persona (ej. "Migue" y "Miguel"): todo lo del primero (clientes, historial de
+ * cambios, usuario para entrar) pasa al segundo y el primero se elimina. Las ventas pasadas cuentan para el que queda.
+ */
+export async function unirVendedores(origenId: string, destinoId: string): Promise<EstadoVend> {
+  await exigirAcceso();
+  if (origenId === destinoId) return { error: "Elegí otro vendedor." };
+  const [o, d] = await Promise.all([db.vendedor.findUnique({ where: { id: origenId } }), db.vendedor.findUnique({ where: { id: destinoId } })]);
+  if (!o || !d) return { error: "No encontré al vendedor." };
+  const clientes = await db.cliente.count({ where: { vendedorId: origenId } });
+  await db.$transaction([
+    db.cliente.updateMany({ where: { vendedorId: origenId }, data: { vendedorId: destinoId } }),
+    db.asignacionVendedor.updateMany({ where: { vendedorId: origenId }, data: { vendedorId: destinoId } }),
+    db.asignacionVendedor.updateMany({ where: { anteriorId: origenId }, data: { anteriorId: destinoId } }),
+    // el usuario con el que entra pasa al que queda (si este no tenía uno) y el % se conserva si el que queda no tenía
+    db.vendedor.update({ where: { id: origenId }, data: { usuarioId: null } }),
+    db.vendedor.update({ where: { id: destinoId }, data: { usuarioId: d.usuarioId ?? o.usuarioId, comisionPct: d.comisionPct ?? o.comisionPct } }),
+    db.vendedor.delete({ where: { id: origenId } }),
+  ]);
+  refrescar();
+  redirect(`/comercial/vendedores/${destinoId}?unido=${encodeURIComponent(`${o.nombre} (${clientes} ${clientes === 1 ? "cliente" : "clientes"})`)}`);
+}
+
 /** Pasa un comisionista que estaba escrito en las fichas (ej. Migue 8%) a la lista de vendedores con todos sus clientes. */
 export async function importarComisionista(comisionista: string, nuevoNombre?: string): Promise<EstadoVend> {
   const u = await exigirAcceso();
-  const clientes = await db.cliente.findMany({ where: { comisionista: { equals: comisionista, mode: "insensitive" } }, select: { id: true, comisionPct: true } });
+  const clientes = await db.cliente.findMany({ where: { comisionista: { equals: comisionista, mode: "insensitive" }, vendedorId: null }, select: { id: true, comisionPct: true } });
   if (clientes.length === 0) return { error: "No encontré clientes con ese comisionista." };
   const nombre = titulo((nuevoNombre ?? "").trim() || comisionista);
   let v = await db.vendedor.findFirst({ where: { nombre: { equals: nombre, mode: "insensitive" } } });

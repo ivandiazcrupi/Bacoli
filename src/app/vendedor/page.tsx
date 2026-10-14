@@ -1,43 +1,48 @@
 import Link from "next/link";
 import { Cabecera } from "@/components/Cabecera";
-import { importeVigente } from "@/lib/cuenta";
-import { db } from "@/lib/db";
-import { deFecha } from "@/lib/fechas";
+import { esFechaValida, hoy } from "@/lib/fechas";
 import { exigirVendedor, vendedorDeUsuario } from "@/lib/session";
+import { filasDelPeriodo, mesAnterior, mesSiguiente, nombreMes } from "@/lib/vendedores";
+import { HojaVendedor } from "../comercial/vendedores/HojaVendedor";
 import { CONTENEDOR_PEDIDOS } from "../pedidos/Encabezado";
 import { EncabezadoVendedor } from "./EncabezadoVendedor";
-import { MisPedidos } from "./MisPedidos";
 
-// MIS PEDIDOS (vendedor): solo los pedidos de SUS clientes, con su estado y si están pagos o no.
-export default async function VendedorPedidos() {
+const nav = "flex h-9 items-center rounded-md border border-stone-300 bg-white px-3 text-sm font-semibold hover:border-stone-600";
+
+// MI HOJA (vendedor): cómo viene su mes y cada pedido de SUS clientes como una cuenta corriente (cargado, entregado, pagado).
+export default async function MiHoja({ searchParams }: { searchParams: Promise<{ mes?: string }> }) {
   const usuario = await exigirVendedor();
   const vendedor = await vendedorDeUsuario(usuario.id); // su ficha en Comercial → Vendedores (si todavía no la enlazaron, no ve nada)
-  const pedidos = await db.pedido.findMany({
-    where: { cliente: { vendedorId: vendedor?.id ?? "-" } },
-    include: { items: true, cliente: { select: { nombre: true } }, punto: { select: { barrio: true } } },
-    orderBy: { creadoEn: "desc" },
-    take: 1000,
-  });
+  const { mes: mesParam } = await searchParams;
+  const actual = hoy().slice(0, 7);
+  const mes = mesParam && /^\d{4}-\d{2}$/.test(mesParam) && esFechaValida(`${mesParam}-01`) ? mesParam : actual;
+  const id = vendedor?.id ?? "-";
+  const [filasMes, filasAnt] = vendedor
+    ? await Promise.all([filasDelPeriodo(`${mes}-01`, `${mesSiguiente(mes)}-01`), filasDelPeriodo(`${mesAnterior(mes)}-01`, `${mes}-01`)])
+    : [[], []];
   return (
     <>
       <Cabecera usuario={usuario} />
-      <main className={CONTENEDOR_PEDIDOS}>
-        <EncabezadoVendedor activa="pedidos" derecha={<Link href="/vendedor/nuevo" className="flex h-10 items-center rounded-lg bg-verde-700 px-5 text-sm font-bold uppercase tracking-wide text-white hover:bg-verde-800">+ Cargar pedido</Link>} />
-        <MisPedidos
-          filas={pedidos.map((p) => ({
-            id: p.id,
-            cargado: new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Argentina/Buenos_Aires" }).format(p.creadoEn),
-            entrega: p.fechaEntrega ? deFecha(p.fechaEntrega) : null,
-            cliente: p.cliente?.nombre ?? "—",
-            barrio: p.punto?.barrio ?? "",
-            items: p.items.filter((i) => i.paquetesPor !== 0).map((i) => ({ cantidad: i.cantidad, nombre: i.nombre })),
-            monto: importeVigente(p.items, Number(p.ivaPct), "PENDIENTE"),
-            estado: p.estado,
-            pagado: p.pagado,
-            medio: p.medioCobro,
-            aCuenta: p.cobro === "CUENTA_CORRIENTE",
-          }))}
+      <main className={`${CONTENEDOR_PEDIDOS} space-y-5`}>
+        <EncabezadoVendedor
+          activa="hoja" titulo="Mi hoja"
+          derecha={
+            <>
+              <nav className="flex items-center gap-2" aria-label="Mes">
+                <Link href={`/vendedor?mes=${mesAnterior(mes)}`} className={nav} aria-label="Mes anterior">←</Link>
+                <span className="min-w-44 rounded-md border border-stone-800 bg-stone-800 px-4 py-2 text-center text-sm font-bold uppercase tracking-wide text-white">{nombreMes(mes)}</span>
+                <Link href={`/vendedor?mes=${mesSiguiente(mes)}`} className={nav} aria-label="Mes siguiente">→</Link>
+                {mes !== actual && <Link href="/vendedor" className={nav}>Este mes</Link>}
+              </nav>
+              <Link href="/vendedor/nuevo" className="ml-2 flex h-10 items-center rounded-lg bg-verde-700 px-5 text-sm font-bold uppercase tracking-wide text-white hover:bg-verde-800">+ Cargar pedido</Link>
+            </>
+          }
         />
+        {vendedor ? (
+          <HojaVendedor nombre={vendedor.nombre} pct={Number(vendedor.comisionPct ?? 0)} mes={mes} filas={filasMes.filter((x) => x.vendedorId === id)} anteriores={filasAnt.filter((x) => x.vendedorId === id)} />
+        ) : (
+          <p className="rounded-xl border border-dashed border-stone-300 bg-white px-6 py-12 text-center text-stone-500">Todavía no te enlazaron con tu ficha de vendedor. Pedile a la oficina que lo haga.</p>
+        )}
       </main>
     </>
   );

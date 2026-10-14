@@ -166,7 +166,7 @@ export async function crearPedido(_: EstadoPedidoForm, formData: FormData): Prom
     await sincronizarCuentaPedido(tx, pedido.id, usuario.id);
   });
   revalidatePath("/pedidos", "layout");
-  revalidatePath("/vendedor");
+  revalidatePath("/vendedor", "layout");
   return { ok: `Pedido de ${cliente.nombre} cargado. Quedó en la lista de Pedidos, esperando día.` };
 }
 
