@@ -1,171 +1,172 @@
 "use client";
 
-import { useActionState, useMemo, useState, useTransition } from "react";
+import { useActionState, useMemo, useRef, useState, useTransition } from "react";
 import { estiloCampo } from "@/components/campos";
-import { cambiarActivoVendedor, crearVendedor, guardarComisionVendedor, guardarVendedor, pasarComisionista, proponerVarios, proponerVendedor, resolverAsignacion, resolverTodas } from "./actions";
+import { cambiarActivoVendedor, eliminarVendedor, entrarVendedores, guardarClaveVendedores, guardarClientesDeVendedor, guardarVendedor, importarComisionista, salirVendedores } from "./actions";
 
 type Opc = { id: string; nombre: string };
 const hoyAR = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }).format(new Date());
-const boton = "h-[46px] rounded-md bg-stone-800 px-5 text-sm font-semibold text-white hover:bg-stone-700 disabled:opacity-60";
+const primeroDeMes = () => `${hoyAR().slice(0, 7)}-01`;
+const etiqueta = "block text-xs font-medium text-stone-500";
+const primario = "rounded-lg bg-stone-900 px-6 py-3 text-[15px] font-semibold text-white hover:bg-stone-700 disabled:opacity-60";
 const Mensaje = ({ e }: { e: { ok?: string; error?: string } | undefined }) => (
   <>
-    {e?.error && <p className="w-full text-sm font-medium text-rojo-700">{e.error}</p>}
-    {e?.ok && <p className="w-full text-sm font-medium text-verde-800">{e.ok}</p>}
+    {e?.error && <p className="text-sm font-medium text-rojo-700">{e.error}</p>}
+    {e?.ok && <p className="text-sm font-medium text-verde-800">{e.ok}</p>}
   </>
 );
 
-// Alta o edición de un vendedor: nombre, % de comisión y (opcional) el usuario con el que entra al sistema.
-export function FormVendedor({ vendedor, usuarios }: { vendedor?: { id: string; nombre: string; pct: string; usuarioId: string }; usuarios: Opc[] }) {
-  const [estado, enviar, cargando] = useActionState(vendedor ? guardarVendedor.bind(null, vendedor.id) : crearVendedor, undefined);
+// ── Contraseña del apartado ──
+export function FormClave({ hayClave, esDueno }: { hayClave: boolean; esDueno: boolean }) {
+  const [entrar, accionEntrar, entrando] = useActionState(entrarVendedores, undefined);
+  const [crear, accionCrear, creando] = useActionState(guardarClaveVendedores, undefined);
+  const [olvide, setOlvide] = useState(false);
+  const nueva = !hayClave || olvide;
+  if (nueva && !esDueno) return <p className="text-center text-sm text-stone-600">Todavía no hay contraseña. Pedile a un dueño que la cree.</p>;
   return (
-    <form key={vendedor ? undefined : estado?.id ?? "nuevo"} action={enviar} className="flex flex-wrap items-end gap-3">
-      <label className="min-w-56 flex-1 text-xs font-semibold text-stone-600">Nombre
-        <input name="nombre" required defaultValue={vendedor?.nombre} placeholder="Ej: Migue" className={`${estiloCampo} mt-1`} />
-      </label>
-      <label className="w-32 text-xs font-semibold text-stone-600">% comisión
-        <input name="pct" inputMode="decimal" defaultValue={vendedor?.pct} placeholder="Ej: 8" className={`${estiloCampo} mt-1`} />
-      </label>
-      <label className="min-w-64 text-xs font-semibold text-stone-600">Usuario para entrar (opcional)
+    <div className="mx-auto w-full max-w-sm space-y-4">
+      {nueva ? (
+        <form action={accionCrear} className="space-y-4">
+          <label className={etiqueta}>{hayClave ? "Nueva contraseña" : "Elegí una contraseña para este apartado"}
+            <input name="nueva" type="password" autoFocus autoComplete="new-password" className={`${estiloCampo} mt-1`} />
+          </label>
+          <button disabled={creando} className={`${primario} w-full`}>{creando ? "…" : "Guardar y entrar"}</button>
+          <Mensaje e={crear} />
+          {olvide && <button type="button" onClick={() => setOlvide(false)} className="block w-full text-center text-sm text-stone-500 hover:underline">Volver</button>}
+        </form>
+      ) : (
+        <form action={accionEntrar} className="space-y-4">
+          <label className={etiqueta}>Contraseña
+            <input name="clave" type="password" autoFocus autoComplete="current-password" className={`${estiloCampo} mt-1`} />
+          </label>
+          <button disabled={entrando} className={`${primario} w-full`}>{entrando ? "…" : "Entrar"}</button>
+          <Mensaje e={entrar} />
+          {esDueno && <button type="button" onClick={() => setOlvide(true)} className="block w-full text-center text-sm text-stone-500 hover:underline">Me olvidé la contraseña</button>}
+        </form>
+      )}
+    </div>
+  );
+}
+
+export function CambiarClave() {
+  const [abierto, setAbierto] = useState(false);
+  const [estado, enviar, cargando] = useActionState(guardarClaveVendedores, undefined);
+  if (!abierto) return <button type="button" onClick={() => setAbierto(true)} className="text-sm text-stone-500 hover:text-stone-900 hover:underline">Cambiar contraseña</button>;
+  return (
+    <form action={enviar} className="flex flex-wrap items-center gap-2">
+      <input name="nueva" type="password" placeholder="Nueva contraseña" autoComplete="new-password" className="h-9 w-48 rounded-md border border-stone-300 px-3 text-sm" />
+      <button disabled={cargando} className="h-9 rounded-md bg-stone-900 px-4 text-sm font-semibold text-white disabled:opacity-60">Guardar</button>
+      <button type="button" onClick={() => setAbierto(false)} className="text-sm text-stone-500 hover:underline">Cancelar</button>
+      <Mensaje e={estado} />
+    </form>
+  );
+}
+
+export function BotonSalir() {
+  return <form action={salirVendedores}><button className="text-sm text-stone-500 hover:text-stone-900 hover:underline">Bloquear</button></form>;
+}
+
+// ── Vendedor: ficha como la de un cliente (nombre, %, usuario) ──
+export function FormVendedor({ vendedor, usuarios }: { vendedor?: { id: string; nombre: string; pct: string; usuarioId: string }; usuarios: Opc[] }) {
+  const [estado, enviar, cargando] = useActionState(guardarVendedor.bind(null, vendedor?.id ?? null), undefined);
+  return (
+    <form action={enviar} className="space-y-5">
+      <div className="flex flex-wrap gap-5">
+        <label className={`${etiqueta} min-w-56 flex-1`}>Nombre
+          <input name="nombre" required defaultValue={vendedor?.nombre} placeholder="Ej: Migue" autoFocus={!vendedor} className={`${estiloCampo} mt-1`} />
+        </label>
+        <label className={`${etiqueta} w-36`}>Comisión (%)
+          <input name="pct" inputMode="decimal" defaultValue={vendedor?.pct} placeholder="Ej: 8" className={`${estiloCampo} mt-1`} />
+        </label>
+      </div>
+      <label className={`${etiqueta} sm:max-w-md`}>Usuario para entrar al sistema <span className="font-normal text-stone-400">(opcional)</span>
         <select name="usuarioId" defaultValue={vendedor?.usuarioId ?? ""} className={`${estiloCampo} mt-1`}>
           <option value="">No entra al sistema</option>
           {usuarios.map((u) => <option key={u.id} value={u.id}>{u.nombre}</option>)}
         </select>
       </label>
-      <button disabled={cargando} className={boton}>{cargando ? "…" : vendedor ? "Guardar" : "+ Cargar vendedor"}</button>
-      <Mensaje e={estado} />
-    </form>
-  );
-}
-
-// Proponer el vendedor de UN cliente (paso 1 del doble chequeo). En la ficha del cliente el cliente ya viene fijo.
-export function FormProponer({ vendedores, clientes, clienteId, actual }: { vendedores: Opc[]; clientes?: Opc[]; clienteId?: string; actual?: string }) {
-  const [estado, enviar, cargando] = useActionState(proponerVendedor, undefined);
-  return (
-    <form action={enviar} className="flex flex-wrap items-end gap-3">
-      {clienteId ? <input type="hidden" name="clienteId" value={clienteId} /> : (
-        <label className="min-w-64 flex-1 text-xs font-semibold text-stone-600">Cliente
-          <select name="clienteId" required defaultValue="" className={`${estiloCampo} mt-1`}>
-            <option value="" disabled hidden>Elegí el cliente</option>
-            {clientes?.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-          </select>
-        </label>
-      )}
-      <label className="min-w-52 text-xs font-semibold text-stone-600">Vendedor
-        <select name="vendedorId" defaultValue={actual ?? ""} className={`${estiloCampo} mt-1`}>
-          <option value="">Sin vendedor</option>
-          {vendedores.map((v) => <option key={v.id} value={v.id}>{v.nombre}</option>)}
-        </select>
-      </label>
-      <label className="text-xs font-semibold text-stone-600">Vale desde
-        <input type="date" name="desde" defaultValue={hoyAR()} max={hoyAR()} className={`${estiloCampo} mt-1`} />
-      </label>
-      <button disabled={cargando} className={boton}>{cargando ? "…" : "Proponer cambio"}</button>
-      <Mensaje e={estado} />
-    </form>
-  );
-}
-
-// Asignar VARIOS clientes a un vendedor: buscador + casillas.
-export function FormProponerVarios({ vendedorId, clientes }: { vendedorId: string; clientes: { id: string; nombre: string; de: string | null }[] }) {
-  const [estado, enviar, cargando] = useActionState(proponerVarios.bind(null, vendedorId), undefined);
-  const [q, setQ] = useState("");
-  const [tildados, setTildados] = useState<Set<string>>(new Set());
-  const visibles = useMemo(() => { const w = q.trim().toLowerCase().split(/\s+/).filter(Boolean); return clientes.filter((c) => w.every((x) => c.nombre.toLowerCase().includes(x))); }, [clientes, q]);
-  const alternar = (id: string) => setTildados((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  return (
-    <form action={enviar} className="space-y-3">
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar cliente…" className={estiloCampo} />
-      <div className="max-h-64 overflow-y-auto rounded-md border border-stone-300">
-        {visibles.slice(0, 300).map((c) => (
-          <label key={c.id} className="flex cursor-pointer items-center gap-3 border-b border-stone-200 px-3 py-1.5 text-[13.5px] last:border-b-0 hover:bg-stone-50">
-            <input type="checkbox" name="clienteId" value={c.id} checked={tildados.has(c.id)} onChange={() => alternar(c.id)} />
-            <span className="flex-1">{c.nombre}</span>
-            {c.de && <span className="text-[12px] text-stone-500">hoy: {c.de}</span>}
-          </label>
-        ))}
-        {visibles.length === 0 && <p className="px-3 py-4 text-sm text-stone-500">No hay clientes con ese nombre.</p>}
-      </div>
-      <div className="flex flex-wrap items-end gap-3">
-        <label className="text-xs font-semibold text-stone-600">Vale desde
-          <input type="date" name="desde" defaultValue={hoyAR()} max={hoyAR()} className={`${estiloCampo} mt-1`} />
-        </label>
-        <button disabled={cargando || tildados.size === 0} className={boton}>{cargando ? "…" : `Proponer ${tildados.size || ""} ${tildados.size === 1 ? "cliente" : "clientes"}`}</button>
+      <div className="flex flex-wrap items-center gap-4">
+        <button disabled={cargando} className={primario}>{cargando ? "…" : vendedor ? "Guardar cambios" : "Crear vendedor"}</button>
         <Mensaje e={estado} />
       </div>
     </form>
   );
 }
 
-// Paso 2: aprobar o rechazar. Aprueba solo quien tiene marcado "Aprueba vendedores" en USUARIOS; quien propuso puede retirar su propuesta.
-export function BotonesResolver({ id, mio, puede, aprobador, cliente, vendedor }: { id: string; mio: boolean; puede: boolean; aprobador: string | null; cliente: string; vendedor: string }) {
-  const [error, setError] = useState<string | null>(null);
+// Dar de baja / alta y eliminar: botones de verdad, con aviso de confirmación.
+export function AccionesVendedor({ id, nombre, activo, clientes }: { id: string; nombre: string; activo: boolean; clientes: number }) {
   const [pendiente, empezar] = useTransition();
-  const resolver = (aprobar: boolean) => {
-    const texto = aprobar ? `¿Aprobás que ${cliente} pase a ${vendedor}? Sus ventas cuentan para ese vendedor desde la fecha elegida.` : mio ? `¿Retirar tu propuesta para ${cliente}?` : `¿Rechazar el cambio de ${cliente} a ${vendedor}?`;
-    if (!window.confirm(texto)) return;
-    empezar(async () => { const r = await resolverAsignacion(id, aprobar); setError(r?.error ?? null); });
+  const baja = () => {
+    const txt = activo
+      ? `¿Dar de baja a ${nombre}?${clientes ? ` Tiene ${clientes} ${clientes === 1 ? "cliente" : "clientes"}: siguen con él hasta que los pases a otro vendedor.` : ""} Su historial y sus comisiones quedan.`
+      : `¿Volver a dar de alta a ${nombre}?`;
+    if (window.confirm(txt)) empezar(() => cambiarActivoVendedor(id));
+  };
+  const borrar = () => {
+    if (window.confirm(`¿Eliminar a ${nombre}?${clientes ? ` Sus ${clientes} clientes quedan sin vendedor.` : ""} Se pierde su historial de comisiones. Si solo querés que deje de aparecer, mejor dalo de baja.`)) empezar(() => eliminarVendedor(id));
   };
   return (
-    <span className="inline-flex flex-wrap items-center justify-end gap-2">
-      <button type="button" disabled={pendiente || !puede} onClick={() => resolver(true)} title={puede ? "" : aprobador ? `Lo aprueba ${aprobador}` : "Nadie tiene asignado aprobar: se elige en USUARIOS"} className="rounded-md bg-verde-700 px-3 py-1.5 text-[13px] font-semibold text-white hover:bg-verde-800 disabled:cursor-not-allowed disabled:opacity-40">Aprobar</button>
-      <button type="button" disabled={pendiente || (!puede && !mio)} onClick={() => resolver(false)} className="rounded-md border border-stone-400 bg-white px-3 py-1.5 text-[13px] font-semibold hover:border-stone-700 disabled:opacity-50">{mio && !puede ? "Retirar" : "Rechazar"}</button>
-      {error && <span className="w-full text-right text-xs font-medium text-rojo-700">{error}</span>}
-    </span>
+    <div className="flex flex-wrap items-center gap-3">
+      <button type="button" disabled={pendiente} onClick={baja} className="rounded-lg border border-stone-300 bg-white px-5 py-2.5 text-sm font-semibold hover:border-stone-600 disabled:opacity-50">{activo ? "Dar de baja" : "Dar de alta"}</button>
+      <button type="button" disabled={pendiente} onClick={borrar} className="rounded-lg border border-rojo-600 bg-white px-5 py-2.5 text-sm font-semibold text-rojo-700 hover:bg-rojo-50 disabled:opacity-50">Eliminar</button>
+    </div>
   );
 }
 
-// Aprobar o rechazar todos los pendientes de una vez.
-export function BotonesTodas({ cantidad }: { cantidad: number }) {
+// ── Asignar clientes: un solo botón. Se abre una lista: tildado = es de este vendedor. ──
+export function AsignarClientes({ vendedorId, nombre, activo, clientes, propios }: { vendedorId: string; nombre: string; activo: boolean; clientes: { id: string; nombre: string; de: string | null }[]; propios: string[] }) {
+  const dialogo = useRef<HTMLDialogElement>(null);
+  const [estado, enviar, cargando] = useActionState(guardarClientesDeVendedor.bind(null, vendedorId), undefined);
+  const [q, setQ] = useState("");
+  const [tildados, setTildados] = useState<Set<string>>(new Set(propios));
+  const visibles = useMemo(() => { const w = q.trim().toLowerCase().split(/\s+/).filter(Boolean); return clientes.filter((c) => w.every((x) => c.nombre.toLowerCase().includes(x))); }, [clientes, q]);
+  const alternar = (id: string) => setTildados((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  return (
+    <>
+      <button type="button" disabled={!activo} onClick={() => dialogo.current?.showModal()} className={`${primario} px-8`}>Asignar clientes</button>
+      <dialog ref={dialogo} className="m-auto w-[min(34rem,92vw)] rounded-2xl border border-stone-300 bg-white p-0 shadow-xl backdrop:bg-stone-900/40">
+        <form action={enviar} className="flex max-h-[85vh] flex-col">
+          <div className="space-y-3 border-b border-stone-200 p-6">
+            <h2 className="text-lg font-semibold">Clientes de {nombre}</h2>
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar cliente…" className={estiloCampo} />
+            <p className="text-sm text-stone-500">{tildados.size} {tildados.size === 1 ? "cliente tildado" : "clientes tildados"}. Los que destildás quedan sin vendedor.</p>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
+            {visibles.slice(0, 400).map((c) => (
+              <label key={c.id} className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-[15px] hover:bg-stone-50">
+                <input type="checkbox" name="clienteId" value={c.id} checked={tildados.has(c.id)} onChange={() => alternar(c.id)} className="h-4 w-4" />
+                <span className="flex-1">{c.nombre}</span>
+                {c.de && <span className="text-xs text-stone-400">de {c.de}</span>}
+              </label>
+            ))}
+            {visibles.length === 0 && <p className="px-3 py-6 text-center text-sm text-stone-500">No hay clientes con ese nombre.</p>}
+          </div>
+          <div className="space-y-3 border-t border-stone-200 p-6">
+            <label className="flex items-center gap-3 text-sm text-stone-600">Cuenta desde
+              <input type="date" name="desde" defaultValue={primeroDeMes()} max={hoyAR()} className="h-9 rounded-md border border-stone-300 px-2 text-sm" />
+            </label>
+            <div className="flex flex-wrap items-center gap-4">
+              <button disabled={cargando} className={primario}>{cargando ? "…" : "Guardar"}</button>
+              <button type="button" onClick={() => dialogo.current?.close()} className="text-sm text-stone-500 hover:underline">Cerrar</button>
+              <Mensaje e={estado} />
+            </div>
+          </div>
+        </form>
+      </dialog>
+    </>
+  );
+}
+
+// ── Comisionista escrito en las fichas (ej. Migue): un botón y queda como vendedor ──
+export function BotonImportar({ comisionista, clientes, pct }: { comisionista: string; clientes: number; pct: string }) {
+  const [pendiente, empezar] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
-  const [pendiente, empezar] = useTransition();
-  const hacer = (aprobar: boolean) => {
-    if (!window.confirm(aprobar ? `¿Aprobar los ${cantidad} cambios pendientes?` : `¿Rechazar los ${cantidad} cambios pendientes?`)) return;
-    empezar(async () => { const r = await resolverTodas(aprobar); setMsg(r?.error ?? r?.ok ?? null); });
-  };
   return (
-    <span className="inline-flex flex-wrap items-center gap-2">
-      <button type="button" disabled={pendiente} onClick={() => hacer(true)} className="rounded-md bg-verde-700 px-3 py-1.5 text-[13px] font-semibold text-white hover:bg-verde-800 disabled:opacity-50">Aprobar todos</button>
-      <button type="button" disabled={pendiente} onClick={() => hacer(false)} className="rounded-md border border-stone-400 bg-white px-3 py-1.5 text-[13px] font-semibold hover:border-stone-700 disabled:opacity-50">Rechazar todos</button>
-      {msg && <span className="text-xs font-medium text-stone-700">{msg}</span>}
-    </span>
-  );
-}
-
-// % de comisión (edición rápida en la lista).
-export function FormComision({ vendedorId, pct }: { vendedorId: string; pct: string }) {
-  const [estado, enviar, cargando] = useActionState(guardarComisionVendedor.bind(null, vendedorId), undefined);
-  return (
-    <form action={enviar} className="inline-flex items-center gap-1.5">
-      <input name="pct" inputMode="decimal" defaultValue={pct} placeholder="0" aria-label="% de comisión" className="h-8 w-16 rounded border border-stone-400 bg-white px-2 text-center text-[13px] focus:border-verde-700 focus:outline-none" />
-      <span className="text-stone-500">%</span>
-      <button disabled={cargando} className="h-8 rounded border border-stone-300 bg-white px-2 text-[12px] font-semibold hover:border-stone-600 disabled:opacity-50">{cargando ? "…" : "Guardar"}</button>
-      {estado?.error && <span className="text-xs text-rojo-700">{estado.error}</span>}
-      {estado?.ok && <span className="text-xs text-verde-800">✓</span>}
-    </form>
-  );
-}
-
-export function BotonActivo({ id, activo, clientes = 0, chico = false }: { id: string; activo: boolean; clientes?: number; chico?: boolean }) {
-  const [pendiente, empezar] = useTransition();
-  const texto = activo
-    ? `¿Dar de baja a este vendedor?${clientes ? ` Tiene ${clientes} ${clientes === 1 ? "cliente" : "clientes"}: siguen asignados a él hasta que los pases a otro vendedor.` : ""} Su historial y sus comisiones quedan, y ya no se le pueden asignar clientes nuevos.`
-    : "¿Volver a dar de alta a este vendedor?";
-  return (
-    <button type="button" disabled={pendiente} onClick={() => { if (window.confirm(texto)) empezar(() => cambiarActivoVendedor(id)); }}
-      className={`rounded-md border font-semibold disabled:opacity-50 ${chico ? "px-2.5 py-1 text-[12px]" : "px-3 py-2 text-[13px]"} ${activo ? "border-rojo-600 bg-white text-rojo-700 hover:bg-rojo-50" : "border-verde-700 text-verde-800 hover:bg-verde-50"}`}>{activo ? "Dar de baja" : "Dar de alta"}</button>
-  );
-}
-
-// Pasar un comisionista de las fichas (ej. Migue 8%) a la lista de vendedores.
-export function FormPasar({ comisionista, clientes, pct }: { comisionista: string; clientes: number; pct: string }) {
-  const [estado, enviar, cargando] = useActionState(pasarComisionista, undefined);
-  return (
-    <form action={enviar} className="flex flex-wrap items-center gap-3 py-2.5">
-      <input type="hidden" name="comisionista" value={comisionista} />
-      <span className="min-w-52 flex-1 text-[14px]"><b>{comisionista}</b> <span className="text-stone-500">· {clientes} {clientes === 1 ? "cliente" : "clientes"}{pct ? ` · ${pct}%` : ""}</span></span>
-      <label className="text-xs font-semibold text-stone-600">Vale desde <input type="date" name="desde" defaultValue={hoyAR()} max={hoyAR()} className="ml-1 h-9 rounded border border-stone-400 px-2 text-sm" /></label>
-      <button disabled={cargando} onClick={(e) => { if (!window.confirm(`¿Pasar a ${comisionista} a la lista de vendedores y proponer sus ${clientes} clientes? Quedan pendientes hasta que se aprueben.`)) e.preventDefault(); }} className="h-9 rounded-md bg-stone-800 px-4 text-[13px] font-semibold text-white hover:bg-stone-700 disabled:opacity-60">{cargando ? "…" : "Pasar a vendedor"}</button>
-      <Mensaje e={estado} />
-    </form>
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-stone-200 bg-white px-5 py-4">
+      <p className="text-[15px] text-stone-700"><b>{comisionista}</b> figura como comisionista en {clientes} {clientes === 1 ? "ficha" : "fichas"}{pct ? ` (${pct}%)` : ""}.</p>
+      <button type="button" disabled={pendiente} onClick={() => { if (window.confirm(`¿Pasar a ${comisionista} a la lista de vendedores con sus ${clientes} clientes?`)) empezar(async () => { const r = await importarComisionista(comisionista); setMsg(r?.error ?? r?.ok ?? null); }); }}
+        className="rounded-lg bg-stone-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-stone-700 disabled:opacity-60">{pendiente ? "…" : "Pasar a vendedor"}</button>
+      {msg && <span className="w-full text-sm text-stone-600">{msg}</span>}
+    </div>
   );
 }

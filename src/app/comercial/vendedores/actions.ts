@@ -1,29 +1,59 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { bloquearVendedores, desbloquearVendedores, hayClaveVendedores, MIN_CLAVE_VENDEDORES, ponerClaveVendedores, vendedoresDesbloqueado } from "@/lib/claveVendedores";
 import { db } from "@/lib/db";
 import { esFechaValida, hoy } from "@/lib/fechas";
 import { titulo } from "@/lib/mayusculas";
 import { leerMonto } from "@/lib/numeros";
 import { exigirOficina } from "@/lib/session";
 
-export type EstadoVend = { ok?: string; error?: string; id?: string } | undefined;
+export type EstadoVend = { ok?: string; error?: string } | undefined;
 
-async function exigirDueno() {
+/** Todo el apartado Vendedores (oficina) pide haber entrado con la contraseña; con ella, todos pueden hacer todo. */
+async function exigirAcceso() {
   const u = await exigirOficina();
-  if (u.rol !== "DUENO") throw new Error("Solo un dueño puede hacer esto.");
+  if (!(await vendedoresDesbloqueado())) throw new Error("Ingresá la contraseña de Vendedores.");
   return u;
 }
-/** Solo quien tiene marcado "Aprueba vendedores" (menú USUARIOS) puede aprobar los cambios de vendedor. */
-async function exigirAprobador() {
-  const u = await exigirDueno();
-  if (!u.apruebaVendedores) throw new Error("Solo la persona que aprueba los cambios de vendedor puede hacerlo.");
-  return u;
+const refrescar = (extra?: string) => { revalidatePath("/comercial/vendedores"); if (extra) revalidatePath(extra); };
+
+// ── Contraseña del apartado ──────────────────────────────────────────────────────────────────────
+const intentos = new Map<string, { n: number; hasta: number }>(); // bloqueo de 15 min tras 5 errores (en memoria, como el login)
+
+export async function entrarVendedores(_: EstadoVend, f: FormData): Promise<EstadoVend> {
+  const u = await exigirOficina();
+  const t = intentos.get(u.id);
+  if (t && t.hasta > Date.now() && t.n >= 5) return { error: "Demasiados intentos. Probá de nuevo en 15 minutos." };
+  if (!(await desbloquearVendedores(String(f.get("clave") ?? "")))) {
+    const n = (t && t.hasta > Date.now() ? t.n : 0) + 1;
+    intentos.set(u.id, { n, hasta: Date.now() + 15 * 60_000 });
+    return { error: "Contraseña incorrecta." };
+  }
+  intentos.delete(u.id);
+  redirect("/comercial/vendedores");
 }
-const refrescar = (...ids: (string | undefined)[]) => {
-  revalidatePath("/comercial/vendedores");
-  for (const id of ids) if (id) revalidatePath(id.startsWith("/") ? id : `/clientes/${id}`);
-};
+
+/** Primera vez (la crea un dueño), o cambiarla: la puede cambiar quien ya entró y, si se olvidó, un dueño. */
+export async function guardarClaveVendedores(_: EstadoVend, f: FormData): Promise<EstadoVend> {
+  const u = await exigirOficina();
+  const hay = await hayClaveVendedores();
+  const puede = u.rol === "DUENO" || (hay && (await vendedoresDesbloqueado()));
+  if (!puede) return { error: "Solo un dueño puede crear la contraseña." };
+  const nueva = String(f.get("nueva") ?? "");
+  if (nueva.length < MIN_CLAVE_VENDEDORES) return { error: `Tiene que tener al menos ${MIN_CLAVE_VENDEDORES} caracteres.` };
+  await ponerClaveVendedores(nueva);
+  redirect("/comercial/vendedores");
+}
+
+export async function salirVendedores() {
+  await exigirOficina();
+  await bloquearVendedores();
+  redirect("/comercial");
+}
+
+// ── Vendedores ───────────────────────────────────────────────────────────────────────────────────
 const leerPct = (txt: string): { pct: number | null } | { error: string } => {
   const t = txt.trim();
   if (!t) return { pct: null };
@@ -31,7 +61,6 @@ const leerPct = (txt: string): { pct: number | null } | { error: string } => {
   return n === null || n < 0 || n > 100 ? { error: "El % tiene que estar entre 0 y 100." } : { pct: n };
 };
 
-/** Un vendedor se puede enlazar a un usuario (de rol Vendedor) para que entre a cargar sus pedidos; cada usuario, a un solo vendedor. */
 async function revisarUsuario(usuarioId: string | null, vendedorId: string | null): Promise<string | null> {
   if (!usuarioId) return null;
   const u = await db.usuario.findUnique({ where: { id: usuarioId }, select: { rol: true, vendedor: { select: { id: true } } } });
@@ -40,25 +69,9 @@ async function revisarUsuario(usuarioId: string | null, vendedorId: string | nul
   return null;
 }
 
-/** Alta de un vendedor: nombre, % de comisión y, si hace falta, el usuario con el que entra al sistema (opcional: Migue, por ejemplo, no entra). */
-export async function crearVendedor(_: EstadoVend, f: FormData): Promise<EstadoVend> {
-  await exigirDueno();
-  const nombre = titulo(String(f.get("nombre") ?? "").trim());
-  if (nombre.length < 2) return { error: "Falta el nombre del vendedor." };
-  const pct = leerPct(String(f.get("pct") ?? ""));
-  if ("error" in pct) return pct;
-  const usuarioId = String(f.get("usuarioId") ?? "") || null;
-  const mal = await revisarUsuario(usuarioId, null);
-  if (mal) return { error: mal };
-  if (await db.vendedor.findFirst({ where: { nombre: { equals: nombre, mode: "insensitive" } } })) return { error: "Ya hay un vendedor con ese nombre." };
-  const v = await db.vendedor.create({ data: { nombre, comisionPct: pct.pct, usuarioId } });
-  refrescar();
-  return { ok: `${nombre} quedó cargado. Ahora asignale clientes.`, id: v.id };
-}
-
-/** Datos de un vendedor: nombre, % y usuario de acceso. */
-export async function guardarVendedor(id: string, _: EstadoVend, f: FormData): Promise<EstadoVend> {
-  await exigirDueno();
+/** Alta y edición de un vendedor: nombre, % de comisión y (opcional) el usuario con el que entra al sistema. */
+export async function guardarVendedor(id: string | null, _: EstadoVend, f: FormData): Promise<EstadoVend> {
+  await exigirAcceso();
   const nombre = titulo(String(f.get("nombre") ?? "").trim());
   if (nombre.length < 2) return { error: "Falta el nombre." };
   const pct = leerPct(String(f.get("pct") ?? ""));
@@ -66,126 +79,81 @@ export async function guardarVendedor(id: string, _: EstadoVend, f: FormData): P
   const usuarioId = String(f.get("usuarioId") ?? "") || null;
   const mal = await revisarUsuario(usuarioId, id);
   if (mal) return { error: mal };
-  await db.vendedor.update({ where: { id }, data: { nombre, comisionPct: pct.pct, usuarioId } });
-  refrescar(`/comercial/vendedores/${id}`);
-  return { ok: "Guardado." };
+  const igual = await db.vendedor.findFirst({ where: { nombre: { equals: nombre, mode: "insensitive" }, ...(id ? { NOT: { id } } : {}) } });
+  if (igual) return { error: "Ya hay un vendedor con ese nombre." };
+  if (id) {
+    await db.vendedor.update({ where: { id }, data: { nombre, comisionPct: pct.pct, usuarioId } });
+    refrescar(`/comercial/vendedores/${id}`);
+    return { ok: "Cambios guardados." };
+  }
+  const v = await db.vendedor.create({ data: { nombre, comisionPct: pct.pct, usuarioId } });
+  refrescar();
+  redirect(`/comercial/vendedores/${v.id}`);
 }
 
-/** Desactivar (deja de aparecer para asignarle clientes; sus clientes y su historial quedan) o volver a activar. */
+/** Dar de baja (queda en la lista, sin poder asignarle clientes nuevos; su usuario deja de entrar) o de alta. */
 export async function cambiarActivoVendedor(id: string) {
-  await exigirDueno();
+  await exigirAcceso();
   const v = await db.vendedor.findUnique({ where: { id }, select: { activo: true } });
   if (!v) return;
   await db.vendedor.update({ where: { id }, data: { activo: !v.activo } });
   refrescar(`/comercial/vendedores/${id}`);
 }
 
-/** % de comisión (edición rápida en la lista). */
-export async function guardarComisionVendedor(vendedorId: string, _: EstadoVend, f: FormData): Promise<EstadoVend> {
-  await exigirDueno();
-  const pct = leerPct(String(f.get("pct") ?? ""));
-  if ("error" in pct) return pct;
-  await db.vendedor.update({ where: { id: vendedorId }, data: { comisionPct: pct.pct } });
-  refrescar(`/comercial/vendedores/${vendedorId}`);
-  return { ok: "Guardado." };
+/** Eliminar un vendedor: sus clientes quedan sin vendedor. Pide confirmar en pantalla. */
+export async function eliminarVendedor(id: string) {
+  await exigirAcceso();
+  await db.vendedor.delete({ where: { id } });
+  refrescar();
+  redirect("/comercial/vendedores");
 }
 
-async function crearPropuestas(uId: string, vendedorId: string | null, clienteIds: string[], desde: string) {
-  let creadas = 0, omitidas = 0;
+// ── Asignar clientes ─────────────────────────────────────────────────────────────────────────────
+/** Cambia el vendedor de varios clientes y deja anotado desde cuándo vale (así cada venta cuenta para el vendedor que tenía el cliente ese día). */
+async function asignar(uId: string, vendedorId: string | null, clienteIds: string[], desde: string) {
+  let n = 0;
   for (const clienteId of clienteIds) {
     const c = await db.cliente.findUnique({ where: { id: clienteId }, select: { vendedorId: true } });
-    const pendiente = await db.asignacionVendedor.count({ where: { clienteId, estado: "PENDIENTE" } });
-    if (!c || (c.vendedorId ?? null) === vendedorId || pendiente) { omitidas++; continue; }
-    await db.asignacionVendedor.create({ data: { clienteId, vendedorId, desde, propuestoPor: uId } });
-    creadas++;
+    if (!c || (c.vendedorId ?? null) === vendedorId) continue;
+    await db.$transaction([
+      db.asignacionVendedor.create({ data: { clienteId, vendedorId, anteriorId: c.vendedorId, desde, propuestoPor: uId, resueltoPor: uId, resueltoEn: new Date(), estado: "APROBADA" } }),
+      db.cliente.update({ where: { id: clienteId }, data: { vendedorId } }),
+    ]);
+    n++;
   }
-  return { creadas, omitidas };
+  return n;
 }
-const leerDesde = (f: FormData) => {
-  const d = String(f.get("desde") ?? "").trim() || hoy();
-  return esFechaValida(d) && d <= hoy() ? d : null;
-};
-const textoResultado = (r: { creadas: number; omitidas: number }) =>
-  r.creadas === 0 ? { error: "No se propuso ningún cambio: esos clientes ya tienen ese vendedor o ya tienen un cambio pendiente." }
-    : { ok: `${r.creadas} ${r.creadas === 1 ? "cambio propuesto" : "cambios propuestos"}${r.omitidas ? ` (${r.omitidas} omitidos: ya tenían ese vendedor o un cambio pendiente)` : ""}. Quedan pendientes: hay que aprobarlos para que valgan.` };
+const primeroDeMes = () => `${hoy().slice(0, 7)}-01`;
+const leerDesde = (f: FormData) => { const d = String(f.get("desde") ?? "").trim() || primeroDeMes(); return esFechaValida(d) && d <= hoy() ? d : null; };
 
-/** Paso 1 del doble chequeo: un dueño PROPONE el vendedor de un cliente (sin vendedor = dejarlo libre). Queda pendiente hasta que OTRO dueño lo apruebe. */
-export async function proponerVendedor(_: EstadoVend, f: FormData): Promise<EstadoVend> {
-  const u = await exigirDueno();
-  const clienteId = String(f.get("clienteId") ?? "");
-  const vendedorId = String(f.get("vendedorId") ?? "") || null;
-  if (!clienteId) return { error: "Elegí el cliente." };
-  if (vendedorId) {
-    const v = await db.vendedor.findUnique({ where: { id: vendedorId }, select: { activo: true } });
-    if (!v || !v.activo) return { error: "Ese vendedor no está activo." };
-  }
-  const desde = leerDesde(f);
-  if (!desde) return { error: "La fecha “vale desde” no es válida (no puede ser futura)." };
-  const r = await crearPropuestas(u.id, vendedorId, [clienteId], desde);
-  refrescar(clienteId);
-  return textoResultado(r);
-}
-
-/** Lo mismo para varios clientes juntos (desde la ficha del vendedor). */
-export async function proponerVarios(vendedorId: string, _: EstadoVend, f: FormData): Promise<EstadoVend> {
-  const u = await exigirDueno();
-  const ids = f.getAll("clienteId").map(String).filter(Boolean);
-  if (ids.length === 0) return { error: "Tildá al menos un cliente." };
+/** Un solo paso: los clientes tildados pasan a ser de este vendedor y los destildados quedan sin vendedor. */
+export async function guardarClientesDeVendedor(vendedorId: string, _: EstadoVend, f: FormData): Promise<EstadoVend> {
+  const u = await exigirAcceso();
   const v = await db.vendedor.findUnique({ where: { id: vendedorId }, select: { activo: true } });
-  if (!v || !v.activo) return { error: "Ese vendedor no está activo." };
+  if (!v) return { error: "No encontré al vendedor." };
   const desde = leerDesde(f);
-  if (!desde) return { error: "La fecha “vale desde” no es válida (no puede ser futura)." };
-  const r = await crearPropuestas(u.id, vendedorId, ids, desde);
+  if (!desde) return { error: "La fecha no es válida (no puede ser futura)." };
+  const tildados = new Set(f.getAll("clienteId").map(String));
+  const actuales = (await db.cliente.findMany({ where: { vendedorId }, select: { id: true } })).map((c) => c.id);
+  const agregar = [...tildados].filter((id) => !actuales.includes(id));
+  if (agregar.length && !v.activo) return { error: "Este vendedor está de baja: primero dalo de alta." };
+  const sacar = actuales.filter((id) => !tildados.has(id));
+  const a = await asignar(u.id, vendedorId, agregar, desde);
+  const b = await asignar(u.id, null, sacar, desde);
   refrescar(`/comercial/vendedores/${vendedorId}`);
-  return textoResultado(r);
+  return { ok: a + b === 0 ? "No había cambios." : `Listo: ${a} ${a === 1 ? "cliente agregado" : "clientes agregados"}${b ? `, ${b} ${b === 1 ? "quitado" : "quitados"}` : ""}.` };
 }
 
-async function resolver(id: string, aprobar: boolean, quien: string) {
-  const a = await db.asignacionVendedor.findUnique({ where: { id } });
-  if (!a || a.estado !== "PENDIENTE") return false;
-  const cliente = await db.cliente.findUnique({ where: { id: a.clienteId }, select: { vendedorId: true } });
-  await db.$transaction([
-    db.asignacionVendedor.update({ where: { id }, data: { estado: aprobar ? "APROBADA" : "RECHAZADA", resueltoPor: quien, resueltoEn: new Date(), anteriorId: cliente?.vendedorId ?? null } }),
-    ...(aprobar ? [db.cliente.update({ where: { id: a.clienteId }, data: { vendedorId: a.vendedorId } })] : []),
-  ]);
-  return true;
-}
-
-/** Paso 2: quien aprueba (marcado en USUARIOS) aprueba o rechaza. Quien lo propuso puede retirarlo. */
-export async function resolverAsignacion(id: string, aprobar: boolean): Promise<EstadoVend> {
-  const u = await exigirDueno();
-  const a = await db.asignacionVendedor.findUnique({ where: { id } });
-  if (!a || a.estado !== "PENDIENTE") return { error: "Ese cambio ya fue resuelto." };
-  if (aprobar && !u.apruebaVendedores) return { error: "Solo la persona que aprueba los cambios de vendedor puede aprobarlos." };
-  if (!aprobar && !u.apruebaVendedores && a.propuestoPor !== u.id) return { error: "Solo quien aprueba (o quien lo propuso) puede rechazarlo." };
-  await resolver(id, aprobar, u.id);
-  refrescar(a.clienteId);
-  return { ok: aprobar ? "Aprobado." : "Rechazado." };
-}
-
-/** Aprobar o rechazar TODOS los pendientes de una vez (para lotes grandes). Solo quien aprueba. */
-export async function resolverTodas(aprobar: boolean): Promise<EstadoVend> {
-  const u = await exigirAprobador();
-  const pendientes = await db.asignacionVendedor.findMany({ where: { estado: "PENDIENTE" }, orderBy: { propuestoEn: "asc" } });
-  let hechos = 0;
-  for (const a of pendientes) if (await resolver(a.id, aprobar, u.id)) hechos++;
-  refrescar();
-  return { ok: `${hechos} ${aprobar ? "aprobados" : "rechazados"}.` };
-}
-
-/** Pasa un comisionista que estaba escrito en las fichas (ej. Migue 8%) a la lista de vendedores: crea el vendedor y PROPONE sus clientes (otro dueño los aprueba). */
-export async function pasarComisionista(_: EstadoVend, f: FormData): Promise<EstadoVend> {
-  const u = await exigirDueno();
-  const nombreOriginal = String(f.get("comisionista") ?? "");
-  const desde = leerDesde(f);
-  if (!desde) return { error: "La fecha “vale desde” no es válida (no puede ser futura)." };
-  const clientes = await db.cliente.findMany({ where: { comisionista: { equals: nombreOriginal, mode: "insensitive" } }, select: { id: true, comisionPct: true } });
+/** Pasa un comisionista que estaba escrito en las fichas (ej. Migue 8%) a la lista de vendedores con todos sus clientes. */
+export async function importarComisionista(comisionista: string): Promise<EstadoVend> {
+  const u = await exigirAcceso();
+  const clientes = await db.cliente.findMany({ where: { comisionista: { equals: comisionista, mode: "insensitive" } }, select: { id: true, comisionPct: true } });
   if (clientes.length === 0) return { error: "No encontré clientes con ese comisionista." };
-  const nombre = titulo(nombreOriginal);
+  const nombre = titulo(comisionista);
   let v = await db.vendedor.findFirst({ where: { nombre: { equals: nombre, mode: "insensitive" } } });
   const pct = Math.max(...clientes.map((c) => Number(c.comisionPct ?? 0)));
   if (!v) v = await db.vendedor.create({ data: { nombre, comisionPct: pct || null } });
-  const r = await crearPropuestas(u.id, v.id, clientes.map((c) => c.id), desde);
+  const n = await asignar(u.id, v.id, clientes.map((c) => c.id), primeroDeMes());
   refrescar();
-  return { ok: `${nombre} quedó como vendedor (${pct ? `${String(pct).replace(".", ",")}%` : "sin %"}). ${r.creadas} ${r.creadas === 1 ? "cliente propuesto" : "clientes propuestos"}: hay que aprobarlos para que valgan.` };
+  return { ok: `${nombre}: ${n} ${n === 1 ? "cliente" : "clientes"}.` };
 }

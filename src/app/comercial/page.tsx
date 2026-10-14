@@ -64,7 +64,7 @@ export default async function Comercial() {
     <>
       <Cabecera usuario={usuario} />
       <main className={CONTENEDOR_PEDIDOS}>
-        <EncabezadoComercial activa="clientes" esDueno={usuario.rol === "DUENO"} derecha={<Link href="/comercial/graficos" className="flex h-10 items-center gap-2 rounded-lg bg-stone-800 px-5 text-sm font-bold uppercase tracking-wide text-white hover:bg-stone-700">Gráficos ›</Link>} />
+        <EncabezadoComercial activa="clientes" derecha={<Link href="/comercial/graficos" className="flex h-10 items-center gap-2 rounded-lg bg-stone-800 px-5 text-sm font-bold uppercase tracking-wide text-white hover:bg-stone-700">Gráficos ›</Link>} />
         <Tablero filas={filas} resumen={resumen} />
       </main>
     </>

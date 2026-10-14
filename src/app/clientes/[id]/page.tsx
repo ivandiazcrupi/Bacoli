@@ -7,7 +7,6 @@ import { actualizarCliente, cambiarActivoCliente, guardarPreciosEspeciales } fro
 import { formatoPesos } from "@/lib/numeros";
 import { EliminarCliente } from "../EliminarCliente";
 import { UnirClientes } from "../UnirClientes";
-import { FormProponer } from "@/app/comercial/vendedores/Formularios";
 import { ClienteForm, type DatosCliente } from "../ClienteForm";
 import { PreciosEspeciales, type FilaPrecio } from "../PreciosEspeciales";
 import { EncabezadoSucursales, FilaSucursal } from "../SucursalForm";
@@ -30,13 +29,11 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
   const [nPedidos, nMovimientos, nNotas] = await Promise.all([db.pedido.count({ where: { clienteId: id } }), db.movimientoCuenta.count({ where: { clienteId: id } }), db.notaCredito.count({ where: { clienteId: id } })]);
   const resumenUnion = `${cliente.puntos.length} sucursal(es), ${nPedidos} pedido(s), ${nMovimientos} movimiento(s) de cuenta, ${nNotas} nota(s) de crédito`;
 
-  const [listas, zonas, barrios, productos, vendedores, pendiente, vendedorActual] = await Promise.all([
+  const [listas, zonas, barrios, productos, vendedorActual] = await Promise.all([
     db.listaPrecios.findMany({ where: { OR: [{ activa: true }, { id: cliente.listaPreciosId ?? "" }] }, orderBy: [{ orden: "asc" }, { nombre: "asc" }] }),
     db.zona.findMany({ orderBy: { orden: "asc" } }),
     db.puntoEntrega.findMany({ distinct: ["barrio"], select: { barrio: true }, orderBy: { barrio: "asc" } }),
     db.producto.findMany({ where: { activo: true }, orderBy: [{ orden: "asc" }, { nombre: "asc" }] }),
-    db.vendedor.findMany({ where: { activo: true }, select: { id: true, nombre: true }, orderBy: { nombre: "asc" } }),
-    db.asignacionVendedor.findFirst({ where: { clienteId: id, estado: "PENDIENTE" } }),
     cliente.vendedorId ? db.vendedor.findUnique({ where: { id: cliente.vendedorId }, select: { nombre: true } }) : null,
   ]);
   const filasPrecios: FilaPrecio[] = productos.map((p) => {
@@ -119,17 +116,9 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
         </section>
         )}
 
-        <section className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-stone-300 bg-white p-5">
-          <div>
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-stone-600">Vendedor</h2>
-            <p className="mt-1 text-lg font-semibold">{vendedorActual?.nombre ?? <span className="font-normal text-stone-500">Sin vendedor</span>}</p>
-            {pendiente && (
-              <p className="mt-1 rounded bg-[#fdf8e3] px-2.5 py-1 text-[13px] font-medium text-[#8a6a05]">
-                Cambio pendiente de aprobación: {pendiente.vendedorId ? vendedores.find((v) => v.id === pendiente.vendedorId)?.nombre ?? "otro vendedor" : "dejarlo sin vendedor"}. Se aprueba en Comercial → Vendedores.
-              </p>
-            )}
-          </div>
-          {usuario.rol === "DUENO" && !pendiente && <FormProponer vendedores={vendedores} clienteId={cliente.id} actual={cliente.vendedorId ?? ""} />}
+        <section className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-stone-300 bg-white px-6 py-4">
+          <p className="text-[15px]"><span className="text-stone-500">Vendedor: </span><b>{vendedorActual?.nombre ?? "sin vendedor"}</b></p>
+          <Link href="/comercial/vendedores" className="text-sm font-semibold text-stone-600 hover:underline">Cambiar en Vendedores ›</Link>
         </section>
 
         <section className="space-y-3">

@@ -1,158 +1,99 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { Cabecera } from "@/components/Cabecera";
+import { vendedoresDesbloqueado } from "@/lib/claveVendedores";
 import { db } from "@/lib/db";
 import { esFechaValida, hoy } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
 import { exigirOficina } from "@/lib/session";
-import { etiquetaMes, mesAnterior, mesSiguiente, nombreMes, ventasEntregadas } from "@/lib/vendedores";
-import { Barras, BarrasH, Panel, SinDatos } from "../../graficos/Graficos";
+import { mesAnterior, mesSiguiente, nombreMes, ventasEntregadas } from "@/lib/vendedores";
 import { CONTENEDOR_PEDIDOS } from "../../../pedidos/Encabezado";
-import { EncabezadoComercial } from "../../EncabezadoComercial";
-import { BotonActivo, FormProponerVarios, FormVendedor } from "../Formularios";
+import { PantallaBloqueada } from "../Bloqueo";
+import { AccionesVendedor, AsignarClientes, FormVendedor } from "../Formularios";
 
-const fechaCorta = (d: Date) => d.toLocaleDateString("es-AR", { timeZone: "America/Argentina/Buenos_Aires", day: "2-digit", month: "2-digit", year: "2-digit" });
-const paq = (n: number) => n.toLocaleString("es-AR", { maximumFractionDigits: 1 });
 const nav = "flex h-9 items-center rounded-md border border-stone-300 bg-white px-3 text-sm font-semibold hover:border-stone-600";
 
-// Un vendedor: su %, cuánto vendió el mes, a qué clientes, evolución y sus clientes con el historial de cambios.
+// Un vendedor, como la ficha de un cliente: sus datos para editar, cuánto vendió el mes y a quién.
 export default async function FichaVendedor({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ mes?: string }> }) {
   const usuario = await exigirOficina();
-  if (usuario.rol !== "DUENO") redirect("/comercial");
+  if (!(await vendedoresDesbloqueado())) return <PantallaBloqueada usuario={usuario} />;
   const { id } = await params;
   const { mes: mesParam } = await searchParams;
   const actual = hoy().slice(0, 7);
   const mes = mesParam && /^\d{4}-\d{2}$/.test(mesParam) && esFechaValida(`${mesParam}-01`) ? mesParam : actual;
-  const vendedor = await db.vendedor.findUnique({ where: { id }, include: { usuario: { select: { id: true, nombre: true } } } });
+  const vendedor = await db.vendedor.findUnique({ where: { id } });
   if (!vendedor) notFound();
   const pct = Number(vendedor.comisionPct ?? 0);
 
-  const meses6 = Array.from({ length: 6 }, (_, i) => { let m = mes; for (let k = 0; k < 5 - i; k++) m = mesAnterior(m); return m; });
-  const [todas, clientes, cambios, todosClientes, usuariosLibres, vendedoresTodos] = await Promise.all([
-    ventasEntregadas(`${meses6[0]}-01`, `${mesSiguiente(mes)}-01`),
-    db.cliente.findMany({ where: { vendedorId: id }, orderBy: { nombre: "asc" }, select: { id: true, nombre: true, activo: true } }),
-    db.asignacionVendedor.findMany({ where: { OR: [{ vendedorId: id }, { anteriorId: id }], estado: "APROBADA" }, orderBy: { resueltoEn: "desc" }, take: 30, include: { cliente: { select: { nombre: true } } } }),
-    db.cliente.findMany({ where: { activo: true, NOT: { vendedorId: id } }, orderBy: { nombre: "asc" }, select: { id: true, nombre: true, vendedorId: true } }),
+  const [ventas, clientes, usuarios, vendedores] = await Promise.all([
+    ventasEntregadas(`${mes}-01`, `${mesSiguiente(mes)}-01`),
+    db.cliente.findMany({ where: { activo: true }, orderBy: { nombre: "asc" }, select: { id: true, nombre: true, vendedorId: true } }),
     db.usuario.findMany({ where: { rol: "VENDEDOR", activo: true, OR: [{ vendedor: null }, { vendedor: { id } }] }, select: { id: true, nombre: true }, orderBy: { nombre: "asc" } }),
     db.vendedor.findMany({ select: { id: true, nombre: true } }),
   ]);
-  const nombreVend = new Map(vendedoresTodos.map((v) => [v.id, v.nombre]));
-  const mias = todas.filter((x) => x.vendedorId === id);
-  const delMes = mias.filter((x) => x.f.slice(0, 7) === mes);
-  const neto = delMes.reduce((t, x) => t + x.neto, 0), comision = (neto * pct) / 100;
-  const antNeto = mias.filter((x) => x.f.slice(0, 7) === mesAnterior(mes)).reduce((t, x) => t + x.neto, 0);
-  const vs = antNeto > 0 ? Math.round(((neto - antNeto) / antNeto) * 100) : null;
-
-  const porCliente = new Map<string, { nombre: string; pedidos: number; paq: number; neto: number }>();
-  for (const x of delMes) {
-    const c = porCliente.get(x.clienteId) ?? { nombre: x.cliente, pedidos: 0, paq: 0, neto: 0 };
-    c.pedidos += 1; c.paq += x.paq; c.neto += x.neto; porCliente.set(x.clienteId, c);
+  const nombreDe = new Map(vendedores.map((v) => [v.id, v.nombre]));
+  const mias = ventas.filter((x) => x.vendedorId === id);
+  const neto = mias.reduce((t, x) => t + x.neto, 0);
+  const porCliente = new Map<string, { nombre: string; pedidos: number; neto: number }>();
+  for (const x of mias) {
+    const c = porCliente.get(x.clienteId) ?? { nombre: x.cliente, pedidos: 0, neto: 0 };
+    c.pedidos += 1; c.neto += x.neto; porCliente.set(x.clienteId, c);
   }
-  const filas = [...porCliente.entries()].map(([cid, c]) => ({ cid, ...c, comision: (c.neto * pct) / 100 })).sort((a, b) => b.neto - a.neto);
-  const evo = meses6.map((m) => ({ m, neto: mias.filter((x) => x.f.slice(0, 7) === m).reduce((t, x) => t + x.neto, 0) }));
-  const nombresUsuarios = new Map((await db.usuario.findMany({ select: { id: true, nombre: true } })).map((u) => [u.id, u.nombre]));
-  const sinVentas = clientes.filter((c) => c.activo && !porCliente.has(c.id));
+  const filas = [...porCliente.entries()].map(([cid, c]) => ({ cid, ...c })).sort((a, b) => b.neto - a.neto);
+  const suyos = clientes.filter((c) => c.vendedorId === id);
+  // Los clientes dados de baja que siguen siendo de este vendedor también cuentan (para no perderlos al guardar la lista).
+  const suyosInactivos = await db.cliente.findMany({ where: { vendedorId: id, activo: false }, select: { id: true, nombre: true } });
 
   return (
     <>
       <Cabecera usuario={usuario} />
-      <main className={`${CONTENEDOR_PEDIDOS} space-y-4`}>
-        <EncabezadoComercial
-          activa="vendedores" esDueno
-          derecha={
-            <nav className="flex items-center gap-2" aria-label="Mes">
-              <Link href={`/comercial/vendedores/${id}?mes=${mesAnterior(mes)}`} className={nav} aria-label="Mes anterior">←</Link>
-              <span className="min-w-44 rounded-md border border-stone-800 bg-stone-800 px-4 py-2 text-center text-sm font-bold uppercase tracking-wide text-white">{nombreMes(mes)}</span>
-              <Link href={`/comercial/vendedores/${id}?mes=${mesSiguiente(mes)}`} className={nav} aria-label="Mes siguiente">→</Link>
-              {mes !== actual && <Link href={`/comercial/vendedores/${id}`} className={nav}>Este mes</Link>}
-            </nav>
-          }
-        />
+      <main className={`${CONTENEDOR_PEDIDOS} space-y-8`}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Link href={`/comercial/vendedores?mes=${mes}`} className="text-sm font-semibold text-stone-500 hover:underline">‹ Vendedores</Link>
+          <nav className="flex items-center gap-2" aria-label="Mes">
+            <Link href={`/comercial/vendedores/${id}?mes=${mesAnterior(mes)}`} className={nav} aria-label="Mes anterior">←</Link>
+            <span className="min-w-40 text-center text-sm font-semibold capitalize text-stone-700">{nombreMes(mes)}</span>
+            <Link href={`/comercial/vendedores/${id}?mes=${mesSiguiente(mes)}`} className={nav} aria-label="Mes siguiente">→</Link>
+          </nav>
+        </div>
 
-        <section className="rounded-lg border border-stone-300 bg-white p-5">
+        <section className="mx-auto w-full max-w-3xl space-y-8">
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <Link href={`/comercial/vendedores?mes=${mes}`} className="text-sm font-semibold text-stone-500 hover:underline">‹ Vendedores</Link>
-              <h1 className="text-2xl font-semibold tracking-tight">{vendedor.nombre}</h1>
-              {!vendedor.activo && <span className="rounded bg-stone-200 px-2 py-0.5 text-xs text-stone-600">de baja</span>}
-            </div>
-            <BotonActivo id={id} activo={vendedor.activo} clientes={clientes.length} />
+            <h1 className="text-3xl font-semibold tracking-tight">{vendedor.nombre}{!vendedor.activo && <span className="ml-3 rounded-full bg-stone-200 px-3 py-1 align-middle text-sm font-medium text-stone-600">de baja</span>}</h1>
+            <AsignarClientes
+              vendedorId={id} nombre={vendedor.nombre} activo={vendedor.activo} propios={[...suyos, ...suyosInactivos].map((c) => c.id)}
+              clientes={[...clientes, ...suyosInactivos.map((c) => ({ ...c, vendedorId: id }))].sort((a, b) => a.nombre.localeCompare(b.nombre, "es")).map((c) => ({ id: c.id, nombre: c.nombre, de: c.vendedorId && c.vendedorId !== id ? nombreDe.get(c.vendedorId) ?? null : null }))}
+            />
           </div>
-          <div className="mt-4 border-t border-stone-200 pt-4">
-            <FormVendedor vendedor={{ id, nombre: vendedor.nombre, pct: pct ? String(pct).replace(".", ",") : "", usuarioId: vendedor.usuario?.id ?? "" }} usuarios={usuariosLibres} />
+
+          <div className="grid grid-cols-3 gap-6 rounded-2xl border border-stone-200 bg-white px-8 py-6 text-center">
+            <div><p className="text-xs text-stone-400">Clientes</p><p className="mt-1 text-2xl font-semibold tabular-nums">{suyos.length + suyosInactivos.length}</p></div>
+            <div><p className="text-xs text-stone-400">Vendió en {nombreMes(mes).split(" ")[0]}</p><p className="mt-1 text-2xl font-semibold tabular-nums">{formatoPesos(neto)}</p></div>
+            <div><p className="text-xs text-stone-400">Comisión{pct ? ` · ${String(pct).replace(".", ",")}%` : ""}</p><p className="mt-1 text-2xl font-semibold tabular-nums">{formatoPesos((neto * pct) / 100)}</p></div>
           </div>
-          <dl className="mt-4 grid grid-cols-2 gap-4 border-t border-stone-200 pt-4 md:grid-cols-5">
-            {[
-              ["Vendió (sin IVA)", formatoPesos(neto), vs === null ? "mes anterior sin datos" : `${vs >= 0 ? "▲" : "▼"} ${Math.abs(vs)}% vs mes anterior`],
-              ["Comisión a pagar", formatoPesos(comision), `${String(pct).replace(".", ",")}% de lo vendido`],
-              ["Pedidos entregados", String(delMes.length), "en el mes"],
-              ["Clientes que compraron", String(filas.length), `de ${clientes.filter((c) => c.activo).length} activos`],
-              ["Paquetes", paq(delMes.reduce((t, x) => t + x.paq, 0)), "en el mes"],
-            ].map(([t, v, d]) => (
-              <div key={t}><dt className="text-xs text-stone-500">{t}</dt><dd className="text-xl font-bold tabular-nums">{v}</dd><div className="text-[12px] text-stone-500">{d}</div></div>
-            ))}
-          </dl>
-        </section>
 
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Panel titulo="Ventas por cliente" nota={`${nombreMes(mes)} · sin IVA`}>
-            {filas.length === 0 ? <SinDatos /> : <BarrasH filas={filas.slice(0, 10).map((f) => ({ nombre: f.nombre, valor: f.neto, extra: `${f.pedidos} ped.` }))} formato={formatoPesos} />}
-          </Panel>
-          <Panel titulo="Ventas de los últimos 6 meses" nota="sin IVA">
-            <Barras etiquetas={evo.map((e) => etiquetaMes(e.m))} series={[{ nombre: "Ventas", color: "#026433", valores: evo.map((e) => Math.round(e.neto)) }]} formato={(n) => formatoPesos(n)} alto={190} resaltar={5} />
-          </Panel>
-        </div>
-
-        <section className="overflow-hidden rounded-lg border border-stone-300 bg-white">
-          <h2 className="border-b border-stone-200 px-4 py-3 text-sm font-semibold uppercase tracking-wide text-stone-600">Detalle por cliente · {nombreMes(mes)}</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-center text-[13.5px]">
-              <thead className="bg-stone-100 text-[11px] uppercase tracking-wide text-stone-600"><tr><th className="px-3 py-2 text-left font-semibold">Cliente</th><th className="px-3 py-2 font-semibold">Pedidos</th><th className="px-3 py-2 font-semibold">Paquetes</th><th className="px-3 py-2 font-semibold">Vendió (sin IVA)</th><th className="px-3 py-2 font-semibold">Comisión</th></tr></thead>
-              <tbody>
+          {filas.length > 0 && (
+            <div>
+              <h2 className="mb-2 px-1 text-sm font-medium text-stone-500">A quién le vendió</h2>
+              <ul className="divide-y divide-stone-200 rounded-2xl border border-stone-200 bg-white">
                 {filas.map((f) => (
-                  <tr key={f.cid} className="h-11 border-t border-stone-200">
-                    <td className="px-3 text-left font-semibold"><Link href={`/clientes/${f.cid}/pedidos`} className="hover:underline">{f.nombre}</Link></td>
-                    <td className="px-3 tabular-nums">{f.pedidos}</td><td className="px-3 tabular-nums">{paq(f.paq)}</td>
-                    <td className="px-3 font-semibold tabular-nums">{formatoPesos(f.neto)}</td><td className="px-3 tabular-nums">{formatoPesos(f.comision)}</td>
-                  </tr>
+                  <li key={f.cid} className="flex items-center justify-between gap-4 px-6 py-3.5">
+                    <Link href={`/clientes/${f.cid}/pedidos`} className="text-[15px] hover:underline">{f.nombre}</Link>
+                    <span className="text-sm text-stone-500">{f.pedidos} {f.pedidos === 1 ? "pedido" : "pedidos"}</span>
+                    <span className="min-w-28 text-right text-[15px] font-medium tabular-nums">{formatoPesos(f.neto)}</span>
+                  </li>
                 ))}
-                {filas.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-stone-500">Sin ventas entregadas en este mes.</td></tr>}
-              </tbody>
-              {filas.length > 0 && <tfoot><tr className="h-11 border-t-2 border-stone-300 bg-stone-50 font-bold"><td className="px-3 text-left">Total</td><td className="tabular-nums">{delMes.length}</td><td className="tabular-nums">{paq(delMes.reduce((t, x) => t + x.paq, 0))}</td><td className="tabular-nums">{formatoPesos(neto)}</td><td className="tabular-nums">{formatoPesos(comision)}</td></tr></tfoot>}
-            </table>
+              </ul>
+            </div>
+          )}
+          {filas.length === 0 && <p className="text-center text-sm text-stone-500">Sin ventas entregadas en este mes.</p>}
+
+          <div className="space-y-6 rounded-2xl border border-stone-200 bg-white p-8">
+            <h2 className="text-sm font-medium text-stone-500">Datos del vendedor</h2>
+            <FormVendedor vendedor={{ id, nombre: vendedor.nombre, pct: pct ? String(pct).replace(".", ",") : "", usuarioId: vendedor.usuarioId ?? "" }} usuarios={usuarios} />
+            <div className="border-t border-stone-200 pt-6"><AccionesVendedor id={id} nombre={vendedor.nombre} activo={vendedor.activo} clientes={suyos.length + suyosInactivos.length} /></div>
           </div>
         </section>
-
-        {vendedor.activo && (
-          <section className="rounded-lg border border-stone-300 bg-white p-4">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-stone-600">Asignarle clientes</h2>
-            <p className="mb-3 mt-0.5 text-[13px] text-stone-600">Tildá los clientes y elegí desde qué fecha valen. Se proponen y <b>quedan pendientes hasta que se aprueben</b>; hasta entonces siguen con su vendedor actual.</p>
-            <FormProponerVarios vendedorId={id} clientes={todosClientes.map((c) => ({ id: c.id, nombre: c.nombre, de: c.vendedorId ? nombreVend.get(c.vendedorId) ?? null : null }))} />
-          </section>
-        )}
-
-        <div className="grid gap-4 lg:grid-cols-2">
-          <section className="rounded-lg border border-stone-300 bg-white p-4">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-stone-600">Sus clientes · {clientes.length}</h2>
-            {sinVentas.length > 0 && <p className="mt-1 text-[12.5px] text-stone-500">{sinVentas.length} sin compras entregadas este mes.</p>}
-            <ul className="mt-2 divide-y divide-stone-200 text-[13.5px]">
-              {clientes.map((c) => <li key={c.id} className="flex items-center justify-between py-1.5"><Link href={`/clientes/${c.id}`} className={`hover:underline ${c.activo ? "" : "text-stone-400"}`}>{c.nombre}</Link>{!c.activo && <span className="text-[11px] text-stone-400">desactivado</span>}</li>)}
-              {clientes.length === 0 && <li className="py-2 text-stone-500">Todavía no tiene clientes asignados.</li>}
-            </ul>
-          </section>
-          <section className="rounded-lg border border-stone-300 bg-white p-4">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-stone-600">Historial de cambios</h2>
-            <ul className="mt-2 divide-y divide-stone-200 text-[13px]">
-              {cambios.map((c) => (
-                <li key={c.id} className="py-2">
-                  <b>{c.cliente.nombre}</b>: {c.vendedorId === id ? <span className="text-verde-700">pasó a este vendedor</span> : <span className="text-rojo-700">dejó de ser de este vendedor</span>}
-                  <div className="text-[12px] text-stone-500">vale desde {c.desde ? `${c.desde.slice(8)}/${c.desde.slice(5, 7)}/${c.desde.slice(2, 4)}` : fechaCorta(c.resueltoEn!)} · propuso {nombresUsuarios.get(c.propuestoPor) ?? "—"} · aprobó {c.resueltoPor ? nombresUsuarios.get(c.resueltoPor) ?? "—" : "—"}</div>
-                </li>
-              ))}
-              {cambios.length === 0 && <li className="py-2 text-stone-500">Sin cambios registrados.</li>}
-            </ul>
-          </section>
-        </div>
       </main>
     </>
   );

@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { esFechaValida, hoy, sumarDias } from "@/lib/fechas";
 import { bultosDe, focacciasDe, unidadesPorSabor } from "@/lib/ruta";
 import { exigirOficina } from "@/lib/session";
+import { vendedoresDesbloqueado } from "@/lib/claveVendedores";
 import { ventasEntregadas } from "@/lib/vendedores";
 import { CONTENEDOR_PEDIDOS } from "../../pedidos/Encabezado";
 import { Barras, BarrasH, Donut, Leyenda, PALETA, Panel, SinDatos } from "./Graficos";
@@ -76,10 +77,11 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
 
   // Comisiones por vendedor (los de Comercial → Vendedores): ventas sin IVA de pedidos ENTREGADOS del mes × el % de cada vendedor.
   // Cada venta cuenta para el vendedor que tenía el cliente ese día (ver src/lib/vendedores.ts).
-  const [listaVendedores, ventasMes] = await Promise.all([
+  const verComisiones = await vendedoresDesbloqueado(); // las comisiones se ven solo con la contraseña del apartado Vendedores
+  const [listaVendedores, ventasMes] = verComisiones ? await Promise.all([
     db.vendedor.findMany({ where: { comisionPct: { not: null } }, select: { id: true, nombre: true, comisionPct: true } }),
     ventasEntregadas(`${mes}-01`, `${mesSiguiente(mes)}-01`),
-  ]);
+  ]) : [[], []];
   const comisiones = listaVendedores.map((v) => {
     const mias = ventasMes.filter((x) => x.vendedorId === v.id);
     const pct = Number(v.comisionPct ?? 0), ventas = mias.reduce((t, x) => t + x.neto, 0);
@@ -128,7 +130,7 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
             { t: "Facturación sin IVA", v: pesos(total.neto), d: vNeto === null ? "mes anterior sin datos" : `${vNeto >= 0 ? "▲" : "▼"} ${Math.abs(vNeto)}% vs mes anterior`, c: vNeto === null ? "" : vNeto >= 0 ? "text-emerald-400" : "text-red-400" },
             { t: "Clientes que pidieron", v: String(clientesQuePidieron), d: "mayoristas, sumando sucursales" },
             { t: "Ticket promedio", v: mayoristas.length ? pesos(mayoristas.reduce((t, p) => t + p.neto, 0) / mayoristas.length) : "—", d: "por pedido mayorista" },
-            { t: "Comisiones", v: pesos(totalComision), d: "de pedidos entregados" },
+            { t: "Comisiones", v: verComisiones ? pesos(totalComision) : "—", d: verComisiones ? "de pedidos entregados" : "con la contraseña de Vendedores" },
           ].map((x) => (
             <div key={x.t} className="bg-stone-900 px-4 py-4 text-center">
               <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-stone-400">{x.t}</p>
@@ -148,7 +150,7 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
           <Panel titulo="Tipo de comprobante"><Donut partes={porTipo} /></Panel>
 
           <Panel titulo="Comisiones de vendedores" nota={`facturación sin IVA de pedidos entregados · ${nombreMes(mes)}`} className="lg:col-span-2">
-            {comisiones.length === 0 ? <SinDatos texto="Ningún pedido entregado este mes de un cliente con vendedor y % de comisión (se cargan en Comercial → Vendedores)." /> : (
+            {!verComisiones ? <SinDatos texto="Las comisiones se ven entrando a Comercial → Vendedores con su contraseña." /> : comisiones.length === 0 ? <SinDatos texto="Ningún pedido entregado este mes de un cliente con vendedor y % de comisión (se cargan en Comercial → Vendedores)." /> : (
               <div className="overflow-hidden rounded-md border border-stone-200">
                 <div className="grid grid-cols-[minmax(0,1.4fr)_70px_80px_minmax(0,1fr)_minmax(0,1fr)] gap-x-3 bg-crema-100 px-3 py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-stone-500">
                   <span className="text-left">Vendedor</span><span>%</span><span>Clientes</span><span>Ventas sin IVA</span><span>Comisión</span>
