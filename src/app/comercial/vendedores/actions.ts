@@ -14,6 +14,12 @@ async function exigirDueno() {
   if (u.rol !== "DUENO") throw new Error("Solo un dueño puede hacer esto.");
   return u;
 }
+/** Solo quien tiene marcado "Aprueba vendedores" (menú USUARIOS) puede aprobar los cambios de vendedor. */
+async function exigirAprobador() {
+  const u = await exigirDueno();
+  if (!u.apruebaVendedores) throw new Error("Solo la persona que aprueba los cambios de vendedor puede hacerlo.");
+  return u;
+}
 const refrescar = (...ids: (string | undefined)[]) => {
   revalidatePath("/comercial/vendedores");
   for (const id of ids) if (id) revalidatePath(id.startsWith("/") ? id : `/clientes/${id}`);
@@ -101,7 +107,7 @@ const leerDesde = (f: FormData) => {
 };
 const textoResultado = (r: { creadas: number; omitidas: number }) =>
   r.creadas === 0 ? { error: "No se propuso ningún cambio: esos clientes ya tienen ese vendedor o ya tienen un cambio pendiente." }
-    : { ok: `${r.creadas} ${r.creadas === 1 ? "cambio propuesto" : "cambios propuestos"}${r.omitidas ? ` (${r.omitidas} omitidos: ya tenían ese vendedor o un cambio pendiente)` : ""}. Otro dueño tiene que aprobarlos para que valgan.` };
+    : { ok: `${r.creadas} ${r.creadas === 1 ? "cambio propuesto" : "cambios propuestos"}${r.omitidas ? ` (${r.omitidas} omitidos: ya tenían ese vendedor o un cambio pendiente)` : ""}. Quedan pendientes: hay que aprobarlos para que valgan.` };
 
 /** Paso 1 del doble chequeo: un dueño PROPONE el vendedor de un cliente (sin vendedor = dejarlo libre). Queda pendiente hasta que OTRO dueño lo apruebe. */
 export async function proponerVendedor(_: EstadoVend, f: FormData): Promise<EstadoVend> {
@@ -145,28 +151,26 @@ async function resolver(id: string, aprobar: boolean, quien: string) {
   return true;
 }
 
-/** Paso 2: otro dueño aprueba (el cliente pasa al vendedor) o rechaza. Quien lo propuso no puede aprobarlo, pero sí retirarlo. */
+/** Paso 2: quien aprueba (marcado en USUARIOS) aprueba o rechaza. Quien lo propuso puede retirarlo. */
 export async function resolverAsignacion(id: string, aprobar: boolean): Promise<EstadoVend> {
   const u = await exigirDueno();
   const a = await db.asignacionVendedor.findUnique({ where: { id } });
   if (!a || a.estado !== "PENDIENTE") return { error: "Ese cambio ya fue resuelto." };
-  if (aprobar && a.propuestoPor === u.id) return { error: "No podés aprobar un cambio que propusiste vos: lo tiene que aprobar otro dueño." };
+  if (aprobar && !u.apruebaVendedores) return { error: "Solo la persona que aprueba los cambios de vendedor puede aprobarlos." };
+  if (!aprobar && !u.apruebaVendedores && a.propuestoPor !== u.id) return { error: "Solo quien aprueba (o quien lo propuso) puede rechazarlo." };
   await resolver(id, aprobar, u.id);
   refrescar(a.clienteId);
   return { ok: aprobar ? "Aprobado." : "Rechazado." };
 }
 
-/** Aprobar o rechazar TODOS los pendientes de una vez (para lotes grandes). Al aprobar se saltean los que propuso quien aprueba. */
+/** Aprobar o rechazar TODOS los pendientes de una vez (para lotes grandes). Solo quien aprueba. */
 export async function resolverTodas(aprobar: boolean): Promise<EstadoVend> {
-  const u = await exigirDueno();
+  const u = await exigirAprobador();
   const pendientes = await db.asignacionVendedor.findMany({ where: { estado: "PENDIENTE" }, orderBy: { propuestoEn: "asc" } });
-  let hechos = 0, propios = 0;
-  for (const a of pendientes) {
-    if (aprobar && a.propuestoPor === u.id) { propios++; continue; }
-    if (await resolver(a.id, aprobar, u.id)) hechos++;
-  }
+  let hechos = 0;
+  for (const a of pendientes) if (await resolver(a.id, aprobar, u.id)) hechos++;
   refrescar();
-  return { ok: `${hechos} ${aprobar ? "aprobados" : "rechazados"}.${propios ? ` ${propios} los propusiste vos: los tiene que aprobar otro dueño.` : ""}` };
+  return { ok: `${hechos} ${aprobar ? "aprobados" : "rechazados"}.` };
 }
 
 /** Pasa un comisionista que estaba escrito en las fichas (ej. Migue 8%) a la lista de vendedores: crea el vendedor y PROPONE sus clientes (otro dueño los aprueba). */
@@ -183,5 +187,5 @@ export async function pasarComisionista(_: EstadoVend, f: FormData): Promise<Est
   if (!v) v = await db.vendedor.create({ data: { nombre, comisionPct: pct || null } });
   const r = await crearPropuestas(u.id, v.id, clientes.map((c) => c.id), desde);
   refrescar();
-  return { ok: `${nombre} quedó como vendedor (${pct ? `${String(pct).replace(".", ",")}%` : "sin %"}). ${r.creadas} ${r.creadas === 1 ? "cliente propuesto" : "clientes propuestos"}: otro dueño tiene que aprobarlos.` };
+  return { ok: `${nombre} quedó como vendedor (${pct ? `${String(pct).replace(".", ",")}%` : "sin %"}). ${r.creadas} ${r.creadas === 1 ? "cliente propuesto" : "clientes propuestos"}: hay que aprobarlos para que valgan.` };
 }

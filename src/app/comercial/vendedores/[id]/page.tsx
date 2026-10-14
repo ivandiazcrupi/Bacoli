@@ -74,9 +74,9 @@ export default async function FichaVendedor({ params, searchParams }: { params: 
             <div className="flex items-center gap-3">
               <Link href={`/comercial/vendedores?mes=${mes}`} className="text-sm font-semibold text-stone-500 hover:underline">‹ Vendedores</Link>
               <h1 className="text-2xl font-semibold tracking-tight">{vendedor.nombre}</h1>
-              {!vendedor.activo && <span className="rounded bg-stone-100 px-2 py-0.5 text-xs text-stone-600">desactivado</span>}
+              {!vendedor.activo && <span className="rounded bg-stone-200 px-2 py-0.5 text-xs text-stone-600">de baja</span>}
             </div>
-            <BotonActivo id={id} activo={vendedor.activo} />
+            <BotonActivo id={id} activo={vendedor.activo} clientes={clientes.length} />
           </div>
           <div className="mt-4 border-t border-stone-200 pt-4">
             <FormVendedor vendedor={{ id, nombre: vendedor.nombre, pct: pct ? String(pct).replace(".", ",") : "", usuarioId: vendedor.usuario?.id ?? "" }} usuarios={usuariosLibres} />
@@ -126,7 +126,7 @@ export default async function FichaVendedor({ params, searchParams }: { params: 
         {vendedor.activo && (
           <section className="rounded-lg border border-stone-300 bg-white p-4">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-stone-600">Asignarle clientes</h2>
-            <p className="mb-3 mt-0.5 text-[13px] text-stone-600">Tildá los clientes y elegí desde qué fecha valen. Se proponen y <b>otro dueño los aprueba</b>; hasta entonces siguen con su vendedor actual.</p>
+            <p className="mb-3 mt-0.5 text-[13px] text-stone-600">Tildá los clientes y elegí desde qué fecha valen. Se proponen y <b>quedan pendientes hasta que se aprueben</b>; hasta entonces siguen con su vendedor actual.</p>
             <FormProponerVarios vendedorId={id} clientes={todosClientes.map((c) => ({ id: c.id, nombre: c.nombre, de: c.vendedorId ? nombreVend.get(c.vendedorId) ?? null : null }))} />
           </section>
         )}

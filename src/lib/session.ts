@@ -82,5 +82,5 @@ export async function exigirCarga() {
 /** El vendedor (de la lista de Vendedores) que corresponde a un usuario de rol Vendedor, o null si todavía no lo enlazaron con ninguno. */
 export async function vendedorDeUsuario(usuarioId: string) {
   const { db } = await import("./db");
-  return db.vendedor.findUnique({ where: { usuarioId } });
+  return db.vendedor.findFirst({ where: { usuarioId, activo: true } }); // un vendedor dado de baja ya no entra a ver ni cargar nada
 }

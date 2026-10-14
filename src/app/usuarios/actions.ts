@@ -86,3 +86,21 @@ export async function cambiarRol(formData: FormData) {
   await db.usuario.update({ where: { id }, data: { rol: rol.data } });
   revalidatePath("/usuarios");
 }
+
+// Quién aprueba los cambios de vendedor de los clientes (UNA sola persona, un dueño). Si ya hay alguien marcado, solo esa persona puede cambiarlo;
+// si no hay nadie, cualquier dueño puede marcarse. Al marcar a otro se desmarca el anterior.
+export async function cambiarAprobador(formData: FormData) {
+  const actual = await exigirUsuario();
+  if (!puedeGestionarUsuarios(actual.rol)) return;
+  const id = String(formData.get("id"));
+  const hay = await db.usuario.findFirst({ where: { apruebaVendedores: true, activo: true }, select: { id: true } });
+  if (hay && hay.id !== actual.id) return;
+  const u = await db.usuario.findUnique({ where: { id } });
+  if (!u || u.rol !== "DUENO" || !u.activo) return;
+  await db.$transaction([
+    db.usuario.updateMany({ where: { apruebaVendedores: true }, data: { apruebaVendedores: false } }),
+    ...(u.apruebaVendedores ? [] : [db.usuario.update({ where: { id }, data: { apruebaVendedores: true } })]),
+  ]);
+  revalidatePath("/usuarios");
+  revalidatePath("/comercial/vendedores");
+}

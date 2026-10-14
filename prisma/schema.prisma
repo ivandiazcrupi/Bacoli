@@ -28,6 +28,7 @@ model Usuario {
   salidas Salida[]
   vendedor Vendedor? @relation("VendedorUsuario")
   comisionPct Decimal? @db.Decimal(5, 2) // (sin uso: la comisión ahora vive en Vendedor)
+  apruebaVendedores Boolean @default(false) // el dueño que aprueba los cambios de vendedor de los clientes (uno solo)
 }
 
 enum TipoCliente {

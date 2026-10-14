@@ -96,8 +96,8 @@ export function FormProponerVarios({ vendedorId, clientes }: { vendedorId: strin
   );
 }
 
-// Paso 2: aprobar o rechazar. Quien propuso no puede aprobar (lo tiene que hacer otro dueño), pero sí retirar su propuesta.
-export function BotonesResolver({ id, mio, cliente, vendedor }: { id: string; mio: boolean; cliente: string; vendedor: string }) {
+// Paso 2: aprobar o rechazar. Aprueba solo quien tiene marcado "Aprueba vendedores" en USUARIOS; quien propuso puede retirar su propuesta.
+export function BotonesResolver({ id, mio, puede, aprobador, cliente, vendedor }: { id: string; mio: boolean; puede: boolean; aprobador: string | null; cliente: string; vendedor: string }) {
   const [error, setError] = useState<string | null>(null);
   const [pendiente, empezar] = useTransition();
   const resolver = (aprobar: boolean) => {
@@ -107,8 +107,8 @@ export function BotonesResolver({ id, mio, cliente, vendedor }: { id: string; mi
   };
   return (
     <span className="inline-flex flex-wrap items-center justify-end gap-2">
-      <button type="button" disabled={pendiente || mio} onClick={() => resolver(true)} title={mio ? "Lo propusiste vos: lo tiene que aprobar otro dueño" : ""} className="rounded-md bg-verde-700 px-3 py-1.5 text-[13px] font-semibold text-white hover:bg-verde-800 disabled:cursor-not-allowed disabled:opacity-40">Aprobar</button>
-      <button type="button" disabled={pendiente} onClick={() => resolver(false)} className="rounded-md border border-stone-400 bg-white px-3 py-1.5 text-[13px] font-semibold hover:border-stone-700 disabled:opacity-50">{mio ? "Retirar" : "Rechazar"}</button>
+      <button type="button" disabled={pendiente || !puede} onClick={() => resolver(true)} title={puede ? "" : aprobador ? `Lo aprueba ${aprobador}` : "Nadie tiene asignado aprobar: se elige en USUARIOS"} className="rounded-md bg-verde-700 px-3 py-1.5 text-[13px] font-semibold text-white hover:bg-verde-800 disabled:cursor-not-allowed disabled:opacity-40">Aprobar</button>
+      <button type="button" disabled={pendiente || (!puede && !mio)} onClick={() => resolver(false)} className="rounded-md border border-stone-400 bg-white px-3 py-1.5 text-[13px] font-semibold hover:border-stone-700 disabled:opacity-50">{mio && !puede ? "Retirar" : "Rechazar"}</button>
       {error && <span className="w-full text-right text-xs font-medium text-rojo-700">{error}</span>}
     </span>
   );
@@ -119,7 +119,7 @@ export function BotonesTodas({ cantidad }: { cantidad: number }) {
   const [msg, setMsg] = useState<string | null>(null);
   const [pendiente, empezar] = useTransition();
   const hacer = (aprobar: boolean) => {
-    if (!window.confirm(aprobar ? `¿Aprobar los ${cantidad} cambios pendientes? (Se saltean los que propusiste vos.)` : `¿Rechazar los ${cantidad} cambios pendientes?`)) return;
+    if (!window.confirm(aprobar ? `¿Aprobar los ${cantidad} cambios pendientes?` : `¿Rechazar los ${cantidad} cambios pendientes?`)) return;
     empezar(async () => { const r = await resolverTodas(aprobar); setMsg(r?.error ?? r?.ok ?? null); });
   };
   return (
@@ -145,11 +145,14 @@ export function FormComision({ vendedorId, pct }: { vendedorId: string; pct: str
   );
 }
 
-export function BotonActivo({ id, activo }: { id: string; activo: boolean }) {
+export function BotonActivo({ id, activo, clientes = 0, chico = false }: { id: string; activo: boolean; clientes?: number; chico?: boolean }) {
   const [pendiente, empezar] = useTransition();
+  const texto = activo
+    ? `¿Dar de baja a este vendedor?${clientes ? ` Tiene ${clientes} ${clientes === 1 ? "cliente" : "clientes"}: siguen asignados a él hasta que los pases a otro vendedor.` : ""} Su historial y sus comisiones quedan, y ya no se le pueden asignar clientes nuevos.`
+    : "¿Volver a dar de alta a este vendedor?";
   return (
-    <button type="button" disabled={pendiente} onClick={() => { if (window.confirm(activo ? "¿Desactivar a este vendedor? Sus clientes y su historial quedan, pero ya no se le pueden asignar clientes nuevos." : "¿Volver a activar a este vendedor?")) empezar(() => cambiarActivoVendedor(id)); }}
-      className={`rounded-md border px-3 py-2 text-[13px] font-semibold disabled:opacity-50 ${activo ? "border-stone-400 bg-white hover:border-stone-700" : "border-verde-700 text-verde-800"}`}>{activo ? "Desactivar" : "Volver a activar"}</button>
+    <button type="button" disabled={pendiente} onClick={() => { if (window.confirm(texto)) empezar(() => cambiarActivoVendedor(id)); }}
+      className={`rounded-md border font-semibold disabled:opacity-50 ${chico ? "px-2.5 py-1 text-[12px]" : "px-3 py-2 text-[13px]"} ${activo ? "border-rojo-600 bg-white text-rojo-700 hover:bg-rojo-50" : "border-verde-700 text-verde-800 hover:bg-verde-50"}`}>{activo ? "Dar de baja" : "Dar de alta"}</button>
   );
 }
 
@@ -161,7 +164,7 @@ export function FormPasar({ comisionista, clientes, pct }: { comisionista: strin
       <input type="hidden" name="comisionista" value={comisionista} />
       <span className="min-w-52 flex-1 text-[14px]"><b>{comisionista}</b> <span className="text-stone-500">· {clientes} {clientes === 1 ? "cliente" : "clientes"}{pct ? ` · ${pct}%` : ""}</span></span>
       <label className="text-xs font-semibold text-stone-600">Vale desde <input type="date" name="desde" defaultValue={hoyAR()} max={hoyAR()} className="ml-1 h-9 rounded border border-stone-400 px-2 text-sm" /></label>
-      <button disabled={cargando} onClick={(e) => { if (!window.confirm(`¿Pasar a ${comisionista} a la lista de vendedores y proponer sus ${clientes} clientes? Otro dueño tiene que aprobarlos.`)) e.preventDefault(); }} className="h-9 rounded-md bg-stone-800 px-4 text-[13px] font-semibold text-white hover:bg-stone-700 disabled:opacity-60">{cargando ? "…" : "Pasar a vendedor"}</button>
+      <button disabled={cargando} onClick={(e) => { if (!window.confirm(`¿Pasar a ${comisionista} a la lista de vendedores y proponer sus ${clientes} clientes? Quedan pendientes hasta que se aprueben.`)) e.preventDefault(); }} className="h-9 rounded-md bg-stone-800 px-4 text-[13px] font-semibold text-white hover:bg-stone-700 disabled:opacity-60">{cargando ? "…" : "Pasar a vendedor"}</button>
       <Mensaje e={estado} />
     </form>
   );

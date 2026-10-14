@@ -5,7 +5,7 @@ import { cabeceraTabla } from "@/components/campos";
 import { db } from "@/lib/db";
 import { NOMBRE_ROL, puedeGestionarUsuarios } from "@/lib/roles";
 import { exigirUsuario } from "@/lib/session";
-import { cambiarActivo } from "./actions";
+import { cambiarActivo, cambiarAprobador } from "./actions";
 import { SelectorRol } from "./SelectorRol";
 import { CambiarClave } from "./CambiarClave";
 import { FormularioUsuario } from "./FormularioUsuario";
@@ -15,6 +15,7 @@ export default async function Usuarios() {
   if (!puedeGestionarUsuarios(actual.rol)) redirect("/");
 
   const usuarios = await db.usuario.findMany({ orderBy: { creadoEn: "asc" } });
+  const hayAprobador = usuarios.some((u) => u.apruebaVendedores && u.activo);
 
   return (
     <>
@@ -37,6 +38,15 @@ export default async function Usuarios() {
               )}
               <span>{u.activo ? <span className="rounded-full bg-verde-100 px-2.5 py-0.5 text-xs font-semibold text-verde-800">Activo</span> : <span className="rounded-full bg-stone-200 px-2.5 py-0.5 text-xs font-semibold text-stone-600">Desactivado</span>}</span>
               <div className="flex flex-wrap items-start justify-end gap-2">
+                {u.rol === "DUENO" && u.activo && (!hayAprobador || actual.apruebaVendedores) && (
+                  <form action={cambiarAprobador}>
+                    <input type="hidden" name="id" value={u.id} />
+                    <button title="La persona que aprueba los cambios de vendedor de los clientes (una sola)" className={`rounded-md border px-3 py-2 text-sm font-medium shadow-sm ${u.apruebaVendedores ? "border-verde-700 bg-verde-50 text-verde-800" : "border-stone-400 bg-white hover:border-verde-700"}`}>
+                      {u.apruebaVendedores ? "✓ Aprueba vendedores" : "Que apruebe vendedores"}
+                    </button>
+                  </form>
+                )}
+                {u.apruebaVendedores && !(actual.apruebaVendedores) && <span className="rounded-md bg-verde-50 px-3 py-2 text-sm font-medium text-verde-800">✓ Aprueba vendedores</span>}
                 <CambiarClave id={u.id} />
                 {u.id !== actual.id && (
                   <form action={cambiarActivo}>

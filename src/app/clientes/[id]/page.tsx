@@ -125,7 +125,7 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
             <p className="mt-1 text-lg font-semibold">{vendedorActual?.nombre ?? <span className="font-normal text-stone-500">Sin vendedor</span>}</p>
             {pendiente && (
               <p className="mt-1 rounded bg-[#fdf8e3] px-2.5 py-1 text-[13px] font-medium text-[#8a6a05]">
-                Cambio pendiente de aprobación: {pendiente.vendedorId ? vendedores.find((v) => v.id === pendiente.vendedorId)?.nombre ?? "otro vendedor" : "dejarlo sin vendedor"}. Lo aprueba otro dueño en Comercial → Vendedores.
+                Cambio pendiente de aprobación: {pendiente.vendedorId ? vendedores.find((v) => v.id === pendiente.vendedorId)?.nombre ?? "otro vendedor" : "dejarlo sin vendedor"}. Se aprueba en Comercial → Vendedores.
               </p>
             )}
           </div>
