@@ -39,7 +39,7 @@ export default async function MiHoja({ searchParams }: { searchParams: Promise<{
           }
         />
         {vendedor ? (
-          <HojaVendedor nombre={vendedor.nombre} pct={Number(vendedor.comisionPct ?? 0)} mes={mes} filas={filasMes.filter((x) => x.vendedorId === id)} anteriores={filasAnt.filter((x) => x.vendedorId === id)} />
+          <HojaVendedor nombre={vendedor.nombre} pct={Number(vendedor.comisionPct ?? 0)} mes={mes} filas={filasMes.filter((x) => x.vendedorId === id)} anteriores={filasAnt.filter((x) => x.vendedorId === id)} modo="vendedor" />
         ) : (
           <p className="rounded-xl border border-dashed border-stone-300 bg-white px-6 py-12 text-center text-stone-500">Todavía no te enlazaron con tu ficha de vendedor. Pedile a la oficina que lo haga.</p>
         )}

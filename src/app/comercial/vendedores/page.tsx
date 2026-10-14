@@ -76,62 +76,59 @@ export default async function Vendedores({ searchParams }: { searchParams: Promi
         {[...grupos.values()].map((g) => <BotonImportar key={g.nombre} comisionista={g.nombre} clientes={g.clientes} pct={g.pct ? String(g.pct).replace(".", ",") : ""} />)}
 
         {filas.length > 0 && (
-          <section aria-label={`Resumen de ${nombreMes(mes)}`} className="grid grid-cols-2 divide-x divide-y divide-stone-200 overflow-hidden rounded-xl border border-stone-300 bg-white lg:grid-cols-5 lg:divide-y-0">
+          <section aria-label={`Resumen de ${nombreMes(mes)}`} className="flex flex-wrap items-center gap-x-8 gap-y-1 rounded-lg border border-stone-300 bg-white px-5 py-2.5 text-[13px] text-stone-500">
+            <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-stone-500">{nombreMes(mes)}</span>
             {[
-              { t: "Vendieron", v: formatoPesos(tot.neto), d: variacion === null ? "mes anterior sin ventas" : `${variacion >= 0 ? "▲" : "▼"} ${Math.abs(variacion)}% vs mes anterior`, c: variacion === null ? "" : variacion >= 0 ? "text-verde-700" : "text-rojo-700", g: true },
-              { t: "Comisiones", v: formatoPesos(tot.comision), d: "a pagar este mes", c: "", g: true },
-              { t: "Unidades", v: num(tot.unidades), d: "entregadas", c: "", g: false },
-              { t: "Pedidos", v: String(tot.pedidos), d: "de sus clientes", c: "", g: false },
-              { t: "Por cobrar", v: formatoPesos(tot.porCobrar), d: "entregado y sin pagar", c: "", g: false },
-            ].map((x) => (
-              <div key={x.t} className="px-4 py-4 text-center">
-                <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-stone-500">{x.t}</div>
-                <div className={`mt-1 font-bold tabular-nums ${x.g ? "text-3xl" : "text-2xl"} ${x.t === "Por cobrar" && tot.porCobrar > 0 ? "text-rojo-700" : "text-stone-900"}`}>{x.v}</div>
-                <div className={`mt-0.5 text-[12px] ${x.c || "text-stone-500"} ${x.c ? "font-semibold" : ""}`}>{x.d}</div>
-              </div>
-            ))}
+              ["Facturaron", formatoPesos(tot.neto)], ["Comisiones", formatoPesos(tot.comision)], ["Unidades", num(tot.unidades)], ["Pedidos", String(tot.pedidos)], ["Por cobrar", formatoPesos(tot.porCobrar)],
+            ].map(([t, v]) => <span key={t}>{t} <b className="ml-1 text-[14px] tabular-nums text-stone-800">{v}</b></span>)}
+            {variacion !== null && <span className={`ml-auto font-semibold ${variacion >= 0 ? "text-verde-700" : "text-rojo-700"}`}>{variacion >= 0 ? "▲" : "▼"} {Math.abs(variacion)}% vs mes anterior</span>}
           </section>
         )}
 
-        <div className="grid items-start gap-4 lg:grid-cols-3">
-          <section className="grid gap-3 sm:grid-cols-2 lg:col-span-2">
-            {filas.map(({ v, pct, r, antes }) => {
-              const dv = antes.neto > 0 ? Math.round(((r.neto - antes.neto) / antes.neto) * 100) : null;
-              return (
-                <Link key={v.id} href={`/comercial/vendedores/${v.id}?mes=${mes}`}
-                  className={`group block rounded-xl border border-stone-300 bg-white p-5 transition hover:border-stone-600 ${v.activo ? "" : "opacity-55"}`}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xl font-semibold leading-tight">{v.nombre}{!v.activo && <span className="ml-2 rounded-full bg-stone-200 px-2.5 py-0.5 align-middle text-xs font-medium text-stone-600">de baja</span>}</p>
-                      <p className="mt-0.5 text-sm text-stone-500">{v._count.clientes} {v._count.clientes === 1 ? "cliente" : "clientes"}{pct ? ` · ${String(pct).replace(".", ",")}%` : " · sin % cargado"}</p>
-                    </div>
-                    <span className="text-stone-300 transition group-hover:text-stone-700">›</span>
-                  </div>
-                  <div className="mt-4 grid grid-cols-2 gap-4">
-                    <div><p className="text-[11px] font-bold uppercase tracking-wide text-stone-500">Vendió</p><p className="text-2xl font-bold tabular-nums">{formatoPesos(r.neto)}</p></div>
-                    <div><p className="text-[11px] font-bold uppercase tracking-wide text-stone-500">Comisión</p><p className="text-2xl font-bold tabular-nums">{formatoPesos(r.comision)}</p></div>
-                  </div>
-                  <div className="mt-3 h-2 rounded-full bg-stone-100"><div className="h-2 rounded-full bg-verde-700" style={{ width: `${r.neto > 0 ? Math.max(3, (r.neto / maxNeto) * 100) : 0}%` }} /></div>
-                  <p className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[12.5px] text-stone-500">
-                    <span><b className="text-stone-700">{num(r.unidades)}</b> unidades</span>
-                    <span><b className="text-stone-700">{r.pedidos}</b> {r.pedidos === 1 ? "pedido" : "pedidos"}</span>
-                    {r.porCobrar > 0 && <span className="font-semibold text-rojo-700">por cobrar {formatoPesos(r.porCobrar)}</span>}
-                    {dv !== null && <span className={`ml-auto font-semibold ${dv >= 0 ? "text-verde-700" : "text-rojo-700"}`}>{dv >= 0 ? "▲" : "▼"} {Math.abs(dv)}%</span>}
-                  </p>
-                </Link>
-              );
-            })}
-            {filas.length === 0 && <p className="rounded-xl border border-dashed border-stone-300 bg-white px-6 py-12 text-center text-stone-500 sm:col-span-2">Todavía no hay vendedores. Con “+ Nuevo vendedor” cargás el primero.</p>}
+        {filas.length > 0 ? (
+          <section className="overflow-hidden rounded-xl border border-stone-300 bg-white">
+            <div className="overflow-x-auto">
+              <div className="min-w-[980px]">
+                <div className="grid grid-cols-[minmax(220px,1.6fr)_minmax(220px,1.4fr)_1fr_1fr_0.8fr_1fr_0.7fr_1.5rem] items-center gap-x-4 bg-stone-100 px-5 py-2 text-[11px] font-semibold uppercase tracking-wide text-stone-600">
+                  <span>Vendedor</span><span className="text-center">Facturó</span><span className="text-center">Comisión</span><span className="text-center">Unidades</span><span className="text-center">Pedidos</span><span className="text-center">Por cobrar</span><span className="text-center">Vs mes ant.</span><span />
+                </div>
+                {filas.map(({ v, pct, r, antes }) => {
+                  const dv = antes.neto > 0 ? Math.round(((r.neto - antes.neto) / antes.neto) * 100) : null;
+                  return (
+                    <Link key={v.id} href={`/comercial/vendedores/${v.id}?mes=${mes}`}
+                      className={`group grid grid-cols-[minmax(220px,1.6fr)_minmax(220px,1.4fr)_1fr_1fr_0.8fr_1fr_0.7fr_1.5rem] items-center gap-x-4 border-t border-stone-200 px-5 py-3.5 transition hover:bg-stone-50 ${v.activo ? "" : "opacity-55"}`}>
+                      <div className="min-w-0">
+                        <p className="truncate text-[17px] font-semibold leading-tight">{v.nombre}{!v.activo && <span className="ml-2 rounded-full bg-stone-200 px-2 py-0.5 align-middle text-[11px] font-medium text-stone-600">de baja</span>}</p>
+                        <p className="mt-0.5 text-[12.5px] text-stone-500">{v._count.clientes} {v._count.clientes === 1 ? "cliente" : "clientes"}{pct ? ` · ${String(pct).replace(".", ",")}%` : " · sin % cargado"}</p>
+                      </div>
+                      <div className="px-2"><p className="text-center text-[18px] font-bold tabular-nums">{formatoPesos(r.neto)}</p><div className="mt-1.5 h-1.5 rounded-full bg-stone-100"><div className="h-1.5 rounded-full bg-verde-700" style={{ width: `${r.neto > 0 ? Math.max(3, (r.neto / maxNeto) * 100) : 0}%` }} /></div></div>
+                      <p className="text-center text-[18px] font-bold tabular-nums">{formatoPesos(r.comision)}</p>
+                      <p className="text-center text-[16px] font-semibold tabular-nums text-stone-700">{num(r.unidades)}</p>
+                      <p className="text-center text-[15px] tabular-nums text-stone-600">{r.pedidos}</p>
+                      <p className={`text-center text-[14px] font-semibold tabular-nums ${r.porCobrar > 0 ? "text-rojo-700" : "text-stone-300"}`}>{r.porCobrar > 0 ? formatoPesos(r.porCobrar) : "—"}</p>
+                      <p className={`text-center text-[13px] font-semibold ${dv === null ? "text-stone-300" : dv >= 0 ? "text-verde-700" : "text-rojo-700"}`}>{dv === null ? "—" : `${dv >= 0 ? "▲" : "▼"} ${Math.abs(dv)}%`}</p>
+                      <span className="text-stone-300 transition group-hover:text-stone-700">›</span>
+                    </Link>
+                  );
+                })}
+                <div className="grid grid-cols-[minmax(220px,1.6fr)_minmax(220px,1.4fr)_1fr_1fr_0.8fr_1fr_0.7fr_1.5rem] items-center gap-x-4 border-t-2 border-stone-300 bg-stone-50 px-5 py-2.5 text-[13px] font-bold">
+                  <span className="text-[11px] uppercase tracking-wide text-stone-600">Total</span>
+                  <span className="text-center tabular-nums">{formatoPesos(tot.neto)}</span><span className="text-center tabular-nums">{formatoPesos(tot.comision)}</span><span className="text-center tabular-nums">{num(tot.unidades)}</span><span className="text-center tabular-nums">{tot.pedidos}</span><span className="text-center tabular-nums">{formatoPesos(tot.porCobrar)}</span><span /><span />
+                </div>
+              </div>
+            </div>
           </section>
+        ) : (
+          <p className="rounded-xl border border-dashed border-stone-300 bg-white px-6 py-12 text-center text-stone-500">Todavía no hay vendedores. Con “+ Nuevo vendedor” cargás el primero.</p>
+        )}
 
-          {filas.length > 0 && (
-            <Panel titulo="Vendido por vendedor" nota={nombreMes(mes)}>
-              {tot.neto > 0
-                ? <BarrasH filas={[...filas].sort((a, b) => b.r.neto - a.r.neto).filter((f) => f.r.neto > 0).map((f) => ({ nombre: f.v.nombre, valor: f.r.neto, extra: `${num(f.r.unidades)} un.` }))} formato={(n) => formatoPesos(Math.round(n))} />
-                : <p className="py-10 text-center text-sm text-stone-400">Todavía no hay ventas entregadas este mes.</p>}
-            </Panel>
-          )}
-        </div>
+        {filas.length > 0 && (
+          <Panel titulo="Vendido por cada vendedor" nota={`${nombreMes(mes)} · sin IVA`}>
+            {tot.neto > 0
+              ? <BarrasH filas={[...filas].sort((a, b) => b.r.neto - a.r.neto).filter((f) => f.r.neto > 0).map((f) => ({ nombre: f.v.nombre, valor: f.r.neto, extra: `${num(f.r.unidades)} un. · comisión ${formatoPesos(f.r.comision)}` }))} formato={(n) => formatoPesos(Math.round(n))} />
+              : <p className="py-8 text-center text-sm text-stone-400">Todavía no hay ventas entregadas este mes.</p>}
+          </Panel>
+        )}
 
         <div className="flex flex-wrap items-center justify-end gap-6 border-t border-stone-200 pt-4"><CambiarClave /><BotonSalir /></div>
       </main>

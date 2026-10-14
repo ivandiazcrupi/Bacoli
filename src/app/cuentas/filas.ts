@@ -12,11 +12,11 @@ export function filaDeArca(f: FilaFactura, puntos: PuntoCliente[]): FilaComproba
     id: f.id, clienteId: f.clienteId ?? "", cliente: f.cliente ?? f.razonSocial ?? "—", tipo: "FACTURA", numero: f.esNc ? `NC ${f.numero}` : `F-${f.numero}`, cargado: f.fecha, fecha: f.fecha,
     entregado: true, bruto: f.total, nc: f.aplicado, cubierta, anulado: null, ncTexto: f.creditos.map((c) => `NC ${c.ncNumero}`).join(" · "), monto: f.esNc ? 0 : f.saldo, vence: "", atraso: 0, pagada: f.pagada, medio: f.medio, obs: f.observacion ?? "",
     razon: f.razonSocial ?? "", arca: true, esNc: f.esNc, cuit: f.cuit, saldo: f.saldo, sucursal: f.sucursal, puntoId: f.puntoId, puntos,
-    aviso: f.problemas.join(" · "), sinPedido: !f.esNc && !f.pedidoId, pedidoId: f.pedidoId, ubicar: f.ubicar, aplicaciones: f.aplicaciones.map((a) => ({ id: a.id, facturaNumero: a.facturaNumero, monto: a.monto, motivo: a.motivo })), ncMotivos: f.creditos.filter((c) => c.motivo).map((c) => `NC ${c.ncNumero}: ${c.motivo}`).join(" · "),
+    avisoPago: f.avisoPago, aviso: f.problemas.join(" · "), sinPedido: !f.esNc && !f.pedidoId, pedidoId: f.pedidoId, ubicar: f.ubicar, aplicaciones: f.aplicaciones.map((a) => ({ id: a.id, facturaNumero: a.facturaNumero, monto: a.monto, motivo: a.motivo })), ncMotivos: f.creditos.filter((c) => c.motivo).map((c) => `NC ${c.ncNumero}: ${c.motivo}`).join(" · "),
   };
 }
 
-type PedidoConPartida = Parameters<typeof partidaDe>[0] & { id: string; estado: string; obsCobro: string | null };
+type PedidoConPartida = Parameters<typeof partidaDe>[0] & { id: string; estado: string; obsCobro: string | null; pagoAvisadoPor?: string | null };
 
 /** Remito de un pedido (pendiente, entregado, anulado o no entregado). */
 export function filaDeRemito(p: PedidoConPartida & { punto?: { barrio: string; razonSocial?: string | null } | null }, cliente: { id: string; nombre: string; razonSocial?: string | null; condicionPago: Parameters<typeof partidaDe>[1] }, hoyStr: string): FilaComprobante {
@@ -24,6 +24,6 @@ export function filaDeRemito(p: PedidoConPartida & { punto?: { barrio: string; r
   return {
     id: p.id, clienteId: cliente.id, cliente: cliente.nombre, tipo: "REMITO", numero: x.numero, cargado: x.cargado, fecha: x.fecha,
     entregado: x.entregado, bruto: x.bruto, nc: x.nc, cubierta: x.cubierta, anulado: p.estado === "CANCELADO" ? "Anulado" : p.estado === "NO_ENTREGADO" ? "No entregado" : null, ncTexto: x.ncNumeros.map((n) => `NC ${n}`).join(" · "), monto: x.monto, vence: x.vence, atraso: x.entregado ? diasDeAtraso(x.vence, hoyStr) : 0, pagada: x.pagada, medio: x.medio, obs: p.obsCobro ?? "",
-    razon: p.punto?.razonSocial || cliente.razonSocial || "", sucursal: p.punto?.barrio ?? null, ubicar: enlaceUbicar(p),
+    avisoPago: x.pagada ? null : p.pagoAvisadoPor ?? null, razon: p.punto?.razonSocial || cliente.razonSocial || "", sucursal: p.punto?.barrio ?? null, ubicar: enlaceUbicar(p),
   };
 }

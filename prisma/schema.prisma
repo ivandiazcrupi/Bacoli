@@ -210,6 +210,8 @@ model Pedido {
   cobro           EstadoCobro?
   medioCobro      MedioPago?
   montoCobrado    Decimal?     @db.Decimal(14, 2)
+  pagoAvisadoPor  String? // nombre del vendedor que indicó que el cliente pagó; la oficina lo confirma en Cuenta corriente (registrar el pago borra el aviso)
+  pagoAvisadoEn   DateTime?
   obsCobro        String? // observación de la cobranza: N° de cheque, de comprobante de transferencia, etc.
   manual          Boolean      @default(false) // factura cargada directamente en CUENTA, sin pedido (el total va en webTotal)
   nota            String?

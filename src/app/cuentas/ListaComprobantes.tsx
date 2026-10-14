@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useMemo, useState, useTransition } from "react";
 import { formatoPesos } from "@/lib/numeros";
 import { FiltroLista, SEP } from "./FiltroLista";
-import { deshacerPago, guardarObservacion, registrarPagos } from "./actions";
+import { deshacerPago, descartarAvisoPago, guardarObservacion, registrarPagos } from "./actions";
 import { aplicarNc, deshacerPagoArca, guardarDatosArca, quitarAplicacionNc, registrarPagosArca } from "./arca/actions";
 
 export type FilaComprobante = {
@@ -43,6 +43,7 @@ export type FilaComprobante = {
   pedidoId?: string | null;
   ubicar?: string | null; // enlace que lleva al pedido: su hoja de ruta (resaltado) o la lista de Pedidos si espera día
   aplicaciones?: { id: string; facturaNumero: number; monto: number; motivo?: string | null }[];
+  avisoPago?: string | null; // nombre del vendedor que indicó que se pagó (la oficina lo confirma)
   ncMotivos?: string; // factura: por qué se emitieron sus notas de crédito
 };
 
@@ -328,11 +329,12 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
                     case "monto": return <span key={c.id} className={`whitespace-nowrap text-[14px] font-bold tabular-nums ${f.cubierta || f.anulado ? "text-stone-300 line-through" : f.esNc ? "text-stone-500" : "text-stone-900"}`}>{f.esNc ? "−" : ""}{formatoPesos(f.cubierta || f.anulado || f.esNc ? f.bruto : f.monto)}</span>;
                     case "estado": {
                       const e = estadoDe(f);
-                      const color = e === "Pendiente" ? "bg-rojo-50 text-rojo-700" : e === "Pagada" ? "bg-verde-50 text-verde-700" : e === "NC sin aplicar" ? "bg-[#fdf8e3] text-[#8a6a05]" : "";
+                      const color = e === "Pendiente" && f.avisoPago ? "bg-[#fdf8e3] text-[#8a6a05]" : e === "Pendiente" ? "bg-rojo-50 text-rojo-700" : e === "Pagada" ? "bg-verde-50 text-verde-700" : e === "NC sin aplicar" ? "bg-[#fdf8e3] text-[#8a6a05]" : "";
                       return <span key={c.id} className="flex min-w-0 items-center justify-center gap-2" title={e === "Pendiente" && f.atraso > 0 ? `Vencida hace ${f.atraso} días` : undefined}>
                         <span className={`flex h-7 w-fit max-w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 font-bold ${color}`}>
                           {e === "NC sin aplicar" ? <button type="button" onClick={() => { setMotivoNc(""); setPicker(picker === f.id ? null : f.id); }} className="font-bold hover:underline">Aplicar a factura</button>
                             : e === "Pagada" ? <><span>Pagada{f.medio ? <span className="text-[11.5px] font-medium"> · {TEXTO_MEDIO[f.medio] ?? ""}</span> : null}</span><button type="button" title="Deshacer el pago" aria-label="Deshacer el pago" onClick={() => deshacer(f.id, !!f.arca)} className="text-[11px] opacity-50 hover:opacity-100">✕</button></>
+                            : e === "Pendiente" && f.avisoPago ? <><span title={`${f.avisoPago} indicó que se pagó. Falta tu confirmación: registrá el pago (tildá el comprobante) o descartá el aviso con la ✕.`}>{f.avisoPago.split(" ")[0].slice(0, 12)} avisó pago</span><button type="button" title="Descartar el aviso (no se pagó)" aria-label="Descartar el aviso" onClick={() => window.confirm(`¿Descartar el aviso de ${f.avisoPago}? El comprobante sigue pendiente.`) && f.pedidoId !== null && empezar(async () => { await descartarAvisoPago(f.pedidoId ?? f.id); router.refresh(); })} className="text-[11px] opacity-50 hover:opacity-100">✕</button></>
                             : e === "Pendiente" ? <span>Pendiente{f.atraso > 0 ? <span className="text-[12px] font-medium opacity-80"> · {f.atraso} d</span> : null}</span>
                             : <span className="font-medium text-stone-500">{e === "Anulado" ? f.anulado : e}</span>}
                         </span>

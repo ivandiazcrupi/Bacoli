@@ -156,7 +156,7 @@ export async function registrarCobro(pedidoId: string, medio: string, monto?: nu
   await db.$transaction(async (tx) => {
     await tx.pedido.update({
       where: { id: pedidoId },
-      data: { cobro: "COBRADO", medioCobro: medio as MedioPago, montoCobrado: cobrado, pagado: cobrado + 0.005 >= debido },
+      data: { cobro: "COBRADO", medioCobro: medio as MedioPago, montoCobrado: cobrado, pagado: cobrado + 0.005 >= debido, pagoAvisadoPor: null, pagoAvisadoEn: null },
     });
     if (pedido.clienteId) {
       await tx.movimientoCuenta.create({

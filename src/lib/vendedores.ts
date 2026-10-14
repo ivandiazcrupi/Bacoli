@@ -58,7 +58,7 @@ export const etiquetaMes = (m: string) => MESES[Number(m.slice(5)) - 1].slice(0,
 export type FilaVendedor = {
   id: string; f: string; cargado: string; entrega: string | null; clienteId: string; cliente: string; barrio: string;
   items: { cantidad: number; nombre: string }[]; neto: number; total: number; unidades: number;
-  estado: "PENDIENTE" | "ENTREGADO" | "NO_ENTREGADO"; pagado: boolean; medio: string | null; aCuenta: boolean; comprobante: string | null; vendedorId: string | null;
+  estado: "PENDIENTE" | "ENTREGADO" | "NO_ENTREGADO"; pagado: boolean; medio: string | null; aCuenta: boolean; comprobante: string | null; vendedorId: string | null; avisadoPor: string | null;
 };
 
 /**
@@ -93,7 +93,7 @@ export async function filasDelPeriodo(desde: string, hasta: string): Promise<Fil
       unidades: bultosDe(p.items) * UNIDADES_POR_PAQUETE,
       estado: p.estado as FilaVendedor["estado"], pagado: p.pagado, medio: p.medioCobro, aCuenta: p.cobro === "CUENTA_CORRIENTE",
       comprobante: p.conFactura ? p.numeroFactura : p.remitoNumero ? formatoRemito(p.remitoNumero) : null,
-      vendedorId: vendedorEn(porCliente.get(p.clienteId!) ?? [], f, p.cliente!.vendedorId),
+      vendedorId: vendedorEn(porCliente.get(p.clienteId!) ?? [], f, p.cliente!.vendedorId), avisadoPor: p.pagado ? null : p.pagoAvisadoPor,
     };
   });
 }

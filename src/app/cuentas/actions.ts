@@ -38,6 +38,15 @@ export async function deshacerPago(pedidoId: string): Promise<Resultado> {
   return r.ok ? { ok: true } : { ok: false, error: r.error ?? "No se pudo deshacer." };
 }
 
+/** La oficina descarta el aviso de un vendedor ("indicó que se pagó") cuando la plata no llegó. */
+export async function descartarAvisoPago(pedidoId: string): Promise<Resultado> {
+  await exigirOficina();
+  await db.pedido.update({ where: { id: pedidoId }, data: { pagoAvisadoPor: null, pagoAvisadoEn: null } });
+  revalidatePath("/cuentas", "layout");
+  revalidatePath("/vendedor", "layout");
+  return { ok: true };
+}
+
 /** Observación de la cobranza (N° de cheque, de comprobante de transferencia, etc.). */
 export async function guardarObservacion(pedidoId: string, texto: string): Promise<Resultado> {
   await exigirOficina();
