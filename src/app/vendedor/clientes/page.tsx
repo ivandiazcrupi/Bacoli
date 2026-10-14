@@ -26,7 +26,7 @@ export default async function VendedorClientes({ searchParams }: { searchParams:
     <>
       <Cabecera usuario={usuario} />
       <main className={CONTENEDOR_PEDIDOS}>
-        <EncabezadoVendedor activa="clientes" derecha={<Link href="/vendedor/nuevo" className="whitespace-nowrap rounded-lg bg-verde-700 px-4 py-3 text-sm font-bold uppercase tracking-wide text-white hover:bg-verde-800 sm:px-10">+ Cargar pedido</Link>} />
+        <EncabezadoVendedor activa="clientes" titulo={vendedor?.nombre} derecha={<Link href="/vendedor/nuevo" className="whitespace-nowrap rounded-lg bg-verde-700 px-4 py-3 text-sm font-bold uppercase tracking-wide text-white hover:bg-verde-800 sm:px-10">+ Cargar pedido</Link>} />
         <FiltrosClientes q={q} zona={zona} estado={estado} zonas={zonas.map((z) => ({ id: z.id, nombre: z.nombre }))} base="/vendedor/clientes" />
         <p className="text-sm text-stone-600">
           <b className="text-stone-900">{clientes.length}</b> {clientes.length === 1 ? "cliente" : "clientes"} · <b className="text-stone-900">{totalPuntos}</b> {totalPuntos === 1 ? "sucursal" : "sucursales"} (puntos de entrega)

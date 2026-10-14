@@ -9,12 +9,12 @@ const ITEMS: { id: PestañaVendedor; texto: string; href: string }[] = [
   { id: "clientes", texto: "Clientes", href: "/vendedor/clientes" },
 ];
 
-// Título "Mi hoja" (con botones a la derecha) y las solapas del vendedor, iguales a las del resto del sistema.
-export function EncabezadoVendedor({ activa, derecha }: { activa: PestañaVendedor; derecha?: ReactNode; titulo?: string }) {
+// Título con el nombre del vendedor (con botones a la derecha) y las solapas del vendedor, iguales a las del resto del sistema.
+export function EncabezadoVendedor({ activa, derecha, titulo = "Vendedor" }: { activa: PestañaVendedor; derecha?: ReactNode; titulo?: string }) {
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold tracking-tight">Mi hoja</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{titulo}</h1>
         <div className="flex flex-wrap items-center gap-2">{derecha}</div>
       </div>
       <PestanasSeccion items={ITEMS} activa={activa} etiqueta="Vendedor" />

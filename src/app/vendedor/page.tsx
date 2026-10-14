@@ -25,7 +25,7 @@ export default async function MiHoja({ searchParams }: { searchParams: Promise<{
       <Cabecera usuario={usuario} />
       <main className={`${CONTENEDOR_PEDIDOS} space-y-5`}>
         <EncabezadoVendedor
-          activa="estadisticas"
+          activa="estadisticas" titulo={vendedor?.nombre}
           derecha={
             <>
               <nav className="flex items-center gap-2" aria-label="Mes">

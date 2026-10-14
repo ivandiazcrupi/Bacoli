@@ -4,7 +4,7 @@ import { Cabecera } from "@/components/Cabecera";
 import { desgloseIva } from "@/lib/cuenta";
 import { db } from "@/lib/db";
 import { esFechaValida, hoy, sumarDias } from "@/lib/fechas";
-import { bultosDe, focacciasDe, unidadesPorSabor } from "@/lib/ruta";
+import { bultosDe, focacciasDe, totalUnidades, unidadesPorSabor } from "@/lib/ruta";
 import { exigirOficina } from "@/lib/session";
 import { vendedoresDesbloqueado } from "@/lib/claveVendedores";
 import { ventasEntregadas } from "@/lib/vendedores";
@@ -59,6 +59,9 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
   const total = { pedidos: delMes.length, paq: delMes.reduce((t, p) => t + p.paq, 0), neto: delMes.reduce((t, p) => t + p.neto, 0) };
   const ant = filas.filter((p) => mesDe(p.f) === mesAnterior(mes));
   const antPaq = ant.reduce((t, p) => t + p.paq, 0), antNeto = ant.reduce((t, p) => t + p.neto, 0);
+  // Unidades vendidas = pizzas que fabricamos (prepizzas ×2 por paquete, pizzas por unidad) + focaccias; los productos de la tienda que no fabricamos no cuentan.
+  const unidadesDe = (x: P) => totalUnidades(x.sabores) + x.foc;
+  const unidades = delMes.reduce((t, p) => t + unidadesDe(p), 0), antUnidades = ant.reduce((t, p) => t + unidadesDe(p), 0);
   const clientesQuePidieron = new Set(mayoristas.map((p) => p.clienteId)).size;
 
   // Pedidos por día
@@ -106,7 +109,7 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
   ].filter((x) => x.valor > 0);
 
   const variacion = (a: number, b: number) => (b > 0 ? Math.round(((a - b) / b) * 100) : null);
-  const vPaq = variacion(total.paq, antPaq), vNeto = variacion(total.neto, antNeto);
+  const vUni = variacion(unidades, antUnidades), vPaq = variacion(total.paq, antPaq), vNeto = variacion(total.neto, antNeto);
   const nav = "flex h-9 items-center rounded-md border border-stone-300 bg-white px-3 text-sm font-semibold hover:border-stone-600";
 
   return (
@@ -130,10 +133,10 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
           {[
             { t: "Pedidos", v: String(total.pedidos), d: "en el mes" },
             { t: "Paquetes", v: paq(total.paq), d: vPaq === null ? "mes anterior sin datos" : `${vPaq >= 0 ? "▲" : "▼"} ${Math.abs(vPaq)}% vs mes anterior`, c: vPaq === null ? "" : vPaq >= 0 ? "text-emerald-400" : "text-red-400" },
+            { t: "Unidades vendidas", v: unidades.toLocaleString("es-AR"), d: vUni === null ? "pizzas + focaccias" : `${vUni >= 0 ? "▲" : "▼"} ${Math.abs(vUni)}% vs mes anterior`, c: vUni === null ? "" : vUni >= 0 ? "text-emerald-400" : "text-red-400" },
             { t: "Facturación sin IVA", v: pesos(total.neto), d: vNeto === null ? "mes anterior sin datos" : `${vNeto >= 0 ? "▲" : "▼"} ${Math.abs(vNeto)}% vs mes anterior`, c: vNeto === null ? "" : vNeto >= 0 ? "text-emerald-400" : "text-red-400" },
             { t: "Clientes que pidieron", v: String(clientesQuePidieron), d: "mayoristas, sumando sucursales" },
             { t: "Ticket promedio", v: mayoristas.length ? pesos(mayoristas.reduce((t, p) => t + p.neto, 0) / mayoristas.length) : "—", d: "por pedido mayorista" },
-            { t: "Comisiones", v: verComisiones ? pesos(totalComision) : "—", d: verComisiones ? "de pedidos entregados" : "con la contraseña de Vendedores" },
           ].map((x) => (
             <div key={x.t} className="bg-stone-900 px-4 py-4 text-center">
               <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-stone-400">{x.t}</p>

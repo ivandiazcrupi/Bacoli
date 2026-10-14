@@ -16,7 +16,7 @@ export default async function VendedorPedidos() {
     <>
       <Cabecera usuario={usuario} />
       <main className={CONTENEDOR_PEDIDOS}>
-        <EncabezadoVendedor activa="pedidos" derecha={<Link href="/vendedor/nuevo" className="whitespace-nowrap rounded-lg bg-verde-700 px-4 py-3 text-sm font-bold uppercase tracking-wide text-white hover:bg-verde-800 sm:px-10">+ Cargar pedido</Link>} />
+        <EncabezadoVendedor activa="pedidos" titulo={vendedor?.nombre} derecha={<Link href="/vendedor/nuevo" className="whitespace-nowrap rounded-lg bg-verde-700 px-4 py-3 text-sm font-bold uppercase tracking-wide text-white hover:bg-verde-800 sm:px-10">+ Cargar pedido</Link>} />
         {vendedor ? (
           <TablaPedidosVendedor filas={filas} pct={Number(vendedor.comisionPct ?? 0)} modo="vendedor" />
         ) : (
