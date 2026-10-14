@@ -5,14 +5,14 @@ import { cabeceraTabla, estiloCampo } from "@/components/campos";
 import { titulo } from "@/lib/mayusculas";
 import { cambiarActivoSucursal, eliminarSucursal, guardarSucursal } from "./actions";
 
-export type DatosSucursal = { id: string; alias: string; direccion: string; barrio: string; zonaId: string; telefono: string; comentario: string; cuit: string; activo: boolean };
+export type DatosSucursal = { id: string; alias: string; direccion: string; barrio: string; zonaId: string; telefono: string; comentario: string; cuit: string; razonSocial: string; activo: boolean };
 type Zona = { id: string; nombre: string };
 
-// CUIT propio de la sucursal (franquicias): apagado por ahora (pedido del dueño). Los datos y la lógica siguen; para volver a mostrarlo, ponerlo en true.
-const MOSTRAR_CUIT = false;
+// Razón social y CUIT propios de la sucursal (franquicias, ej. cada local de la birrería): a la vista otra vez (pedido del dueño). Vacíos = usa los del cliente.
+const MOSTRAR_CUIT = true;
 
 // Columnas de la fila (PC): barrio, dirección, zona, teléfono, comentario y los botones.
-const COLUMNAS = MOSTRAR_CUIT ? "lg:grid-cols-[1.4fr_2.1fr_1.2fr_1.3fr_1.4fr_1.5fr_19.5rem]" : "lg:grid-cols-[1.5fr_2.3fr_1.3fr_1.4fr_1.5fr_19.5rem]";
+const COLUMNAS = MOSTRAR_CUIT ? "lg:grid-cols-[1.1fr_1.7fr_1fr_1.1fr_1.5fr_1.2fr_1.2fr_19.5rem]" : "lg:grid-cols-[1.5fr_2.3fr_1.3fr_1.4fr_1.5fr_19.5rem]";
 const celda = "min-w-0";
 const campo = `${estiloCampo} mt-0 py-3 text-base`;
 const boton = "rounded-md px-4 py-3 text-sm font-semibold shadow-sm";
@@ -22,7 +22,7 @@ const etiquetaChica = "mb-0.5 block text-xs font-medium text-stone-500 lg:hidden
 export function EncabezadoSucursales() {
   return (
     <div className={`hidden gap-2 px-5 py-3.5 lg:grid ${cabeceraTabla} ${COLUMNAS}`}>
-      <span>Barrio *</span><span>Dirección *</span><span>Zona *</span><span>Teléfono</span>{MOSTRAR_CUIT && <span title="Solo si la sucursal tiene un CUIT distinto al del cliente (franquicia)">CUIT propio</span>}<span>Comentario</span><span className="w-[19.5rem]" />
+      <span>Barrio *</span><span>Dirección *</span><span>Zona *</span><span>Teléfono</span>{MOSTRAR_CUIT && <span title="Solo si la sucursal tiene otra razón social que el cliente (franquicia)">Razón social propia</span>}{MOSTRAR_CUIT && <span title="Solo si la sucursal tiene un CUIT distinto al del cliente (franquicia)">CUIT propio</span>}<span>Comentario</span><span className="w-[19.5rem]" />
     </div>
   );
 }
@@ -30,7 +30,7 @@ export function EncabezadoSucursales() {
 // Una sucursal por fila, siempre visible y editable. Con `sucursal` edita; sin ella, agrega una nueva.
 export function FilaSucursal({ clienteId, sucursal, zonas, barrios }: { clienteId: string; sucursal?: DatosSucursal; zonas: Zona[]; barrios: string[] }) {
   const [estado, enviar, cargando] = useActionState(guardarSucursal.bind(null, clienteId, sucursal?.id ?? null), undefined);
-  const v = (c: "alias" | "direccion" | "barrio" | "zonaId" | "telefono" | "comentario" | "cuit") => estado?.valores?.[c] ?? sucursal?.[c] ?? "";
+  const v = (c: "alias" | "direccion" | "barrio" | "zonaId" | "telefono" | "comentario" | "cuit" | "razonSocial") => estado?.valores?.[c] ?? sucursal?.[c] ?? "";
   const [estadoBorrar, borrar] = useActionState(eliminarSucursal, undefined);
   const activa = sucursal?.activo ?? true;
 
@@ -59,6 +59,14 @@ export function FilaSucursal({ clienteId, sucursal, zonas, barrios }: { clienteI
           <span className={etiquetaChica}>Teléfono</span>
           <input name="telefono" aria-label="Teléfono" placeholder={sucursal ? "" : "Teléfono"} inputMode="tel" defaultValue={v("telefono")} className={campo} />
         </label>
+        {MOSTRAR_CUIT ? (
+          <label className={celda}>
+            <span className={etiquetaChica}>Razón social propia (si es otra)</span>
+            <input name="razonSocial" aria-label="Razón social propia de la sucursal" placeholder={sucursal ? "" : "Razón social propia"} autoCapitalize="characters" defaultValue={v("razonSocial")} title="Solo si la sucursal tiene otra razón social que el cliente (franquicia). Vacío = usa la del cliente." className={`${campo} dato`} />
+          </label>
+        ) : (
+          <input type="hidden" name="razonSocial" value={v("razonSocial")} />
+        )}
         {MOSTRAR_CUIT ? (
           <label className={celda}>
             <span className={etiquetaChica}>CUIT propio (si es otro)</span>

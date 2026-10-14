@@ -45,7 +45,7 @@ export async function Listado({ tipo, searchParams, ruta }: { tipo: "FACTURA" | 
       ...(estado === "sin-pagar" ? { pagado: false } : estado === "pagadas" ? { pagado: true } : {}),
       ...(palabras.length ? { AND: palabras.map((w) => ({ cliente: { nombre: { contains: w, mode: "insensitive" as const } } })) } : {}),
     },
-    include: { items: true, cliente: true, ...incluirNc },
+    include: { items: true, cliente: true, punto: true, ...incluirNc },
   });
 
   const todas: FilaComprobante[] = pedidos.flatMap((p) => (p.cliente ? [filaDeRemito(p, p.cliente, hoyStr)] : []));

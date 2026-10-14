@@ -38,7 +38,7 @@ export async function buscarDestinos(q: string): Promise<Destino[]> {
       cliente: { activo: true, ...(usuario.rol === "VENDEDOR" ? { vendedorId: usuario.id } : {}) }, // el vendedor solo busca entre sus clientes
       AND: palabras.map((w) => {
         const contiene = { contains: w, mode: "insensitive" as const };
-        return { OR: [{ alias: contiene }, { direccion: contiene }, { barrio: contiene }, { cliente: { nombre: contiene } }, { cliente: { razonSocial: contiene } }] };
+        return { OR: [{ alias: contiene }, { direccion: contiene }, { barrio: contiene }, { razonSocial: contiene }, { cliente: { nombre: contiene } }, { cliente: { razonSocial: contiene } }] };
       }),
     },
     include: { cliente: true, zona: true },

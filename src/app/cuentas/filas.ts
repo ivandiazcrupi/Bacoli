@@ -19,11 +19,11 @@ export function filaDeArca(f: FilaFactura, puntos: PuntoCliente[]): FilaComproba
 type PedidoConPartida = Parameters<typeof partidaDe>[0] & { id: string; estado: string; obsCobro: string | null };
 
 /** Remito de un pedido (pendiente, entregado, anulado o no entregado). */
-export function filaDeRemito(p: PedidoConPartida & { punto?: { barrio: string } | null }, cliente: { id: string; nombre: string; razonSocial?: string | null; condicionPago: Parameters<typeof partidaDe>[1] }, hoyStr: string): FilaComprobante {
+export function filaDeRemito(p: PedidoConPartida & { punto?: { barrio: string; razonSocial?: string | null } | null }, cliente: { id: string; nombre: string; razonSocial?: string | null; condicionPago: Parameters<typeof partidaDe>[1] }, hoyStr: string): FilaComprobante {
   const x = partidaDe(p, cliente.condicionPago);
   return {
     id: p.id, clienteId: cliente.id, cliente: cliente.nombre, tipo: "REMITO", numero: x.numero, cargado: x.cargado, fecha: x.fecha,
     entregado: x.entregado, bruto: x.bruto, nc: x.nc, cubierta: x.cubierta, anulado: p.estado === "CANCELADO" ? "Anulado" : p.estado === "NO_ENTREGADO" ? "No entregado" : null, ncTexto: x.ncNumeros.map((n) => `NC ${n}`).join(" · "), monto: x.monto, vence: x.vence, atraso: x.entregado ? diasDeAtraso(x.vence, hoyStr) : 0, pagada: x.pagada, medio: x.medio, obs: p.obsCobro ?? "",
-    razon: cliente.razonSocial ?? "", sucursal: p.punto?.barrio ?? null, ubicar: enlaceUbicar(p),
+    razon: p.punto?.razonSocial || cliente.razonSocial || "", sucursal: p.punto?.barrio ?? null, ubicar: enlaceUbicar(p),
   };
 }

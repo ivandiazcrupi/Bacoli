@@ -11,6 +11,7 @@ export const esquemaSucursal = z.object({
   zonaId: z.string().min(1, "Elegí la zona de reparto."),
   telefono: textoOpcional,
   comentario: textoOpcional,
+  razonSocial: textoOpcional, // solo si la sucursal tiene una razón social distinta a la del cliente
   cuit: textoOpcional, // solo si la sucursal tiene un CUIT distinto al del cliente (franquicia)
 }).refine((x) => !x.cuit || cuitValido(x.cuit), { message: "El CUIT de la sucursal no es válido (11 dígitos).", path: ["cuit"] });
 
