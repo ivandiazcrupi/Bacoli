@@ -3,7 +3,7 @@ import { Cabecera } from "@/components/Cabecera";
 import { importeVigente } from "@/lib/cuenta";
 import { db } from "@/lib/db";
 import { deFecha } from "@/lib/fechas";
-import { exigirVendedor } from "@/lib/session";
+import { exigirVendedor, vendedorDeUsuario } from "@/lib/session";
 import { CONTENEDOR_PEDIDOS } from "../pedidos/Encabezado";
 import { EncabezadoVendedor } from "./EncabezadoVendedor";
 import { MisPedidos } from "./MisPedidos";
@@ -11,8 +11,9 @@ import { MisPedidos } from "./MisPedidos";
 // MIS PEDIDOS (vendedor): solo los pedidos de SUS clientes, con su estado y si están pagos o no.
 export default async function VendedorPedidos() {
   const usuario = await exigirVendedor();
+  const vendedor = await vendedorDeUsuario(usuario.id); // su ficha en Comercial → Vendedores (si todavía no la enlazaron, no ve nada)
   const pedidos = await db.pedido.findMany({
-    where: { cliente: { vendedorId: usuario.id } },
+    where: { cliente: { vendedorId: vendedor?.id ?? "-" } },
     include: { items: true, cliente: { select: { nombre: true } }, punto: { select: { barrio: true } } },
     orderBy: { creadoEn: "desc" },
     take: 1000,

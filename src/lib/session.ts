@@ -78,3 +78,9 @@ export async function exigirCarga() {
   if (!esPersonalDeOficina(usuario.rol) && !esVendedor(usuario.rol)) redirect("/");
   return usuario;
 }
+
+/** El vendedor (de la lista de Vendedores) que corresponde a un usuario de rol Vendedor, o null si todavía no lo enlazaron con ninguno. */
+export async function vendedorDeUsuario(usuarioId: string) {
+  const { db } = await import("./db");
+  return db.vendedor.findUnique({ where: { usuarioId } });
+}

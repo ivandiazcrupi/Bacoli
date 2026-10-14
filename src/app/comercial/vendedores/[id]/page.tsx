@@ -9,7 +9,7 @@ import { etiquetaMes, mesAnterior, mesSiguiente, nombreMes, ventasEntregadas } f
 import { Barras, BarrasH, Panel, SinDatos } from "../../graficos/Graficos";
 import { CONTENEDOR_PEDIDOS } from "../../../pedidos/Encabezado";
 import { EncabezadoComercial } from "../../EncabezadoComercial";
-import { FormComision } from "../Formularios";
+import { BotonActivo, FormProponerVarios, FormVendedor } from "../Formularios";
 
 const fechaCorta = (d: Date) => d.toLocaleDateString("es-AR", { timeZone: "America/Argentina/Buenos_Aires", day: "2-digit", month: "2-digit", year: "2-digit" });
 const paq = (n: number) => n.toLocaleString("es-AR", { maximumFractionDigits: 1 });
@@ -23,16 +23,20 @@ export default async function FichaVendedor({ params, searchParams }: { params: 
   const { mes: mesParam } = await searchParams;
   const actual = hoy().slice(0, 7);
   const mes = mesParam && /^\d{4}-\d{2}$/.test(mesParam) && esFechaValida(`${mesParam}-01`) ? mesParam : actual;
-  const vendedor = await db.usuario.findUnique({ where: { id }, select: { id: true, nombre: true, rol: true, activo: true, comisionPct: true } });
-  if (!vendedor || vendedor.rol !== "VENDEDOR") notFound();
+  const vendedor = await db.vendedor.findUnique({ where: { id }, include: { usuario: { select: { id: true, nombre: true } } } });
+  if (!vendedor) notFound();
   const pct = Number(vendedor.comisionPct ?? 0);
 
   const meses6 = Array.from({ length: 6 }, (_, i) => { let m = mes; for (let k = 0; k < 5 - i; k++) m = mesAnterior(m); return m; });
-  const [todas, clientes, cambios] = await Promise.all([
+  const [todas, clientes, cambios, todosClientes, usuariosLibres, vendedoresTodos] = await Promise.all([
     ventasEntregadas(`${meses6[0]}-01`, `${mesSiguiente(mes)}-01`),
     db.cliente.findMany({ where: { vendedorId: id }, orderBy: { nombre: "asc" }, select: { id: true, nombre: true, activo: true } }),
     db.asignacionVendedor.findMany({ where: { OR: [{ vendedorId: id }, { anteriorId: id }], estado: "APROBADA" }, orderBy: { resueltoEn: "desc" }, take: 30, include: { cliente: { select: { nombre: true } } } }),
+    db.cliente.findMany({ where: { activo: true, NOT: { vendedorId: id } }, orderBy: { nombre: "asc" }, select: { id: true, nombre: true, vendedorId: true } }),
+    db.usuario.findMany({ where: { rol: "VENDEDOR", activo: true, OR: [{ vendedor: null }, { vendedor: { id } }] }, select: { id: true, nombre: true }, orderBy: { nombre: "asc" } }),
+    db.vendedor.findMany({ select: { id: true, nombre: true } }),
   ]);
+  const nombreVend = new Map(vendedoresTodos.map((v) => [v.id, v.nombre]));
   const mias = todas.filter((x) => x.vendedorId === id);
   const delMes = mias.filter((x) => x.f.slice(0, 7) === mes);
   const neto = delMes.reduce((t, x) => t + x.neto, 0), comision = (neto * pct) / 100;
@@ -72,7 +76,10 @@ export default async function FichaVendedor({ params, searchParams }: { params: 
               <h1 className="text-2xl font-semibold tracking-tight">{vendedor.nombre}</h1>
               {!vendedor.activo && <span className="rounded bg-stone-100 px-2 py-0.5 text-xs text-stone-600">desactivado</span>}
             </div>
-            <div className="flex items-center gap-2 text-sm text-stone-600">Comisión: <FormComision vendedorId={id} pct={pct ? String(pct).replace(".", ",") : ""} /></div>
+            <BotonActivo id={id} activo={vendedor.activo} />
+          </div>
+          <div className="mt-4 border-t border-stone-200 pt-4">
+            <FormVendedor vendedor={{ id, nombre: vendedor.nombre, pct: pct ? String(pct).replace(".", ",") : "", usuarioId: vendedor.usuario?.id ?? "" }} usuarios={usuariosLibres} />
           </div>
           <dl className="mt-4 grid grid-cols-2 gap-4 border-t border-stone-200 pt-4 md:grid-cols-5">
             {[
@@ -115,6 +122,14 @@ export default async function FichaVendedor({ params, searchParams }: { params: 
             </table>
           </div>
         </section>
+
+        {vendedor.activo && (
+          <section className="rounded-lg border border-stone-300 bg-white p-4">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-stone-600">Asignarle clientes</h2>
+            <p className="mb-3 mt-0.5 text-[13px] text-stone-600">Tildá los clientes y elegí desde qué fecha valen. Se proponen y <b>otro dueño los aprueba</b>; hasta entonces siguen con su vendedor actual.</p>
+            <FormProponerVarios vendedorId={id} clientes={todosClientes.map((c) => ({ id: c.id, nombre: c.nombre, de: c.vendedorId ? nombreVend.get(c.vendedorId) ?? null : null }))} />
+          </section>
+        )}
 
         <div className="grid gap-4 lg:grid-cols-2">
           <section className="rounded-lg border border-stone-300 bg-white p-4">

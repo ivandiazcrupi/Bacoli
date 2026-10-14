@@ -11,7 +11,7 @@ import { IVA_ENVIO, IVA_PCT, anotarEntregaEnCuenta, sincronizarCuentaPedido, sal
 import { db } from "@/lib/db";
 import { aFecha, esFechaValida, hoy } from "@/lib/fechas";
 import { formatoPesos, leerMonto } from "@/lib/numeros";
-import { exigirCarga, exigirOficina } from "@/lib/session";
+import { exigirCarga, exigirOficina, vendedorDeUsuario } from "@/lib/session";
 import { importarPedidosWeb, type ResultadoImportacion } from "@/lib/empretienda";
 import { productosParaCliente, type ProductoPedido } from "./datos";
 
@@ -30,12 +30,13 @@ export type DatosPedido = {
 /** Busca sucursales por cliente, marca, sucursal, dirección o barrio: cada palabra puede coincidir con cualquiera. */
 export async function buscarDestinos(q: string): Promise<Destino[]> {
   const usuario = await exigirCarga();
+  const propio = usuario.rol === "VENDEDOR" ? (await vendedorDeUsuario(usuario.id))?.id ?? "-" : null; // un vendedor solo ve sus clientes
   const palabras = q.trim().split(/\s+/).filter(Boolean).slice(0, 6);
   if (palabras.length === 0) return [];
   const puntos = await db.puntoEntrega.findMany({
     where: {
       activo: true,
-      cliente: { activo: true, ...(usuario.rol === "VENDEDOR" ? { vendedorId: usuario.id } : {}) }, // el vendedor solo busca entre sus clientes
+      cliente: { activo: true, ...(propio ? { vendedorId: propio } : {}) },
       AND: palabras.map((w) => {
         const contiene = { contains: w, mode: "insensitive" as const };
         return { OR: [{ alias: contiene }, { direccion: contiene }, { barrio: contiene }, { razonSocial: contiene }, { cliente: { nombre: contiene } }, { cliente: { razonSocial: contiene } }] };
@@ -54,7 +55,7 @@ export async function datosNuevoPedido(puntoId: string): Promise<DatosPedido | n
   const usuario = await exigirCarga();
   const punto = await db.puntoEntrega.findUnique({ where: { id: puntoId }, include: { cliente: { include: { listaPrecios: true } } } });
   if (!punto) return null;
-  if (usuario.rol === "VENDEDOR" && punto.cliente.vendedorId !== usuario.id) return null;
+  if (usuario.rol === "VENDEDOR" && punto.cliente.vendedorId !== (await vendedorDeUsuario(usuario.id))?.id) return null;
   return {
     puntoId,
     cliente: punto.cliente.nombre,
@@ -119,7 +120,7 @@ export async function crearPedido(_: EstadoPedidoForm, formData: FormData): Prom
   const puntoId = String(formData.get("puntoId") ?? "");
   const punto = await db.puntoEntrega.findUnique({ where: { id: puntoId }, include: { cliente: true } });
   if (!punto) return { error: "Elegí el cliente y la sucursal." };
-  if (usuario.rol === "VENDEDOR" && punto.cliente.vendedorId !== usuario.id) return { error: "Ese cliente no es tuyo." };
+  if (usuario.rol === "VENDEDOR" && punto.cliente.vendedorId !== (await vendedorDeUsuario(usuario.id))?.id) return { error: "Ese cliente no es tuyo." };
   const leidos = await leerRenglones(formData);
   if ("error" in leidos) return { error: leidos.error };
 

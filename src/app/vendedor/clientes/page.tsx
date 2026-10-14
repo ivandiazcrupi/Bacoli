@@ -4,7 +4,7 @@ import { importeVigente } from "@/lib/cuenta";
 import { db } from "@/lib/db";
 import { titulo } from "@/lib/mayusculas";
 import { formatoPesos } from "@/lib/numeros";
-import { exigirVendedor } from "@/lib/session";
+import { exigirVendedor, vendedorDeUsuario } from "@/lib/session";
 import { enlaceWhatsApp } from "@/lib/telefonos";
 import { CONTENEDOR_PEDIDOS } from "../../pedidos/Encabezado";
 import { EncabezadoVendedor } from "../EncabezadoVendedor";
@@ -12,8 +12,9 @@ import { EncabezadoVendedor } from "../EncabezadoVendedor";
 // MIS CLIENTES (vendedor): solo sus clientes, con dónde entregan y cuánto tienen sin pagar.
 export default async function VendedorClientes() {
   const usuario = await exigirVendedor();
+  const vendedor = await vendedorDeUsuario(usuario.id);
   const clientes = await db.cliente.findMany({
-    where: { vendedorId: usuario.id, activo: true },
+    where: { vendedorId: vendedor?.id ?? "-", activo: true },
     include: { puntos: { where: { activo: true }, orderBy: { barrio: "asc" } }, pedidos: { where: { estado: "ENTREGADO", pagado: false }, include: { items: true } } },
     orderBy: { nombre: "asc" },
   });
@@ -23,7 +24,7 @@ export default async function VendedorClientes() {
       <main className={CONTENEDOR_PEDIDOS}>
         <EncabezadoVendedor activa="clientes" titulo="Mis clientes" derecha={<Link href="/vendedor/nuevo" className="flex h-10 items-center rounded-lg bg-verde-700 px-5 text-sm font-bold uppercase tracking-wide text-white hover:bg-verde-800">+ Cargar pedido</Link>} />
         {clientes.length === 0 ? (
-          <p className="mt-4 rounded-lg border border-dashed border-stone-300 p-4 text-stone-600">Todavía no tenés clientes asignados. La oficina te los asigna desde la ficha de cada cliente.</p>
+          <p className="mt-4 rounded-lg border border-dashed border-stone-300 p-4 text-stone-600">Todavía no tenés clientes asignados. La oficina te los asigna desde Comercial → Vendedores.</p>
         ) : (
           <div className="mt-4 grid gap-3 lg:grid-cols-2">
             {clientes.map((c) => {

@@ -35,9 +35,9 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
     db.zona.findMany({ orderBy: { orden: "asc" } }),
     db.puntoEntrega.findMany({ distinct: ["barrio"], select: { barrio: true }, orderBy: { barrio: "asc" } }),
     db.producto.findMany({ where: { activo: true }, orderBy: [{ orden: "asc" }, { nombre: "asc" }] }),
-    db.usuario.findMany({ where: { rol: "VENDEDOR", activo: true }, select: { id: true, nombre: true }, orderBy: { nombre: "asc" } }),
+    db.vendedor.findMany({ where: { activo: true }, select: { id: true, nombre: true }, orderBy: { nombre: "asc" } }),
     db.asignacionVendedor.findFirst({ where: { clienteId: id, estado: "PENDIENTE" } }),
-    cliente.vendedorId ? db.usuario.findUnique({ where: { id: cliente.vendedorId }, select: { nombre: true } }) : null,
+    cliente.vendedorId ? db.vendedor.findUnique({ where: { id: cliente.vendedorId }, select: { nombre: true } }) : null,
   ]);
   const filasPrecios: FilaPrecio[] = productos.map((p) => {
     const propio = cliente.preciosEspeciales.find((x) => x.productoId === p.id);

@@ -26,8 +26,8 @@ model Usuario {
   actualizadoEn DateTime @updatedAt
 
   salidas Salida[]
-  clientesVendidos Cliente[] @relation("ClientesDelVendedor")
-  comisionPct Decimal? @db.Decimal(5, 2) // % de comisión del vendedor (sobre ventas sin IVA de pedidos entregados)
+  vendedor Vendedor? @relation("VendedorUsuario")
+  comisionPct Decimal? @db.Decimal(5, 2) // (sin uso: la comisión ahora vive en Vendedor)
 }
 
 enum TipoCliente {
@@ -108,7 +108,7 @@ model Cliente {
   maxPedidosImpagos Int?
   maxMonto          Decimal?       @db.Decimal(14, 2)
   vendedorId        String? // vendedor que atiende a este cliente (ve solo sus clientes)
-  vendedor          Usuario? @relation("ClientesDelVendedor", fields: [vendedorId], references: [id], onDelete: SetNull)
+  vendedor          Vendedor? @relation(fields: [vendedorId], references: [id], onDelete: SetNull)
   comisionista      String?
   comisionPct       Decimal?       @db.Decimal(5, 2)
   activo            Boolean        @default(true)
@@ -527,4 +527,18 @@ model AsignacionVendedor {
   resueltoEn   DateTime?
 
   @@index([clienteId, estado])
+}
+
+// VENDEDOR: quien comisiona por las ventas de sus clientes (ej. Migue). Es una lista aparte de los usuarios: no hace falta que entre al sistema.
+// Si se le da acceso (para cargar sus pedidos), se enlaza con un usuario de rol Vendedor.
+model Vendedor {
+  id          String   @id @default(cuid())
+  nombre      String
+  comisionPct Decimal? @db.Decimal(5, 2) // % sobre ventas sin IVA de pedidos entregados
+  activo      Boolean  @default(true)
+  usuarioId   String?  @unique // usuario con el que entra al sistema (opcional)
+  usuario     Usuario? @relation("VendedorUsuario", fields: [usuarioId], references: [id], onDelete: SetNull)
+  creadoEn    DateTime @default(now())
+
+  clientes Cliente[]
 }

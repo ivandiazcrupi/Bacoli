@@ -98,16 +98,9 @@ export function ClienteForm({ accion, inicial, listas, zonas, barrios = [], text
         </div>
       </Bloque>
 
-      <Bloque titulo="Comisión" ayuda="Solo si la venta le deja una comisión a alguien (ej.: Migue 8%). Por ahora queda anotado.">
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Campo etiqueta="Comisionista">
-            <input name="comisionista" autoCapitalize="characters" placeholder="Ej: MIGUE" defaultValue={v("comisionista")} className={estiloDato} />
-          </Campo>
-          <Campo etiqueta="Comisión (%)">
-            <input name="comisionPct" inputMode="decimal" placeholder="Ej: 8" defaultValue={v("comisionPct")} className={estiloCampo} />
-          </Campo>
-        </div>
-      </Bloque>
+      {/* La comisión ahora se maneja en Comercial → Vendedores. Los datos viejos (comisionista y %) se conservan acá, ocultos, para poder pasarlos a vendedores. */}
+      <input type="hidden" name="comisionista" value={v("comisionista")} />
+      <input type="hidden" name="comisionPct" value={v("comisionPct")} />
 
       {zonas && (
         <Bloque titulo="Primera sucursal" ayuda="Después se pueden agregar más.">

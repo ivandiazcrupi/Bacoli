@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { esFechaValida, hoy, sumarDias } from "@/lib/fechas";
 import { bultosDe, focacciasDe, unidadesPorSabor } from "@/lib/ruta";
 import { exigirOficina } from "@/lib/session";
+import { ventasEntregadas } from "@/lib/vendedores";
 import { CONTENEDOR_PEDIDOS } from "../../pedidos/Encabezado";
 import { Barras, BarrasH, Donut, Leyenda, PALETA, Panel, SinDatos } from "./Graficos";
 import { TopClientes } from "./TopClientes";
@@ -73,15 +74,17 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
     porCliente.set(p.clienteId ?? "", c);
   }
 
-  // Comisiones: ventas sin IVA de pedidos ENTREGADOS en el mes, por comisionista
-  const comis = new Map<string, { nombre: string; pct: number; clientes: Set<string | null>; ventas: number; comision: number }>();
-  for (const p of mayoristas) {
-    if (!p.entregado || !p.comisionista || p.pct <= 0) continue;
-    const c = comis.get(p.comisionista) ?? { nombre: p.comisionista, pct: p.pct, clientes: new Set(), ventas: 0, comision: 0 };
-    c.clientes.add(p.clienteId); c.ventas += p.neto; c.comision += (p.neto * p.pct) / 100;
-    comis.set(p.comisionista, c);
-  }
-  const comisiones = [...comis.values()].sort((a, b) => b.comision - a.comision);
+  // Comisiones por vendedor (los de Comercial → Vendedores): ventas sin IVA de pedidos ENTREGADOS del mes × el % de cada vendedor.
+  // Cada venta cuenta para el vendedor que tenía el cliente ese día (ver src/lib/vendedores.ts).
+  const [listaVendedores, ventasMes] = await Promise.all([
+    db.vendedor.findMany({ where: { comisionPct: { not: null } }, select: { id: true, nombre: true, comisionPct: true } }),
+    ventasEntregadas(`${mes}-01`, `${mesSiguiente(mes)}-01`),
+  ]);
+  const comisiones = listaVendedores.map((v) => {
+    const mias = ventasMes.filter((x) => x.vendedorId === v.id);
+    const pct = Number(v.comisionPct ?? 0), ventas = mias.reduce((t, x) => t + x.neto, 0);
+    return { nombre: v.nombre, pct, clientes: new Set(mias.map((x) => x.clienteId)), ventas, comision: (ventas * pct) / 100 };
+  }).filter((c) => c.ventas > 0).sort((x, y) => y.comision - x.comision);
   const totalComision = comisiones.reduce((t, c) => t + c.comision, 0);
 
   // Evolución de 6 meses
@@ -145,7 +148,7 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
           <Panel titulo="Tipo de comprobante"><Donut partes={porTipo} /></Panel>
 
           <Panel titulo="Comisiones de vendedores" nota={`facturación sin IVA de pedidos entregados · ${nombreMes(mes)}`} className="lg:col-span-2">
-            {comisiones.length === 0 ? <SinDatos texto="Ningún pedido entregado este mes de un cliente con comisionista y porcentaje cargado." /> : (
+            {comisiones.length === 0 ? <SinDatos texto="Ningún pedido entregado este mes de un cliente con vendedor y % de comisión (se cargan en Comercial → Vendedores)." /> : (
               <div className="overflow-hidden rounded-md border border-stone-200">
                 <div className="grid grid-cols-[minmax(0,1.4fr)_70px_80px_minmax(0,1fr)_minmax(0,1fr)] gap-x-3 bg-crema-100 px-3 py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-stone-500">
                   <span className="text-left">Vendedor</span><span>%</span><span>Clientes</span><span>Ventas sin IVA</span><span>Comisión</span>

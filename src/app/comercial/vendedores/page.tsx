@@ -8,7 +8,7 @@ import { exigirOficina } from "@/lib/session";
 import { mesAnterior, mesSiguiente, nombreMes, ventasEntregadas } from "@/lib/vendedores";
 import { CONTENEDOR_PEDIDOS } from "../../pedidos/Encabezado";
 import { EncabezadoComercial } from "../EncabezadoComercial";
-import { BotonesResolver, FormComision, FormProponer } from "./Formularios";
+import { BotonesResolver, BotonesTodas, FormComision, FormPasar, FormProponer, FormVendedor } from "./Formularios";
 
 const fechaCorta = (d: Date) => d.toLocaleDateString("es-AR", { timeZone: "America/Argentina/Buenos_Aires", day: "2-digit", month: "2-digit", year: "2-digit" });
 const nav = "flex h-9 items-center rounded-md border border-stone-300 bg-white px-3 text-sm font-semibold hover:border-stone-600";
@@ -21,21 +21,36 @@ export default async function Vendedores({ searchParams }: { searchParams: Promi
   const actual = hoy().slice(0, 7);
   const mes = mesParam && /^\d{4}-\d{2}$/.test(mesParam) && esFechaValida(`${mesParam}-01`) ? mesParam : actual;
 
-  const [vendedores, clientes, pendientes, ventas, ventasAnt] = await Promise.all([
-    db.usuario.findMany({ where: { rol: "VENDEDOR" }, orderBy: [{ activo: "desc" }, { nombre: "asc" }], select: { id: true, nombre: true, activo: true, comisionPct: true, _count: { select: { clientesVendidos: true } } } }),
+  const [vendedores, clientes, pendientes, ventas, ventasAnt, usuariosLibres, conComisionista] = await Promise.all([
+    db.vendedor.findMany({ orderBy: [{ activo: "desc" }, { nombre: "asc" }], include: { _count: { select: { clientes: true } }, usuario: { select: { nombre: true } } } }),
     db.cliente.findMany({ where: { activo: true }, orderBy: { nombre: "asc" }, select: { id: true, nombre: true, vendedorId: true } }),
     db.asignacionVendedor.findMany({ where: { estado: "PENDIENTE" }, orderBy: { propuestoEn: "asc" }, include: { cliente: { select: { nombre: true, vendedorId: true } } } }),
     ventasEntregadas(`${mes}-01`, `${mesSiguiente(mes)}-01`),
     ventasEntregadas(`${mesAnterior(mes)}-01`, `${mes}-01`),
+    db.usuario.findMany({ where: { rol: "VENDEDOR", activo: true, vendedor: null }, select: { id: true, nombre: true }, orderBy: { nombre: "asc" } }),
+    db.cliente.findMany({ where: { comisionista: { not: null } }, select: { comisionista: true, comisionPct: true } }),
   ]);
-  const nombres = new Map((await db.usuario.findMany({ select: { id: true, nombre: true } })).map((u) => [u.id, u.nombre]));
-  const nom = (id: string | null) => (id ? nombres.get(id) ?? "—" : "Sin vendedor");
+  const nombresUsuarios = new Map((await db.usuario.findMany({ select: { id: true, nombre: true } })).map((u) => [u.id, u.nombre]));
+  const nombresVendedores = new Map(vendedores.map((v) => [v.id, v.nombre]));
+  const nom = (id: string | null) => (id ? nombresVendedores.get(id) ?? "—" : "Sin vendedor");
+
+  // Comisionistas escritos en las fichas de los clientes (ej. Migue 8%) que todavía no son vendedores.
+  const yaVendedor = new Set(vendedores.map((v) => v.nombre.trim().toLowerCase()));
+  const grupos = new Map<string, { nombre: string; clientes: number; pct: number }>();
+  for (const c of conComisionista) {
+    const nombre = (c.comisionista ?? "").trim();
+    if (!nombre || yaVendedor.has(nombre.toLowerCase())) continue;
+    const g = grupos.get(nombre.toLowerCase()) ?? { nombre, clientes: 0, pct: 0 };
+    g.clientes += 1; g.pct = Math.max(g.pct, Number(c.comisionPct ?? 0));
+    grupos.set(nombre.toLowerCase(), g);
+  }
+  const comisionistas = [...grupos.values()].sort((x, y) => x.nombre.localeCompare(y.nombre, "es"));
 
   const resumen = vendedores.map((v) => {
     const pct = Number(v.comisionPct ?? 0);
     const mias = ventas.filter((x) => x.vendedorId === v.id), antes = ventasAnt.filter((x) => x.vendedorId === v.id);
     const neto = mias.reduce((t, x) => t + x.neto, 0), netoAnt = antes.reduce((t, x) => t + x.neto, 0);
-    return { v, pct, neto, netoAnt, pedidos: mias.length, comision: (neto * pct) / 100, clientes: v._count.clientesVendidos };
+    return { v, pct, neto, netoAnt, pedidos: mias.length, comision: (neto * pct) / 100, clientes: v._count.clientes };
   });
   const sinVendedor = ventas.filter((x) => !x.vendedorId || !vendedores.some((v) => v.id === x.vendedorId));
   const totComision = resumen.reduce((t, r) => t + r.comision, 0);
@@ -63,14 +78,14 @@ export default async function Vendedores({ searchParams }: { searchParams: Promi
 
         {pendientes.length > 0 && (
           <section className="rounded-lg border border-[#e6d58a] bg-[#fdf8e3] p-4">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-[#8a6a05]">Cambios pendientes de aprobación · {pendientes.length}</h2>
+            <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-semibold uppercase tracking-wide text-[#8a6a05]">Cambios pendientes de aprobación · {pendientes.length}</h2>{pendientes.length > 1 && <BotonesTodas cantidad={pendientes.length} />}</div>
             <p className="mt-0.5 text-[13px] text-stone-600">Los propone un dueño y los aprueba otro. Hasta que se aprueben, el cliente sigue con su vendedor actual.</p>
             <ul className="mt-2 divide-y divide-[#eadfa6]">
               {pendientes.map((a) => (
                 <li key={a.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5 text-[14px]">
                   <span>
                     <b>{a.cliente.nombre}</b>: {nom(a.cliente.vendedorId)} <span className="text-stone-400">→</span> <b>{nom(a.vendedorId)}</b>
-                    <span className="ml-2 text-[12px] text-stone-500">vale desde {a.desde ? `${a.desde.slice(8)}/${a.desde.slice(5, 7)}/${a.desde.slice(2, 4)}` : "la aprobación"} · propuesto por {nom(a.propuestoPor)} el {fechaCorta(a.propuestoEn)}</span>
+                    <span className="ml-2 text-[12px] text-stone-500">vale desde {a.desde ? `${a.desde.slice(8)}/${a.desde.slice(5, 7)}/${a.desde.slice(2, 4)}` : "la aprobación"} · propuesto por {nombresUsuarios.get(a.propuestoPor) ?? "—"} el {fechaCorta(a.propuestoEn)}</span>
                   </span>
                   <BotonesResolver id={a.id} mio={a.propuestoPor === usuario.id} cliente={a.cliente.nombre} vendedor={nom(a.vendedorId)} />
                 </li>
@@ -94,7 +109,7 @@ export default async function Vendedores({ searchParams }: { searchParams: Promi
                   const vs = variacion(neto, netoAnt);
                   return (
                     <tr key={v.id} className={`h-14 border-t border-stone-200 ${v.activo ? "" : "opacity-60"}`}>
-                      <td className="px-3 text-left font-semibold">{v.nombre}{!v.activo && <span className="ml-2 text-[11px] font-normal text-stone-500">desactivado</span>}</td>
+                      <td className="px-3 text-left"><Link href={`/comercial/vendedores/${v.id}?mes=${mes}`} className="font-semibold hover:underline">{v.nombre}</Link>{!v.activo && <span className="ml-2 text-[11px] font-normal text-stone-500">desactivado</span>}{v.usuario && <div className="text-[11.5px] font-normal text-stone-500">entra como {v.usuario.nombre}</div>}</td>
                       <td className="px-3"><FormComision vendedorId={v.id} pct={pct ? String(pct).replace(".", ",") : ""} /></td>
                       <td className="px-3 tabular-nums">{nc}</td>
                       <td className="px-3 tabular-nums">{pedidos}</td>
@@ -105,7 +120,7 @@ export default async function Vendedores({ searchParams }: { searchParams: Promi
                     </tr>
                   );
                 })}
-                {resumen.length === 0 && <tr><td colSpan={8} className="px-4 py-10 text-stone-500">Todavía no hay vendedores. Se crean en Usuarios con el rol “Vendedor”.</td></tr>}
+                {resumen.length === 0 && <tr><td colSpan={8} className="px-4 py-10 text-stone-500">Todavía no hay vendedores. Cargá el primero abajo, en “Nuevo vendedor”.</td></tr>}
               </tbody>
               {resumen.length > 0 && (
                 <tfoot><tr className="h-12 border-t-2 border-stone-300 bg-stone-50 font-semibold"><td className="px-3 text-left">Total a pagar en comisiones</td><td colSpan={5} /><td className="px-3 text-base font-bold tabular-nums">{formatoPesos(totComision)}</td><td /></tr></tfoot>
@@ -116,6 +131,22 @@ export default async function Vendedores({ searchParams }: { searchParams: Promi
             Ventas del mes sin vendedor: <b className="text-stone-700">{formatoPesos(sinVendedor.reduce((t, x) => t + x.neto, 0))}</b> · {sinAsignar} {sinAsignar === 1 ? "cliente activo" : "clientes activos"} sin vendedor asignado.
           </p>
         </section>
+
+        <section className="rounded-lg border border-stone-300 bg-white p-4">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-stone-600">Nuevo vendedor</h2>
+          <p className="mb-3 mt-0.5 text-[13px] text-stone-600">Un vendedor es quien comisiona por las ventas de sus clientes (ej. Migue). <b>No hace falta que entre al sistema</b>: si querés que cargue sus pedidos, enlazalo con un usuario de rol Vendedor (los usuarios se crean en el menú USUARIOS).</p>
+          <FormVendedor usuarios={usuariosLibres} />
+        </section>
+
+        {comisionistas.length > 0 && (
+          <section className="rounded-lg border border-stone-300 bg-white p-4">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-stone-600">Comisionistas escritos en las fichas de clientes</h2>
+            <p className="mt-0.5 text-[13px] text-stone-600">Ya los tenías anotados en la ficha (Comisionista / Comisión %). Con “Pasar a vendedor” se crea el vendedor con ese % y se proponen todos sus clientes; <b>otro dueño los aprueba</b>. No se borra nada de las fichas.</p>
+            <div className="mt-1 divide-y divide-stone-200">
+              {comisionistas.map((c) => <FormPasar key={c.nombre} comisionista={c.nombre} clientes={c.clientes} pct={c.pct ? String(c.pct).replace(".", ",") : ""} />)}
+            </div>
+          </section>
+        )}
 
         <section className="rounded-lg border border-stone-300 bg-white p-4">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-stone-600">Asignar un vendedor a un cliente</h2>
