@@ -10,7 +10,7 @@ import { FiltroLista, SEP } from "../../cuentas/FiltroLista";
 import { avisarPago, quitarAvisoPago } from "../../vendedor/actions";
 
 // Los pedidos de un vendedor como una cuenta corriente: filtro arriba de cada columna, orden al tocar el título,
-// vistas Todos / Sin pagar / Pagados y total abajo. El vendedor puede avisar que un pedido se pagó; la oficina lo confirma en Cuenta corriente.
+// todos los pedidos juntos y total abajo. El vendedor puede avisar que un pedido se pagó; la oficina lo confirma en Cuenta corriente.
 
 const ESTADOS = { PENDIENTE: "Pendiente", ENTREGADO: "Entregado", NO_ENTREGADO: "No entregado" } as const;
 const PASTILLA_ESTADO = { PENDIENTE: "bg-[#fdf8e3] text-[#8a6a05]", ENTREGADO: "bg-verde-50 text-verde-700", NO_ENTREGADO: "bg-rojo-50 text-rojo-700" } as const;
@@ -22,12 +22,10 @@ const entrada = "h-7 w-full min-w-0 rounded border border-stone-300 bg-white px-
 type Pago = "Pagado" | "Sin pagar" | "Cuenta corriente" | "Avisó pago" | "Sin entregar";
 const pagoDe = (x: FilaVendedor): Pago => (x.pagado ? "Pagado" : x.estado === "ENTREGADO" ? (x.avisadoPor ? "Avisó pago" : x.aCuenta ? "Cuenta corriente" : "Sin pagar") : "Sin entregar");
 type Col = "cargado" | "entregado" | "cliente" | "pedido" | "comprobante" | "monto" | "comision" | "estado" | "pago";
-type Vista = "todos" | "sinpagar" | "pagados";
 
 export function TablaPedidosVendedor({ filas, pct, comision = true, modo }: { filas: FilaVendedor[]; pct: number; comision?: boolean; modo: "oficina" | "vendedor" }) {
   const router = useRouter();
   const [pendiente, empezar] = useTransition();
-  const [vista, setVista] = useState<Vista>("todos");
   const [filtros, setFiltros] = useState<Partial<Record<Col, string>>>({});
   const [orden, setOrden] = useState<{ col: Col; dir: 1 | -1 }>({ col: "cargado", dir: -1 });
   const [error, setError] = useState("");
@@ -47,12 +45,9 @@ export function TablaPedidosVendedor({ filas, pct, comision = true, modo }: { fi
     }
   };
   const nombres = useMemo(() => [...new Set(filas.map((f) => f.cliente))].sort((a, b) => a.localeCompare(b, "es")), [filas]);
-  const sinPagar = (x: FilaVendedor) => x.estado === "ENTREGADO" && !x.pagado;
 
   const visibles = useMemo(() => {
     const lista = filas.filter((x) => {
-      if (vista === "sinpagar" && !sinPagar(x)) return false;
-      if (vista === "pagados" && !x.pagado) return false;
       for (const [c, f] of Object.entries(filtros) as [Col, string][]) {
         const t = f.trim();
         if (!t) continue;
@@ -71,7 +66,7 @@ export function TablaPedidosVendedor({ filas, pct, comision = true, modo }: { fi
       return r * dir || a.cliente.localeCompare(b.cliente, "es");
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filas, vista, filtros, orden, pct]);
+  }, [filas, filtros, orden, pct]);
 
   const entregadas = visibles.filter((x) => x.estado === "ENTREGADO");
   const totalMonto = entregadas.reduce((t, x) => t + x.total, 0);
@@ -91,17 +86,10 @@ export function TablaPedidosVendedor({ filas, pct, comision = true, modo }: { fi
   const texto = (c: Col, ph = "Filtrar…") => <td key={c} className="px-1.5 pb-2"><input value={filtros[c] ?? ""} onChange={(e) => setFiltros({ ...filtros, [c]: e.target.value })} placeholder={ph} className={entrada} /></td>;
   const lista = (c: Col, t: string, opciones: string[]) => <td key={c} className="px-1.5 pb-2"><FiltroLista varios titulo={t} opciones={opciones} valor={filtros[c] ?? ""} onCambio={(v) => setFiltros({ ...filtros, [c]: v })} /></td>;
 
-  const vistaBoton = (v: Vista, t: string, n: number) => (
-    <button key={v} type="button" onClick={() => setVista(v)} className={`rounded-md px-4 py-1.5 text-sm font-semibold ${vista === v ? "bg-stone-800 text-white" : "border border-stone-300 bg-white text-stone-700 hover:border-stone-500"}`}>{t} <span className="opacity-70">{n}</span></button>
-  );
-
   return (
     <section className="overflow-hidden rounded-xl border border-stone-300 bg-white">
       <header className="flex flex-wrap items-center gap-2 border-b border-stone-200 px-4 py-3">
-        {vistaBoton("todos", "Todos", filas.length)}
-        {vistaBoton("sinpagar", "Sin pagar", filas.filter(sinPagar).length)}
-        {vistaBoton("pagados", "Pagados", filas.filter((x) => x.pagado).length)}
-        <span className="ml-3 text-[12.5px] text-stone-500">{visibles.length} de {filas.length} pedidos</span>
+        <span className="text-[12.5px] text-stone-500">{visibles.length} de {filas.length} pedidos</span>
         {hayFiltros && <button type="button" onClick={() => setFiltros({})} className="text-[12.5px] font-semibold text-stone-600 underline decoration-stone-300 underline-offset-4 hover:text-stone-900">Quitar filtros ✕</button>}
         {error && <span className="ml-auto text-sm font-medium text-rojo-700">{error}</span>}
       </header>
@@ -156,7 +144,7 @@ export function TablaPedidosVendedor({ filas, pct, comision = true, modo }: { fi
           {visibles.length > 0 && (
             <tfoot className="border-t-2 border-stone-300 bg-stone-50 text-[13px] font-bold">
               <tr>
-                <td colSpan={5} className="px-3 py-2.5 text-right text-[11px] uppercase tracking-wide text-stone-600">Total entregado{hayFiltros || vista !== "todos" ? " (con el filtro)" : ""}</td>
+                <td colSpan={5} className="px-3 py-2.5 text-right text-[11px] uppercase tracking-wide text-stone-600">Total entregado{hayFiltros ? " (con el filtro)" : ""}</td>
                 <td className="px-2 py-2.5 tabular-nums">{formatoPesos(totalMonto)}</td>
                 {comision && <td className="px-2 py-2.5 tabular-nums">{formatoPesos(totalCom)}</td>}
                 <td colSpan={2} />

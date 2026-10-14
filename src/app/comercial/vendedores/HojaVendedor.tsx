@@ -1,14 +1,13 @@
 import { formatoPesos } from "@/lib/numeros";
 import { num } from "@/lib/ruta";
 import { type FilaVendedor, nombreMes, resumenDe } from "@/lib/vendedores";
-import { Barras, Panel, SinDatos } from "../estadisticas/Graficos";
+import { SinDatos } from "../estadisticas/Graficos";
 import { TablaPedidosVendedor } from "./TablaPedidosVendedor";
 
 // La hoja de un vendedor: cómo viene el mes (resumen ordenado), sus 5 mejores clientes, dos gráficos y cada pedido como una cuenta corriente.
 // La usan la ficha de Comercial → Vendedores y la pantalla del propio vendedor.
 
 const variacion = (a: number, b: number) => (b > 0 ? Math.round(((a - b) / b) * 100) : null);
-const corto = (n: number) => (n >= 1_000_000 ? `$ ${(n / 1_000_000).toFixed(1).replace(".", ",")} M` : `$ ${Math.round(n / 1000)} mil`);
 
 function Tendencia({ ahora, antes }: { ahora: number; antes: number }) {
   const v = variacion(ahora, antes);
@@ -21,10 +20,7 @@ export function HojaVendedor({ nombre, pct, mes, filas, anteriores, comision = t
 }) {
   const r = resumenDe(filas, pct);
   const ant = resumenDe(anteriores, pct);
-  const dias = new Date(Date.UTC(Number(mes.slice(0, 4)), Number(mes.slice(5)), 0)).getUTCDate();
-  const etiquetas = Array.from({ length: dias }, (_, i) => String(i + 1));
   const ent = filas.filter((x) => x.estado === "ENTREGADO");
-  const porDia = (val: (x: FilaVendedor) => number) => etiquetas.map((_, i) => ent.filter((x) => Number(x.f.slice(8)) === i + 1).reduce((t, x) => t + val(x), 0));
   const avisos = filas.filter((x) => x.avisadoPor && !x.pagado).length;
 
   const porCliente = new Map<string, { nombre: string; neto: number; pedidos: number; unidades: number }>();
@@ -77,15 +73,6 @@ export function HojaVendedor({ nombre, pct, mes, filas, anteriores, comision = t
             ))}
           </ol>
         ) : <SinDatos texto="Todavía no hay clientes con entregas en este mes." />}
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-2">
-        <Panel titulo="Facturado por día" nota="sin IVA, entregado">
-          {r.neto > 0 ? <Barras etiquetas={etiquetas} series={[{ nombre: "Facturado", color: "#026433", valores: porDia((x) => x.neto) }]} formato={corto} alto={150} valoresSiempre /> : <SinDatos texto={`${nombre} todavía no facturó en ${nombreMes(mes).split(" ")[0]}.`} />}
-        </Panel>
-        <Panel titulo="Unidades por día" nota="entregadas">
-          {r.unidades > 0 ? <Barras etiquetas={etiquetas} series={[{ nombre: "Unidades", color: "#3b6ea5", valores: porDia((x) => x.unidades) }]} formato={num} alto={150} valoresSiempre /> : <SinDatos texto="Sin unidades entregadas en este mes." />}
-        </Panel>
       </section>
 
       <TablaPedidosVendedor filas={filas} pct={pct} comision={comision} modo={modo} />
