@@ -27,6 +27,7 @@ model Usuario {
 
   salidas Salida[]
   clientesVendidos Cliente[] @relation("ClientesDelVendedor")
+  comisionPct Decimal? @db.Decimal(5, 2) // % de comisión del vendedor (sobre ventas sin IVA de pedidos entregados)
 }
 
 enum TipoCliente {
@@ -120,6 +121,7 @@ model Cliente {
   pedidos           Pedido[]
   movimientos       MovimientoCuenta[]
   notasCredito      NotaCredito[]
+  asignacionesVendedor AsignacionVendedor[]
 
   @@index([nombre])
 }
@@ -502,4 +504,27 @@ model LeadContacto {
   creadoEn DateTime @default(now())
 
   @@index([leadId, creadoEn])
+}
+
+// Cambio de vendedor de un cliente con doble chequeo: lo propone un dueño y lo aprueba OTRO dueño. Queda el historial.
+enum EstadoAsignacion {
+  PENDIENTE
+  APROBADA
+  RECHAZADA
+}
+
+model AsignacionVendedor {
+  id           String           @id @default(cuid())
+  clienteId    String
+  cliente      Cliente          @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  vendedorId   String? // vendedor propuesto (null = dejar al cliente sin vendedor)
+  anteriorId   String? // vendedor que tenía el cliente al resolverse
+  desde        String? // AAAA-MM-DD: desde cuándo vale el cambio (las ventas desde esa fecha cuentan para el nuevo vendedor)
+  propuestoPor String
+  propuestoEn  DateTime         @default(now())
+  estado       EstadoAsignacion @default(PENDIENTE)
+  resueltoPor  String?
+  resueltoEn   DateTime?
+
+  @@index([clienteId, estado])
 }

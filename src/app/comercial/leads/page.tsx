@@ -29,7 +29,7 @@ export default async function Leads() {
     <>
       <Cabecera usuario={usuario} />
       <main className={CONTENEDOR_PEDIDOS}>
-        <EncabezadoComercial activa="leads" derecha={<Link href="/comercial/leads/nuevo" className="flex h-10 items-center rounded-lg bg-verde-700 px-5 text-sm font-bold uppercase tracking-wide text-white hover:bg-verde-800">+ Cargar lead</Link>} />
+        <EncabezadoComercial activa="leads" esDueno={usuario.rol === "DUENO"} derecha={<Link href="/comercial/leads/nuevo" className="flex h-10 items-center rounded-lg bg-verde-700 px-5 text-sm font-bold uppercase tracking-wide text-white hover:bg-verde-800">+ Cargar lead</Link>} />
         <ListaLeads filas={filas} hoy={hoyStr} />
       </main>
     </>
