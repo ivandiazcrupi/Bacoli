@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { estiloCampo } from "@/components/campos";
 
 // Buscador que filtra mientras se escribe (sin apretar Enter) y dos desplegables que aplican al elegir.
-export function FiltrosClientes({ q, zona, estado, zonas }: { q: string; zona: string; estado: string; zonas: { id: string; nombre: string }[] }) {
+export function FiltrosClientes({ q, zona, estado, zonas, base = "/clientes" }: { q: string; zona: string; estado: string; zonas: { id: string; nombre: string }[]; base?: string }) {
   const router = useRouter();
   const [texto, setTexto] = useState(q);
   const [pendiente, empezar] = useTransition();
@@ -15,7 +15,7 @@ export function FiltrosClientes({ q, zona, estado, zonas }: { q: string; zona: s
   function ir(cambio: { q?: string; zona?: string; estado?: string }) {
     const v = { q: texto, zona, estado, ...cambio };
     const partes = Object.entries(v).filter(([k, x]) => x && !(k === "estado" && x === "activos"));
-    empezar(() => router.replace(`/clientes${partes.length ? `?${new URLSearchParams(partes)}` : ""}`));
+    empezar(() => router.replace(`${base}${partes.length ? `?${new URLSearchParams(partes)}` : ""}`));
   }
 
   return (

@@ -5,8 +5,8 @@ type Pestana = "facturas" | "remitos" | "clientes";
 // Las tres vistas de CUENTA: facturas, remitos y la cuenta de cada cliente.
 export function EncabezadoCuenta({ activa }: { activa: Pestana }) {
   const base = "rounded-t-lg border-x border-t px-6 py-3 text-sm font-bold uppercase tracking-wide";
-  const on = "border-stone-300 border-b-white bg-white text-verde-800 -mb-px";
-  const off = "border-transparent text-stone-500 hover:text-verde-800";
+  const on = "border-stone-300 border-b-white bg-white text-stone-900 -mb-px";
+  const off = "border-transparent text-stone-500 hover:text-stone-900";
   const items: { id: Pestana; texto: string; href: string }[] = [
     { id: "facturas", texto: "Facturas", href: "/cuentas" },
     { id: "remitos", texto: "Remitos", href: "/cuentas/remitos" },

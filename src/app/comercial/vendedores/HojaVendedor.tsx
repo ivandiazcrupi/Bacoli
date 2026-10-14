@@ -15,8 +15,8 @@ function Tendencia({ ahora, antes }: { ahora: number; antes: number }) {
   return <span className={`font-semibold ${v >= 0 ? "text-verde-700" : "text-rojo-700"}`}>{v >= 0 ? "▲" : "▼"} {Math.abs(v)}% vs mes anterior</span>;
 }
 
-export function HojaVendedor({ nombre, pct, mes, filas, anteriores, comision = true, modo = "oficina" }: {
-  nombre: string; pct: number; mes: string; filas: FilaVendedor[]; anteriores: FilaVendedor[]; comision?: boolean; modo?: "oficina" | "vendedor";
+export function HojaVendedor({ nombre, pct, mes, filas, anteriores, comision = true, modo = "oficina", conTabla = true }: {
+  nombre: string; pct: number; mes: string; filas: FilaVendedor[]; anteriores: FilaVendedor[]; comision?: boolean; modo?: "oficina" | "vendedor"; conTabla?: boolean;
 }) {
   const r = resumenDe(filas, pct);
   const ant = resumenDe(anteriores, pct);
@@ -75,7 +75,7 @@ export function HojaVendedor({ nombre, pct, mes, filas, anteriores, comision = t
         ) : <SinDatos texto="Todavía no hay clientes con entregas en este mes." />}
       </section>
 
-      <TablaPedidosVendedor filas={filas} pct={pct} comision={comision} modo={modo} />
+      {conTabla && <TablaPedidosVendedor filas={filas} pct={pct} comision={comision} modo={modo} />}
     </div>
   );
 }

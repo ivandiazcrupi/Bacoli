@@ -1,57 +1,40 @@
 import Link from "next/link";
 import { Cabecera } from "@/components/Cabecera";
-import { importeVigente } from "@/lib/cuenta";
 import { db } from "@/lib/db";
-import { titulo } from "@/lib/mayusculas";
-import { formatoPesos } from "@/lib/numeros";
 import { exigirVendedor, vendedorDeUsuario } from "@/lib/session";
-import { enlaceWhatsApp } from "@/lib/telefonos";
+import { FiltrosClientes } from "../../clientes/FiltrosClientes";
+import { ListaClientes } from "../../clientes/ListaClientes";
+import { filtroClientes } from "../../clientes/consulta";
 import { CONTENEDOR_PEDIDOS } from "../../pedidos/Encabezado";
 import { EncabezadoVendedor } from "../EncabezadoVendedor";
 
-// MIS CLIENTES (vendedor): solo sus clientes, con dónde entregan y cuánto tienen sin pagar.
-export default async function VendedorClientes() {
+// CLIENTES (vendedor): la misma lista que ve la oficina en Clientes, pero solo con SUS clientes y sin los accesos de oficina.
+export default async function VendedorClientes({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const usuario = await exigirVendedor();
   const vendedor = await vendedorDeUsuario(usuario.id);
-  const clientes = await db.cliente.findMany({
-    where: { vendedorId: vendedor?.id ?? "-", activo: true },
-    include: { puntos: { where: { activo: true }, orderBy: { barrio: "asc" } }, pedidos: { where: { estado: "ENTREGADO", pagado: false }, include: { items: true } } },
-    orderBy: { nombre: "asc" },
-  });
+  const { q = "", zona = "", estado = "activos" } = await searchParams;
+  const where = filtroClientes({ q, zona, estado }, { vendedorId: vendedor?.id ?? "-" });
+  const [clientes, zonas] = await Promise.all([
+    db.cliente.findMany({
+      where, orderBy: { nombre: "asc" },
+      include: { puntos: { where: zona ? { zonaId: zona } : undefined, include: { zona: true }, orderBy: [{ barrio: "asc" }, { direccion: "asc" }] } },
+    }),
+    db.zona.findMany({ orderBy: { orden: "asc" } }),
+  ]);
+  const totalPuntos = clientes.reduce((n, c) => n + c.puntos.length, 0);
   return (
     <>
       <Cabecera usuario={usuario} />
       <main className={CONTENEDOR_PEDIDOS}>
-        <EncabezadoVendedor activa="clientes" titulo="Mis clientes" derecha={<Link href="/vendedor/nuevo" className="flex h-10 items-center rounded-lg bg-verde-700 px-5 text-sm font-bold uppercase tracking-wide text-white hover:bg-verde-800">+ Cargar pedido</Link>} />
+        <EncabezadoVendedor activa="clientes" derecha={<Link href="/vendedor/nuevo" className="whitespace-nowrap rounded-lg bg-verde-700 px-4 py-3 text-sm font-bold uppercase tracking-wide text-white hover:bg-verde-800 sm:px-10">+ Cargar pedido</Link>} />
+        <FiltrosClientes q={q} zona={zona} estado={estado} zonas={zonas.map((z) => ({ id: z.id, nombre: z.nombre }))} base="/vendedor/clientes" />
+        <p className="text-sm text-stone-600">
+          <b className="text-stone-900">{clientes.length}</b> {clientes.length === 1 ? "cliente" : "clientes"} · <b className="text-stone-900">{totalPuntos}</b> {totalPuntos === 1 ? "sucursal" : "sucursales"} (puntos de entrega)
+        </p>
         {clientes.length === 0 ? (
-          <p className="mt-4 rounded-lg border border-dashed border-stone-300 p-4 text-stone-600">Todavía no tenés clientes asignados. La oficina te los asigna desde Comercial → Vendedores.</p>
+          <p className="rounded-lg border border-dashed border-stone-300 p-4 text-stone-600">{vendedor && !q && !zona && estado === "activos" ? "Todavía no tenés clientes asignados. La oficina te los asigna desde Comercial → Vendedores." : "No hay clientes con esos filtros."}</p>
         ) : (
-          <div className="mt-4 grid gap-3 lg:grid-cols-2">
-            {clientes.map((c) => {
-              const debe = c.pedidos.reduce((t, p) => t + importeVigente(p.items, Number(p.ivaPct), "PENDIENTE"), 0);
-              return (
-                <section key={c.id} className="rounded-lg border border-stone-300 bg-white p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <h2 className="text-base font-semibold">{c.nombre}</h2>
-                    {c.pedidos.length > 0
-                      ? <span className="shrink-0 rounded-full bg-rojo-50 px-3 py-1 text-[12.5px] font-bold text-rojo-700">Sin pagar · {c.pedidos.length} {c.pedidos.length === 1 ? "pedido" : "pedidos"} · {formatoPesos(debe)}</span>
-                      : <span className="shrink-0 rounded-full bg-verde-50 px-3 py-1 text-[12.5px] font-bold text-verde-700">Al día</span>}
-                  </div>
-                  <ul className="mt-2 divide-y divide-stone-200 text-[13px]">
-                    {c.puntos.map((p) => {
-                      const wa = enlaceWhatsApp(p.telefono);
-                      return (
-                        <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-1.5">
-                          <span><b>{p.barrio}</b> · {titulo(p.direccion)}</span>
-                          {p.telefono && (wa ? <a href={wa} target="_blank" rel="noreferrer" className="text-verde-800 underline">{p.telefono}</a> : <span>{p.telefono}</span>)}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </section>
-              );
-            })}
-          </div>
+          <ListaClientes clientes={clientes} modo="vendedor" />
         )}
       </main>
     </>

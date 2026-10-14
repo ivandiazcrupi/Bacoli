@@ -34,9 +34,9 @@ export async function Cabecera({ usuario }: { usuario: Usuario }) {
         </Link>
 
         <nav aria-label="Menú principal" className="order-[98] -mx-4 flex w-[calc(100%+2rem)] items-center gap-3 overflow-x-auto whitespace-nowrap px-4 pb-1 lg:order-none lg:mx-0 lg:w-auto lg:justify-center lg:gap-2 lg:overflow-visible lg:px-0 lg:pb-0">
-          {vendedor && <Link href="/vendedor" className={principal}>Mi hoja</Link>}
-          {vendedor && <Link href="/vendedor/pedidos" className={principal}>Mis pedidos</Link>}
-          {vendedor && <Link href="/vendedor/clientes" className={principal}>Mis clientes</Link>}
+          {vendedor && <Link href="/vendedor" className={principal}>Estadísticas</Link>}
+          {vendedor && <Link href="/vendedor/pedidos" className={principal}>Pedidos</Link>}
+          {vendedor && <Link href="/vendedor/clientes" className={principal}>Clientes</Link>}
           {oficina && <Link href="/clientes" className={principal}>Clientes</Link>}
           {oficina && <Link href="/pedidos" className={principal}>Pedidos</Link>}
           {oficina && <Link href="/cuentas" className={principal}>Cuenta corriente</Link>}

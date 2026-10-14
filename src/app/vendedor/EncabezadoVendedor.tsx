@@ -1,17 +1,23 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
+import { PestanasSeccion } from "@/components/PestanasSeccion";
 
-export function EncabezadoVendedor({ activa, titulo, derecha }: { activa: "hoja" | "pedidos" | "clientes"; titulo?: string; derecha?: ReactNode }) {
-  const pest = (k: string, href: string, texto: string) => (
-    <Link href={href} className={`rounded-md px-4 py-1.5 text-sm font-semibold uppercase tracking-wide ${activa === k ? "bg-stone-800 text-white" : "border border-stone-300 bg-white text-stone-600 hover:border-stone-500"}`}>{texto}</Link>
-  );
+export type PestañaVendedor = "estadisticas" | "pedidos" | "clientes";
+
+const ITEMS: { id: PestañaVendedor; texto: string; href: string }[] = [
+  { id: "estadisticas", texto: "Estadísticas", href: "/vendedor" },
+  { id: "pedidos", texto: "Pedidos", href: "/vendedor/pedidos" },
+  { id: "clientes", texto: "Clientes", href: "/vendedor/clientes" },
+];
+
+// Título "Mi hoja" (con botones a la derecha) y las solapas del vendedor, iguales a las del resto del sistema.
+export function EncabezadoVendedor({ activa, derecha }: { activa: PestañaVendedor; derecha?: ReactNode; titulo?: string }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div className="flex flex-wrap items-center gap-4">
-        <h1 className="text-2xl font-bold tracking-tight">{titulo ?? "Mi hoja"}</h1>
-        <div className="flex gap-2">{pest("hoja", "/vendedor", "Mi hoja")}{pest("pedidos", "/vendedor/pedidos", "Mis pedidos")}{pest("clientes", "/vendedor/clientes", "Mis clientes")}</div>
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold tracking-tight">Mi hoja</h1>
+        <div className="flex flex-wrap items-center gap-2">{derecha}</div>
       </div>
-      <div className="flex items-center gap-2">{derecha}</div>
-    </div>
+      <PestanasSeccion items={ITEMS} activa={activa} etiqueta="Vendedor" />
+    </>
   );
 }

@@ -22,8 +22,8 @@ html.intermedio { font-size: 13.5px; }
 .intermedio header.bg-white nav a:hover { background: #efede7; }
 .intermedio main h1 { font-size: 18px !important; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: #26241f; border-bottom: 2px solid #26241f; display: inline-block; padding-bottom: 2px; }
 .intermedio main { padding-top: 1rem !important; padding-bottom: 1rem !important; }
-.intermedio nav[aria-label="Pedidos"] { border-bottom: 1px solid #cfcbc1 !important; gap: 2px !important; }
-.intermedio nav[aria-label="Pedidos"] a { border-radius: 3px 3px 0 0 !important; padding: .4rem 1.1rem !important; }
+.intermedio nav[aria-label="Pedidos"], .intermedio nav[aria-label="Comercial"], .intermedio nav[aria-label="Vendedor"], .intermedio nav[aria-label="Cuenta"] { border-bottom: 1px solid #cfcbc1 !important; gap: 2px !important; }
+.intermedio nav[aria-label="Pedidos"] a, .intermedio nav[aria-label="Comercial"] a, .intermedio nav[aria-label="Vendedor"] a, .intermedio nav[aria-label="Cuenta"] a { border-radius: 3px 3px 0 0 !important; padding: .4rem 1.1rem !important; }
 .intermedio [class*="border-stone-200"], .intermedio [class*="border-stone-300"] { border-color: #d3d0c7 !important; }
 .intermedio [class*="border-stone-400"] { border-color: #bcb8ad !important; }
 .intermedio [class*="py-4"] { padding-top: .6rem !important; padding-bottom: .6rem !important; }

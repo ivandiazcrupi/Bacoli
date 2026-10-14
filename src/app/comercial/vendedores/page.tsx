@@ -68,7 +68,7 @@ export default async function Vendedores({ searchParams }: { searchParams: Promi
                 <span className="min-w-40 text-center text-sm font-semibold capitalize text-stone-700">{nombreMes(mes)}</span>
                 <Link href={`/comercial/vendedores?mes=${mesSiguiente(mes)}`} className={nav} aria-label="Mes siguiente">→</Link>
               </nav>
-              <Link href="/comercial/vendedores/nuevo" className="ml-2 flex h-10 items-center rounded-lg bg-stone-900 px-5 text-sm font-semibold text-white hover:bg-stone-700">+ Nuevo vendedor</Link>
+              <Link href="/comercial/vendedores/nuevo" className="ml-2 whitespace-nowrap rounded-lg bg-verde-700 px-4 py-3 text-sm font-bold uppercase tracking-wide text-white hover:bg-verde-800 sm:px-10">+ Nuevo vendedor</Link>
             </>
           }
         />
