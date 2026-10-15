@@ -367,4 +367,3 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Combos de la tienda: cantidad (pedido del dueño)
 - `focacciasDe` ya suma 2 focaccias **por cada combo** ("2 combos = 4 focaccias"). El error estaba al leer la planilla de Empretienda: si el nombre no trae "2x", el combo quedaba siempre como 1; ahora la cantidad sale de la columna Tomate (cada combo = 2 paquetes de tomate; `armarItems` en `src/lib/empretienda.ts`). Los pedidos ya cargados con el error se corrigen editando la cantidad del combo.
-- **TEMPORAL — botón "Revisar combos"** (Pedidos → Minoristas (web); `RevisarCombos.tsx`, `revisarCombos`/`aplicarCombos` al final de `src/lib/empretienda.ts`): compara los combos de pedidos PENDIENTES con la planilla y propone solo SUBIR la cantidad; se tildan y se aplican con confirmación. **Pedido del dueño: borrar el botón y ese bloque cuando termine de usarlo.**

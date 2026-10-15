@@ -12,7 +12,7 @@ import { db } from "@/lib/db";
 import { aFecha, esFechaValida, hoy } from "@/lib/fechas";
 import { formatoPesos, leerMonto } from "@/lib/numeros";
 import { exigirCarga, exigirOficina, vendedorDeUsuario } from "@/lib/session";
-import { aplicarCombos, importarPedidosWeb, revisarCombos, type ResultadoImportacion } from "@/lib/empretienda";
+import { importarPedidosWeb, type ResultadoImportacion } from "@/lib/empretienda";
 import { productosParaCliente, type ProductoPedido } from "./datos";
 
 export type Destino = { puntoId: string; clienteId: string; cliente: string; alias: string | null; direccion: string; barrio: string; zona: string; telefono: string };
@@ -572,16 +572,4 @@ export async function guardarNotaPedido(pedidoId: string, texto: string): Promis
   await db.pedido.update({ where: { id: pedidoId }, data: { nota: nota || null } });
   revalidatePath("/pedidos", "layout");
   return { ok: true, texto: nota };
-}
-
-/** TEMPORAL: revisar y corregir la cantidad de combos de pedidos de la tienda ya cargados (se borra después). */
-export async function revisarCombosWeb() {
-  await exigirOficina();
-  return revisarCombos();
-}
-export async function aplicarCombosWeb(itemIds: string[]) {
-  await exigirOficina();
-  const r = await aplicarCombos(itemIds);
-  revalidatePath("/pedidos", "layout");
-  return r;
 }
