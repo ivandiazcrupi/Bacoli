@@ -90,7 +90,7 @@ function Formulario({ destino, cambiar, listo }: { destino: DatosPedido; cambiar
   const [dtos, setDtos] = useState<Record<string, string>>({}); // bonificación % por producto
   const [scs, setScs] = useState<Record<string, number>>({}); // paquetes/unidades sin cargo por producto
   const [motivos, setMotivos] = useState<Record<string, string>>({});
-  const [abiertoDto, setAbiertoDto] = useState<Record<string, boolean>>({});
+  const [dtoGen, setDtoGen] = useState(""); // descuento % para todo el pedido (cada producto puede tener el suyo)
   const [abiertoSc, setAbiertoSc] = useState<Record<string, boolean>>({});
   const [conFactura, setConFactura] = useState(destino.facturado);
   const [otro, setOtro] = useState({ nombre: "", cantidad: "1", precio: "", unidad: "paquete", iva: "0" });
@@ -101,7 +101,8 @@ function Formulario({ destino, cambiar, listo }: { destino: DatosPedido; cambiar
   useEffect(() => { if (estado?.ok) listo(estado.ok); }, [estado, listo]);
   const cant = (id: string) => q[id] ?? 0;
   const mover = (id: string, d: number) => setQ((x) => ({ ...x, [id]: Math.max(0, (x[id] ?? 0) + d) }));
-  const pctDe = (id: string) => Math.min(100, Math.max(0, leerMonto(dtos[id] ?? "") ?? 0));
+  const dtoTexto = (id: string) => ((dtos[id] ?? "").trim() !== "" ? dtos[id] : dtoGen);
+  const pctDe = (id: string) => Math.min(100, Math.max(0, leerMonto(dtoTexto(id) ?? "") ?? 0));
   const bruto = (id: string) => cant(id) * (leerMonto(precios[id] ?? "") ?? 0);
   const importe = (id: string) => bruto(id) * (1 - pctDe(id) / 100);
   const sinCargoDe = (id: string) => scs[id] ?? 0;
@@ -142,7 +143,7 @@ function Formulario({ destino, cambiar, listo }: { destino: DatosPedido; cambiar
       <input type="hidden" name="m_total" value="1" />
       {destino.productos.map((p) => (
         <span key={p.id}>
-          <input type="hidden" name={`bd_${p.id}`} value={pctDe(p.id) ? dtos[p.id] : ""} />
+          <input type="hidden" name={`bd_${p.id}`} value={pctDe(p.id) ? dtoTexto(p.id) : ""} />
           <input type="hidden" name={`sc_${p.id}`} value={sinCargoDe(p.id) || ""} />
           <input type="hidden" name={`scm_${p.id}`} value={sinCargoDe(p.id) ? motivos[p.id] ?? "" : ""} />
         </span>
@@ -162,6 +163,21 @@ function Formulario({ destino, cambiar, listo }: { destino: DatosPedido; cambiar
         {[{ v: false, t: "Con remito" }, { v: true, t: "Con factura" }].map((o) => (
           <button key={String(o.v)} type="button" aria-pressed={conFactura === o.v} onClick={() => setConFactura(o.v)} className={`h-12 rounded-xl border text-[15px] font-semibold ${conFactura === o.v ? "border-stone-800 bg-stone-800 text-white" : "border-stone-400 bg-white text-stone-700"}`}>{o.t}</button>
         ))}
+      </div>
+
+      <div className="mb-4 rounded-xl border border-stone-300 bg-white px-3 py-3">
+        <div className="flex items-center gap-2">
+          <span className="min-w-0 flex-1 text-[15px] font-semibold text-stone-800">Descuento para todo el pedido <span className="block text-[12px] font-normal text-stone-500">se aplica a todos los productos (podés cambiarlo en uno)</span></span>
+          <label className="relative w-24 shrink-0">
+            <input inputMode="decimal" aria-label="Descuento para todo el pedido en %" placeholder="0" value={dtoGen} onChange={(e) => setDtoGen(e.target.value)} className={`${input} pr-7 text-right text-[17px] font-semibold`} />
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400" aria-hidden>%</span>
+          </label>
+        </div>
+        <div className="mt-2 flex gap-2">
+          {["5", "10", "15"].map((t) => (
+            <button key={t} type="button" aria-pressed={dtoGen === t} onClick={() => setDtoGen((x) => (x === t ? "" : t))} className={`${chip} flex-1 ${dtoGen === t ? "border-stone-800 bg-stone-800 text-white" : "border-stone-400 bg-white text-stone-700"}`}>{t} %</button>
+          ))}
+        </div>
       </div>
 
       <p className="mb-2 text-sm font-semibold text-stone-700">¿Qué pidió?</p>
@@ -188,59 +204,49 @@ function Formulario({ destino, cambiar, listo }: { destino: DatosPedido; cambiar
                 </div>
               )}
               {n > 0 && (
-                <div className="flex items-center gap-2 border-t border-stone-200 bg-stone-50 px-3 py-2.5">
-                  <label className="relative flex-1">
-                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" aria-hidden>$</span>
-                    <input name={`pr_${p.id}`} inputMode="decimal" aria-label={`Precio de ${p.nombre}`} placeholder="Precio" value={precios[p.id] ?? ""} onChange={(e) => setPrecios((x) => ({ ...x, [p.id]: e.target.value }))} className={`${input} pl-7 ${precio ? "" : "border-rojo-600"}`} />
-                  </label>
-                  {conFactura && (
-                    <select name={`iva_${p.id}`} aria-label={`IVA de ${p.nombre}`} value={ivas[p.id] ?? "0"} onChange={(e) => setIvas((x) => ({ ...x, [p.id]: e.target.value }))} className="h-12 w-[5.5rem] rounded-lg border border-stone-400 bg-white px-1 text-center text-base">
-                      {["0", "10,5", "21"].map((t) => <option key={t} value={t}>IVA {t}%</option>)}
-                    </select>
-                  )}
-                  <p className="w-[6.5rem] shrink-0 text-right text-[15px] font-bold tabular-nums">{precio ? formatoPesos(importe(p.id)) : <span className="text-xs font-medium text-rojo-700">Falta precio</span>}</p>
-                </div>
-              )}
-              {n > 0 && precio > 0 && (
-                <div className="border-t border-stone-200 px-3 py-2.5">
-                  {!(abiertoDto[p.id] || pct > 0) ? (
-                    <button type="button" onClick={() => setAbiertoDto((x) => ({ ...x, [p.id]: true }))} className={`${chip} border-stone-400 bg-white text-stone-700 active:bg-stone-100`}>− Descuento</button>
-                  ) : (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        {["5", "10", "15"].map((t) => (
-                          <button key={t} type="button" aria-pressed={dtos[p.id] === t} onClick={() => setDtos((x) => ({ ...x, [p.id]: x[p.id] === t ? "" : t }))} className={`${chip} ${dtos[p.id] === t ? "border-stone-800 bg-stone-800 text-white" : "border-stone-400 bg-white text-stone-700"}`}>{t} %</button>
-                        ))}
-                        <label className="relative flex-1">
-                          <input inputMode="decimal" aria-label={`Descuento de ${p.nombre} en %`} placeholder="Otro %" value={["5", "10", "15"].includes(dtos[p.id] ?? "") ? "" : dtos[p.id] ?? ""} onChange={(e) => setDtos((x) => ({ ...x, [p.id]: e.target.value }))} className={`${input} h-11 pr-7`} />
-                          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400" aria-hidden>%</span>
-                        </label>
-                        <button type="button" onClick={() => { setDtos((x) => ({ ...x, [p.id]: "" })); setAbiertoDto((x) => ({ ...x, [p.id]: false })); }} aria-label="Quitar descuento" className="h-11 w-11 shrink-0 rounded-lg border border-stone-400 bg-white text-lg text-stone-600 active:bg-stone-100">✕</button>
-                      </div>
-                      {pct > 0 && <p className="text-[14px] text-stone-700">Descuento {String(pct).replace(".", ",")} %: <span className="tabular-nums">{formatoPesos(bruto(p.id))} → <b>{formatoPesos(importe(p.id))}</b></span> <span className="text-stone-500">(−{formatoPesos(bruto(p.id) - importe(p.id))})</span></p>}
-                    </div>
-                  )}
+                <div className="space-y-3 border-t border-stone-200 bg-stone-50 px-3 py-3">
+                  <div className={`grid gap-2 ${conFactura ? "grid-cols-3" : "grid-cols-2"}`}>
+                    <label className="block text-[12px] font-semibold uppercase tracking-wide text-stone-500">Precio $
+                      <input name={`pr_${p.id}`} inputMode="decimal" aria-label={`Precio de ${p.nombre}`} placeholder="0" value={precios[p.id] ?? ""} onChange={(e) => setPrecios((x) => ({ ...x, [p.id]: e.target.value }))} className={`${input} mt-1 text-[17px] font-semibold normal-case tracking-normal ${precio ? "" : "border-rojo-600"}`} />
+                    </label>
+                    <label className="block text-[12px] font-semibold uppercase tracking-wide text-stone-500">Descuento %
+                      <input inputMode="decimal" aria-label={`Descuento de ${p.nombre} en %`} placeholder={dtoGen && !(dtos[p.id] ?? "").trim() ? dtoGen : "0"} value={dtos[p.id] ?? ""} onChange={(e) => setDtos((x) => ({ ...x, [p.id]: e.target.value }))} className={`${input} mt-1 text-[17px] font-semibold normal-case tracking-normal`} />
+                    </label>
+                    {conFactura && (
+                      <label className="block text-[12px] font-semibold uppercase tracking-wide text-stone-500">IVA
+                        <select name={`iva_${p.id}`} aria-label={`IVA de ${p.nombre}`} value={ivas[p.id] ?? "0"} onChange={(e) => setIvas((x) => ({ ...x, [p.id]: e.target.value }))} className={`${input} mt-1 px-2 text-[17px] font-semibold normal-case tracking-normal`}>
+                          {["0", "10,5", "21"].map((t) => <option key={t} value={t}>{t} %</option>)}
+                        </select>
+                      </label>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[12px] font-semibold uppercase tracking-wide text-stone-500">Rápido</span>
+                    {["5", "10", "15"].map((t) => (
+                      <button key={t} type="button" aria-pressed={dtoTexto(p.id) === t} onClick={() => setDtos((x) => ({ ...x, [p.id]: (x[p.id] ?? "") === t ? "" : t }))} className={`${chip} ${dtoTexto(p.id) === t ? "border-stone-800 bg-stone-800 text-white" : "border-stone-400 bg-white text-stone-700"}`}>{t} %</button>
+                    ))}
+                    {(dtos[p.id] ?? "") !== "" && <button type="button" onClick={() => setDtos((x) => ({ ...x, [p.id]: "" }))} className={`${chip} border-stone-300 bg-white text-stone-500`}>Sin descuento</button>}
+                  </div>
+                  <p className="flex items-baseline justify-between text-[15px]">
+                    <span className="text-stone-600">{pct > 0 ? <>Con {String(pct).replace(".", ",")} % de descuento <span className="text-stone-400 line-through tabular-nums">{formatoPesos(bruto(p.id))}</span></> : "Subtotal"}</span>
+                    <b className="text-[18px] tabular-nums text-stone-900">{precio ? formatoPesos(importe(p.id)) : <span className="text-xs font-medium text-rojo-700">Falta precio</span>}</b>
+                  </p>
                 </div>
               )}
               {(n > 0 || sc > 0 || abiertoSc[p.id]) && (
-                <div className="border-t border-stone-200 px-3 py-2.5">
-                  {!(sc > 0 || abiertoSc[p.id]) ? (
-                    <button type="button" onClick={() => { setAbiertoSc((x) => ({ ...x, [p.id]: true })); setScs((x) => ({ ...x, [p.id]: 1 })); }} className={`${chip} border-stone-400 bg-white text-stone-700 active:bg-stone-100`}>+ Sin cargo</button>
-                  ) : (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className="min-w-0 flex-1 text-[15px] font-semibold text-stone-800">Sin cargo <span className="font-normal text-stone-500">(no suma al total)</span></span>
-                        <button type="button" className="h-12 w-12 shrink-0 rounded-xl border border-stone-400 bg-white text-2xl leading-none active:bg-stone-100" onClick={() => setScs((x) => ({ ...x, [p.id]: Math.max(0, (x[p.id] ?? 0) - 1) }))} aria-label={`Menos sin cargo de ${p.nombre}`}>−</button>
-                        <span className="w-9 text-center text-xl font-semibold tabular-nums">{sc}</span>
-                        <button type="button" className="h-12 w-12 shrink-0 rounded-xl border border-stone-400 bg-white text-2xl leading-none active:bg-stone-100" onClick={() => setScs((x) => ({ ...x, [p.id]: (x[p.id] ?? 0) + 1 }))} aria-label={`Más sin cargo de ${p.nombre}`}>+</button>
-                        <button type="button" onClick={() => { setScs((x) => ({ ...x, [p.id]: 0 })); setMotivos((x) => ({ ...x, [p.id]: "" })); setAbiertoSc((x) => ({ ...x, [p.id]: false })); }} aria-label="Quitar sin cargo" className="h-11 w-11 shrink-0 rounded-lg border border-stone-400 bg-white text-lg text-stone-600 active:bg-stone-100">✕</button>
-                      </div>
-                      <div className="grid grid-cols-4 gap-1.5" role="group" aria-label="Motivo del sin cargo">
-                        {MOTIVOS.map((m) => (
-                          <button key={m} type="button" aria-pressed={motivos[p.id] === m} onClick={() => setMotivos((x) => ({ ...x, [p.id]: m }))} className={`h-11 rounded-lg border text-[13px] font-semibold ${motivos[p.id] === m ? "border-stone-800 bg-stone-800 text-white" : "border-stone-400 bg-white text-stone-700"}`}>{m}</button>
-                        ))}
-                      </div>
-                      {sc > 0 && !motivos[p.id] && <p className="text-[13px] font-medium text-rojo-700">Elegí el motivo.</p>}
+                <div className="space-y-2 border-t border-stone-200 px-3 py-3">
+                  <div className="flex items-center gap-2">
+                    <span className="min-w-0 flex-1 text-[15px] font-semibold text-stone-800">Sin cargo <span className="block text-[12px] font-normal text-stone-500">recambio, muestra… (no suma al total)</span></span>
+                    <button type="button" className="h-12 w-12 shrink-0 rounded-xl border border-stone-400 bg-white text-2xl leading-none active:bg-stone-100" onClick={() => setScs((x) => ({ ...x, [p.id]: Math.max(0, (x[p.id] ?? 0) - 1) }))} aria-label={`Menos sin cargo de ${p.nombre}`}>−</button>
+                    <span className="w-9 text-center text-xl font-semibold tabular-nums">{sc}</span>
+                    <button type="button" className="h-12 w-12 shrink-0 rounded-xl border border-stone-400 bg-white text-2xl leading-none active:bg-stone-100" onClick={() => setScs((x) => ({ ...x, [p.id]: (x[p.id] ?? 0) + 1 }))} aria-label={`Más sin cargo de ${p.nombre}`}>+</button>
+                  </div>
+                  {sc > 0 && (
+                    <div className="grid grid-cols-2 gap-1.5" role="group" aria-label="Motivo del sin cargo">
+                      {MOTIVOS.map((m) => (
+                        <button key={m} type="button" aria-pressed={motivos[p.id] === m} onClick={() => setMotivos((x) => ({ ...x, [p.id]: m }))} className={`h-11 rounded-lg border text-[14px] font-semibold ${motivos[p.id] === m ? "border-stone-800 bg-stone-800 text-white" : "border-stone-400 bg-white text-stone-700"}`}>{m}</button>
+                      ))}
+                      {!motivos[p.id] && <p className="col-span-2 text-[13px] font-medium text-rojo-700">¿Por qué es sin cargo? Elegí el motivo.</p>}
                     </div>
                   )}
                 </div>
