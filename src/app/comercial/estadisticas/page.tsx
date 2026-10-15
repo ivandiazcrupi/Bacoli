@@ -4,7 +4,7 @@ import { Cabecera } from "@/components/Cabecera";
 import { desgloseIva } from "@/lib/cuenta";
 import { db } from "@/lib/db";
 import { esFechaValida, hoy, sumarDias } from "@/lib/fechas";
-import { bultosDe, focacciasDe, totalUnidades, unidadesPorSabor } from "@/lib/ruta";
+import { bultosDe, focacciasPorTipo, totalUnidades, unidadesPorSabor } from "@/lib/ruta";
 import { exigirOficina } from "@/lib/session";
 import { vendedoresDesbloqueado } from "@/lib/claveVendedores";
 import { ventasEntregadas } from "@/lib/vendedores";
@@ -40,7 +40,7 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
   });
 
   // Cada pedido cuenta en el mes de su día de reparto (o, si todavía no lo tiene, el día en que se cargó).
-  type P = { f: string; web: boolean; clienteId: string | null; cliente: string; zona: string; tipo: string; paq: number; neto: number; entregado: boolean; sabores: ReturnType<typeof unidadesPorSabor>; foc: number };
+  type P = { f: string; web: boolean; clienteId: string | null; cliente: string; zona: string; tipo: string; paq: number; neto: number; entregado: boolean; sabores: ReturnType<typeof unidadesPorSabor>; foc: number; focOliva: number; focCherry: number };
   const filas: P[] = pedidos.map((p) => {
     const web = p.origen === "WEB";
     const base = desgloseIva(p.items, Number(p.ivaPct), p.estado).base;
@@ -49,7 +49,7 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
     return {
       f: p.fechaEntrega ? p.fechaEntrega.toISOString().slice(0, 10) : fechaAR(p.creadoEn), web, clienteId: p.clienteId, cliente: p.cliente?.nombre ?? "", zona: p.punto?.zona.nombre ?? "",
       tipo: web ? "Tienda online" : p.conFactura ? "Con factura" : "Con remito", paq: bultosDe(p.items), neto, entregado: p.estado === "ENTREGADO",
-      sabores: unidadesPorSabor(p.items), foc: focacciasDe(p.items),
+      sabores: unidadesPorSabor(p.items), foc: focacciasPorTipo(p.items).oliva + focacciasPorTipo(p.items).cherry, focOliva: focacciasPorTipo(p.items).oliva, focCherry: focacciasPorTipo(p.items).cherry,
     };
   });
   const delMes = filas.filter((p) => mesDe(p.f) === mes);
@@ -105,7 +105,8 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
     { nombre: "Prepizza tomate", valor: delMes.reduce((t, p) => t + p.sabores.tomate, 0) },
     { nombre: "Prepizza cebolla", valor: delMes.reduce((t, p) => t + p.sabores.cebolla, 0) },
     { nombre: "Pizzas por unidad", valor: delMes.reduce((t, p) => t + p.sabores.pizzas, 0) },
-    { nombre: "Focaccias", valor: delMes.reduce((t, p) => t + p.foc, 0) },
+    { nombre: "Focaccia oliva", valor: delMes.reduce((t, p) => t + p.focOliva, 0) },
+    { nombre: "Focaccia cherry", valor: delMes.reduce((t, p) => t + p.focCherry, 0) },
   ].filter((x) => x.valor > 0);
 
   const variacion = (a: number, b: number) => (b > 0 ? Math.round(((a - b) / b) * 100) : null);

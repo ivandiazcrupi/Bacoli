@@ -367,3 +367,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Combos de la tienda: cantidad (pedido del dueño)
 - `focacciasDe` ya suma 2 focaccias **por cada combo** ("2 combos = 4 focaccias"). El error estaba al leer la planilla de Empretienda: si el nombre no trae "2x", el combo quedaba siempre como 1; ahora la cantidad sale de la columna Tomate (cada combo = 2 paquetes de tomate; `armarItems` en `src/lib/empretienda.ts`). Los pedidos ya cargados con el error se corrigen editando la cantidad del combo.
+
+## Focaccias por sabor: oliva y cherry (pedido del dueño)
+- La tienda vende ahora **"FOCACCIA CHERRY Y ROMERO X2"** (cada una comprada trae 2 focaccias cherry) y **"OLIVA + CHERRY Y ROMERO X2"** (pack mixto: 1 oliva + 1 cherry por cada una comprada). `focacciasPorTipo` (`src/lib/ruta.ts`) separa **oliva** y **cherry**: un nombre que termina en "X2" multiplica por 2 (en el pack mixto se reparte mitad y mitad), las FOCACCIA comunes cuentan como oliva y los 2 FOCACCIA del "COMBO NAPOLITANO + 2 FOCACCIA" también cuentan como oliva (supuesto: confirmar con el dueño). `focacciasDe` = oliva + cherry.
+- En la hoja de ruta hay **dos contadores: FOCACCIA OLIVA y FOCACCIA CHERRY** (en gris con 0), en la hoja impresa aparece cada uno solo si hay, y en Estadísticas el panel "qué se vende" las muestra separadas (Unidades vendidas suma ambas).
