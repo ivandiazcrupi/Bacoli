@@ -34,12 +34,11 @@ function Fila({ titulo, pedidos }: { titulo: string; pedidos: { items: Renglon[]
   );
 }
 
-// Dos renglones: lo que espera día en esta lista, y todo lo que falta entregar (con y sin día asignado).
-export function ContadorPedidos({ esperando, conDia }: { esperando: { items: Renglon[] }[]; conDia: { items: Renglon[] }[] }) {
+// Lo que espera día en la lista que se está viendo.
+export function ContadorPedidos({ esperando }: { esperando: { items: Renglon[] }[] }) {
   return (
-    <section aria-label="Cuánto hay por entregar" className="space-y-2 rounded-lg border border-stone-300 bg-white px-4 py-3">
+    <section aria-label="Cuánto espera día" className="rounded-lg border border-stone-300 bg-white px-4 py-3">
       <Fila titulo="Esperando día" pedidos={esperando} />
-      <Fila titulo="Por entregar en total" pedidos={[...esperando, ...conDia]} />
     </section>
   );
 }

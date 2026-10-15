@@ -23,10 +23,8 @@ export default async function Pedidos({ searchParams }: { searchParams: Promise<
 
   // Esperan día: los pendientes sin fecha y los que volvieron como "no entregado" (se reactivan al asignarles día).
   const esperando = { estado: { in: ["PENDIENTE", "NO_ENTREGADO"] as EstadoPedido[] }, fechaEntrega: null };
-  const [pedidos, conDia, cuentaMayoristas, cuentaWeb, cuentaCobranzas, cerrados] = await Promise.all([
+  const [pedidos, cuentaMayoristas, cuentaWeb, cuentaCobranzas, cerrados] = await Promise.all([
     db.pedido.findMany({ where: { ...esperando, origen: esCobranza ? "COBRANZA" : esWeb ? "WEB" : "MAYORISTA" }, include: incluirPedido, orderBy: [{ creadoEn: "asc" }] }),
-    // Ya tienen día asignado pero todavía no se entregaron (para el total "por entregar").
-    esCobranza ? Promise.resolve([]) : db.pedido.findMany({ where: { estado: "PENDIENTE", fechaEntrega: { not: null }, origen: esWeb ? "WEB" : "MAYORISTA" }, select: { items: { select: { nombre: true, cantidad: true, sinCargo: true, unidad: true, paquetesPor: true } } } }),
     db.pedido.count({ where: { ...esperando, origen: "MAYORISTA" } }),
     db.pedido.count({ where: { ...esperando, origen: "WEB" } }),
     db.pedido.count({ where: { ...esperando, origen: "COBRANZA" } }),
@@ -71,7 +69,7 @@ export default async function Pedidos({ searchParams }: { searchParams: Promise<
 
         {esWeb && <TraerPedidosWeb />}
 
-        {!esCobranza && <ContadorPedidos esperando={pedidos} conDia={conDia} />}
+        {!esCobranza && <ContadorPedidos esperando={pedidos} />}
 
         {esWeb && pedidos.length === 0 ? (
           <p className="rounded-lg border border-dashed border-stone-400 p-8 text-center text-stone-600">Todavía no hay pedidos de la tienda online esperando día. Entran solos cada 15 minutos, o tocá “Traer pedidos ahora”.</p>
