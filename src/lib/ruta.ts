@@ -55,9 +55,11 @@ export function focacciasPorTipo(items: RenglonRuta[]) {
     const cherry = nom.includes("CHERRY");
     const oliva = nom.includes("OLIVA");
     if (!cherry && !nom.includes("FOCACCIA")) continue;
-    const x = nom.match(/\bX\s*(\d+)\s*$/);
-    const unidades = x ? Number(x[1]) : 1; // unidades que trae cada una comprada
-    if (cherry && oliva) { r.oliva += cant * (unidades / 2); r.cherry += cant * (unidades / 2); } // pack mixto
+    const xs = [...nom.matchAll(/\bX\s*(\d+)\b/g)]; // "X2" en cualquier parte del nombre (ej. "… X2 UNIDADES", "(X2)")
+    const x = xs.length ? xs[xs.length - 1] : null;
+    const mixto = cherry && oliva;
+    const unidades = x ? Number(x[1]) : mixto ? 2 : 1; // unidades que trae cada una comprada (el pack mixto sin "X" trae 1 de cada)
+    if (mixto) { r.oliva += cant * (unidades / 2); r.cherry += cant * (unidades / 2); } // pack mixto
     else if (cherry) r.cherry += cant * unidades;
     else r.oliva += cant * unidades;
   }
