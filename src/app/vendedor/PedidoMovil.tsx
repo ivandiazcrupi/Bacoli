@@ -9,6 +9,8 @@ import { buscarDestinos, crearPedido, datosNuevoPedido, type DatosPedido, type D
 // Cargar un pedido desde el CELULAR (lo usa Diego todo el día): pasos grandes, botones para el dedo y el total siempre a la vista.
 // 1) elegir el cliente (aparecen sus clientes sin escribir nada; se puede buscar) · 2) cantidades y precios · 3) Guardar.
 const input = "h-12 w-full rounded-lg border border-stone-400 bg-white px-3 text-base text-stone-900 focus:border-verde-700 focus:outline-none focus:ring-2 focus:ring-verde-700/25";
+const chip = "h-11 rounded-lg border px-3 text-[15px] font-semibold";
+const MOTIVOS = ["Recambio", "Bonificación", "Muestra", "Otro"];
 const paso = "h-14 w-14 shrink-0 rounded-xl border border-stone-400 bg-white text-3xl font-medium leading-none text-stone-800 active:bg-stone-100";
 
 export function PedidoMovil({ inicial }: { inicial: DatosPedido | null }) {
@@ -85,6 +87,11 @@ function Formulario({ destino, cambiar, listo }: { destino: DatosPedido; cambiar
   const [q, setQ] = useState<Record<string, number>>({});
   const [precios, setPrecios] = useState<Record<string, string>>({});
   const [ivas, setIvas] = useState<Record<string, string>>({});
+  const [dtos, setDtos] = useState<Record<string, string>>({}); // bonificación % por producto
+  const [scs, setScs] = useState<Record<string, number>>({}); // paquetes/unidades sin cargo por producto
+  const [motivos, setMotivos] = useState<Record<string, string>>({});
+  const [abiertoDto, setAbiertoDto] = useState<Record<string, boolean>>({});
+  const [abiertoSc, setAbiertoSc] = useState<Record<string, boolean>>({});
   const [conFactura, setConFactura] = useState(destino.facturado);
   const [otro, setOtro] = useState({ nombre: "", cantidad: "1", precio: "", unidad: "paquete", iva: "0" });
   const [masAbierto, setMasAbierto] = useState(false);
@@ -94,7 +101,10 @@ function Formulario({ destino, cambiar, listo }: { destino: DatosPedido; cambiar
   useEffect(() => { if (estado?.ok) listo(estado.ok); }, [estado, listo]);
   const cant = (id: string) => q[id] ?? 0;
   const mover = (id: string, d: number) => setQ((x) => ({ ...x, [id]: Math.max(0, (x[id] ?? 0) + d) }));
-  const importe = (id: string) => cant(id) * (leerMonto(precios[id] ?? "") ?? 0);
+  const pctDe = (id: string) => Math.min(100, Math.max(0, leerMonto(dtos[id] ?? "") ?? 0));
+  const bruto = (id: string) => cant(id) * (leerMonto(precios[id] ?? "") ?? 0);
+  const importe = (id: string) => bruto(id) * (1 - pctDe(id) / 100);
+  const sinCargoDe = (id: string) => scs[id] ?? 0;
   const otroQ = Number(otro.cantidad.replace(/\D/g, "") || 0);
   const otroImp = otro.nombre.trim() ? otroQ * (leerMonto(otro.precio) ?? 0) : 0;
   const montoEnvio = Math.max(0, leerMonto(envio) ?? 0);
@@ -109,14 +119,19 @@ function Formulario({ destino, cambiar, listo }: { destino: DatosPedido; cambiar
   }, [q, precios, ivas, conFactura, otroImp, otro.iva, montoEnvio]);
 
   const elegidos = destino.productos.filter((p) => cant(p.id) > 0);
-  const hayAlgo = elegidos.length > 0 || (otro.nombre.trim() && otroQ > 0);
+  const conSc = destino.productos.filter((p) => cant(p.id) > 0 || sinCargoDe(p.id) > 0);
+  const totalDescuento = destino.productos.reduce((t, p) => t + bruto(p.id) - importe(p.id), 0);
+  const totalSc = destino.productos.reduce((t, p) => t + sinCargoDe(p.id), 0);
+  const falloMotivo = destino.productos.find((p) => sinCargoDe(p.id) > 0 && !(motivos[p.id] ?? "").trim());
+  const hayAlgo = conSc.length > 0 || (otro.nombre.trim() && otroQ > 0);
   const faltaPrecio = elegidos.some((p) => !(leerMonto(precios[p.id] ?? "") ?? 0)) || (otro.nombre.trim() !== "" && !(leerMonto(otro.precio) ?? 0));
   const antes = (e: React.FormEvent) => {
     if (!hayAlgo) { e.preventDefault(); setError("Sumá la cantidad de al menos un producto con el +."); return; }
     if (faltaPrecio) { e.preventDefault(); setError("Falta escribir el precio de lo que pidió (los renglones marcados en rojo)."); return; }
+    if (falloMotivo) { e.preventDefault(); setError(`Elegí el motivo del sin cargo de ${falloMotivo.nombre}.`); return; }
     setError(null);
   };
-  const cuantos = elegidos.length + (otro.nombre.trim() && otroQ > 0 ? 1 : 0);
+  const cuantos = conSc.length + (otro.nombre.trim() && otroQ > 0 ? 1 : 0);
   const arriba = useRef<HTMLDivElement>(null);
 
   return (
@@ -125,6 +140,13 @@ function Formulario({ destino, cambiar, listo }: { destino: DatosPedido; cambiar
       <input type="hidden" name="puntoId" value={destino.puntoId} />
       <input type="hidden" name="conFactura" value={conFactura ? "1" : "0"} />
       <input type="hidden" name="m_total" value="1" />
+      {destino.productos.map((p) => (
+        <span key={p.id}>
+          <input type="hidden" name={`bd_${p.id}`} value={pctDe(p.id) ? dtos[p.id] : ""} />
+          <input type="hidden" name={`sc_${p.id}`} value={sinCargoDe(p.id) || ""} />
+          <input type="hidden" name={`scm_${p.id}`} value={sinCargoDe(p.id) ? motivos[p.id] ?? "" : ""} />
+        </span>
+      ))}
       <input type="hidden" name="envio" value={envio} />
       <input type="hidden" name="mn_0" value={otro.nombre} /><input type="hidden" name="mc_0" value={otro.cantidad} /><input type="hidden" name="mp_0" value={otro.precio} /><input type="hidden" name="mu_0" value={otro.unidad} /><input type="hidden" name="mi_0" value={otro.iva} />
 
@@ -147,8 +169,10 @@ function Formulario({ destino, cambiar, listo }: { destino: DatosPedido; cambiar
         {destino.productos.map((p) => {
           const n = cant(p.id);
           const precio = leerMonto(precios[p.id] ?? "") ?? 0;
+          const sc = sinCargoDe(p.id);
+          const pct = pctDe(p.id);
           return (
-            <li key={p.id} className={`rounded-xl border bg-white ${n > 0 ? "border-verde-700" : "border-stone-300"}`}>
+            <li key={p.id} className={`rounded-xl border bg-white ${n > 0 || sc > 0 ? "border-verde-700" : "border-stone-300"}`}>
               <div className="flex items-center gap-3 px-3 py-2.5">
                 <div className="min-w-0 flex-1">
                   <p className="text-[16px] font-semibold leading-tight text-stone-900">{p.nombre}</p>
@@ -158,6 +182,11 @@ function Formulario({ destino, cambiar, listo }: { destino: DatosPedido; cambiar
                 <input name={`q_${p.id}`} inputMode="numeric" aria-label={`Cantidad de ${p.nombre}`} value={n || ""} placeholder="0" onChange={(e) => setQ((x) => ({ ...x, [p.id]: Number(e.target.value.replace(/\D/g, "") || 0) }))} className="h-14 w-16 shrink-0 rounded-xl border border-stone-400 bg-white text-center text-2xl font-semibold tabular-nums" />
                 <button type="button" className={paso} onClick={() => mover(p.id, 1)} aria-label={`Más ${p.nombre}`}>+</button>
               </div>
+              {n === 0 && sc === 0 && !abiertoSc[p.id] && (
+                <div className="border-t border-stone-200 px-3 py-2">
+                  <button type="button" onClick={() => { setAbiertoSc((x) => ({ ...x, [p.id]: true })); setScs((x) => ({ ...x, [p.id]: 1 })); }} className="text-[14px] font-semibold text-stone-600 underline-offset-2 active:underline">+ Solo sin cargo (recambio, muestra…)</button>
+                </div>
+              )}
               {n > 0 && (
                 <div className="flex items-center gap-2 border-t border-stone-200 bg-stone-50 px-3 py-2.5">
                   <label className="relative flex-1">
@@ -170,6 +199,50 @@ function Formulario({ destino, cambiar, listo }: { destino: DatosPedido; cambiar
                     </select>
                   )}
                   <p className="w-[6.5rem] shrink-0 text-right text-[15px] font-bold tabular-nums">{precio ? formatoPesos(importe(p.id)) : <span className="text-xs font-medium text-rojo-700">Falta precio</span>}</p>
+                </div>
+              )}
+              {n > 0 && precio > 0 && (
+                <div className="border-t border-stone-200 px-3 py-2.5">
+                  {!(abiertoDto[p.id] || pct > 0) ? (
+                    <button type="button" onClick={() => setAbiertoDto((x) => ({ ...x, [p.id]: true }))} className={`${chip} border-stone-400 bg-white text-stone-700 active:bg-stone-100`}>− Descuento</button>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        {["5", "10", "15"].map((t) => (
+                          <button key={t} type="button" aria-pressed={dtos[p.id] === t} onClick={() => setDtos((x) => ({ ...x, [p.id]: x[p.id] === t ? "" : t }))} className={`${chip} ${dtos[p.id] === t ? "border-stone-800 bg-stone-800 text-white" : "border-stone-400 bg-white text-stone-700"}`}>{t} %</button>
+                        ))}
+                        <label className="relative flex-1">
+                          <input inputMode="decimal" aria-label={`Descuento de ${p.nombre} en %`} placeholder="Otro %" value={["5", "10", "15"].includes(dtos[p.id] ?? "") ? "" : dtos[p.id] ?? ""} onChange={(e) => setDtos((x) => ({ ...x, [p.id]: e.target.value }))} className={`${input} h-11 pr-7`} />
+                          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400" aria-hidden>%</span>
+                        </label>
+                        <button type="button" onClick={() => { setDtos((x) => ({ ...x, [p.id]: "" })); setAbiertoDto((x) => ({ ...x, [p.id]: false })); }} aria-label="Quitar descuento" className="h-11 w-11 shrink-0 rounded-lg border border-stone-400 bg-white text-lg text-stone-600 active:bg-stone-100">✕</button>
+                      </div>
+                      {pct > 0 && <p className="text-[14px] text-stone-700">Descuento {String(pct).replace(".", ",")} %: <span className="tabular-nums">{formatoPesos(bruto(p.id))} → <b>{formatoPesos(importe(p.id))}</b></span> <span className="text-stone-500">(−{formatoPesos(bruto(p.id) - importe(p.id))})</span></p>}
+                    </div>
+                  )}
+                </div>
+              )}
+              {(n > 0 || sc > 0 || abiertoSc[p.id]) && (
+                <div className="border-t border-stone-200 px-3 py-2.5">
+                  {!(sc > 0 || abiertoSc[p.id]) ? (
+                    <button type="button" onClick={() => { setAbiertoSc((x) => ({ ...x, [p.id]: true })); setScs((x) => ({ ...x, [p.id]: 1 })); }} className={`${chip} border-stone-400 bg-white text-stone-700 active:bg-stone-100`}>+ Sin cargo</button>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="min-w-0 flex-1 text-[15px] font-semibold text-stone-800">Sin cargo <span className="font-normal text-stone-500">(no suma al total)</span></span>
+                        <button type="button" className="h-12 w-12 shrink-0 rounded-xl border border-stone-400 bg-white text-2xl leading-none active:bg-stone-100" onClick={() => setScs((x) => ({ ...x, [p.id]: Math.max(0, (x[p.id] ?? 0) - 1) }))} aria-label={`Menos sin cargo de ${p.nombre}`}>−</button>
+                        <span className="w-9 text-center text-xl font-semibold tabular-nums">{sc}</span>
+                        <button type="button" className="h-12 w-12 shrink-0 rounded-xl border border-stone-400 bg-white text-2xl leading-none active:bg-stone-100" onClick={() => setScs((x) => ({ ...x, [p.id]: (x[p.id] ?? 0) + 1 }))} aria-label={`Más sin cargo de ${p.nombre}`}>+</button>
+                        <button type="button" onClick={() => { setScs((x) => ({ ...x, [p.id]: 0 })); setMotivos((x) => ({ ...x, [p.id]: "" })); setAbiertoSc((x) => ({ ...x, [p.id]: false })); }} aria-label="Quitar sin cargo" className="h-11 w-11 shrink-0 rounded-lg border border-stone-400 bg-white text-lg text-stone-600 active:bg-stone-100">✕</button>
+                      </div>
+                      <div className="grid grid-cols-4 gap-1.5" role="group" aria-label="Motivo del sin cargo">
+                        {MOTIVOS.map((m) => (
+                          <button key={m} type="button" aria-pressed={motivos[p.id] === m} onClick={() => setMotivos((x) => ({ ...x, [p.id]: m }))} className={`h-11 rounded-lg border text-[13px] font-semibold ${motivos[p.id] === m ? "border-stone-800 bg-stone-800 text-white" : "border-stone-400 bg-white text-stone-700"}`}>{m}</button>
+                        ))}
+                      </div>
+                      {sc > 0 && !motivos[p.id] && <p className="text-[13px] font-medium text-rojo-700">Elegí el motivo.</p>}
+                    </div>
+                  )}
                 </div>
               )}
             </li>
@@ -208,6 +281,9 @@ function Formulario({ destino, cambiar, listo }: { destino: DatosPedido; cambiar
       {/* Barra fija abajo: el total y el botón siempre al alcance del pulgar */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-stone-300 bg-white px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
         <div className="mx-auto max-w-xl">
+          {(totalDescuento > 0 || totalSc > 0) && (
+            <p className="mb-1 text-[13px] text-stone-600">{[totalDescuento > 0 ? `Descuentos −${formatoPesos(totalDescuento)}` : "", totalSc > 0 ? `Sin cargo: ${totalSc} ${totalSc === 1 ? "unidad" : "unidades"}` : ""].filter(Boolean).join(" · ")}</p>
+          )}
           <div className="mb-2 flex items-baseline justify-between">
             <span className="text-sm text-stone-600">{cuantos === 0 ? "Todavía no sumaste nada" : `${cuantos} ${cuantos === 1 ? "producto" : "productos"}${conFactura && iva > 0 ? ` · IVA ${formatoPesos(iva)}` : ""}`}</span>
             <span className="text-2xl font-bold tabular-nums text-stone-900">{formatoPesos(neto + iva)}</span>
