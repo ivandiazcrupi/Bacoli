@@ -6,6 +6,7 @@ import { aFecha, deFecha, diaMes, esFechaValida, diasDeSemana, finDeSemana, hoy,
 import { exigirOficina } from "@/lib/session";
 import { UbicarPedido } from "@/components/UbicarPedido";
 import { Bandeja } from "./Bandeja";
+import { RevisarCombos } from "./RevisarCombos";
 import { TraerPedidosWeb } from "./TraerPedidosWeb";
 import { aFilaBandeja, incluirPedido } from "./filas";
 import { CONTENEDOR_PEDIDOS, EncabezadoPedidos } from "./Encabezado";
@@ -67,6 +68,7 @@ export default async function Pedidos({ searchParams }: { searchParams: Promise<
         </div>
 
         {esWeb && <TraerPedidosWeb />}
+        {esWeb && <RevisarCombos />}
 
         {esWeb && pedidos.length === 0 ? (
           <p className="rounded-lg border border-dashed border-stone-400 p-8 text-center text-stone-600">Todavía no hay pedidos de la tienda online esperando día. Entran solos cada 15 minutos, o tocá “Traer pedidos ahora”.</p>

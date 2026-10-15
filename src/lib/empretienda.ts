@@ -194,3 +194,50 @@ export async function importarPedidosWeb(csvManual?: string): Promise<ResultadoI
   }
   return { ok: true, nuevos, yaCargados, mensaje: nuevos ? `Se cargaron ${nuevos} ${nuevos === 1 ? "pedido nuevo" : "pedidos nuevos"} de la tienda.` : "No hay pedidos nuevos en la tienda." };
 }
+
+// ───── Revisión TEMPORAL de combos (se pidió para corregir pedidos ya cargados con la cantidad mal; después se borra este bloque y su botón) ─────
+export type CorreccionCombo = { itemId: string; pedidoId: string; orden: string; cliente: string; nombre: string; actual: number; nuevo: number };
+
+async function leerPlanillaViva(): Promise<{ ok: true; csv: string } | { ok: false; mensaje: string }> {
+  const url = process.env.EMPRETIENDA_CSV_URL;
+  if (!url) return { ok: false, mensaje: "Falta conectar la planilla de la tienda (variable EMPRETIENDA_CSV_URL)." };
+  try {
+    const r = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(25_000) });
+    if (!r.ok) return { ok: false, mensaje: `No se pudo leer la planilla (error ${r.status}).` };
+    return { ok: true, csv: await r.text() };
+  } catch {
+    return { ok: false, mensaje: "No se pudo leer la planilla de la tienda. Probá de nuevo en unos minutos." };
+  }
+}
+
+/** Compara los combos de pedidos pendientes con lo que dice la planilla. Solo propone SUBIR la cantidad (el error era siempre quedarse corto). No cambia nada. */
+export async function revisarCombos(): Promise<{ ok: boolean; mensaje: string; cambios: CorreccionCombo[] }> {
+  const planilla = await leerPlanillaViva();
+  if (!planilla.ok) return { ok: false, mensaje: planilla.mensaje, cambios: [] };
+  const porOrden = new Map(leerPlanilla(planilla.csv).map((p) => [p.orden, p]));
+  const pedidos = await db.pedido.findMany({
+    where: { origen: "WEB", estado: "PENDIENTE", webOrden: { not: null }, items: { some: { nombre: { startsWith: "COMBO NAPOLITANO" } } } },
+    select: { id: true, webOrden: true, webNombre: true, items: { where: { nombre: { startsWith: "COMBO NAPOLITANO" } }, orderBy: { id: "asc" }, select: { id: true, nombre: true, cantidad: true } } },
+  });
+  const cambios: CorreccionCombo[] = [];
+  for (const p of pedidos) {
+    const fila = porOrden.get(p.webOrden ?? "");
+    if (!fila) continue;
+    const combosPlanilla = armarItems(fila.renglones, { tomate: null, cebolla: null }).filter((i) => i.nombre.startsWith("COMBO NAPOLITANO"));
+    if (combosPlanilla.length !== p.items.length) continue; // no coinciden los renglones: mejor no tocar
+    p.items.forEach((it, k) => {
+      const nuevo = combosPlanilla[k].cantidad;
+      if (nuevo > it.cantidad) cambios.push({ itemId: it.id, pedidoId: p.id, orden: p.webOrden ?? "", cliente: p.webNombre ?? "", nombre: it.nombre, actual: it.cantidad, nuevo });
+    });
+  }
+  return { ok: true, mensaje: cambios.length ? `${cambios.length} ${cambios.length === 1 ? "combo para corregir" : "combos para corregir"}.` : "No hay combos para corregir.", cambios };
+}
+
+/** Aplica solo los renglones tildados, recalculando todo de nuevo en el servidor (no se confía en lo que mandó la pantalla). */
+export async function aplicarCombos(itemIds: string[]): Promise<{ ok: boolean; mensaje: string }> {
+  const r = await revisarCombos();
+  if (!r.ok) return { ok: false, mensaje: r.mensaje };
+  const aplicar = r.cambios.filter((c) => itemIds.includes(c.itemId));
+  for (const c of aplicar) await db.pedidoItem.update({ where: { id: c.itemId }, data: { cantidad: c.nuevo } });
+  return { ok: true, mensaje: `Se corrigieron ${aplicar.length} ${aplicar.length === 1 ? "combo" : "combos"}.` };
+}
