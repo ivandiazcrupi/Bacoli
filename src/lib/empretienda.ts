@@ -107,7 +107,9 @@ export function armarItems(renglones: RenglonPlanilla[], cat: Catalogo): ItemNue
     if (texto.includes("COMBO") && /NAPOLITANO|MADRE|FOCACCIA/.test(texto)) {
       // Semana de la madre: la tienda le cambió el nombre y trae 2 focaccias gratis. Se carga siempre con el nombre del sistema.
       const conFocaccia = /FOCACCIA|MADRE/.test(texto);
-      otros.push({ productoId: null, nombre: conFocaccia ? "COMBO NAPOLITANO + 2 FOCACCIA" : "COMBO NAPOLITANO", sku: null, unidad: "combo", cantidad: cantidadTexto, paquetesPor: 2 });
+      // Cada combo trae 2 paquetes de tomate: si el nombre no dice "2x", la cantidad sale de la columna Tomate (4 paquetes = 2 combos).
+      const cantidadCombo = prefijo ? cantidadTexto : Math.max(1, Math.round(r.tomate / 2));
+      otros.push({ productoId: null, nombre: conFocaccia ? "COMBO NAPOLITANO + 2 FOCACCIA" : "COMBO NAPOLITANO", sku: null, unidad: "combo", cantidad: cantidadCombo, paquetesPor: 2 });
     } else if (texto.includes("TOMATE + CEBOLLA")) {
       sumar(cat.tomate, r.tomate || cantidadTexto);
       sumar(cat.cebolla, r.cebolla || cantidadTexto);
