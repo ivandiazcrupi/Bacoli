@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { aplicarCombosWeb, revisarCombosWeb } from "./actions";
 
-type Cambio = { itemId: string; orden: string; cliente: string; actual: number; nuevo: number };
+type Cambio = { itemId: string; orden: string; cliente: string; actual: number; nuevo: number; estado: string; dia: string | null };
 
 // TEMPORAL: muestra qué combos de la tienda tienen la cantidad mal y deja aplicar la corrección tildada. Después se borra.
 export function RevisarCombos() {
@@ -33,13 +33,13 @@ export function RevisarCombos() {
       {mensaje && <span className="ml-3 text-sm text-stone-700" role="status">{mensaje}</span>}
       {cambios && cambios.length > 0 && (
         <div className="max-w-xl rounded-md border border-stone-300 bg-white p-3 text-[13px]">
-          <p className="mb-2 text-stone-600">Solo pedidos pendientes. Bajá la copia de seguridad (Empresa) antes de aplicar.</p>
+          <p className="mb-2 text-stone-600">Incluye pedidos pendientes, los de las hojas de ruta y los ya entregados (no los cancelados). Bajá la copia de seguridad (Empresa) antes de aplicar.</p>
           <ul className="space-y-1">
             {cambios.map((c) => (
               <li key={c.itemId}>
                 <label className="flex items-center gap-2">
                   <input type="checkbox" checked={tildados.has(c.itemId)} onChange={(e) => setTildados((t) => { const n = new Set(t); if (e.target.checked) n.add(c.itemId); else n.delete(c.itemId); return n; })} />
-                  <span>N° {c.orden} · {c.cliente}: combos <b>{c.actual} → {c.nuevo}</b> ({c.nuevo * 2} focaccias)</span>
+                  <span>N° {c.orden} · {c.cliente}: combos <b>{c.actual} → {c.nuevo}</b> ({c.nuevo * 2} focaccias) · <span className="text-stone-500">{c.estado === "ENTREGADO" ? "ya entregado" : c.estado === "NO_ENTREGADO" ? "no entregado" : "pendiente"}{c.dia ? ` · hoja del ${c.dia.split("-").reverse().join("/")}` : " · sin día"}</span></span>
                 </label>
               </li>
             ))}

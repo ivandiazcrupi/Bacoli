@@ -196,7 +196,7 @@ export async function importarPedidosWeb(csvManual?: string): Promise<ResultadoI
 }
 
 // ───── Revisión TEMPORAL de combos (se pidió para corregir pedidos ya cargados con la cantidad mal; después se borra este bloque y su botón) ─────
-export type CorreccionCombo = { itemId: string; pedidoId: string; orden: string; cliente: string; nombre: string; actual: number; nuevo: number };
+export type CorreccionCombo = { itemId: string; pedidoId: string; orden: string; cliente: string; nombre: string; actual: number; nuevo: number; estado: string; dia: string | null };
 
 async function leerPlanillaViva(): Promise<{ ok: true; csv: string } | { ok: false; mensaje: string }> {
   const url = process.env.EMPRETIENDA_CSV_URL;
@@ -216,8 +216,8 @@ export async function revisarCombos(): Promise<{ ok: boolean; mensaje: string; c
   if (!planilla.ok) return { ok: false, mensaje: planilla.mensaje, cambios: [] };
   const porOrden = new Map(leerPlanilla(planilla.csv).map((p) => [p.orden, p]));
   const pedidos = await db.pedido.findMany({
-    where: { origen: "WEB", estado: "PENDIENTE", webOrden: { not: null }, items: { some: { nombre: { startsWith: "COMBO NAPOLITANO" } } } },
-    select: { id: true, webOrden: true, webNombre: true, items: { where: { nombre: { startsWith: "COMBO NAPOLITANO" } }, orderBy: { id: "asc" }, select: { id: true, nombre: true, cantidad: true } } },
+    where: { origen: "WEB", estado: { in: ["PENDIENTE", "ENTREGADO", "NO_ENTREGADO"] }, webOrden: { not: null }, items: { some: { nombre: { startsWith: "COMBO NAPOLITANO" } } } },
+    select: { id: true, webOrden: true, webNombre: true, estado: true, fechaEntrega: true, items: { where: { nombre: { startsWith: "COMBO NAPOLITANO" } }, orderBy: { id: "asc" }, select: { id: true, nombre: true, cantidad: true, cantidadEntregada: true } } },
   });
   const cambios: CorreccionCombo[] = [];
   for (const p of pedidos) {
@@ -227,7 +227,7 @@ export async function revisarCombos(): Promise<{ ok: boolean; mensaje: string; c
     if (combosPlanilla.length !== p.items.length) continue; // no coinciden los renglones: mejor no tocar
     p.items.forEach((it, k) => {
       const nuevo = combosPlanilla[k].cantidad;
-      if (nuevo > it.cantidad) cambios.push({ itemId: it.id, pedidoId: p.id, orden: p.webOrden ?? "", cliente: p.webNombre ?? "", nombre: it.nombre, actual: it.cantidad, nuevo });
+      if (nuevo > it.cantidad) cambios.push({ itemId: it.id, pedidoId: p.id, orden: p.webOrden ?? "", cliente: p.webNombre ?? "", nombre: it.nombre, actual: it.cantidad, nuevo, estado: p.estado, dia: p.fechaEntrega ? p.fechaEntrega.toISOString().slice(0, 10) : null });
     });
   }
   return { ok: true, mensaje: cambios.length ? `${cambios.length} ${cambios.length === 1 ? "combo para corregir" : "combos para corregir"}.` : "No hay combos para corregir.", cambios };
@@ -238,6 +238,11 @@ export async function aplicarCombos(itemIds: string[]): Promise<{ ok: boolean; m
   const r = await revisarCombos();
   if (!r.ok) return { ok: false, mensaje: r.mensaje };
   const aplicar = r.cambios.filter((c) => itemIds.includes(c.itemId));
-  for (const c of aplicar) await db.pedidoItem.update({ where: { id: c.itemId }, data: { cantidad: c.nuevo } });
+  for (const c of aplicar) {
+    // Si estaba entregado completo (entregado = lo pedido), la entrega acompaña la nueva cantidad.
+    const it = await db.pedidoItem.findUnique({ where: { id: c.itemId }, select: { cantidad: true, cantidadEntregada: true } });
+    const acompanar = it?.cantidadEntregada != null && it.cantidadEntregada === it.cantidad;
+    await db.pedidoItem.update({ where: { id: c.itemId }, data: { cantidad: c.nuevo, ...(acompanar ? { cantidadEntregada: c.nuevo } : {}) } });
+  }
   return { ok: true, mensaje: `Se corrigieron ${aplicar.length} ${aplicar.length === 1 ? "combo" : "combos"}.` };
 }
