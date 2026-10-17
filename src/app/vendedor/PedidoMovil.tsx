@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { IVA_ENVIO } from "@/lib/cuenta";
 import { formatoPesos, leerMonto } from "@/lib/numeros";
-import { buscarDestinos, crearPedido, datosNuevoPedido, type DatosPedido, type Destino } from "../pedidos/actions";
+import { actualizarPedido, buscarDestinos, crearPedido, datosNuevoPedido, type DatosPedido, type Destino } from "../pedidos/actions";
 
 // Cargar un pedido desde el CELULAR (lo usa Diego todo el día): pasos grandes, botones para el dedo y el total siempre a la vista.
 // 1) elegir el cliente (aparecen sus clientes sin escribir nada; se puede buscar) · 2) cantidades y precios · 3) Guardar.
@@ -13,7 +13,22 @@ const chip = "h-11 rounded-lg border px-3 text-[15px] font-semibold";
 const MOTIVOS = ["Recambio", "Bonificación", "Muestra", "Otro"];
 const paso = "h-14 w-14 shrink-0 rounded-xl border border-stone-400 bg-white text-3xl font-medium leading-none text-stone-800 active:bg-stone-100";
 
-export function PedidoMovil({ inicial }: { inicial: DatosPedido | null }) {
+/** Valores con los que arranca el formulario cuando se MODIFICA un pedido ya cargado. */
+export type EdicionPedido = {
+  pedidoId: string;
+  conFactura: boolean;
+  nota: string;
+  envio: string;
+  cantidades: Record<string, number>;
+  precios: Record<string, string>;
+  ivas: Record<string, string>;
+  descuentos: Record<string, string>;
+  sinCargo: Record<string, number>;
+  motivos: Record<string, string>;
+  otro: { nombre: string; cantidad: string; precio: string; unidad: string; iva: string } | null;
+};
+
+export function PedidoMovil({ inicial, edicion }: { inicial: DatosPedido | null; edicion?: EdicionPedido }) {
   const [destino, setDestino] = useState<DatosPedido | null>(inicial);
   const [hecho, setHecho] = useState<string | null>(null);
   const [vuelta, setVuelta] = useState(0);
@@ -23,14 +38,14 @@ export function PedidoMovil({ inicial }: { inicial: DatosPedido | null }) {
         <p className="text-4xl text-verde-700" aria-hidden>✓</p>
         <p className="text-lg font-semibold text-verde-800">{hecho}</p>
         <div className="grid gap-3">
-          <button type="button" onClick={() => { setHecho(null); setDestino(null); setVuelta((v) => v + 1); }} className="h-14 rounded-xl bg-verde-700 text-base font-bold uppercase tracking-wide text-white active:bg-verde-800">Cargar otro pedido</button>
-          <Link href="/vendedor/pedidos" className="flex h-14 items-center justify-center rounded-xl border border-stone-400 bg-white text-base font-semibold text-stone-800">Ver mis pedidos</Link>
+          {!edicion && <button type="button" onClick={() => { setHecho(null); setDestino(null); setVuelta((v) => v + 1); }} className="h-14 rounded-xl bg-verde-700 text-base font-bold uppercase tracking-wide text-white active:bg-verde-800">Cargar otro pedido</button>}
+          <Link href="/vendedor/pedidos" className={`flex h-14 items-center justify-center rounded-xl text-base font-semibold ${edicion ? "bg-verde-700 font-bold uppercase tracking-wide text-white" : "border border-stone-400 bg-white text-stone-800"}`}>Ver mis pedidos</Link>
         </div>
       </div>
     );
   }
   return destino
-    ? <Formulario key={`${destino.puntoId}-${vuelta}`} destino={destino} cambiar={() => setDestino(null)} listo={setHecho} />
+    ? <Formulario key={`${destino.puntoId}-${vuelta}`} destino={destino} cambiar={() => setDestino(null)} listo={setHecho} edicion={edicion} />
     : <ElegirCliente key={vuelta} elegido={setDestino} />;
 }
 
@@ -82,20 +97,20 @@ function ElegirCliente({ elegido }: { elegido: (d: DatosPedido) => void }) {
 }
 
 // ── Paso 2: productos ──
-function Formulario({ destino, cambiar, listo }: { destino: DatosPedido; cambiar: () => void; listo: (texto: string) => void }) {
-  const [estado, enviar, cargando] = useActionState(crearPedido, undefined);
-  const [q, setQ] = useState<Record<string, number>>({});
-  const [precios, setPrecios] = useState<Record<string, string>>({});
-  const [ivas, setIvas] = useState<Record<string, string>>({});
-  const [dtos, setDtos] = useState<Record<string, string>>({}); // bonificación % por producto
-  const [scs, setScs] = useState<Record<string, number>>({}); // paquetes/unidades sin cargo por producto
-  const [motivos, setMotivos] = useState<Record<string, string>>({});
+function Formulario({ destino, cambiar, listo, edicion }: { destino: DatosPedido; cambiar: () => void; listo: (texto: string) => void; edicion?: EdicionPedido }) {
+  const [estado, enviar, cargando] = useActionState(edicion ? actualizarPedido.bind(null, edicion.pedidoId) : crearPedido, undefined);
+  const [q, setQ] = useState<Record<string, number>>(edicion?.cantidades ?? {});
+  const [precios, setPrecios] = useState<Record<string, string>>(edicion?.precios ?? {});
+  const [ivas, setIvas] = useState<Record<string, string>>(edicion?.ivas ?? {});
+  const [dtos, setDtos] = useState<Record<string, string>>(edicion?.descuentos ?? {}); // bonificación % por producto
+  const [scs, setScs] = useState<Record<string, number>>(edicion?.sinCargo ?? {}); // paquetes/unidades sin cargo por producto
+  const [motivos, setMotivos] = useState<Record<string, string>>(edicion?.motivos ?? {});
   const [dtoGen, setDtoGen] = useState(""); // descuento % para todo el pedido (cada producto puede tener el suyo)
-  const [abiertoSc, setAbiertoSc] = useState<Record<string, boolean>>({});
-  const [conFactura, setConFactura] = useState(destino.facturado);
-  const [otro, setOtro] = useState({ nombre: "", cantidad: "1", precio: "", unidad: "paquete", iva: "0" });
-  const [masAbierto, setMasAbierto] = useState(false);
-  const [envio, setEnvio] = useState("");
+  const [abiertoSc, setAbiertoSc] = useState<Record<string, boolean>>(Object.fromEntries(Object.entries(edicion?.sinCargo ?? {}).filter(([, v]) => v > 0).map(([k]) => [k, true])));
+  const [conFactura, setConFactura] = useState(edicion ? edicion.conFactura : destino.facturado);
+  const [otro, setOtro] = useState(edicion?.otro ?? { nombre: "", cantidad: "1", precio: "", unidad: "paquete", iva: "0" });
+  const [masAbierto, setMasAbierto] = useState(!!edicion && !!(edicion.otro || edicion.envio || edicion.nota));
+  const [envio, setEnvio] = useState(edicion?.envio ?? "");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => { if (estado?.ok) listo(estado.ok); }, [estado, listo]);
@@ -156,7 +171,7 @@ function Formulario({ destino, cambiar, listo }: { destino: DatosPedido; cambiar
           <p className="truncate text-[17px] font-bold text-stone-900">{destino.cliente}</p>
           <p className="truncate text-[13px] text-stone-600">{destino.sucursal}</p>
         </div>
-        <button type="button" onClick={cambiar} className="shrink-0 rounded-lg border border-stone-400 bg-white px-3 py-2 text-sm font-semibold text-stone-700 active:bg-stone-100">Cambiar</button>
+        {!edicion && <button type="button" onClick={cambiar} className="shrink-0 rounded-lg border border-stone-400 bg-white px-3 py-2 text-sm font-semibold text-stone-700 active:bg-stone-100">Cambiar</button>}
       </div>
 
       <div className="mb-4 grid grid-cols-2 gap-2" role="group" aria-label="Tipo de comprobante">
@@ -276,7 +291,7 @@ function Formulario({ destino, cambiar, listo }: { destino: DatosPedido; cambiar
           <input value={envio} inputMode="decimal" onChange={(e) => setEnvio(e.target.value)} placeholder="$ 0" className={`${input} mt-1`} />
         </label>
         <label className="block text-sm font-semibold text-stone-700">Nota importante <span className="font-normal text-stone-500">(se ve en la ruta)</span>
-          <input name="nota" placeholder="Ej.: entregar en el vecino" className={`${input} mt-1`} />
+          <input name="nota" defaultValue={edicion?.nota ?? ""} placeholder="Ej.: entregar en el vecino" className={`${input} mt-1`} />
         </label>
       </div>
 
@@ -294,7 +309,7 @@ function Formulario({ destino, cambiar, listo }: { destino: DatosPedido; cambiar
             <span className="text-sm text-stone-600">{cuantos === 0 ? "Todavía no sumaste nada" : `${cuantos} ${cuantos === 1 ? "producto" : "productos"}${conFactura && iva > 0 ? ` · IVA ${formatoPesos(iva)}` : ""}`}</span>
             <span className="text-2xl font-bold tabular-nums text-stone-900">{formatoPesos(neto + iva)}</span>
           </div>
-          <button disabled={cargando} className="h-14 w-full rounded-xl bg-verde-700 text-base font-bold uppercase tracking-wide text-white active:bg-verde-800 disabled:opacity-60">{cargando ? "Guardando…" : "Guardar pedido"}</button>
+          <button disabled={cargando} className="h-14 w-full rounded-xl bg-verde-700 text-base font-bold uppercase tracking-wide text-white active:bg-verde-800 disabled:opacity-60">{cargando ? "Guardando…" : edicion ? "Guardar cambios" : "Guardar pedido"}</button>
         </div>
       </div>
     </form>

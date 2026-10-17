@@ -3,6 +3,7 @@
 import { webPagado, ERROR_WEB_SIN_PAGO } from "@/lib/webpago";
 import { leerCobro, marcarCobroEnTx } from "@/lib/cobrar";
 import { errorSiHojaFija } from "@/lib/dias";
+import { errorEdicionVendedor } from "@/lib/edicionVendedor";
 import { mayus, oracion, titulo } from "@/lib/mayusculas";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -171,9 +172,15 @@ export async function crearPedido(_: EstadoPedidoForm, formData: FormData): Prom
 }
 
 export async function actualizarPedido(pedidoId: string, _: EstadoPedidoForm, formData: FormData): Promise<EstadoPedidoForm> {
-  const usuario = await exigirOficina();
-  const pedido = await db.pedido.findUnique({ where: { id: pedidoId } });
+  const usuario = await exigirCarga(); // oficina, o un vendedor sobre pedidos de SUS clientes (más abajo)
+  const pedido = await db.pedido.findUnique({ where: { id: pedidoId }, include: { cliente: { select: { vendedorId: true } } } });
   if (!pedido) return { error: "No encontré el pedido." };
+  const esVendedor = usuario.rol === "VENDEDOR";
+  if (esVendedor) {
+    if (!pedido.clienteId || pedido.cliente?.vendedorId !== (await vendedorDeUsuario(usuario.id))?.id) return { error: "Ese pedido no es de un cliente tuyo." };
+    const motivo = await errorEdicionVendedor(pedido);
+    if (motivo) return { error: motivo };
+  }
   // Un pedido "no entregado" (de antes del flujo con silueta) también se puede corregir: al guardar vuelve a pendiente.
   if (pedido.estado !== "PENDIENTE" && pedido.estado !== "NO_ENTREGADO") return { error: "Solo se puede modificar un pedido pendiente. Reabrilo primero." };
   const hojaFija = await errorSiHojaFija(pedido.fechaEntrega);
@@ -192,6 +199,8 @@ export async function actualizarPedido(pedidoId: string, _: EstadoPedidoForm, fo
   });
   revalidatePath("/pedidos", "layout");
   revalidatePath(`/pedidos/${pedidoId}`);
+  revalidatePath("/vendedor", "layout");
+  if (esVendedor) return { ok: "Cambios guardados. El pedido quedó actualizado." }; // el vendedor no ve el detalle de la oficina
   redirect(`/pedidos/${pedidoId}`);
 }
 

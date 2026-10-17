@@ -23,7 +23,7 @@ type Pago = "Pagado" | "Sin pagar" | "Cuenta corriente" | "Avisó pago" | "Sin e
 const pagoDe = (x: FilaVendedor): Pago => (x.pagado ? "Pagado" : x.estado === "ENTREGADO" ? (x.avisadoPor ? "Avisó pago" : x.aCuenta ? "Cuenta corriente" : "Sin pagar") : "Sin entregar");
 type Col = "cargado" | "entregado" | "cliente" | "pedido" | "comprobante" | "monto" | "comision" | "estado" | "pago";
 
-export function TablaPedidosVendedor({ filas, pct, comision = true, modo }: { filas: FilaVendedor[]; pct: number; comision?: boolean; modo: "oficina" | "vendedor" }) {
+export function TablaPedidosVendedor({ filas, pct, comision = true, modo, editables = [] }: { filas: FilaVendedor[]; pct: number; comision?: boolean; modo: "oficina" | "vendedor"; editables?: string[] }) {
   const router = useRouter();
   const [pendiente, empezar] = useTransition();
   const [filtros, setFiltros] = useState<Partial<Record<Col, string>>>({});
@@ -124,6 +124,9 @@ export function TablaPedidosVendedor({ filas, pct, comision = true, modo }: { fi
                 {p === "Sin entregar" && x.estado !== "NO_ENTREGADO" && <span className="text-[13px] text-stone-400">Sin entregar</span>}
                 {x.comprobante && <span className="ml-auto text-[13px] font-medium tabular-nums text-stone-500">{x.comprobante}</span>}
               </div>
+              {modo === "vendedor" && editables.includes(x.id) && (
+                <Link href={`/vendedor/pedidos/${x.id}/editar`} className="mt-3 flex h-12 w-full items-center justify-center rounded-xl border border-stone-800 bg-white text-[15px] font-semibold text-stone-900 active:bg-stone-100">✎ Modificar pedido</Link>
+              )}
               {modo === "vendedor" && (p === "Sin pagar" || p === "Cuenta corriente") && (
                 <button type="button" disabled={pendiente} onClick={() => avisar(x)} className="mt-3 h-12 w-full rounded-xl border border-stone-400 bg-white text-[15px] font-semibold text-stone-800 active:bg-stone-100 disabled:opacity-50">Avisar que pagó</button>
               )}
@@ -162,7 +165,7 @@ export function TablaPedidosVendedor({ filas, pct, comision = true, modo }: { fi
                   <td className="px-2 py-2.5 font-medium tabular-nums">{x.comprobante ?? <span className="text-stone-300">—</span>}</td>
                   <td className="px-2 py-2.5 font-bold tabular-nums">{formatoPesos(x.total)}</td>
                   {comision && <td className="px-2 py-2.5 tabular-nums">{com(x) !== null ? formatoPesos(com(x)!) : <span className="text-stone-300">—</span>}</td>}
-                  <td className="px-2 py-2.5"><span className={`${pastilla} ${PASTILLA_ESTADO[x.estado]}`}>{ESTADOS[x.estado]}</span></td>
+                  <td className="px-2 py-2.5"><span className={`${pastilla} ${PASTILLA_ESTADO[x.estado]}`}>{ESTADOS[x.estado]}</span>{modo === "vendedor" && editables.includes(x.id) && <Link href={`/vendedor/pedidos/${x.id}/editar`} className="mt-1.5 block text-[12px] font-semibold text-stone-700 underline underline-offset-2 hover:text-stone-900">✎ Modificar</Link>}</td>
                   <td className="px-2 py-2.5">
                     {p === "Pagado" ? <span className={`${pastilla} bg-verde-50 text-verde-700`}>Pagado{x.medio ? <span className="text-[11.5px] font-medium"> · {MEDIOS[x.medio] ?? ""}</span> : null}</span>
                       : p === "Avisó pago" ? (
