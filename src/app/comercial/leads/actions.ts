@@ -43,6 +43,31 @@ export async function crearLead(_: EstadoLeadForm, f: FormData): Promise<EstadoL
   redirect(`/comercial/leads/${lead.id}`);
 }
 
+export type EstadoCargaRapida = { ok?: string; error?: string } | undefined;
+
+// Carga RÁPIDA: solo el nombre es obligatorio (teléfono, barrio y una nota, si se tienen). Se queda en la lista, sin cambiar de pantalla.
+// Si el teléfono ya está cargado en otro lead, avisa en vez de duplicarlo.
+export async function cargarLeadRapido(_: EstadoCargaRapida, f: FormData): Promise<EstadoCargaRapida> {
+  const u = await exigirOficina();
+  const nombre = mayus(txt(f, "nombre"));
+  if (nombre.length < 2) return { error: "Escribí el nombre del comercio o de la persona." };
+  const telefono = opc(f, "telefono");
+  const digitos = (telefono ?? "").replace(/\D/g, "");
+  if (digitos.length >= 8) {
+    const existentes = await db.lead.findMany({ where: { telefono: { not: null } }, select: { nombre: true, telefono: true, estado: true } });
+    const repetido = existentes.find((l) => (l.telefono ?? "").replace(/\D/g, "").slice(-8) === digitos.slice(-8));
+    if (repetido) return { error: `Ese teléfono ya está cargado: ${repetido.nombre} (${nombreEstado(repetido.estado)}).` };
+  }
+  await db.lead.create({
+    data: {
+      nombre, telefono, barrio: opc(f, "barrio") ? mayus(txt(f, "barrio")) : null, notas: opc(f, "nota"),
+      vendedor: titulo(u.nombre), contactos: { create: { tipo: "NOTA", texto: "Lead cargado.", usuario: u.nombre } },
+    },
+  });
+  revalidatePath("/comercial/leads");
+  return { ok: `Cargado: ${nombre}` };
+}
+
 export async function guardarLead(id: string, _: EstadoLeadForm, f: FormData): Promise<EstadoLeadForm> {
   await exigirOficina();
   const valores = Object.fromEntries([...f.entries()].map(([k, v]) => [k, String(v)]));
