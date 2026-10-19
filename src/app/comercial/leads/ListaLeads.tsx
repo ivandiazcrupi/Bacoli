@@ -23,6 +23,7 @@ export function ListaLeads({ filas, hoy }: { filas: FilaLead[]; hoy: string }) {
   const [pendiente, empezar] = useTransition();
   const [vista, setVista] = useState<Vista>("abiertos");
   const [buscar, setBuscar] = useState("");
+  const [aviso, setAviso] = useState("");
   const [cambiados, setCambiados] = useState<Record<string, string>>({}); // estado recién cambiado (se ve al instante)
   const estadoDe = (f: FilaLead) => cambiados[f.id] ?? f.estado;
   const abierto = (f: FilaLead) => ABIERTOS.includes(estadoDe(f) as never);
@@ -36,6 +37,8 @@ export function ListaLeads({ filas, hoy }: { filas: FilaLead[]; hoy: string }) {
       motivo = r.trim();
     }
     setCambiados((x) => ({ ...x, [f.id]: nuevo }));
+    if (nuevo === "GANADO" || nuevo === "PERDIDO") setAviso(`${f.nombre} pasó a ${nombreEstado(nuevo)}. Para volver a verlo, elegí “${nombreEstado(nuevo)}” o “Todos” en el desplegable de arriba.`);
+    else setAviso("");
     const datos = new FormData();
     datos.set("estado", nuevo); datos.set("motivo", motivo);
     empezar(async () => { await cambiarEstadoLead(f.id, datos); router.refresh(); });
@@ -45,6 +48,7 @@ export function ListaLeads({ filas, hoy }: { filas: FilaLead[]; hoy: string }) {
     const q = buscar.trim().toLowerCase();
     const r = filas.filter((f) => {
       const e = estadoDe(f);
+      if (cambiados[f.id]) return !q || `${f.nombre} ${f.telefono ?? ""} ${f.barrio ?? ""}`.toLowerCase().includes(q); // el que recién cambiaste queda a la vista hasta que salgas o recargues
       if (vista === "abiertos" ? !ABIERTOS.includes(e as never) : vista === "hoy" ? !vence(f) : vista !== "todos" && e !== vista) return false;
       return !q || `${f.nombre} ${f.contacto ?? ""} ${f.telefono ?? ""} ${f.barrio ?? ""} ${f.nota ?? ""}`.toLowerCase().includes(q);
     });
@@ -69,6 +73,7 @@ export function ListaLeads({ filas, hoy }: { filas: FilaLead[]; hoy: string }) {
         </select>
       </div>
 
+      {aviso && <p role="status" className="rounded-md border border-verde-700/30 bg-verde-50 px-3 py-2 text-sm font-medium text-verde-800">{aviso}</p>}
       <div className={`overflow-hidden rounded-lg border border-stone-300 bg-white ${pendiente ? "opacity-80" : ""}`}>
         <div className="border-b border-stone-200 px-3 py-2 text-sm text-stone-600">{visibles.length} {visibles.length === 1 ? "lead" : "leads"}{vista === "abiertos" ? " en seguimiento" : ""}</div>
         <div className="overflow-x-auto">
