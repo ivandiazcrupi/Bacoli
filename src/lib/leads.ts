@@ -12,6 +12,8 @@ export const nombreEstado = (e: string) => ESTADOS.find(([k]) => k === e)?.[1] ?
 export const estadoValido = (e: string): e is EstadoLead => ESTADOS.some(([k]) => k === e);
 export const ABIERTOS: EstadoLead[] = ["NUEVO", "CONTACTADO", "MUESTRA", "NEGOCIANDO"]; // los que todavía hay que seguir
 
+export const TIPOS_COMERCIO = ["ALMACÉN", "SUPERMERCADO", "KIOSCO", "RESTAURANTE", "PIZZERÍA", "ROTISERÍA", "PANADERÍA", "CAFETERÍA", "BAR", "DIETÉTICA", "FIAMBRERÍA", "HOTEL", "DISTRIBUIDOR", "OTRO"];
+
 export const ORIGENES = ["WhatsApp", "Instagram", "Referido", "Web", "Llamada", "Visita", "Otro"];
 
 // Tipos de anotación del historial. "ESTADO" lo anota el sistema solo cuando cambia el estado.

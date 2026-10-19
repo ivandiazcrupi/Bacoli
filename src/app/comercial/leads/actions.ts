@@ -21,6 +21,7 @@ function leerLead(f: FormData) {
     telefono: opc(f, "telefono"),
     email: opc(f, "email") ? txt(f, "email").toLowerCase() : null,
     barrio: opc(f, "barrio") ? mayus(txt(f, "barrio")) : null,
+    tipoComercio: opc(f, "tipoComercio") ? mayus(txt(f, "tipoComercio")) : null,
     direccion: opc(f, "direccion") ? titulo(txt(f, "direccion")) : null,
     origen: opc(f, "origen"),
     interes: opc(f, "interes"),
@@ -35,7 +36,6 @@ export async function crearLead(_: EstadoLeadForm, f: FormData): Promise<EstadoL
   const valores = Object.fromEntries([...f.entries()].map(([k, v]) => [k, String(v)]));
   const d = leerLead(f);
   if (d.nombre.length < 2) return { error: "Falta el nombre del comercio o de la persona.", valores };
-  if (!d.telefono && !d.email && !d.contacto) return { error: "Cargá al menos un dato para poder contactarlo (teléfono, email o persona).", valores };
   const lead = await db.lead.create({
     data: { ...d, vendedor: d.vendedor ?? titulo(u.nombre), contactos: { create: { tipo: "NOTA", texto: "Lead cargado.", usuario: u.nombre } } },
   });
@@ -60,7 +60,7 @@ export async function cargarLeadRapido(_: EstadoCargaRapida, f: FormData): Promi
   }
   await db.lead.create({
     data: {
-      nombre, telefono, barrio: opc(f, "barrio") ? mayus(txt(f, "barrio")) : null, notas: opc(f, "nota"),
+      nombre, telefono, barrio: opc(f, "barrio") ? mayus(txt(f, "barrio")) : null, tipoComercio: opc(f, "tipoComercio") ? mayus(txt(f, "tipoComercio")) : null, notas: opc(f, "nota"),
       vendedor: titulo(u.nombre), contactos: { create: { tipo: "NOTA", texto: "Lead cargado.", usuario: u.nombre } },
     },
   });

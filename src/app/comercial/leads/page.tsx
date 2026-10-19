@@ -20,7 +20,7 @@ export default async function Leads() {
   });
   const filas: FilaLead[] = leads.map((l) => ({
     id: l.id, nombre: l.nombre, contacto: l.contacto, telefono: l.telefono, wa: enlaceWhatsApp(l.telefono),
-    barrio: l.barrio, estado: l.estado, nota: l.notas, proximo: l.proximoContacto, ingreso: fechaAR(l.creadoEn),
+    barrio: l.barrio, tipo: l.tipoComercio, estado: l.estado, nota: l.notas, proximo: l.proximoContacto, ingreso: fechaAR(l.creadoEn),
     ultimo: l.contactos[0] && l.contactos[0].tipo !== "NOTA" ? fechaAR(l.contactos[0].creadoEn) : null,
     ultimoTipo: l.contactos[0]?.tipo ?? null,
   }));

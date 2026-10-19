@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useEffect, useRef } from "react";
 import { estiloCampo, estiloDato } from "@/components/campos";
+import { TIPOS_COMERCIO } from "@/lib/leads";
 import { cargarLeadRapido } from "./actions";
 
 // Carga rápida de un posible cliente: nombre (obligatorio), teléfono, barrio y una nota. Enter guarda y deja todo listo para el siguiente.
@@ -17,7 +18,7 @@ export function CargaRapida() {
   const etiqueta = "block text-[12px] font-semibold uppercase tracking-wide text-stone-500";
   return (
     <section className="rounded-lg border border-stone-300 bg-white px-4 py-3" aria-label="Cargar un posible cliente">
-      <form ref={formulario} action={enviar} className="grid items-end gap-3 md:grid-cols-[1.4fr_1fr_1fr_1.6fr_auto]">
+      <form ref={formulario} action={enviar} className="grid items-end gap-3 md:grid-cols-[1.4fr_1fr_1fr_1fr_1.5fr_auto]">
         <label className={etiqueta}>Comercio o persona *
           <input ref={nombre} name="nombre" autoCapitalize="characters" autoComplete="off" required placeholder="Ej.: ALMACÉN LA ESQUINA" className={`${estiloDato} mt-1`} />
         </label>
@@ -26,6 +27,10 @@ export function CargaRapida() {
         </label>
         <label className={etiqueta}>Barrio
           <input name="barrio" autoCapitalize="characters" autoComplete="off" className={`${estiloDato} mt-1`} />
+        </label>
+        <label className={etiqueta}>Tipo de comercio
+          <input name="tipoComercio" list="tipos-comercio" autoCapitalize="characters" autoComplete="off" placeholder="Almacén, pizzería…" className={`${estiloDato} mt-1`} />
+          <datalist id="tipos-comercio">{TIPOS_COMERCIO.map((t) => <option key={t} value={t} />)}</datalist>
         </label>
         <label className={etiqueta}>Nota
           <input name="nota" autoComplete="off" placeholder="Cómo llegó, qué le interesa…" className={`${estiloCampo} mt-1`} />

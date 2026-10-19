@@ -484,6 +484,7 @@ model Lead {
   email          String?
   barrio         String?
   direccion      String?
+  tipoComercio   String? // almacén, restaurante, pizzería… (texto libre con sugerencias)
   origen         String? // cómo llegó: WhatsApp, Instagram, Referido, Web, Visita, Otro
   interes        String? // qué le interesa / cuánto podría pedir
   notas          String?

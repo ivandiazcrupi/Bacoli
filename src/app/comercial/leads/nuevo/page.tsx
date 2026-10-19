@@ -12,13 +12,13 @@ export default async function NuevoLead() {
   return (
     <>
       <Cabecera usuario={usuario} />
-      <main className={CONTENEDOR_PEDIDOS}>
+      <main className={`${CONTENEDOR_PEDIDOS} space-y-4`}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-bold tracking-tight">Cargar lead</h1>
           <BotonVolver fallback="/comercial/leads" />
         </div>
-        <p className="mt-1 text-sm text-stone-600">Un posible cliente que todavía no pidió. Con el nombre y un dato para contactarlo alcanza; lo demás se completa después.</p>
-        <div className="mt-4"><FormLead accion={crearLead} inicial={LEAD_VACIO} textoBoton="Cargar lead" vendedores={vendedores} /></div>
+        <p className="text-sm text-stone-600">Solo el nombre es obligatorio. En “Más datos” podés sumar la persona de contacto, el email, la dirección y cuándo volver a escribirle.</p>
+        <FormLead accion={crearLead} inicial={LEAD_VACIO} textoBoton="Cargar lead" vendedores={vendedores} />
       </main>
     </>
   );

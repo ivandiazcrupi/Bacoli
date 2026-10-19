@@ -42,47 +42,37 @@ export default async function FichaLead({ params }: { params: Promise<{ id: stri
           <BotonVolver fallback="/comercial/leads" />
         </div>
 
-        <section className="rounded-lg border border-stone-300 bg-white p-5">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <div className="flex flex-wrap items-center gap-3">
-                <h1 className="text-2xl font-semibold tracking-tight">{lead.nombre}</h1>
-                <span className={`rounded px-2.5 py-1 text-[13px] font-bold ${PASTILLA[lead.estado]}`}>{nombreEstado(lead.estado)}</span>
-              </div>
-              <p className="mt-1 text-sm text-stone-600">
-                {[lead.contacto, lead.barrio, lead.direccion].filter(Boolean).join(" · ") || "Sin más datos"}
-              </p>
-              {lead.estado === "PERDIDO" && lead.motivoPerdida && <p className="mt-1 text-sm font-medium text-rojo-700">Motivo: {lead.motivoPerdida}</p>}
+        <section className="rounded-lg border border-stone-300 bg-white p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-xl font-semibold tracking-tight">{lead.nombre}</h1>
+              <span className={`rounded px-2.5 py-1 text-[13px] font-bold ${PASTILLA[lead.estado]}`}>{nombreEstado(lead.estado)}</span>
+              {lead.estado === "PERDIDO" && lead.motivoPerdida && <span className="text-sm font-medium text-rojo-700">Motivo: {lead.motivoPerdida}</span>}
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {wa && <a href={wa} target="_blank" rel="noreferrer" className="rounded-lg bg-verde-700 px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white hover:bg-verde-800">Escribir por WhatsApp</a>}
-              {lead.telefono && <a href={`tel:${lead.telefono.replace(/[^\d+]/g, "")}`} className="rounded-lg border border-stone-300 bg-white px-4 py-2.5 text-sm font-semibold hover:border-stone-500">Llamar</a>}
-              {lead.estado === "GANADO" || lead.estado === "NEGOCIANDO" ? <Link href="/clientes/nuevo" className="rounded-lg border border-stone-300 bg-white px-4 py-2.5 text-sm font-semibold hover:border-stone-500">Cargarlo como cliente ›</Link> : null}
+              {wa && <a href={wa} target="_blank" rel="noreferrer" className="rounded-lg bg-verde-700 px-4 py-2 text-sm font-bold uppercase tracking-wide text-white hover:bg-verde-800">WhatsApp</a>}
+              {lead.telefono && <a href={`tel:${lead.telefono.replace(/[^\d+]/g, "")}`} className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-semibold hover:border-stone-500">Llamar</a>}
+              {lead.estado === "GANADO" || lead.estado === "NEGOCIANDO" ? <Link href="/clientes/nuevo" className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-semibold hover:border-stone-500">Cargarlo como cliente ›</Link> : null}
             </div>
           </div>
-          <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-stone-200 pt-4 text-sm md:grid-cols-5">
-            <div><dt className="text-xs text-stone-500">Ingresó</dt><dd className="font-medium">{fmt(ingreso)} · hace {dias(hoyStr, ingreso)} d</dd></div>
-            <div><dt className="text-xs text-stone-500">Cómo llegó</dt><dd className="font-medium">{lead.origen ?? "—"}</dd></div>
+          <dl className="mt-4 grid grid-cols-2 gap-4 border-t border-stone-200 pt-3 text-sm md:grid-cols-[1.4fr_1fr_1fr_1fr_1.6fr]">
+            <div><dt className="text-xs text-stone-500">Nombre</dt><dd className="font-medium">{lead.nombre}</dd></div>
             <div><dt className="text-xs text-stone-500">Teléfono</dt><dd className="font-medium">{lead.telefono ?? "—"}</dd></div>
-            <div><dt className="text-xs text-stone-500">Vendedor</dt><dd className="font-medium">{lead.vendedor ?? "—"}</dd></div>
-            <div>
-              <dt className="text-xs text-stone-500">Próximo contacto</dt>
-              <dd className="flex items-center gap-2 font-medium">
-                {lead.proximoContacto && abierto ? (
-                  <>
-                    <span className={atraso !== null && atraso >= 0 ? "rounded bg-rojo-50 px-2 py-0.5 font-bold text-rojo-700" : ""}>{lead.proximoContacto === hoyStr ? "Hoy" : fmt(lead.proximoContacto)}{atraso !== null && atraso > 0 ? ` · ${atraso} d de atraso` : ""}</span>
-                    <form action={borrarProximo.bind(null, lead.id)}><button className="text-xs text-stone-500 underline hover:text-stone-800">quitar</button></form>
-                  </>
-                ) : <span className="text-stone-400">Sin fecha</span>}
-              </dd>
-            </div>
+            <div><dt className="text-xs text-stone-500">Barrio</dt><dd className="font-medium">{lead.barrio ?? "—"}</dd></div>
+            <div><dt className="text-xs text-stone-500">Tipo de comercio</dt><dd className="font-medium">{lead.tipoComercio ?? "—"}</dd></div>
+            <div><dt className="text-xs text-stone-500">Nota</dt><dd className="whitespace-pre-wrap font-medium">{lead.notas ?? "—"}</dd></div>
           </dl>
-          {(lead.interes || lead.notas) && (
-            <div className="mt-4 grid gap-4 border-t border-stone-200 pt-4 text-sm md:grid-cols-2">
-              {lead.interes && <div><div className="text-xs text-stone-500">Qué le interesa</div><p className="whitespace-pre-wrap">{lead.interes}</p></div>}
-              {lead.notas && <div><div className="text-xs text-stone-500">Notas</div><p className="whitespace-pre-wrap">{lead.notas}</p></div>}
-            </div>
-          )}
+          <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-stone-200 pt-3 text-xs text-stone-500">
+            <span>Ingresó {fmt(ingreso)} · hace {dias(hoyStr, ingreso)} d</span>
+            {lead.origen && <span>Llegó por {lead.origen}</span>}
+            {lead.vendedor && <span>Vendedor {lead.vendedor}</span>}
+            {lead.proximoContacto && abierto && (
+              <span className="flex items-center gap-2">
+                <span className={atraso !== null && atraso >= 0 ? "rounded bg-rojo-50 px-2 py-0.5 font-bold text-rojo-700" : ""}>Escribirle: {lead.proximoContacto === hoyStr ? "hoy" : fmt(lead.proximoContacto)}{atraso !== null && atraso > 0 ? ` · ${atraso} d de atraso` : ""}</span>
+                <form action={borrarProximo.bind(null, lead.id)}><button className="underline hover:text-stone-800">quitar</button></form>
+              </span>
+            )}
+          </p>
         </section>
 
         <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
@@ -123,7 +113,7 @@ export default async function FichaLead({ params }: { params: Promise<{ id: stri
           <div className="border-t border-stone-200 p-3">
             <FormLead
               accion={guardarLead.bind(null, lead.id)} textoBoton="Guardar cambios" vendedores={vendedores}
-              inicial={{ nombre: lead.nombre, contacto: lead.contacto ?? "", telefono: lead.telefono ?? "", email: lead.email ?? "", barrio: lead.barrio ?? "", direccion: lead.direccion ?? "", origen: lead.origen ?? "", interes: lead.interes ?? "", notas: lead.notas ?? "", vendedor: lead.vendedor ?? "", proximoContacto: lead.proximoContacto ?? "" }}
+              inicial={{ nombre: lead.nombre, tipoComercio: lead.tipoComercio ?? "", contacto: lead.contacto ?? "", telefono: lead.telefono ?? "", email: lead.email ?? "", barrio: lead.barrio ?? "", direccion: lead.direccion ?? "", origen: lead.origen ?? "", interes: lead.interes ?? "", notas: lead.notas ?? "", vendedor: lead.vendedor ?? "", proximoContacto: lead.proximoContacto ?? "" }}
             />
             {usuario.rol === "DUENO" && <div className="mt-3 flex justify-end"><BotonEliminar accion={eliminarLead.bind(null, lead.id)} nombre={lead.nombre} /></div>}
           </div>
