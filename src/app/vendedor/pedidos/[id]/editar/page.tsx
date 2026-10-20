@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { errorEdicionVendedor } from "@/lib/edicionVendedor";
 import { exigirVendedor, vendedorDeUsuario } from "@/lib/session";
 import { datosNuevoPedido } from "../../../../pedidos/actions";
+import { BandaTotales } from "../../../BandaTotales";
 import { PedidoMovil, type EdicionPedido } from "../../../PedidoMovil";
 
 const coma = (v: { toString(): string } | number) => String(v).replace(".", ","); // 10.5 -> "10,5"
@@ -67,6 +68,7 @@ export default async function EditarPedidoVendedor({ params }: { params: Promise
       <Cabecera usuario={usuario} />
       <main className="mx-auto w-full max-w-xl space-y-4 px-4 py-4">
         {encabezado}
+        <BandaTotales vendedor={vendedor} />
         <PedidoMovil inicial={destino} edicion={edicion} />
       </main>
     </>
