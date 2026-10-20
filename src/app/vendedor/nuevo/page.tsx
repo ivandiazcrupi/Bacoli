@@ -2,7 +2,6 @@ import Link from "next/link";
 import { Cabecera } from "@/components/Cabecera";
 import { exigirVendedor, vendedorDeUsuario } from "@/lib/session";
 import { datosNuevoPedido } from "../../pedidos/actions";
-import { BandaTotales } from "../BandaTotales";
 import { PedidoMovil } from "../PedidoMovil";
 
 // El vendedor carga un pedido a uno de SUS clientes (pensado para el celular). Entra directo a Pedidos: la oficina le asigna el día.
@@ -19,7 +18,6 @@ export default async function CargarPedidoVendedor({ searchParams }: { searchPar
           <h1 className="text-2xl font-bold tracking-tight">Cargar pedido</h1>
           <Link href="/vendedor" className="text-sm font-semibold text-stone-500 underline decoration-stone-300 underline-offset-4">Salir</Link>
         </div>
-        <BandaTotales vendedor={vendedor} />
         <PedidoMovil inicial={inicial} comisionPct={Number(vendedor?.comisionPct ?? 0)} />
       </main>
     </>

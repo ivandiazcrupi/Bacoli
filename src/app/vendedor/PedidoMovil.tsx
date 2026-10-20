@@ -45,7 +45,7 @@ export function PedidoMovil({ inicial, edicion, comisionPct = 0 }: { inicial: Da
     );
   }
   return destino
-    ? <Formulario key={`${destino.puntoId}-${vuelta}`} destino={destino} cambiar={() => setDestino(null)} listo={setHecho} edicion={edicion} />
+    ? <Formulario key={`${destino.puntoId}-${vuelta}`} destino={destino} cambiar={() => setDestino(null)} listo={setHecho} edicion={edicion} comisionPct={comisionPct} />
     : <ElegirCliente key={vuelta} elegido={setDestino} />;
 }
 
@@ -97,7 +97,7 @@ function ElegirCliente({ elegido }: { elegido: (d: DatosPedido) => void }) {
 }
 
 // ── Paso 2: productos ──
-function Formulario({ destino, cambiar, listo, edicion }: { destino: DatosPedido; cambiar: () => void; listo: (texto: string) => void; edicion?: EdicionPedido }) {
+function Formulario({ destino, cambiar, listo, edicion, comisionPct }: { destino: DatosPedido; cambiar: () => void; listo: (texto: string) => void; edicion?: EdicionPedido; comisionPct: number }) {
   const [estado, enviar, cargando] = useActionState(edicion ? actualizarPedido.bind(null, edicion.pedidoId) : crearPedido, undefined);
   const [q, setQ] = useState<Record<string, number>>(edicion?.cantidades ?? {});
   const [precios, setPrecios] = useState<Record<string, string>>(edicion?.precios ?? {});

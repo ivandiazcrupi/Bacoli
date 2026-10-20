@@ -391,5 +391,5 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ## Vendedor: totales a la vista y edición de sus clientes (pedido del dueño, por Diego)
 - **Franja de totales** (`src/app/vendedor/BandaTotales.tsx`) arriba de las tres pantallas del vendedor (Estadísticas, Pedidos, Clientes): **Facturado y Comisión del mes** (grandes) y **en total** (todos los meses). Facturado = pedidos ENTREGADOS sin IVA, igual que en la hoja del vendedor.
 - **Editar sus clientes** (`/vendedor/clientes/[id]/editar`, botón "Editar" en cada línea de Clientes del vendedor; `guardarClienteVendedor`): solo de SUS clientes; puede cambiar razón social, CUIT y, por sucursal, **barrio, dirección, teléfono y nota (comentario)**. No toca zona, precios, límites, ni activar/desactivar/eliminar/agregar sucursales: eso sigue siendo de la oficina.
-- La franja de totales también se ve **al cargar y al modificar un pedido** (`/vendedor/nuevo` y `/vendedor/pedidos/[id]/editar`).
+- La franja de totales **NO va** al cargar/modificar pedido (el dueño lo sacó: no va).
 - En la barra de abajo de cargar/modificar pedido (`PedidoMovil`) se ve **"Tu comisión en este pedido (X %)"** = % del vendedor × neto sin IVA del pedido que está armando (prop `comisionPct`).
