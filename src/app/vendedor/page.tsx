@@ -5,6 +5,7 @@ import { exigirVendedor, vendedorDeUsuario } from "@/lib/session";
 import { filasDelPeriodo, mesAnterior, mesSiguiente, nombreMes } from "@/lib/vendedores";
 import { HojaVendedor } from "../comercial/vendedores/HojaVendedor";
 import { CONTENEDOR_PEDIDOS } from "../pedidos/Encabezado";
+import { BandaTotales } from "./BandaTotales";
 import { EncabezadoVendedor } from "./EncabezadoVendedor";
 
 const nav = "flex h-9 items-center rounded-md border border-stone-300 bg-white px-3 text-sm font-semibold hover:border-stone-600";
@@ -38,6 +39,7 @@ export default async function MiHoja({ searchParams }: { searchParams: Promise<{
             </>
           }
         />
+        <BandaTotales vendedor={vendedor} />
         {vendedor ? (
           <HojaVendedor nombre={vendedor.nombre} pct={Number(vendedor.comisionPct ?? 0)} mes={mes} filas={filasMes.filter((x) => x.vendedorId === id)} anteriores={filasAnt.filter((x) => x.vendedorId === id)} modo="vendedor" conTabla={false} />
         ) : (

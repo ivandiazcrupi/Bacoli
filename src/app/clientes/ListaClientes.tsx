@@ -16,7 +16,7 @@ function IconoObservacion({ texto }: { texto: string }) {
 
 // Columnas (PC): barrio, nombre, dirección, teléfono, accesos.
 const COLUMNAS_OFICINA = "lg:grid-cols-[1.2fr_1.6fr_2fr_1.1fr_6.5rem_19rem]";
-const COLUMNAS_VENDEDOR = "lg:grid-cols-[1.2fr_1.6fr_2fr_1.1fr_6.5rem]";
+const COLUMNAS_VENDEDOR = "lg:grid-cols-[1.2fr_1.6fr_2fr_1.1fr_6.5rem_5rem]";
 const acceso = "rounded-md border border-stone-400 bg-white px-2.5 py-1 text-xs font-medium uppercase hover:border-verde-700 hover:text-verde-800";
 const accesoEditar = "rounded-md border border-verde-700 bg-white px-2.5 py-1 text-xs font-medium text-verde-800 hover:bg-verde-50";
 
@@ -50,7 +50,9 @@ function FilaCliente({ c, modo }: { c: Cliente; modo: Modo }) {
       <Link href={`/clientes/${c.id}/pedidos`} className={acceso}>Pedidos</Link>
       <Link href={`/clientes/${c.id}`} className={accesoEditar}>Editar</Link>
     </div>
-  ) : null;
+  ) : (
+    <div className="flex lg:justify-end"><Link href={`/vendedor/clientes/${c.id}/editar`} className={accesoEditar}>Editar</Link></div>
+  );
   const nombre = (clase: string) => (modo === "oficina" ? <Link href={`/clientes/${c.id}`} className={`${clase} hover:text-verde-800 hover:underline`}>{c.nombre}</Link> : <span className={clase}>{c.nombre}</span>);
 
   return (
@@ -95,7 +97,7 @@ export function ListaClientes({ clientes, modo = "oficina" }: { clientes: Client
   return (
     <div className="space-y-2">
       <div className={`hidden gap-x-4 rounded-t-xl px-4 py-3 lg:grid ${cabeceraTabla} ${modo === "oficina" ? COLUMNAS_OFICINA : COLUMNAS_VENDEDOR}`}>
-        <span>Barrio</span><span>Nombre</span><span>Dirección</span><span>Teléfono</span><span>Estado</span>{modo === "oficina" && <span />}
+        <span>Barrio</span><span>Nombre</span><span>Dirección</span><span>Teléfono</span><span>Estado</span><span />
       </div>
       {clientes.map((c) => <FilaCliente key={c.id} c={c} modo={modo} />)}
     </div>

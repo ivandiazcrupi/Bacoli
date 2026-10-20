@@ -81,3 +81,30 @@ export async function crearClienteVendedor(_: EstadoCliente, f: FormData): Promi
   revalidatePath("/clientes");
   redirect(`/vendedor/nuevo?punto=${creado.puntos[0].id}`);
 }
+
+/**
+ * El vendedor corrige datos de SUS clientes: razón social, CUIT y, de cada sucursal, barrio, dirección, teléfono y comentario (nota).
+ * No toca zona, precios, límites ni activar/desactivar: eso queda para la oficina.
+ */
+export async function guardarClienteVendedor(clienteId: string, _: EstadoCliente, f: FormData): Promise<EstadoCliente & { ok?: boolean }> {
+  const usuario = await exigirVendedor();
+  const vendedor = await vendedorDeUsuario(usuario.id);
+  if (!vendedor) return { error: "Todavía no te enlazaron con tu ficha de vendedor." };
+  const cliente = await db.cliente.findUnique({ where: { id: clienteId }, include: { puntos: { select: { id: true } } } });
+  if (!cliente || cliente.vendedorId !== vendedor.id) return { error: "Ese cliente no es uno de tus clientes." };
+  const cuitTxt = String(f.get("cuit") ?? "").trim();
+  if (cuitTxt && !cuitValido(cuitTxt)) return { error: "El CUIT no es válido (son 11 números)." };
+  const puntos = cliente.puntos.map((p) => {
+    const g = (k: string) => String(f.get(`${k}_${p.id}`) ?? "").trim();
+    return { id: p.id, barrio: mayus(g("barrio")), direccion: titulo(g("direccion")), telefono: g("telefono") || null, comentario: mayus(g("comentario")) || null };
+  });
+  if (puntos.some((p) => !p.barrio || !p.direccion)) return { error: "Cada sucursal necesita barrio y dirección." };
+  await db.$transaction([
+    db.cliente.update({ where: { id: clienteId }, data: { razonSocial: mayus(String(f.get("razonSocial") ?? "").trim()) || null, cuit: cuitTxt ? cuitTxt.replace(/\D/g, "") : null } }),
+    ...puntos.map((p) => db.puntoEntrega.update({ where: { id: p.id }, data: { barrio: p.barrio, direccion: p.direccion, telefono: p.telefono, comentario: p.comentario } })),
+  ]);
+  revalidatePath("/vendedor", "layout");
+  revalidatePath("/clientes", "layout");
+  revalidatePath("/pedidos", "layout");
+  return { ok: true };
+}

@@ -6,6 +6,7 @@ import { FiltrosClientes } from "../../clientes/FiltrosClientes";
 import { ListaClientes } from "../../clientes/ListaClientes";
 import { filtroClientes } from "../../clientes/consulta";
 import { CONTENEDOR_PEDIDOS } from "../../pedidos/Encabezado";
+import { BandaTotales } from "../BandaTotales";
 import { EncabezadoVendedor } from "../EncabezadoVendedor";
 
 // CLIENTES (vendedor): la misma lista que ve la oficina en Clientes, pero solo con SUS clientes y sin los accesos de oficina.
@@ -27,6 +28,7 @@ export default async function VendedorClientes({ searchParams }: { searchParams:
       <Cabecera usuario={usuario} />
       <main className={CONTENEDOR_PEDIDOS}>
         <EncabezadoVendedor activa="clientes" titulo={vendedor?.nombre} derecha={<><Link href="/vendedor/clientes/nuevo" className="whitespace-nowrap rounded-lg border border-verde-700 bg-white px-4 py-3 text-sm font-bold uppercase tracking-wide text-verde-800 hover:bg-verde-50 sm:px-8">+ Cargar cliente</Link><Link href="/vendedor/nuevo" className="whitespace-nowrap rounded-lg bg-verde-700 px-4 py-3 text-sm font-bold uppercase tracking-wide text-white hover:bg-verde-800 sm:px-10">+ Cargar pedido</Link></>} />
+        <BandaTotales vendedor={vendedor} />
         <FiltrosClientes q={q} zona={zona} estado={estado} zonas={zonas.map((z) => ({ id: z.id, nombre: z.nombre }))} base="/vendedor/clientes" />
         <p className="text-sm text-stone-600">
           <b className="text-stone-900">{clientes.length}</b> {clientes.length === 1 ? "cliente" : "clientes"} · <b className="text-stone-900">{totalPuntos}</b> {totalPuntos === 1 ? "sucursal" : "sucursales"} (puntos de entrega)

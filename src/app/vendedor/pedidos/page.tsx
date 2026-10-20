@@ -6,6 +6,7 @@ import { exigirVendedor, vendedorDeUsuario } from "@/lib/session";
 import { filasDelPeriodo } from "@/lib/vendedores";
 import { TablaPedidosVendedor } from "../../comercial/vendedores/TablaPedidosVendedor";
 import { CONTENEDOR_PEDIDOS } from "../../pedidos/Encabezado";
+import { BandaTotales } from "../BandaTotales";
 import { EncabezadoVendedor } from "../EncabezadoVendedor";
 
 // PEDIDOS (vendedor): todos los pedidos de SUS clientes como una cuenta corriente (cargado, entregado, pagado), con filtros.
@@ -22,6 +23,7 @@ export default async function VendedorPedidos() {
       <Cabecera usuario={usuario} />
       <main className={CONTENEDOR_PEDIDOS}>
         <EncabezadoVendedor activa="pedidos" titulo={vendedor?.nombre} derecha={<Link href="/vendedor/nuevo" className="whitespace-nowrap rounded-lg bg-verde-700 px-4 py-3 text-sm font-bold uppercase tracking-wide text-white hover:bg-verde-800 sm:px-10">+ Cargar pedido</Link>} />
+        <BandaTotales vendedor={vendedor} />
         {vendedor ? (
           <TablaPedidosVendedor filas={filas} pct={Number(vendedor.comisionPct ?? 0)} modo="vendedor" editables={editables} />
         ) : (
