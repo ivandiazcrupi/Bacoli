@@ -28,7 +28,7 @@ export type EdicionPedido = {
   otro: { nombre: string; cantidad: string; precio: string; unidad: string; iva: string } | null;
 };
 
-export function PedidoMovil({ inicial, edicion }: { inicial: DatosPedido | null; edicion?: EdicionPedido }) {
+export function PedidoMovil({ inicial, edicion, comisionPct = 0 }: { inicial: DatosPedido | null; edicion?: EdicionPedido; comisionPct?: number }) {
   const [destino, setDestino] = useState<DatosPedido | null>(inicial);
   const [hecho, setHecho] = useState<string | null>(null);
   const [vuelta, setVuelta] = useState(0);
@@ -305,6 +305,10 @@ function Formulario({ destino, cambiar, listo, edicion }: { destino: DatosPedido
           {(totalDescuento > 0 || totalSc > 0) && (
             <p className="mb-1 text-[13px] text-stone-600">{[totalDescuento > 0 ? `Descuentos −${formatoPesos(totalDescuento)}` : "", totalSc > 0 ? `Sin cargo: ${totalSc} ${totalSc === 1 ? "unidad" : "unidades"}` : ""].filter(Boolean).join(" · ")}</p>
           )}
+          <p className="mb-1 flex items-baseline justify-between text-sm font-semibold text-verde-800">
+            <span>Tu comisión en este pedido{comisionPct > 0 ? ` (${String(comisionPct).replace(".", ",")} %)` : ""}</span>
+            <span className="tabular-nums">{formatoPesos((neto * comisionPct) / 100)}</span>
+          </p>
           <div className="mb-2 flex items-baseline justify-between">
             <span className="text-sm text-stone-600">{cuantos === 0 ? "Todavía no sumaste nada" : `${cuantos} ${cuantos === 1 ? "producto" : "productos"}${conFactura && iva > 0 ? ` · IVA ${formatoPesos(iva)}` : ""}`}</span>
             <span className="text-2xl font-bold tabular-nums text-stone-900">{formatoPesos(neto + iva)}</span>

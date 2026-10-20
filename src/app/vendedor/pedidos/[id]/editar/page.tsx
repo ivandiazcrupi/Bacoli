@@ -69,7 +69,7 @@ export default async function EditarPedidoVendedor({ params }: { params: Promise
       <main className="mx-auto w-full max-w-xl space-y-4 px-4 py-4">
         {encabezado}
         <BandaTotales vendedor={vendedor} />
-        <PedidoMovil inicial={destino} edicion={edicion} />
+        <PedidoMovil inicial={destino} edicion={edicion} comisionPct={Number(vendedor?.comisionPct ?? 0)} />
       </main>
     </>
   );

@@ -20,7 +20,7 @@ export default async function CargarPedidoVendedor({ searchParams }: { searchPar
           <Link href="/vendedor" className="text-sm font-semibold text-stone-500 underline decoration-stone-300 underline-offset-4">Salir</Link>
         </div>
         <BandaTotales vendedor={vendedor} />
-        <PedidoMovil inicial={inicial} />
+        <PedidoMovil inicial={inicial} comisionPct={Number(vendedor?.comisionPct ?? 0)} />
       </main>
     </>
   );
