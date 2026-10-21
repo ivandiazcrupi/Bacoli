@@ -33,6 +33,8 @@ export type FilaFactura = {
   pedidoId: string | null;
   ubicar: string | null; // enlace para ubicar el pedido (hoja de ruta de su día o lista de Pedidos)
   pedidoEntregado: boolean;
+  pedidoCargado: string | null; // día en que se cargó el pedido (AAAA-MM-DD)
+  entrega: string | null; // día de entrega del pedido, si ya se entregó
   avisoPago: string | null; // vendedor que indicó que se pagó (falta confirmarlo en Cuenta corriente)
   pagada: boolean;
   medio: string | null;
@@ -98,7 +100,9 @@ export async function cargarFacturas() {
     return {
       id: a.id, esNc: a.esNotaCredito, tipo: a.tipo, puntoVenta: a.puntoVenta, numero: a.numero, fecha: a.fecha.toISOString().slice(0, 10), cuit, razonSocial: a.razonSocial,
       clienteId: cli?.id ?? null, cliente: cli?.nombre ?? null, total, puntoId: a.puntoId, sucursal: punto?.barrio ?? null, observacion: a.observacion,
-      pedidoId: pedido?.id ?? null, ubicar: pedido ? enlaceUbicar(pedido) : null, pedidoEntregado: pedido?.estado === "ENTREGADO", avisoPago: pagada ? null : pedido?.pagoAvisadoPor ?? null, pagada, medio: a.medioCobro ?? (pedido?.cobro === "COBRADO" ? pedido.medioCobro : null), obsCobro: a.obsCobro,
+      pedidoId: pedido?.id ?? null, ubicar: pedido ? enlaceUbicar(pedido) : null, pedidoEntregado: pedido?.estado === "ENTREGADO",
+      pedidoCargado: pedido ? new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Argentina/Buenos_Aires" }).format(pedido.creadoEn) : null,
+      entrega: pedido?.estado === "ENTREGADO" && pedido.fechaEntrega ? pedido.fechaEntrega.toISOString().slice(0, 10) : null, avisoPago: pagada ? null : pedido?.pagoAvisadoPor ?? null, pagada, medio: a.medioCobro ?? (pedido?.cobro === "COBRADO" ? pedido.medioCobro : null), obsCobro: a.obsCobro,
       creditos: a.creditosRecibidos.map((x) => ({ id: x.id, ncId: x.ncId, ncNumero: idNumero.get(x.ncId) ?? 0, monto: Number(x.monto), motivo: x.motivo })),
       aplicado,
       aplicaciones: a.notasAplicadas.map((x) => ({ id: x.id, facturaId: x.facturaId, facturaNumero: idNumero.get(x.facturaId) ?? 0, monto: Number(x.monto), motivo: x.motivo })),

@@ -16,6 +16,7 @@ export type FilaComprobante = {
   numero: string | null;
   cargado: string;
   fecha: string;
+  entrega?: string | null; // día de entrega (solo si ya se entregó)
   entregado: boolean;
   bruto: number;
   nc: number;
@@ -57,7 +58,7 @@ const TEXTO_MEDIO: Record<string, string> = { EFECTIVO: "Efectivo", TRANSFERENCI
 const fechaCorta = (s: string) => (s ? `${s.slice(8)}/${s.slice(5, 7)}/${s.slice(2, 4)}` : "");
 const POR_VEZ = 250;
 
-type ColId = "numero" | "cliente" | "razon" | "sucursal" | "fecha" | "monto" | "estado" | "pedido" | "nc" | "obs";
+type ColId = "numero" | "cliente" | "razon" | "sucursal" | "fecha" | "entrega" | "monto" | "estado" | "pedido" | "nc" | "obs";
 type Columna = { id: ColId; titulo: string; ancho: string; solo?: "arca" | "remito"; ordena?: boolean; filtro?: "texto" | "estado" | "pedido" | "lista" };
 
 const COLUMNAS: Columna[] = [
@@ -65,7 +66,8 @@ const COLUMNAS: Columna[] = [
   { id: "razon", titulo: "Razón social", ancho: "minmax(262px,1.4fr)", filtro: "lista" },
   { id: "cliente", titulo: "Cliente", ancho: "minmax(200px,1.1fr)", ordena: true, filtro: "lista" },
   { id: "sucursal", titulo: "Sucursal", ancho: "118px", filtro: "lista" },
-  { id: "fecha", titulo: "Fecha", ancho: "62px", ordena: true, filtro: "texto" },
+  { id: "fecha", titulo: "Pedido", ancho: "62px", ordena: true, filtro: "texto" },
+  { id: "entrega", titulo: "Entrega", ancho: "62px", ordena: true, filtro: "texto" },
   { id: "monto", titulo: "Monto", ancho: "100px", ordena: true, filtro: "texto" },
   { id: "estado", titulo: "Estado", ancho: "176px", ordena: true, filtro: "estado" },
   { id: "pedido", titulo: "Ubicar", ancho: "72px", filtro: "pedido" },
@@ -92,6 +94,7 @@ function textoDe(f: FilaComprobante, c: ColId): string {
     case "razon": return f.razon ?? "";
     case "sucursal": return f.sucursal ?? "";
     case "fecha": return fechaCorta(f.cargado);
+    case "entrega": return fechaCorta(f.entrega ?? "");
     case "monto": return formatoPesos(Math.abs(montoDe(f))).replace(/\s/g, "");
     case "estado": return estadoDe(f);
     case "pedido": return f.ubicar?.startsWith("/pedidos/dia/") ? "En hoja de ruta" : f.ubicar ? "Esperando día" : f.arca && f.sinPedido ? "Sin pedido" : "";
@@ -194,7 +197,7 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
     });
     if (orden.col) {
       const col = orden.col;
-      const clave = (f: FilaComprobante): string | number => col === "numero" ? Number(digitos(f.numero)) || 0 : col === "monto" ? montoDe(f) : col === "fecha" ? f.cargado : textoDe(f, col).toLowerCase();
+      const clave = (f: FilaComprobante): string | number => col === "numero" ? Number(digitos(f.numero)) || 0 : col === "monto" ? montoDe(f) : col === "fecha" ? f.cargado : col === "entrega" ? f.entrega ?? "" : textoDe(f, col).toLowerCase();
       r = [...r].sort((a, b) => { const x = clave(a), y = clave(b); return (x < y ? -1 : x > y ? 1 : 0) * (orden.asc ? 1 : -1); });
     }
     return r;
@@ -326,6 +329,7 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
                     case "razon": return <span key={c.id} className="block min-w-0 truncate text-left text-[12.5px] font-semibold text-stone-800" title={f.razon || undefined}>{f.razon || <span className="text-stone-300">—</span>}</span>;
                     case "sucursal": return <SucursalCelda key={c.id} f={f} />;
                     case "fecha": return <span key={c.id} className="tabular-nums text-stone-600">{fechaCorta(f.cargado)}</span>;
+                    case "entrega": return <span key={c.id} className="tabular-nums text-stone-600">{f.entrega ? fechaCorta(f.entrega) : <span className="text-stone-300">—</span>}</span>;
                     case "monto": return <span key={c.id} className={`whitespace-nowrap text-[14px] font-bold tabular-nums ${f.cubierta || f.anulado ? "text-stone-300 line-through" : f.esNc ? "text-stone-500" : "text-stone-900"}`}>{f.esNc ? "−" : ""}{formatoPesos(f.cubierta || f.anulado || f.esNc ? f.bruto : f.monto)}</span>;
                     case "estado": {
                       const e = estadoDe(f);

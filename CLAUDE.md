@@ -393,3 +393,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - **Editar sus clientes** (`/vendedor/clientes/[id]/editar`, botón "Editar" en cada línea de Clientes del vendedor; `guardarClienteVendedor`): solo de SUS clientes; puede cambiar razón social, CUIT y, por sucursal, **barrio, dirección, teléfono y nota (comentario)**. No toca zona, precios, límites, ni activar/desactivar/eliminar/agregar sucursales: eso sigue siendo de la oficina.
 - La franja de totales **NO va** al cargar/modificar pedido (el dueño lo sacó: no va).
 - En la barra de abajo de cargar/modificar pedido (`PedidoMovil`) se ve **"Tu comisión en este pedido (X %)"** = % del vendedor × neto sin IVA del pedido que está armando (prop `comisionPct`).
+
+## Cuenta corriente: PEDIDO y ENTREGA (pedido del dueño)
+- En las tres hojas de comprobantes (Facturas, Remitos y cuenta del cliente; `ListaComprobantes.tsx`) la columna **FECHA pasó a llamarse PEDIDO** (cuándo se cargó el pedido; en facturas de ARCA con pedido, la del pedido, y si no, la de la factura) y a su derecha hay una columna nueva **ENTREGA** (día de entrega, solo si ya se entregó; si no, "—"). Las dos se ordenan y se filtran como las demás. Esto reemplaza lo de "se sacaron Entrega y Vence" (sigue sin haber Vence).
