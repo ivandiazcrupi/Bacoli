@@ -9,7 +9,7 @@ import type { FilaComprobante } from "./ListaComprobantes";
 export function filaDeArca(f: FilaFactura, puntos: PuntoCliente[]): FilaComprobante {
   const cubierta = !f.esNc && f.aplicado > 0 && f.saldo <= 0.01;
   return {
-    id: f.id, clienteId: f.clienteId ?? "", cliente: f.cliente ?? f.razonSocial ?? "—", tipo: "FACTURA", numero: f.esNc ? `NC ${f.numero}` : `F-${f.numero}`, cargado: f.pedidoCargado ?? f.fecha, fecha: f.fecha, entrega: f.entrega,
+    id: f.id, clienteId: f.clienteId ?? "", cliente: f.cliente ?? f.razonSocial ?? "—", tipo: "FACTURA", numero: f.esNc ? `NC ${f.numero}` : `F-${f.numero}`, cargado: f.pedidoCargado ?? f.fecha, fecha: f.fecha, entrega: f.entrega, anulaManual: f.anulaTexto && f.anulaTipo ? { tipo: f.anulaTipo, texto: f.anulaTexto, motivo: f.anulaMotivo } : null,
     entregado: true, bruto: f.total, nc: f.aplicado, cubierta, anulado: null, ncTexto: f.creditos.map((c) => `NC ${c.ncNumero}`).join(" · "), monto: f.esNc ? 0 : f.saldo, vence: "", atraso: 0, pagada: f.pagada, medio: f.medio, obs: f.observacion ?? "",
     razon: f.razonSocial ?? "", arca: true, esNc: f.esNc, cuit: f.cuit, saldo: f.saldo, sucursal: f.sucursal, puntoId: f.puntoId, puntos,
     avisoPago: f.avisoPago, aviso: f.problemas.join(" · "), sinPedido: !f.esNc && !f.pedidoId, pedidoId: f.pedidoId, ubicar: f.ubicar, aplicaciones: f.aplicaciones.map((a) => ({ id: a.id, facturaNumero: a.facturaNumero, monto: a.monto, motivo: a.motivo })), ncMotivos: f.creditos.filter((c) => c.motivo).map((c) => `NC ${c.ncNumero}: ${c.motivo}`).join(" · "),

@@ -114,6 +114,31 @@ export async function aplicarNc(ncId: string, facturaId: string, motivo: string)
   return { ok: true };
 }
 
+/**
+ * Nota de crédito que se aplica a algo que NO está en el sistema (una factura vieja) o que se anula con una nota de débito:
+ * se anota a mano el número y el motivo. La nota queda aplicada por completo, igual que si se hubiera aplicado a una factura cargada.
+ */
+export async function aplicarNcManual(ncId: string, tipo: string, texto: string, motivo: string): Promise<Resultado> {
+  await exigirOficina();
+  const t = texto.trim().replace(/\s+/g, " ").slice(0, 40);
+  const m = motivo.trim().replace(/\s+/g, " ").slice(0, 200);
+  if (tipo !== "FACTURA" && tipo !== "ND") return { ok: false, error: "Elegí si se aplica a una factura o la anula una nota de débito." };
+  if (t.length < 1) return { ok: false, error: tipo === "ND" ? "Escribí el número de la nota de débito." : "Escribí el número de la factura." };
+  if (m.length < 3) return { ok: false, error: "Falta el motivo de la nota de crédito (por qué se emitió)." };
+  const nc = await db.comprobanteArca.findUnique({ where: { id: ncId }, select: { esNotaCredito: true } });
+  if (!nc?.esNotaCredito) return { ok: false, error: "No encontré la nota de crédito." };
+  await db.comprobanteArca.update({ where: { id: ncId }, data: { anulaTipo: tipo, anulaTexto: t, anulaMotivo: m } });
+  revalidatePath("/cuentas", "layout");
+  return { ok: true };
+}
+
+export async function quitarAplicacionManual(ncId: string): Promise<Resultado> {
+  await exigirOficina();
+  await db.comprobanteArca.update({ where: { id: ncId }, data: { anulaTipo: null, anulaTexto: null, anulaMotivo: null } }).catch(() => null);
+  revalidatePath("/cuentas", "layout");
+  return { ok: true };
+}
+
 export async function quitarAplicacionNc(id: string): Promise<Resultado> {
   await exigirOficina();
   await db.aplicacionNcArca.delete({ where: { id } }).catch(() => null);

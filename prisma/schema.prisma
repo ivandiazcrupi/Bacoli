@@ -441,6 +441,9 @@ model ComprobanteArca {
   medioCobro    MedioPago?
   pagadoEn      DateTime?
   obsCobro      String? // N° de cheque, comprobante de transferencia…
+  anulaTipo     String? // nota de crédito aplicada a mano a algo que no está en el sistema: "FACTURA" o "ND" (nota de débito)
+  anulaTexto    String? // el número escrito a mano (ej. 4700 o 0001-00004700)
+  anulaMotivo   String?
 
   notasAplicadas    AplicacionNcArca[] @relation("NotaDeCredito") // si esta fila es una nota de crédito: a qué facturas se aplicó
   creditosRecibidos AplicacionNcArca[] @relation("FacturaCreditada") // si es una factura: qué notas de crédito la bajan

@@ -33,6 +33,9 @@ export type FilaFactura = {
   pedidoId: string | null;
   ubicar: string | null; // enlace para ubicar el pedido (hoja de ruta de su día o lista de Pedidos)
   pedidoEntregado: boolean;
+  anulaTipo: string | null; // nota de crédito aplicada a mano (la factura o la nota de débito no están en el sistema)
+  anulaTexto: string | null;
+  anulaMotivo: string | null;
   pedidoCargado: string | null; // día en que se cargó el pedido (AAAA-MM-DD)
   entrega: string | null; // día de entrega del pedido, si ya se entregó
   avisoPago: string | null; // vendedor que indicó que se pagó (falta confirmarlo en Cuenta corriente)
@@ -84,7 +87,7 @@ export async function cargarFacturas() {
     const dePunto = cuit ? porCuitDePunto.get(cuit) : undefined;
     const cli = cuit ? dePunto?.cliente ?? porCuit.get(cuit) : undefined;
     const pedido = a.esNotaCredito ? undefined : pedidoDe.get(a.id);
-    const aplicado = redondear2(a.esNotaCredito ? a.notasAplicadas.reduce((t, x) => t + Number(x.monto), 0) : a.creditosRecibidos.reduce((t, x) => t + Number(x.monto), 0));
+    const aplicado = redondear2(a.esNotaCredito && a.anulaTexto ? total : a.esNotaCredito ? a.notasAplicadas.reduce((t, x) => t + Number(x.monto), 0) : a.creditosRecibidos.reduce((t, x) => t + Number(x.monto), 0));
     const pagada = !a.esNotaCredito && (a.pagado || pedido?.cobro === "COBRADO");
     const problemas: string[] = [];
     if (pedido) {
@@ -100,7 +103,7 @@ export async function cargarFacturas() {
     return {
       id: a.id, esNc: a.esNotaCredito, tipo: a.tipo, puntoVenta: a.puntoVenta, numero: a.numero, fecha: a.fecha.toISOString().slice(0, 10), cuit, razonSocial: a.razonSocial,
       clienteId: cli?.id ?? null, cliente: cli?.nombre ?? null, total, puntoId: a.puntoId, sucursal: punto?.barrio ?? null, observacion: a.observacion,
-      pedidoId: pedido?.id ?? null, ubicar: pedido ? enlaceUbicar(pedido) : null, pedidoEntregado: pedido?.estado === "ENTREGADO",
+      pedidoId: pedido?.id ?? null, ubicar: pedido ? enlaceUbicar(pedido) : null, pedidoEntregado: pedido?.estado === "ENTREGADO", anulaTipo: a.anulaTipo, anulaTexto: a.anulaTexto, anulaMotivo: a.anulaMotivo,
       pedidoCargado: pedido ? new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Argentina/Buenos_Aires" }).format(pedido.creadoEn) : null,
       entrega: pedido?.estado === "ENTREGADO" && pedido.fechaEntrega ? pedido.fechaEntrega.toISOString().slice(0, 10) : null, avisoPago: pagada ? null : pedido?.pagoAvisadoPor ?? null, pagada, medio: a.medioCobro ?? (pedido?.cobro === "COBRADO" ? pedido.medioCobro : null), obsCobro: a.obsCobro,
       creditos: a.creditosRecibidos.map((x) => ({ id: x.id, ncId: x.ncId, ncNumero: idNumero.get(x.ncId) ?? 0, monto: Number(x.monto), motivo: x.motivo })),

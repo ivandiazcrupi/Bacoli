@@ -6,7 +6,7 @@ import { Fragment, useEffect, useMemo, useState, useTransition } from "react";
 import { formatoPesos } from "@/lib/numeros";
 import { FiltroLista, SEP } from "./FiltroLista";
 import { deshacerPago, descartarAvisoPago, guardarObservacion, registrarPagos } from "./actions";
-import { aplicarNc, deshacerPagoArca, guardarDatosArca, quitarAplicacionNc, registrarPagosArca } from "./arca/actions";
+import { aplicarNc, aplicarNcManual, quitarAplicacionManual, deshacerPagoArca, guardarDatosArca, quitarAplicacionNc, registrarPagosArca } from "./arca/actions";
 
 export type FilaComprobante = {
   id: string;
@@ -16,6 +16,7 @@ export type FilaComprobante = {
   numero: string | null;
   cargado: string;
   fecha: string;
+  anulaManual?: { tipo: string; texto: string; motivo: string | null } | null; // NC aplicada a mano (factura fuera del sistema o nota de débito)
   entrega?: string | null; // día de entrega (solo si ya se entregó)
   entregado: boolean;
   bruto: number;
@@ -103,6 +104,23 @@ function textoDe(f: FilaComprobante, c: ColId): string {
   }
 }
 
+// Factura anulada por una NC (o NC ya aplicada): la observación queda bloqueada y muestra su contraparte ("Anula F-5000" / "Anulada por NC 100").
+const rotuloManual = (m: { tipo: string; texto: string }) => (m.tipo === "ND" ? `ND ${m.texto.replace(/^nd\s*/i, "")}` : `F-${m.texto.replace(/^f-?/i, "")}`);
+function bloqueoDe(f: FilaComprobante): { texto: string; ayuda: string } | null {
+  if (f.esNc && f.anulaManual) {
+    const m = f.anulaManual;
+    return m.tipo === "ND"
+      ? { texto: `Anulada por ${rotuloManual(m)}`, ayuda: `Bloqueado: esta nota de crédito fue anulada con la nota de débito ${rotuloManual(m)} (anotada a mano, no está en el sistema).${m.motivo ? ` Motivo: ${m.motivo}.` : ""}` }
+      : { texto: `Anula ${rotuloManual(m)}`, ayuda: `Bloqueado: esta nota de crédito ya está aplicada y anula la factura ${rotuloManual(m)} (anotada a mano, no está en el sistema).${m.motivo ? ` Motivo: ${m.motivo}.` : ""}` };
+  }
+  if (f.esNc && (f.saldo ?? 0) <= 0.01 && (f.aplicaciones?.length ?? 0) > 0) {
+    const facturas = f.aplicaciones!.map((a) => `F-${a.facturaNumero}`).join(", ");
+    return { texto: `Anula ${facturas}`, ayuda: `Bloqueado: esta nota de crédito ya está aplicada y anula ${facturas}.${f.aplicaciones!.some((a) => a.motivo) ? ` Motivo: ${f.aplicaciones!.filter((a) => a.motivo).map((a) => a.motivo).join(" · ")}.` : ""}` };
+  }
+  if (!f.esNc && f.cubierta && f.ncTexto) return { texto: `Anulada por ${f.ncTexto}`, ayuda: `Bloqueado: esta factura quedó anulada por ${f.ncTexto}, que la cubre por completo.${f.ncMotivos ? ` ${f.ncMotivos}.` : ""}` };
+  return null;
+}
+
 // Observación: se escribe ahí mismo, como una celda de Excel. Se guarda al salir o con Enter.
 function ObsCelda({ f }: { f: FilaComprobante }) {
   const [valor, setValor] = useState(f.obs);
@@ -157,6 +175,8 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
   const [trabajando, empezar] = useTransition();
   const [picker, setPicker] = useState<string | null>(null);
   const [motivoNc, setMotivoNc] = useState("");
+  const [manualTipo, setManualTipo] = useState<"FACTURA" | "ND">("FACTURA");
+  const [manualTexto, setManualTexto] = useState("");
   const [vista, setVista] = useState(vistaInicial);
   const [filtros, setFiltros] = useState<Partial<Record<ColId, string>>>({});
   const [orden, setOrden] = useState<{ col: ColId | null; asc: boolean }>({ col: null, asc: true });
@@ -333,14 +353,14 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
                     case "monto": return <span key={c.id} className={`whitespace-nowrap text-[14px] font-bold tabular-nums ${f.cubierta || f.anulado ? "text-stone-300 line-through" : f.esNc ? "text-stone-500" : "text-stone-900"}`}>{f.esNc ? "−" : ""}{formatoPesos(f.cubierta || f.anulado || f.esNc ? f.bruto : f.monto)}</span>;
                     case "estado": {
                       const e = estadoDe(f);
-                      const color = e === "Pendiente" && f.avisoPago ? "bg-[#fdf8e3] text-[#8a6a05]" : e === "Pendiente" ? "bg-rojo-50 text-rojo-700" : e === "Pagada" ? "bg-verde-50 text-verde-700" : e === "NC sin aplicar" ? "bg-[#fdf8e3] text-[#8a6a05]" : "";
+                      const color = e === "Pendiente" && f.avisoPago ? "bg-[#fdf8e3] text-[#8a6a05]" : e === "Pendiente" ? "bg-rojo-50 text-rojo-700" : e === "Pagada" ? "bg-verde-50 text-verde-700" : e === "NC sin aplicar" ? "bg-[#fdf8e3] text-[#8a6a05]" : e === "NC aplicada" || e === "Anulada por NC" ? "text-sky-700" : "";
                       return <span key={c.id} className="flex min-w-0 items-center justify-center gap-2" title={e === "Pendiente" && f.atraso > 0 ? `Vencida hace ${f.atraso} días` : undefined}>
                         <span className={`flex h-7 w-fit max-w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 font-bold ${color}`}>
                           {e === "NC sin aplicar" ? <button type="button" onClick={() => { setMotivoNc(""); setPicker(picker === f.id ? null : f.id); }} className="font-bold hover:underline">Aplicar a factura</button>
                             : e === "Pagada" ? <><span>Pagada{f.medio ? <span className="text-[11.5px] font-medium"> · {TEXTO_MEDIO[f.medio] ?? ""}</span> : null}</span><button type="button" title="Deshacer el pago" aria-label="Deshacer el pago" onClick={() => deshacer(f.id, !!f.arca)} className="text-[11px] opacity-50 hover:opacity-100">✕</button></>
                             : e === "Pendiente" && f.avisoPago ? <><span title={`${f.avisoPago} indicó que se pagó. Falta tu confirmación: registrá el pago (tildá el comprobante) o descartá el aviso con la ✕.`}>{f.avisoPago.split(" ")[0].slice(0, 12)} avisó pago</span><button type="button" title="Descartar el aviso (no se pagó)" aria-label="Descartar el aviso" onClick={() => window.confirm(`¿Descartar el aviso de ${f.avisoPago}? El comprobante sigue pendiente.`) && f.pedidoId !== null && empezar(async () => { await descartarAvisoPago(f.pedidoId ?? f.id); router.refresh(); })} className="text-[11px] opacity-50 hover:opacity-100">✕</button></>
                             : e === "Pendiente" ? <span>Pendiente{f.atraso > 0 ? <span className="text-[12px] font-medium opacity-80"> · {f.atraso} d</span> : null}</span>
-                            : <span className="font-medium text-stone-500">{e === "Anulado" ? f.anulado : e}</span>}
+                            : <span className={e === "NC aplicada" || e === "Anulada por NC" ? "font-bold" : "font-medium text-stone-500"}>{e === "Anulado" ? f.anulado : e}</span>}
                         </span>
                       </span>;
                     }
@@ -348,11 +368,14 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
                       ? <Link key={c.id} href={f.ubicar} title="Te lleva al pedido: a su hoja de ruta (resaltado) o, si todavía espera día, a la lista de Pedidos" className="mx-auto inline-flex h-7 items-center gap-1 whitespace-nowrap rounded-md border border-stone-300 bg-white px-2.5 text-[12px] font-semibold text-stone-700 hover:border-stone-700 hover:bg-stone-800 hover:text-white">Ubicar <span aria-hidden>›</span></Link>
                       : <span key={c.id} className="text-[12.5px] text-stone-300">—</span>;
                     case "nc": return <span key={c.id} title={f.ncMotivos || undefined} className="truncate text-[12.5px] text-stone-500">
-                      {f.arca && f.esNc ? <>{(f.aplicaciones ?? []).map((a) => <span key={a.id} title={a.motivo ? `Motivo: ${a.motivo}` : undefined} className="mr-2 whitespace-nowrap">→ F-{a.facturaNumero}{a.motivo ? <span className="text-stone-400"> · {a.motivo}</span> : null} <button type="button" title="Quitar" onClick={() => window.confirm("¿Quitar esta aplicación?") && empezar(async () => { const r = await quitarAplicacionNc(a.id); if (!r.ok) setError(r.error ?? "No se pudo."); router.refresh(); })} className="text-stone-300 hover:text-rojo-700">✕</button></span>)}{(f.aplicaciones ?? []).length === 0 && <span className="text-stone-300">—</span>}</>
+                      {f.arca && f.esNc ? <>{(f.aplicaciones ?? []).map((a) => <span key={a.id} title={a.motivo ? `Motivo: ${a.motivo}` : undefined} className="mr-2 whitespace-nowrap">→ F-{a.facturaNumero}{a.motivo ? <span className="text-stone-400"> · {a.motivo}</span> : null} <button type="button" title="Quitar" onClick={() => window.confirm("¿Quitar esta aplicación?") && empezar(async () => { const r = await quitarAplicacionNc(a.id); if (!r.ok) setError(r.error ?? "No se pudo."); router.refresh(); })} className="text-stone-300 hover:text-rojo-700">✕</button></span>)}{f.anulaManual && <span title={f.anulaManual.motivo ? `Motivo: ${f.anulaManual.motivo}` : undefined} className="mr-2 whitespace-nowrap">→ {rotuloManual(f.anulaManual)}{f.anulaManual.motivo ? <span className="text-stone-400"> · {f.anulaManual.motivo}</span> : null} <button type="button" title="Quitar" onClick={() => window.confirm("¿Quitar esta aplicación anotada a mano?") && empezar(async () => { const r = await quitarAplicacionManual(f.id); if (!r.ok) setError(r.error ?? "No se pudo."); router.refresh(); })} className="text-stone-300 hover:text-rojo-700">✕</button></span>}{(f.aplicaciones ?? []).length === 0 && !f.anulaManual && <span className="text-stone-300">—</span>}</>
                         : !f.arca && f.tipo === "FACTURA" && !f.pagada && !f.cubierta && !f.anulado ? <Link href={`/cuentas/${f.clienteId}/nc?factura=${f.id}`} className="font-medium text-stone-600 underline decoration-stone-300 underline-offset-4 hover:text-stone-900">+ Nota de crédito</Link>
                         : f.ncTexto ? <>{f.ncTexto}{!f.cubierta && f.nc > 0 ? ` (−${formatoPesos(f.nc)})` : ""}</> : <span className="text-stone-300">—</span>}
                     </span>;
-                    case "obs": return <ObsCelda key={`${c.id}-${f.obs}`} f={f} />;
+                    case "obs": {
+                      const b = bloqueoDe(f);
+                      return b ? <span key={c.id} title={b.ayuda} className="block min-w-0 cursor-not-allowed truncate rounded bg-stone-50 px-2 text-center text-[12.5px] font-medium leading-7 text-stone-400">{b.texto}</span> : <ObsCelda key={`${c.id}-${f.obs}`} f={f} />;
+                    }
                   }
                 })}
               </div>
@@ -380,6 +403,17 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
                       </ul>
                     );
                   })()}
+                  <div className="mt-4 max-w-xl border-t border-stone-300 pt-3">
+                    <p className="mb-2 font-medium text-stone-700">¿No está en el sistema? <span className="font-normal text-stone-400">anotala a mano (usa el motivo de arriba)</span></p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <select value={manualTipo} onChange={(e) => setManualTipo(e.target.value as "FACTURA" | "ND")} aria-label="Qué hace la nota" className="h-9 rounded-md border border-stone-400 bg-white px-2 text-[13px]">
+                        <option value="FACTURA">Se aplica a la factura…</option>
+                        <option value="ND">La anula la nota de débito…</option>
+                      </select>
+                      <input value={manualTexto} onChange={(e) => setManualTexto(e.target.value)} maxLength={40} placeholder={manualTipo === "ND" ? "N° de la ND (ej. 55)" : "N° de la factura (ej. 4700)"} className="h-9 w-48 rounded-md border border-stone-400 bg-white px-3 text-[13px]" />
+                      <button type="button" disabled={trabajando || motivoNc.trim().length < 3 || !manualTexto.trim()} title={motivoNc.trim().length < 3 ? "Primero escribí el motivo de la nota de crédito" : undefined} onClick={() => window.confirm(`¿Anotar que la ${f.numero} ${manualTipo === "ND" ? "queda anulada por la ND" : "se aplica a la factura"} ${manualTexto.trim()}?\nMotivo: ${motivoNc.trim()}`) && empezar(async () => { const r = await aplicarNcManual(f.id, manualTipo, manualTexto, motivoNc); if (!r.ok) setError(r.error ?? "No se pudo."); else { setPicker(null); setManualTexto(""); } router.refresh(); })} className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-[12px] font-medium hover:border-stone-700 hover:bg-stone-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-stone-300 disabled:hover:bg-white disabled:hover:text-stone-900">Anotar a mano</button>
+                    </div>
+                  </div>
                 </div>
               )}
             </Fragment>
