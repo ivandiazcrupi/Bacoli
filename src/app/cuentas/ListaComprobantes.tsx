@@ -126,13 +126,25 @@ function ObsCelda({ f }: { f: FilaComprobante }) {
   const [valor, setValor] = useState(f.obs);
   const [guardado, setGuardado] = useState(f.obs);
   const [estado, setEstado] = useState<"" | "ok" | "error">("");
+  const cerrada = f.pagada && !f.esNc; // pagada: la leyenda del pago (cheque, transferencia…) queda como "ya listo" y se edita solo con el lapicito
+  const [editando, setEditando] = useState(false);
   const guardar = async () => {
-    if (valor.trim() === guardado.trim()) return;
-    const r = f.arca ? await guardarDatosArca(f.id, null, valor) : await guardarObservacion(f.id, valor);
-    if (r.ok) { setGuardado(valor); setEstado("ok"); setTimeout(() => setEstado(""), 1500); } else setEstado("error");
+    if (valor.trim() !== guardado.trim()) {
+      const r = f.arca ? await guardarDatosArca(f.id, null, valor) : await guardarObservacion(f.id, valor);
+      if (r.ok) { setGuardado(valor); setEstado("ok"); setTimeout(() => setEstado(""), 1500); } else { setEstado("error"); return; }
+    }
+    setEditando(false);
   };
+  if (cerrada && !editando) {
+    return (
+      <span className="flex min-w-0 items-center justify-center gap-1.5" title={guardado ? `${guardado}\n(Pagada: tocá el lápiz para modificarla)` : "Pagada: tocá el lápiz para agregar una leyenda"}>
+        <span className="min-w-0 truncate text-[13px] font-medium text-stone-500">{guardado || <span className="text-stone-300">—</span>}</span>
+        <button type="button" aria-label="Editar la observación" onClick={() => setEditando(true)} className="shrink-0 text-[13px] text-stone-400 hover:text-stone-800">✎</button>
+      </span>
+    );
+  }
   return (
-    <input aria-label="Observación" value={valor} maxLength={200} placeholder="—" onChange={(e) => setValor(e.target.value)} onBlur={guardar} onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+    <input aria-label="Observación" autoFocus={cerrada} value={valor} maxLength={200} placeholder="—" onChange={(e) => setValor(e.target.value)} onBlur={guardar} onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); if (e.key === "Escape" && cerrada) { setValor(guardado); setEditando(false); } }}
       className={`h-7 w-full min-w-0 rounded border bg-transparent px-2 text-center text-[13.5px] placeholder:text-stone-300 hover:border-stone-300 focus:border-verde-700 focus:bg-white focus:outline-none ${estado === "ok" ? "border-verde-600" : estado === "error" ? "border-rojo-600" : "border-transparent"}`} />
   );
 }
