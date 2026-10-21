@@ -65,6 +65,7 @@ export default async function CuentaDeCliente({ params }: { params: Promise<{ id
           </div>
         </div>
 
+        <div className="flex flex-wrap items-center justify-between gap-3">
         <Resumen datos={[
           { titulo: "Deuda total", valor: formatoPesos(total) },
           { titulo: "Por entregar", valor: formatoPesos(porEntregar) },
@@ -72,6 +73,8 @@ export default async function CuentaDeCliente({ params }: { params: Promise<{ id
           { titulo: "Sin pagar", valor: pendientes.length },
           { titulo: "Saldo a favor (NC)", valor: formatoPesos(aFavor) },
         ]} />
+        <Link href={`/cuentas/${id}/estado`} target="_blank" className="rounded-md border border-stone-400 bg-white px-4 py-2.5 text-sm font-semibold hover:border-verde-700 hover:text-verde-800">Descargar PDF para el cliente</Link>
+        </div>
 
         <section className={CONTENEDOR_TABLA} aria-label="Comprobantes del cliente">
           <ListaComprobantes filas={filas} tipo="CUENTA" />

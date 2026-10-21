@@ -396,3 +396,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Cuenta corriente: PEDIDO y ENTREGA (pedido del dueño)
 - En las tres hojas de comprobantes (Facturas, Remitos y cuenta del cliente; `ListaComprobantes.tsx`) la columna **FECHA pasó a llamarse PEDIDO** (cuándo se cargó el pedido; en facturas de ARCA con pedido, la del pedido, y si no, la de la factura) y a su derecha hay una columna nueva **ENTREGA** (día de entrega, solo si ya se entregó; si no, "—"). Las dos se ordenan y se filtran como las demás. Esto reemplaza lo de "se sacaron Entrega y Vence" (sigue sin haber Vence).
+
+## Estado de cuenta para el cliente (pedido del dueño)
+- En la cuenta de un cliente (`/cuentas/[id]`), a la derecha del resumen (a la altura de "Vencido"), botón **"Descargar PDF para el cliente"**: abre `/cuentas/[id]/estado` (en otra pestaña), una hoja **A4 vertical limpia** (sin observaciones internas ni avisos) con la empresa, el cliente, la tabla COMPROBANTE · SUCURSAL · PEDIDO · ENTREGA · MONTO · ESTADO y el total a pagar (entregado y sin pagar, menos saldo a favor; "por entregar" aparte). Por defecto solo lo que debe; botón "Con lo pagado" suma lo pagado. **El PDF se genera con Imprimir → "Guardar como PDF"** del navegador (sin librerías; se eligió PDF y no JPG porque es texto nítido y se manda fácil por WhatsApp/mail).
