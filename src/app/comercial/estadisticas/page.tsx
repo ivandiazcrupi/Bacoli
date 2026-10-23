@@ -23,7 +23,7 @@ const pesos = (n: number) => n.toLocaleString("es-AR", { style: "currency", curr
 const paq = (n: number) => n.toLocaleString("es-AR", { maximumFractionDigits: 1 });
 const corto = (n: number) => (n >= 1_000_000 ? `${(n / 1_000_000).toLocaleString("es-AR", { maximumFractionDigits: 1 })} M` : n >= 1000 ? `${Math.round(n / 1000)} mil` : String(Math.round(n)));
 
-// ESTADÍSTICAS: tablero general del mes (como una cabina). Todo sale de los pedidos cargados; no cambia nada.
+// ESTADÍSTICAS: tablero general del mes (como una cabina). Solo cuenta lo ENTREGADO (lo realmente vendido); no cambia nada.
 export default async function Graficos({ searchParams }: { searchParams: Promise<{ mes?: string }> }) {
   const usuario = await exigirOficina();
   const desbloqueado = await vendedoresDesbloqueado();
@@ -35,11 +35,11 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
   const desde = new Date(`${meses6[0]}-01T00:00:00Z`);
 
   const pedidos = await db.pedido.findMany({
-    where: { estado: { in: ["PENDIENTE", "ENTREGADO"] }, origen: { in: ["MAYORISTA", "WEB"] }, OR: [{ creadoEn: { gte: desde } }, { fechaEntrega: { gte: desde } }] },
+    where: { estado: "ENTREGADO", origen: { in: ["MAYORISTA", "WEB"] }, OR: [{ creadoEn: { gte: desde } }, { fechaEntrega: { gte: desde } }] },
     include: { items: true, cliente: { select: { id: true, nombre: true } }, punto: { select: { zona: { select: { nombre: true } } } } },
   });
 
-  // Cada pedido cuenta en el mes de su día de reparto (o, si todavía no lo tiene, el día en que se cargó).
+  // Cada pedido entregado cuenta en el mes de su día de entrega.
   type P = { f: string; web: boolean; clienteId: string | null; cliente: string; zona: string; tipo: string; paq: number; neto: number; entregado: boolean; sabores: ReturnType<typeof unidadesPorSabor>; foc: number; focOliva: number; focCherry: number };
   const filas: P[] = pedidos.map((p) => {
     const web = p.origen === "WEB";
@@ -132,7 +132,7 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
         {/* Instrumentos: lo principal del mes de un vistazo */}
         <section aria-label="Resumen del mes" className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-stone-700 bg-stone-700 sm:grid-cols-3 lg:grid-cols-6">
           {[
-            { t: "Pedidos", v: String(total.pedidos), d: "en el mes" },
+            { t: "Pedidos", v: String(total.pedidos), d: "entregados en el mes" },
             { t: "Paquetes", v: paq(total.paq), d: vPaq === null ? "mes anterior sin datos" : `${vPaq >= 0 ? "▲" : "▼"} ${Math.abs(vPaq)}% vs mes anterior`, c: vPaq === null ? "" : vPaq >= 0 ? "text-emerald-400" : "text-red-400" },
             { t: "Unidades vendidas", v: unidades.toLocaleString("es-AR"), d: vUni === null ? "pizzas + focaccias" : `${vUni >= 0 ? "▲" : "▼"} ${Math.abs(vUni)}% vs mes anterior`, c: vUni === null ? "" : vUni >= 0 ? "text-emerald-400" : "text-red-400" },
             { t: "Facturación sin IVA", v: pesos(total.neto), d: vNeto === null ? "mes anterior sin datos" : `${vNeto >= 0 ? "▲" : "▼"} ${Math.abs(vNeto)}% vs mes anterior`, c: vNeto === null ? "" : vNeto >= 0 ? "text-emerald-400" : "text-red-400" },
