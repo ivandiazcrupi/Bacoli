@@ -10,7 +10,7 @@ import { vendedoresDesbloqueado } from "@/lib/claveVendedores";
 import { ventasEntregadas } from "@/lib/vendedores";
 import { CONTENEDOR_PEDIDOS } from "../../pedidos/Encabezado";
 import { PantallaBloqueada } from "../vendedores/Bloqueo";
-import { Barras, BarrasH, Donut, Leyenda, PALETA, Panel, SinDatos } from "./Graficos";
+import { Barras, BarrasH, Leyenda, PALETA, Panel, SinDatos } from "./Graficos";
 import { TopClientes } from "./TopClientes";
 
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
@@ -63,12 +63,8 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
   const unidades = delMes.reduce((t, p) => t + unidadesDe(p), 0), antUnidades = ant.reduce((t, p) => t + unidadesDe(p), 0);
   const clientesQuePidieron = new Set(mayoristas.map((p) => p.clienteId)).size;
 
-  // Pedidos por día
-  const diasDelMes = Number(sumarDias(`${mesSiguiente(mes)}-01`, -1).slice(8));
-  const porDia = Array.from({ length: diasDelMes }, (_, i) => { const f = `${mes}-${String(i + 1).padStart(2, "0")}`; const d = delMes.filter((p) => p.f === f); return { may: d.filter((p) => !p.web).length, web: d.filter((p) => p.web).length }; });
-  const diaTop = porDia.reduce((m, d, i) => (d.may + d.web > porDia[m].may + porDia[m].web ? i : m), 0);
-
   // Resumen diario: todos los días del mes; los domingos no se vende (quedan anulados).
+  const diasDelMes = Number(sumarDias(`${mesSiguiente(mes)}-01`, -1).slice(8));
   const resumenDia = Array.from({ length: diasDelMes }, (_, i) => {
     const f = `${mes}-${String(i + 1).padStart(2, "0")}`;
     const d = delMes.filter((p) => p.f === f);
@@ -93,12 +89,8 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
     if (desde > 0) filasDia.push({ tipo: "semana", desde, hasta, t: acc }); }
   const diasDeVenta = resumenDia.filter((x) => x.pedidos > 0).length;
   const totalDia = resumenDia.reduce((t, x) => ({ pedidos: t.pedidos + x.pedidos, paq: t.paq + x.paq, uni: t.uni + x.uni, tomate: t.tomate + x.tomate, cebolla: t.cebolla + x.cebolla, pizzas: t.pizzas + x.pizzas, foc: t.foc + x.foc, neto: t.neto + x.neto }), { pedidos: 0, paq: 0, uni: 0, tomate: 0, cebolla: 0, pizzas: 0, foc: 0, neto: 0 });
-  const COLS_DIA = "grid-cols-[minmax(0,1.3fr)_repeat(7,minmax(0,1fr))_minmax(0,1.4fr)]";
-
-  // Zonas y tipo de comprobante
-  const cuenta = (xs: string[]) => [...xs.reduce((m, x) => m.set(x, (m.get(x) ?? 0) + 1), new Map<string, number>())].map(([nombre, valor]) => ({ nombre, valor })).sort((a, b) => b.valor - a.valor);
-  const porZona = cuenta(mayoristas.map((p) => p.zona || "Sin zona"));
-  const porTipo = cuenta(delMes.map((p) => p.tipo));
+  const COLS_DIA = "grid-cols-[minmax(0,1.5fr)_repeat(7,minmax(0,1fr))_minmax(0,1.5fr)]";
+  const CELDAS = "[&>span]:px-2"; // aire parejo en cada celda (las líneas verticales separan las columnas)
 
   // Clientes (cada cliente junto, sumando todas sus sucursales)
   const porCliente = new Map<string, { nombre: string; paquetes: number; neto: number; pedidos: number }>();
@@ -174,25 +166,20 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
         </section>
 
         <div className="grid gap-4 lg:grid-cols-3">
-          <Panel titulo="Pedidos por día" nota={total.pedidos ? `el día más cargado: ${diaTop + 1}` : undefined} className="lg:col-span-2">
-            {total.pedidos === 0 ? <SinDatos /> : <Barras etiquetas={porDia.map((_, i) => String(i + 1))} resaltar={diaTop} series={[{ nombre: "Mayoristas", color: PALETA[0], valores: porDia.map((d) => d.may) }, { nombre: "Tienda online", color: PALETA[1], valores: porDia.map((d) => d.web) }]} />}
-          </Panel>
-          <Panel titulo="Pedidos por zona" nota="mayoristas"><Donut partes={porZona} /></Panel>
-
-          <Panel titulo="Resumen por día" nota="solo pedidos entregados · en el lugar del domingo, el resumen de la semana" className="lg:col-span-3">
+          <Panel titulo="Resumen por día" nota="solo pedidos entregados · cada semana (martes a lunes) cierra con su subtotal" className="lg:col-span-3">
             {total.pedidos === 0 ? <SinDatos /> : (
               <div className="overflow-x-auto">
-                <div className="min-w-[760px] overflow-hidden rounded-md border border-stone-200">
-                  <div className={`grid ${COLS_DIA} gap-x-3 bg-crema-100 px-3 py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-stone-500`}>
-                    <span className="text-left">Día</span><span>Pedidos</span><span>Paquetes</span><span>Unidades</span><span>Tomate</span><span>Cebolla</span><span>Pizzas</span><span>Focaccias</span><span>Facturación</span>
+                <div className="min-w-[820px] overflow-hidden rounded-md border border-stone-300">
+                  <div className={`grid ${COLS_DIA} ${CELDAS} divide-x divide-stone-300 bg-crema-100 py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-stone-600`}>
+                    <span className="!pl-3 text-left">Día</span><span>Pedidos</span><span>Paquetes</span><span>Unidades</span><span>Tomate</span><span>Cebolla</span><span>Pizzas</span><span>Focaccias</span><span>Facturación</span>
                   </div>
                   {filasDia.map((fila) => {
                     if (fila.tipo === "semana") {
                       const t = fila.t, vacio = t.pedidos === 0;
                       const n = (v: number) => (vacio || v === 0 ? <span className="text-stone-300">—</span> : v.toLocaleString("es-AR", { maximumFractionDigits: 1 }));
                       return (
-                        <div key={`sem-${fila.desde}`} className={`grid ${COLS_DIA} items-center gap-x-3 border-t border-stone-200 bg-stone-100/70 px-3 py-1.5 text-center text-[12.5px] font-medium tabular-nums text-stone-500`}>
-                          <span className="text-left">Semana {fila.desde} al {fila.hasta}</span>
+                        <div key={`sem-${fila.desde}`} className={`grid ${COLS_DIA} ${CELDAS} divide-x divide-stone-300 border-y-2 border-stone-300 bg-stone-100 py-2 text-center text-[13px] font-semibold tabular-nums text-stone-600`}>
+                          <span className="!pl-3 text-left">Subtotal <span className="font-normal text-stone-500">· semana {fila.desde} al {fila.hasta}</span></span>
                           <span>{n(t.pedidos)}</span><span>{n(t.paq)}</span><span>{n(t.uni)}</span><span>{n(t.tomate)}</span><span>{n(t.cebolla)}</span><span>{n(t.pizzas)}</span><span>{n(t.foc)}</span>
                           <span>{vacio ? <span className="text-stone-300">—</span> : pesos(t.neto)}</span>
                         </div>
@@ -202,32 +189,33 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
                     const vacio = x.pedidos === 0;
                     const num = (n: number) => (vacio || n === 0 ? <span className="text-stone-300">—</span> : n.toLocaleString("es-AR", { maximumFractionDigits: 1 }));
                     return (
-                      <div key={x.f} className={`grid ${COLS_DIA} items-center gap-x-3 border-t border-stone-200 px-3 py-2 text-center text-[13.5px] tabular-nums ${x.f === hoy() ? "bg-crema-50" : ""}`}>
-                        <span className="text-left font-semibold text-stone-800">{x.nombre.slice(0, 3)} {x.dia}</span>
+                      <div key={x.f} className={`grid ${COLS_DIA} ${CELDAS} divide-x divide-stone-200 border-b border-stone-200 py-2 text-center text-[13.5px] tabular-nums hover:bg-crema-50 ${x.f === hoy() ? "bg-crema-50" : ""}`}>
+                        <span className="!pl-3 text-left font-semibold text-stone-800">{x.nombre.slice(0, 3)} {x.dia}</span>
                         <span>{num(x.pedidos)}</span><span>{num(x.paq)}</span><span>{num(x.uni)}</span><span>{num(x.tomate)}</span><span>{num(x.cebolla)}</span><span>{num(x.pizzas)}</span><span>{num(x.foc)}</span>
                         <span className="font-bold text-stone-900">{vacio ? <span className="text-stone-300">—</span> : pesos(x.neto)}</span>
                       </div>
                     );
                   })}
-                  <div className={`grid ${COLS_DIA} gap-x-3 border-t-2 border-stone-300 bg-crema-50 px-3 py-2.5 text-center text-[13.5px] font-bold tabular-nums`}>
-                    <span className="text-left">Total del mes</span>
-                    <span>{totalDia.pedidos}</span><span>{paq(totalDia.paq)}</span><span>{totalDia.uni.toLocaleString("es-AR")}</span><span>{totalDia.tomate.toLocaleString("es-AR")}</span><span>{totalDia.cebolla.toLocaleString("es-AR")}</span><span>{totalDia.pizzas.toLocaleString("es-AR")}</span><span>{totalDia.foc.toLocaleString("es-AR")}</span><span>{pesos(totalDia.neto)}</span>
-                  </div>
-                  <div className={`grid ${COLS_DIA} items-center gap-x-3 border-t border-stone-200 px-3 py-2 text-center text-[13.5px] tabular-nums text-stone-700`}>
-                    <span className="text-left font-semibold">Días de venta</span>
-                    <span className="col-span-8 text-left font-semibold text-stone-800">{diasDeVenta} <span className="font-normal text-stone-500">{diasDeVenta === 1 ? "día con entregas" : "días con entregas"}</span></span>
-                  </div>
-                  <div className={`grid ${COLS_DIA} items-center gap-x-3 border-t border-stone-200 bg-crema-50 px-3 py-2 text-center text-[13.5px] font-semibold tabular-nums text-stone-700`}>
-                    <span className="text-left">Promedio por día de venta</span>
-                    {(() => { const d = diasDeVenta || 1; const m = (v: number, dec = 1) => (diasDeVenta === 0 ? "—" : (v / d).toLocaleString("es-AR", { maximumFractionDigits: dec })); return <><span>{m(totalDia.pedidos)}</span><span>{m(totalDia.paq)}</span><span>{m(totalDia.uni, 0)}</span><span>{m(totalDia.tomate, 0)}</span><span>{m(totalDia.cebolla, 0)}</span><span>{m(totalDia.pizzas, 0)}</span><span>{m(totalDia.foc, 0)}</span><span>{diasDeVenta === 0 ? "—" : pesos(totalDia.neto / d)}</span></>; })()}
+                  {/* Totales y promedios del mes */}
+                  <div className="bg-stone-900 text-white">
+                    <div className={`grid ${COLS_DIA} ${CELDAS} divide-x divide-stone-700 py-3 text-center text-[14px] font-bold tabular-nums`}>
+                      <span className="!pl-3 text-left text-[12px] uppercase tracking-[0.12em] text-stone-300">Total del mes</span>
+                      <span>{totalDia.pedidos}</span><span>{paq(totalDia.paq)}</span><span>{totalDia.uni.toLocaleString("es-AR")}</span><span>{totalDia.tomate.toLocaleString("es-AR")}</span><span>{totalDia.cebolla.toLocaleString("es-AR")}</span><span>{totalDia.pizzas.toLocaleString("es-AR")}</span><span>{totalDia.foc.toLocaleString("es-AR")}</span><span className="text-[15px]">{pesos(totalDia.neto)}</span>
+                    </div>
+                    <div className={`grid ${COLS_DIA} ${CELDAS} divide-x divide-stone-700 border-t border-stone-700 py-2.5 text-center text-[13.5px] font-semibold tabular-nums text-stone-300`}>
+                      <span className="!pl-3 text-left text-[12px] font-bold uppercase tracking-[0.12em]">Promedio por día</span>
+                      {(() => { const d = diasDeVenta || 1; const m = (v: number, dec = 1) => (diasDeVenta === 0 ? "—" : (v / d).toLocaleString("es-AR", { maximumFractionDigits: dec })); return <><span>{m(totalDia.pedidos)}</span><span>{m(totalDia.paq)}</span><span>{m(totalDia.uni, 0)}</span><span>{m(totalDia.tomate, 0)}</span><span>{m(totalDia.cebolla, 0)}</span><span>{m(totalDia.pizzas, 0)}</span><span>{m(totalDia.foc, 0)}</span><span className="text-white">{diasDeVenta === 0 ? "—" : pesos(totalDia.neto / d)}</span></>; })()}
+                    </div>
+                    <p className="border-t border-stone-700 px-3 py-2 text-[12px] text-stone-400">
+                      <b className="text-[13px] text-white">{diasDeVenta}</b> {diasDeVenta === 1 ? "día de venta" : "días de venta"} en el mes (días con entregas). Los promedios se calculan sobre esos días.
+                    </p>
                   </div>
                 </div>
               </div>
             )}
           </Panel>
 
-          <Panel titulo="Clientes que más piden" nota="cada cliente, todas sus sucursales juntas" className="lg:col-span-2"><TopClientes filas={[...porCliente.values()]} /></Panel>
-          <Panel titulo="Tipo de comprobante"><Donut partes={porTipo} /></Panel>
+          <Panel titulo="Clientes que más piden" nota="cada cliente, todas sus sucursales juntas" className="lg:col-span-3"><TopClientes filas={[...porCliente.values()]} /></Panel>
 
           <Panel titulo="Comisiones de vendedores" nota={`facturación sin IVA de pedidos entregados · ${nombreMes(mes)}`} className="lg:col-span-2">
             {!verComisiones ? <SinDatos texto="Las comisiones se ven entrando a Comercial → Vendedores con su contraseña." /> : comisiones.length === 0 ? <SinDatos texto="Ningún pedido entregado este mes de un cliente con vendedor y % de comisión (se cargan en Comercial → Vendedores)." /> : (
