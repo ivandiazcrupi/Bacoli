@@ -75,6 +75,21 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
     const suma = (fn: (p: P) => number) => d.reduce((t, p) => t + fn(p), 0);
     return { f, dia: i + 1, nombre: nombreDia(f), domingo: nombreDia(f) === "Domingo", pedidos: d.length, paq: suma((p) => p.paq), uni: suma(unidadesDe), tomate: suma((p) => p.sabores.tomate), cebolla: suma((p) => p.sabores.cebolla), pizzas: suma((p) => p.sabores.pizzas), foc: suma((p) => p.foc), neto: suma((p) => p.neto) };
   });
+  // En el lugar de cada domingo (no se reparte) va el mini resumen de la semana que termina (los días de arriba); si el mes termina a mitad de semana, uno al final.
+  type Dia = (typeof resumenDia)[number];
+  const CERO = { pedidos: 0, paq: 0, uni: 0, tomate: 0, cebolla: 0, pizzas: 0, foc: 0, neto: 0 };
+  const sumar = (a: typeof CERO, x: Dia) => ({ pedidos: a.pedidos + x.pedidos, paq: a.paq + x.paq, uni: a.uni + x.uni, tomate: a.tomate + x.tomate, cebolla: a.cebolla + x.cebolla, pizzas: a.pizzas + x.pizzas, foc: a.foc + x.foc, neto: a.neto + x.neto });
+  type FilaDia = { tipo: "dia"; x: Dia } | { tipo: "semana"; desde: number; hasta: number; t: typeof CERO };
+  const filasDia: FilaDia[] = [];
+  { let acc = CERO, desde = 0, hasta = 0;
+    for (const x of resumenDia) {
+      if (desde === 0 && !x.domingo) desde = x.dia;
+      acc = sumar(acc, x);
+      if (x.domingo) { if (desde > 0) filasDia.push({ tipo: "semana", desde, hasta, t: acc }); acc = CERO; desde = 0; continue; }
+      hasta = x.dia;
+      filasDia.push({ tipo: "dia", x });
+    }
+    if (desde > 0) filasDia.push({ tipo: "semana", desde, hasta, t: acc }); }
   const totalDia = resumenDia.reduce((t, x) => ({ pedidos: t.pedidos + x.pedidos, paq: t.paq + x.paq, uni: t.uni + x.uni, tomate: t.tomate + x.tomate, cebolla: t.cebolla + x.cebolla, pizzas: t.pizzas + x.pizzas, foc: t.foc + x.foc, neto: t.neto + x.neto }), { pedidos: 0, paq: 0, uni: 0, tomate: 0, cebolla: 0, pizzas: 0, foc: 0, neto: 0 });
   const COLS_DIA = "grid-cols-[minmax(0,1.3fr)_repeat(7,minmax(0,1fr))_minmax(0,1.4fr)]";
 
@@ -162,21 +177,33 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
           </Panel>
           <Panel titulo="Pedidos por zona" nota="mayoristas"><Donut partes={porZona} /></Panel>
 
-          <Panel titulo="Resumen por día" nota="solo pedidos entregados · los domingos no se reparte" className="lg:col-span-3">
+          <Panel titulo="Resumen por día" nota="solo pedidos entregados · en el lugar del domingo, el resumen de la semana" className="lg:col-span-3">
             {total.pedidos === 0 ? <SinDatos /> : (
               <div className="overflow-x-auto">
                 <div className="min-w-[760px] overflow-hidden rounded-md border border-stone-200">
                   <div className={`grid ${COLS_DIA} gap-x-3 bg-crema-100 px-3 py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-stone-500`}>
                     <span className="text-left">Día</span><span>Pedidos</span><span>Paquetes</span><span>Unidades</span><span>Tomate</span><span>Cebolla</span><span>Pizzas</span><span>Focaccias</span><span>Facturación</span>
                   </div>
-                  {resumenDia.map((x) => {
+                  {filasDia.map((fila) => {
+                    if (fila.tipo === "semana") {
+                      const t = fila.t, vacio = t.pedidos === 0;
+                      const n = (v: number) => (vacio || v === 0 ? <span className="text-stone-300">—</span> : v.toLocaleString("es-AR", { maximumFractionDigits: 1 }));
+                      return (
+                        <div key={`sem-${fila.desde}`} className={`grid ${COLS_DIA} items-center gap-x-3 border-t border-stone-200 bg-stone-100/70 px-3 py-1.5 text-center text-[12.5px] font-medium tabular-nums text-stone-500`}>
+                          <span className="text-left">Semana {fila.desde} al {fila.hasta}</span>
+                          <span>{n(t.pedidos)}</span><span>{n(t.paq)}</span><span>{n(t.uni)}</span><span>{n(t.tomate)}</span><span>{n(t.cebolla)}</span><span>{n(t.pizzas)}</span><span>{n(t.foc)}</span>
+                          <span>{vacio ? <span className="text-stone-300">—</span> : pesos(t.neto)}</span>
+                        </div>
+                      );
+                    }
+                    const x = fila.x;
                     const vacio = x.pedidos === 0;
                     const num = (n: number) => (vacio || n === 0 ? <span className="text-stone-300">—</span> : n.toLocaleString("es-AR", { maximumFractionDigits: 1 }));
                     return (
-                      <div key={x.f} className={`grid ${COLS_DIA} items-center gap-x-3 border-t border-stone-200 px-3 py-2 text-center text-[13.5px] tabular-nums ${x.domingo ? "bg-stone-100 text-stone-400" : x.f === hoy() ? "bg-crema-50" : ""}`}>
-                        <span className={`text-left ${x.domingo ? "line-through" : "font-semibold text-stone-800"}`}>{x.nombre.slice(0, 3)} {x.dia}{x.domingo && <span className="ml-2 text-[11px] font-medium no-underline">sin reparto</span>}</span>
+                      <div key={x.f} className={`grid ${COLS_DIA} items-center gap-x-3 border-t border-stone-200 px-3 py-2 text-center text-[13.5px] tabular-nums ${x.f === hoy() ? "bg-crema-50" : ""}`}>
+                        <span className="text-left font-semibold text-stone-800">{x.nombre.slice(0, 3)} {x.dia}</span>
                         <span>{num(x.pedidos)}</span><span>{num(x.paq)}</span><span>{num(x.uni)}</span><span>{num(x.tomate)}</span><span>{num(x.cebolla)}</span><span>{num(x.pizzas)}</span><span>{num(x.foc)}</span>
-                        <span className={x.domingo ? "" : "font-bold text-stone-900"}>{vacio ? <span className="text-stone-300">—</span> : pesos(x.neto)}</span>
+                        <span className="font-bold text-stone-900">{vacio ? <span className="text-stone-300">—</span> : pesos(x.neto)}</span>
                       </div>
                     );
                   })}
