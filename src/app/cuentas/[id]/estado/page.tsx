@@ -13,10 +13,10 @@ const corta = (s: string | null | undefined) => (s ? `${s.slice(8)}/${s.slice(5,
 
 // Estado de cuenta para pasarle al cliente: una hoja A4 limpia (sin datos internos) que se imprime o se guarda como PDF.
 // Por defecto muestra lo que debe; ?ver=todas suma también lo pagado.
-export default async function EstadoDeCuenta({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ ver?: string }> }) {
+export default async function EstadoDeCuenta({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ ver?: string; razon?: string }> }) {
   await exigirOficina();
   const { id } = await params;
-  const { ver } = await searchParams;
+  const { ver, razon } = await searchParams;
   const todas = ver === "todas";
   const [cliente, empresa] = await Promise.all([db.cliente.findUnique({ where: { id } }), db.empresa.findUnique({ where: { id: "principal" } })]);
   if (!cliente) notFound();
@@ -30,6 +30,7 @@ export default async function EstadoDeCuenta({ params, searchParams }: { params:
   ]);
   const filasArca = facturas.filas.filter((f) => f.clienteId === id).map((f) => filaDeArca(f, facturas.puntosDeCuit(f.cuit)));
   const filas = [...filasArca, ...pedidos.map((p) => filaDeRemito(p, cliente, hoyStr))]
+    .filter((f) => !razon || (f.razon ?? "") === razon)
     .filter((f) => !f.anulado && !f.cubierta && (f.esNc ? (f.saldo ?? 0) > 0.01 : todas || !f.pagada))
     .sort((a, b) => a.cargado.localeCompare(b.cargado) || (a.numero ?? "").localeCompare(b.numero ?? ""));
   const debe = filas.filter((f) => !f.esNc && !f.pagada && f.entregado).reduce((s, f) => s + f.monto, 0);
@@ -56,7 +57,7 @@ export default async function EstadoDeCuenta({ params, searchParams }: { params:
           </header>
           <div className="mt-4 text-[13px]">
             <p className="text-[17px] font-bold">{cliente.nombre}</p>
-            {cliente.razonSocial && cliente.razonSocial !== cliente.nombre && <p className="text-neutral-600">{cliente.razonSocial}</p>}
+            {razon ? <p className="text-neutral-600">{razon}</p> : cliente.razonSocial && cliente.razonSocial !== cliente.nombre && <p className="text-neutral-600">{cliente.razonSocial}</p>}
             {cliente.cuit && <p className="text-neutral-600">CUIT {cliente.cuit}</p>}
           </div>
           <table className="mt-5 w-full text-[12.5px]">
