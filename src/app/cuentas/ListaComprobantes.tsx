@@ -189,6 +189,7 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
   const [trabajando, empezar] = useTransition();
   const [picker, setPicker] = useState<string | null>(null);
   const [motivoNc, setMotivoNc] = useState("");
+  const [buscaNc, setBuscaNc] = useState(""); // buscador de la factura a la que se aplica una NC
   const [manualTipo, setManualTipo] = useState<"FACTURA" | "ND">("FACTURA");
   const [manualTexto, setManualTexto] = useState("");
   const [vista, setVista] = useState(vistaInicial);
@@ -374,7 +375,7 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
                       const color = e === "Pendiente" && f.avisoPago ? "bg-[#fdf8e3] text-[#8a6a05]" : e === "Pendiente" ? "bg-rojo-50 text-rojo-700" : e === "Pagada" ? "bg-verde-50 text-verde-700" : e === "NC sin aplicar" || e === "Falta NC" ? "bg-[#fdf8e3] text-[#8a6a05]" : e === "NC aplicada" || e === "Anulada por NC" ? "text-sky-700" : "";
                       return <span key={c.id} className="flex min-w-0 items-center justify-center gap-2" title={e === "Pendiente" && f.atraso > 0 ? `Vencida hace ${f.atraso} días` : undefined}>
                         <span className={`flex h-7 w-fit max-w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 font-bold ${color}`}>
-                          {e === "NC sin aplicar" ? <button type="button" onClick={() => { setMotivoNc(""); setPicker(picker === f.id ? null : f.id); }} className="font-bold hover:underline">Aplicar a factura</button>
+                          {e === "NC sin aplicar" ? <button type="button" onClick={() => { setMotivoNc(""); setBuscaNc(""); setPicker(picker === f.id ? null : f.id); }} className="font-bold hover:underline">Aplicar a factura</button>
                             : e === "Pagada" ? <><span>Pagada{f.medio ? <span className="text-[11.5px] font-medium"> · {TEXTO_MEDIO[f.medio] ?? ""}</span> : null}</span><button type="button" title="Deshacer el pago" aria-label="Deshacer el pago" onClick={() => deshacer(f.id, !!f.arca)} className="text-[11px] opacity-50 hover:opacity-100">✕</button></>
                             : e === "Pendiente" && f.avisoPago ? <><span title={`${f.avisoPago} indicó que se pagó. Falta tu confirmación: registrá el pago (tildá el comprobante) o descartá el aviso con la ✕.`}>{f.avisoPago.split(" ")[0].slice(0, 12)} avisó pago</span><button type="button" title="Descartar el aviso (no se pagó)" aria-label="Descartar el aviso" onClick={() => window.confirm(`¿Descartar el aviso de ${f.avisoPago}? El comprobante sigue pendiente.`) && f.pedidoId !== null && empezar(async () => { await descartarAvisoPago(f.pedidoId ?? f.id); router.refresh(); })} className="text-[11px] opacity-50 hover:opacity-100">✕</button></>
                             : e === "Pendiente" ? <span>Pendiente{f.atraso > 0 ? <span className="text-[12px] font-medium opacity-80"> · {f.atraso} d</span> : null}</span>
@@ -404,22 +405,34 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
                     <span className="font-medium text-stone-700">Motivo de la {f.numero} <span className="font-normal text-rojo-700">(obligatorio: por qué se emitió)</span></span>
                     <input value={motivoNc} onChange={(e) => setMotivoNc(e.target.value)} maxLength={200} placeholder="Ej.: Devolución de mercadería, error en el precio, factura duplicada…" className="h-9 rounded-md border border-stone-400 bg-white px-3 text-[13px]" />
                   </label>
-                  <p className="mb-2 font-medium text-stone-700">¿A qué factura corresponde la {f.numero}? <span className="font-normal text-stone-400">mismo CUIT; primero las del mismo importe</span></p>
+                  <p className="mb-2 font-medium text-stone-700">¿A qué factura corresponde la {f.numero}? <span className="font-normal text-stone-400">todas las del mismo CUIT; primero las del mismo importe</span></p>
                   {(() => {
-                    const candidatas = filas.filter((x) => x.arca && !x.esNc && x.cuit === f.cuit && (x.saldo ?? 0) > 0.01).sort((a, b) => Number(Math.abs((b.saldo ?? 0) - (f.saldo ?? 0)) < 0.01) - Number(Math.abs((a.saldo ?? 0) - (f.saldo ?? 0)) < 0.01) || (b.numero ?? "").localeCompare(a.numero ?? ""));
-                    if (candidatas.length === 0) return <p className="text-stone-500">No hay facturas de este CUIT con saldo.</p>;
+                    const delCuit = filas.filter((x) => x.arca && !x.esNc && x.cuit === f.cuit && (x.saldo ?? 0) > 0.01).sort((a, b) => Number(Math.abs((b.saldo ?? 0) - (f.saldo ?? 0)) < 0.01) - Number(Math.abs((a.saldo ?? 0) - (f.saldo ?? 0)) < 0.01) || (b.numero ?? "").localeCompare(a.numero ?? ""));
+                    if (delCuit.length === 0) return <p className="text-stone-500">No hay facturas de este CUIT con saldo.</p>;
+                    // Buscador: cada palabra puede ser parte del número, la fecha, el importe, la sucursal o la observación.
+                    const palabras = buscaNc.toLowerCase().split(/\s+/).filter(Boolean);
+                    const candidatas = palabras.length === 0 ? delCuit : delCuit.filter((c) => {
+                      const texto = [c.numero, fechaCorta(c.fecha), c.fecha, String(Math.round(c.saldo ?? 0)), formatoPesos(c.saldo ?? 0), c.sucursal ?? "", c.obs ?? ""].join(" ").toLowerCase();
+                      return palabras.every((w) => texto.includes(w) || (/^\d+$/.test(w) && texto.replace(/[.\s]/g, "").includes(w)));
+                    });
                     return (
-                      <ul className="max-w-xl">
-                        {candidatas.slice(0, 12).map((c) => (
-                          <li key={c.id} className="flex items-center gap-4 border-b border-stone-200 py-1.5">
-                            <span className="w-36 whitespace-nowrap font-semibold tabular-nums">{c.numero}</span>
-                            <span className="w-16 text-stone-400">{fechaCorta(c.fecha)}</span>
-                            <span className="w-28 text-right tabular-nums">{formatoPesos(c.saldo ?? 0)}</span>
-                            {Math.abs((c.saldo ?? 0) - (f.saldo ?? 0)) < 0.01 && <span className="text-[11.5px] font-medium text-verde-700">mismo importe</span>}
-                            <button type="button" disabled={trabajando || motivoNc.trim().length < 3} title={motivoNc.trim().length < 3 ? "Primero escribí el motivo de la nota de crédito" : undefined} onClick={() => window.confirm(`¿Aplicar la ${f.numero} a la ${c.numero} por ${formatoPesos(Math.min(f.saldo ?? 0, c.saldo ?? 0))}?\nMotivo: ${motivoNc.trim()}`) && empezar(async () => { const r = await aplicarNc(f.id, c.id, motivoNc); if (!r.ok) setError(r.error ?? "No se pudo."); else setPicker(null); router.refresh(); })} className="ml-auto rounded-md border border-stone-300 bg-white px-3 py-1 text-[12px] font-medium hover:border-stone-700 hover:bg-stone-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-stone-300 disabled:hover:bg-white disabled:hover:text-stone-900">Aplicar</button>
-                          </li>
-                        ))}
-                      </ul>
+                      <div className="max-w-xl">
+                        <input value={buscaNc} onChange={(e) => setBuscaNc(e.target.value)} placeholder={`Buscar entre las ${delCuit.length} facturas de este CUIT: número, importe, fecha, sucursal…`} aria-label="Buscar factura" className="mb-2 h-9 w-full rounded-md border border-stone-400 bg-white px-3 text-[13px]" />
+                        {candidatas.length === 0 ? <p className="py-2 text-stone-500">Ninguna factura de este CUIT coincide con “{buscaNc}”.</p> : (
+                          <ul className="max-h-72 overflow-y-auto">
+                            {candidatas.map((c) => (
+                              <li key={c.id} className="flex items-center gap-4 border-b border-stone-200 py-1.5">
+                                <span className="w-36 whitespace-nowrap font-semibold tabular-nums">{c.numero}</span>
+                                <span className="w-16 text-stone-400">{fechaCorta(c.fecha)}</span>
+                                <span className="w-28 text-right tabular-nums">{formatoPesos(c.saldo ?? 0)}</span>
+                                {c.sucursal && <span className="max-w-[9rem] truncate text-[12px] text-stone-500" title={c.sucursal}>{c.sucursal}</span>}
+                                {Math.abs((c.saldo ?? 0) - (f.saldo ?? 0)) < 0.01 && <span className="text-[11.5px] font-medium text-verde-700">mismo importe</span>}
+                                <button type="button" disabled={trabajando || motivoNc.trim().length < 3} title={motivoNc.trim().length < 3 ? "Primero escribí el motivo de la nota de crédito" : undefined} onClick={() => window.confirm(`¿Aplicar la ${f.numero} a la ${c.numero} por ${formatoPesos(Math.min(f.saldo ?? 0, c.saldo ?? 0))}?\nMotivo: ${motivoNc.trim()}`) && empezar(async () => { const r = await aplicarNc(f.id, c.id, motivoNc); if (!r.ok) setError(r.error ?? "No se pudo."); else setPicker(null); router.refresh(); })} className="ml-auto rounded-md border border-stone-300 bg-white px-3 py-1 text-[12px] font-medium hover:border-stone-700 hover:bg-stone-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-stone-300 disabled:hover:bg-white disabled:hover:text-stone-900">Aplicar</button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
                     );
                   })()}
                   <div className="mt-4 max-w-xl border-t border-stone-300 pt-3">
