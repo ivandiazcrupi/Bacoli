@@ -7,6 +7,8 @@ import { aFecha, deFecha, diaMes, esFechaValida, diasDeSemana, finDeSemana, hoy,
 import { formatoPesos } from "@/lib/numeros";
 import { bultosDe, num, totalUnidades, unidadesPorSabor } from "@/lib/ruta";
 import { exigirOficina } from "@/lib/session";
+import { vendedoresDesbloqueado } from "@/lib/claveVendedores";
+import { TotalFacturacion } from "./TotalFacturacion";
 import { CONTENEDOR_PEDIDOS, EncabezadoPedidos } from "../Encabezado";
 
 // SEMANA: cada día con lo que tiene asignado. Al entrar a un día se arma su hoja de ruta (qué vehículos salen y qué lleva cada uno).
@@ -16,6 +18,7 @@ export default async function Semana({ searchParams }: { searchParams: Promise<{
   const inicio = semana && esFechaValida(semana) ? inicioSemana(semana) : semanaDeTrabajo();
   const fin = finDeSemana(inicio);
   const esta = semanaDeTrabajo();
+  const verTotales = await vendedoresDesbloqueado();
 
   const [pedidos, salidas, cerrados] = await Promise.all([
     db.pedido.findMany({ where: { estado: { not: "CANCELADO" }, origen: { not: "COBRANZA" }, fechaEntrega: { gte: aFecha(inicio), lte: aFecha(fin) } }, include: { items: true } }),
@@ -89,7 +92,7 @@ export default async function Semana({ searchParams }: { searchParams: Promise<{
             <span className="font-bold tabular-nums"><span className="text-xs font-normal text-stone-500 lg:hidden">Pedidos: </span>{total.pedidos}</span>
             <span className="font-bold tabular-nums"><span className="text-xs font-normal text-stone-500 lg:hidden">Paquetes: </span>{num(total.paquetes)}</span>
             <span className="font-bold tabular-nums"><span className="text-xs font-normal text-stone-500 lg:hidden">Unidades: </span>{total.unidades}</span>
-            <span className="font-bold tabular-nums"><span className="text-xs font-normal text-stone-500 lg:hidden">Facturación: </span>{total.pedidos === 0 ? "—" : formatoPesos(total.monto)}</span>
+            <TotalFacturacion desbloqueado={verTotales} valor={total.pedidos === 0 ? "—" : formatoPesos(total.monto)} />
             <span className="font-bold tabular-nums"><span className="text-xs font-normal text-stone-500 lg:hidden">Entregas: </span>{total.pedidos === 0 ? "—" : `${total.entregados} de ${total.pedidos}`}</span>
             <span className="font-bold tabular-nums"><span className="text-xs font-normal text-stone-500 lg:hidden">Vehículos: </span>{total.vehiculos}</span>
             <span />
