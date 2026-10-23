@@ -1,7 +1,7 @@
 import { EncabezadoComercial } from "../EncabezadoComercial";
 import Link from "next/link";
 import { Cabecera } from "@/components/Cabecera";
-import { desgloseIva, importeVigente } from "@/lib/cuenta";
+import { importeVigente } from "@/lib/cuenta";
 import { db } from "@/lib/db";
 import { esFechaValida, hoy, nombreDia, sumarDias } from "@/lib/fechas";
 import { bultosDe, focacciasPorTipo, totalUnidades, unidadesPorSabor } from "@/lib/ruta";
@@ -40,15 +40,14 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
   });
 
   // Cada pedido entregado cuenta en el mes de su día de entrega.
-  type P = { f: string; web: boolean; clienteId: string | null; cliente: string; zona: string; tipo: string; paq: number; neto: number; bruto: number; entregado: boolean; sabores: ReturnType<typeof unidadesPorSabor>; foc: number; focOliva: number; focCherry: number };
+  type P = { f: string; web: boolean; clienteId: string | null; cliente: string; zona: string; tipo: string; paq: number; neto: number; entregado: boolean; sabores: ReturnType<typeof unidadesPorSabor>; foc: number; focOliva: number; focCherry: number };
   const filas: P[] = pedidos.map((p) => {
     const web = p.origen === "WEB";
-    const base = desgloseIva(p.items, Number(p.ivaPct), p.estado).base;
-    const fijo = p.webTotal != null ? Number(p.webTotal) : null; // tienda online / comprobantes cargados directo: valen su total
-    const neto = fijo != null ? (!web && Number(p.ivaPct) > 0 ? fijo / (1 + Number(p.ivaPct) / 100) : fijo) : base;
+    // Facturación = el importe FINAL del pedido tal cual quedó (con IVA en los de factura, sin IVA en los de remito; la tienda, lo que pagó).
+    const neto = importeVigente(p.items, Number(p.ivaPct), p.estado === "ENTREGADO" ? "ENTREGADO" : "PENDIENTE", p.webTotal);
     return {
       f: p.fechaEntrega ? p.fechaEntrega.toISOString().slice(0, 10) : fechaAR(p.creadoEn), web, clienteId: p.clienteId, cliente: p.cliente?.nombre ?? "", zona: p.punto?.zona.nombre ?? "",
-      tipo: web ? "Tienda online" : p.conFactura ? "Con factura" : "Con remito", paq: bultosDe(p.items), neto, bruto: importeVigente(p.items, Number(p.ivaPct), p.estado === "ENTREGADO" ? "ENTREGADO" : "PENDIENTE", p.webTotal), entregado: p.estado === "ENTREGADO",
+      tipo: web ? "Tienda online" : p.conFactura ? "Con factura" : "Con remito", paq: bultosDe(p.items), neto, entregado: p.estado === "ENTREGADO",
       sabores: unidadesPorSabor(p.items), foc: focacciasPorTipo(p.items).oliva + focacciasPorTipo(p.items).cherry, focOliva: focacciasPorTipo(p.items).oliva, focCherry: focacciasPorTipo(p.items).cherry,
     };
   });
@@ -56,9 +55,9 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
   const mayoristas = delMes.filter((p) => !p.web);
 
   // Resumen (instrumentos de arriba)
-  const total = { pedidos: delMes.length, paq: delMes.reduce((t, p) => t + p.paq, 0), neto: delMes.reduce((t, p) => t + p.neto, 0), bruto: delMes.reduce((t, p) => t + p.bruto, 0) };
+  const total = { pedidos: delMes.length, paq: delMes.reduce((t, p) => t + p.paq, 0), neto: delMes.reduce((t, p) => t + p.neto, 0) };
   const ant = filas.filter((p) => mesDe(p.f) === mesAnterior(mes));
-  const antPaq = ant.reduce((t, p) => t + p.paq, 0), antNeto = ant.reduce((t, p) => t + p.neto, 0), antBruto = ant.reduce((t, p) => t + p.bruto, 0);
+  const antPaq = ant.reduce((t, p) => t + p.paq, 0), antNeto = ant.reduce((t, p) => t + p.neto, 0);
   // Unidades vendidas = pizzas que fabricamos (prepizzas ×2 por paquete, pizzas por unidad) + focaccias; los productos de la tienda que no fabricamos no cuentan.
   const unidadesDe = (x: P) => totalUnidades(x.sabores) + x.foc;
   const unidades = delMes.reduce((t, p) => t + unidadesDe(p), 0), antUnidades = ant.reduce((t, p) => t + unidadesDe(p), 0);
@@ -74,10 +73,10 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
     const f = `${mes}-${String(i + 1).padStart(2, "0")}`;
     const d = delMes.filter((p) => p.f === f);
     const suma = (fn: (p: P) => number) => d.reduce((t, p) => t + fn(p), 0);
-    return { f, dia: i + 1, nombre: nombreDia(f), domingo: nombreDia(f) === "Domingo", pedidos: d.length, paq: suma((p) => p.paq), uni: suma(unidadesDe), tomate: suma((p) => p.sabores.tomate), cebolla: suma((p) => p.sabores.cebolla), pizzas: suma((p) => p.sabores.pizzas), foc: suma((p) => p.foc), neto: suma((p) => p.neto), bruto: suma((p) => p.bruto) };
+    return { f, dia: i + 1, nombre: nombreDia(f), domingo: nombreDia(f) === "Domingo", pedidos: d.length, paq: suma((p) => p.paq), uni: suma(unidadesDe), tomate: suma((p) => p.sabores.tomate), cebolla: suma((p) => p.sabores.cebolla), pizzas: suma((p) => p.sabores.pizzas), foc: suma((p) => p.foc), neto: suma((p) => p.neto) };
   });
-  const totalDia = resumenDia.reduce((t, x) => ({ pedidos: t.pedidos + x.pedidos, paq: t.paq + x.paq, uni: t.uni + x.uni, tomate: t.tomate + x.tomate, cebolla: t.cebolla + x.cebolla, pizzas: t.pizzas + x.pizzas, foc: t.foc + x.foc, neto: t.neto + x.neto, bruto: t.bruto + x.bruto }), { pedidos: 0, paq: 0, uni: 0, tomate: 0, cebolla: 0, pizzas: 0, foc: 0, neto: 0, bruto: 0 });
-  const COLS_DIA = "grid-cols-[minmax(0,1.3fr)_repeat(7,minmax(0,1fr))_repeat(2,minmax(0,1.4fr))]";
+  const totalDia = resumenDia.reduce((t, x) => ({ pedidos: t.pedidos + x.pedidos, paq: t.paq + x.paq, uni: t.uni + x.uni, tomate: t.tomate + x.tomate, cebolla: t.cebolla + x.cebolla, pizzas: t.pizzas + x.pizzas, foc: t.foc + x.foc, neto: t.neto + x.neto }), { pedidos: 0, paq: 0, uni: 0, tomate: 0, cebolla: 0, pizzas: 0, foc: 0, neto: 0 });
+  const COLS_DIA = "grid-cols-[minmax(0,1.3fr)_repeat(7,minmax(0,1fr))_minmax(0,1.4fr)]";
 
   // Zonas y tipo de comprobante
   const cuenta = (xs: string[]) => [...xs.reduce((m, x) => m.set(x, (m.get(x) ?? 0) + 1), new Map<string, number>())].map(([nombre, valor]) => ({ nombre, valor })).sort((a, b) => b.valor - a.valor);
@@ -120,7 +119,7 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
   ].filter((x) => x.valor > 0);
 
   const variacion = (a: number, b: number) => (b > 0 ? Math.round(((a - b) / b) * 100) : null);
-  const vUni = variacion(unidades, antUnidades), vPaq = variacion(total.paq, antPaq), vNeto = variacion(total.neto, antNeto), vBruto = variacion(total.bruto, antBruto);
+  const vUni = variacion(unidades, antUnidades), vPaq = variacion(total.paq, antPaq), vNeto = variacion(total.neto, antNeto);
   const nav = "flex h-9 items-center rounded-md border border-stone-300 bg-white px-3 text-sm font-semibold hover:border-stone-600";
 
   return (
@@ -140,19 +139,18 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
         />
 
         {/* Instrumentos: lo principal del mes de un vistazo */}
-        <section aria-label="Resumen del mes" className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-stone-700 bg-stone-700 sm:grid-cols-4 lg:grid-cols-7">
+        <section aria-label="Resumen del mes" className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-stone-700 bg-stone-700 sm:grid-cols-3 lg:grid-cols-6">
           {[
             { t: "Pedidos", v: String(total.pedidos), d: "entregados en el mes" },
             { t: "Paquetes", v: paq(total.paq), d: vPaq === null ? "mes anterior sin datos" : `${vPaq >= 0 ? "▲" : "▼"} ${Math.abs(vPaq)}% vs mes anterior`, c: vPaq === null ? "" : vPaq >= 0 ? "text-emerald-400" : "text-red-400" },
             { t: "Unidades vendidas", v: unidades.toLocaleString("es-AR"), d: vUni === null ? "pizzas + focaccias" : `${vUni >= 0 ? "▲" : "▼"} ${Math.abs(vUni)}% vs mes anterior`, c: vUni === null ? "" : vUni >= 0 ? "text-emerald-400" : "text-red-400" },
-            { t: "Facturación sin IVA", v: pesos(total.neto), d: vNeto === null ? "mes anterior sin datos" : `${vNeto >= 0 ? "▲" : "▼"} ${Math.abs(vNeto)}% vs mes anterior`, c: vNeto === null ? "" : vNeto >= 0 ? "text-emerald-400" : "text-red-400" },
-            { t: "Facturación total", v: pesos(total.bruto), d: vBruto === null ? "con IVA, como quedó el pedido" : `${vBruto >= 0 ? "▲" : "▼"} ${Math.abs(vBruto)}% · con IVA`, c: vBruto === null ? "" : vBruto >= 0 ? "text-emerald-400" : "text-red-400" },
+            { t: "Facturación", v: pesos(total.neto), d: vNeto === null ? "mes anterior sin datos" : `${vNeto >= 0 ? "▲" : "▼"} ${Math.abs(vNeto)}% vs mes anterior`, c: vNeto === null ? "" : vNeto >= 0 ? "text-emerald-400" : "text-red-400" },
             { t: "Clientes que pidieron", v: String(clientesQuePidieron), d: "mayoristas, sumando sucursales" },
             { t: "Ticket promedio", v: mayoristas.length ? pesos(mayoristas.reduce((t, p) => t + p.neto, 0) / mayoristas.length) : "—", d: "por pedido mayorista" },
           ].map((x) => (
             <div key={x.t} className="bg-stone-900 px-4 py-4 text-center">
               <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-stone-400">{x.t}</p>
-              <p className="mt-1 truncate text-[22px] font-extrabold leading-tight tabular-nums text-white">{x.v}</p>
+              <p className="mt-1 truncate text-[26px] font-extrabold leading-tight tabular-nums text-white">{x.v}</p>
               <p className={`mt-0.5 text-[12px] ${x.c || "text-stone-400"}`}>{x.d}</p>
             </div>
           ))}
@@ -167,9 +165,9 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
           <Panel titulo="Resumen por día" nota="solo pedidos entregados · los domingos no se reparte" className="lg:col-span-3">
             {total.pedidos === 0 ? <SinDatos /> : (
               <div className="overflow-x-auto">
-                <div className="min-w-[860px] overflow-hidden rounded-md border border-stone-200">
+                <div className="min-w-[760px] overflow-hidden rounded-md border border-stone-200">
                   <div className={`grid ${COLS_DIA} gap-x-3 bg-crema-100 px-3 py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-stone-500`}>
-                    <span className="text-left">Día</span><span>Pedidos</span><span>Paquetes</span><span>Unidades</span><span>Tomate</span><span>Cebolla</span><span>Pizzas</span><span>Focaccias</span><span>Facturación sin IVA</span><span>Facturación total</span>
+                    <span className="text-left">Día</span><span>Pedidos</span><span>Paquetes</span><span>Unidades</span><span>Tomate</span><span>Cebolla</span><span>Pizzas</span><span>Focaccias</span><span>Facturación</span>
                   </div>
                   {resumenDia.map((x) => {
                     const vacio = x.pedidos === 0;
@@ -178,14 +176,13 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
                       <div key={x.f} className={`grid ${COLS_DIA} items-center gap-x-3 border-t border-stone-200 px-3 py-2 text-center text-[13.5px] tabular-nums ${x.domingo ? "bg-stone-100 text-stone-400" : x.f === hoy() ? "bg-crema-50" : ""}`}>
                         <span className={`text-left ${x.domingo ? "line-through" : "font-semibold text-stone-800"}`}>{x.nombre.slice(0, 3)} {x.dia}{x.domingo && <span className="ml-2 text-[11px] font-medium no-underline">sin reparto</span>}</span>
                         <span>{num(x.pedidos)}</span><span>{num(x.paq)}</span><span>{num(x.uni)}</span><span>{num(x.tomate)}</span><span>{num(x.cebolla)}</span><span>{num(x.pizzas)}</span><span>{num(x.foc)}</span>
-                        <span className={x.domingo ? "" : "text-stone-700"}>{vacio ? <span className="text-stone-300">—</span> : pesos(x.neto)}</span>
-                        <span className={x.domingo ? "" : "font-bold text-stone-900"}>{vacio ? <span className="text-stone-300">—</span> : pesos(x.bruto)}</span>
+                        <span className={x.domingo ? "" : "font-bold text-stone-900"}>{vacio ? <span className="text-stone-300">—</span> : pesos(x.neto)}</span>
                       </div>
                     );
                   })}
                   <div className={`grid ${COLS_DIA} gap-x-3 border-t-2 border-stone-300 bg-crema-50 px-3 py-2.5 text-center text-[13.5px] font-bold tabular-nums`}>
                     <span className="text-left">Total del mes</span>
-                    <span>{totalDia.pedidos}</span><span>{paq(totalDia.paq)}</span><span>{totalDia.uni.toLocaleString("es-AR")}</span><span>{totalDia.tomate.toLocaleString("es-AR")}</span><span>{totalDia.cebolla.toLocaleString("es-AR")}</span><span>{totalDia.pizzas.toLocaleString("es-AR")}</span><span>{totalDia.foc.toLocaleString("es-AR")}</span><span>{pesos(totalDia.neto)}</span><span>{pesos(totalDia.bruto)}</span>
+                    <span>{totalDia.pedidos}</span><span>{paq(totalDia.paq)}</span><span>{totalDia.uni.toLocaleString("es-AR")}</span><span>{totalDia.tomate.toLocaleString("es-AR")}</span><span>{totalDia.cebolla.toLocaleString("es-AR")}</span><span>{totalDia.pizzas.toLocaleString("es-AR")}</span><span>{totalDia.foc.toLocaleString("es-AR")}</span><span>{pesos(totalDia.neto)}</span>
                   </div>
                 </div>
               </div>
@@ -221,7 +218,7 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
           </Panel>
 
           <Panel titulo="Paquetes por mes" nota="últimos 6 meses"><Barras etiquetas={evo.map((e) => etiqMes(e.m))} resaltar={5} formato={paq} series={[{ nombre: "Paquetes", color: PALETA[0], valores: evo.map((e) => e.paq) }]} alto={170} ancho={340} /></Panel>
-          <Panel titulo="Facturación por mes" nota="sin IVA · últimos 6 meses" className="lg:col-span-2"><Barras etiquetas={evo.map((e) => etiqMes(e.m))} resaltar={5} formato={corto} series={[{ nombre: "Facturación", color: PALETA[1], valores: evo.map((e) => e.neto) }]} alto={170} /></Panel>
+          <Panel titulo="Facturación por mes" nota="últimos 6 meses" className="lg:col-span-2"><Barras etiquetas={evo.map((e) => etiqMes(e.m))} resaltar={5} formato={corto} series={[{ nombre: "Facturación", color: PALETA[1], valores: evo.map((e) => e.neto) }]} alto={170} /></Panel>
         </div>
         <p className="text-[12px] text-stone-500">Solo se cuentan los pedidos entregados, en el mes de su día de entrega. Las comisiones se calculan con el porcentaje cargado en cada cliente.</p>
       </main>
