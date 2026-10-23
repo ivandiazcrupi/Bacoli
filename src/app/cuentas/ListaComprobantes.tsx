@@ -271,6 +271,8 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
     });
   };
 
+  // Si el filtro de Cliente deja a UN solo cliente, aparece el botón del estado de cuenta en PDF para pasárselo (en la cuenta del cliente ya está en el resumen).
+  const clienteUnico = tipo !== "CUENTA" && (filtros.cliente ?? "").trim() ? [...new Set(filtradas.map((f) => f.clienteId))].filter(Boolean) : [];
   const celdaBase = "min-w-0 truncate";
   const entrada = "h-7 w-full min-w-0 rounded border border-stone-300 bg-white px-1.5 text-center text-[12px] font-normal normal-case tracking-normal text-stone-800 placeholder:text-stone-300 focus:border-verde-700 focus:outline-none";
   const opcionesEstado = esArca && tipo !== "CUENTA" ? ["Pendiente", "Pagada", "Anulada por NC", "NC sin aplicar", "NC aplicada"] : ["Pendiente", "Pagada", "Por entregar", "Anulada por NC", "Anulado"];
@@ -287,6 +289,7 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
         {hayFiltro && <button type="button" onClick={() => { setVista("todas"); setFiltros({}); }} className="h-8 rounded-md border border-stone-300 px-3 text-[13px] text-stone-600 hover:border-stone-500">Quitar filtros</button>}
         <span className="text-[13px] text-stone-500">{filtradas.filter((f) => !f.hueco).length} filas{sumaFiltrada > 0 ? <> · sin pagar <b className="tabular-nums text-stone-800">{formatoPesos(sumaFiltrada)}</b></> : null}</span>
         <div className="relative ml-auto flex items-center gap-2">
+          {clienteUnico.length === 1 && <Link href={`/cuentas/${clienteUnico[0]}/estado`} target="_blank" className="flex h-8 items-center rounded-md border border-verde-700 bg-white px-3 text-[13px] font-semibold text-verde-800 hover:bg-verde-50">Descargar PDF para el cliente</Link>}
           {acciones}
           <button type="button" onClick={() => setVerColumnas(!verColumnas)} aria-expanded={verColumnas} className="h-8 rounded-md border border-stone-300 bg-white px-3 text-[13px] text-stone-700 hover:border-stone-500">Columnas ▾</button>
           {verColumnas && (
