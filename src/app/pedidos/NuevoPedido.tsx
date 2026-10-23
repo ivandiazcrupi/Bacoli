@@ -73,7 +73,7 @@ export function NuevoPedido({ esDueno, esVendedor = false }: { esDueno: boolean;
               {resultados.map((d) => (
                 <button key={d.puntoId} type="button" onClick={() => elegir(d)} className={`grid w-full items-center gap-x-4 gap-y-0.5 border-t border-stone-300 px-5 py-2.5 text-center first:border-t-0 hover:bg-crema-100 ${COLUMNAS}`}>
                   <span className="font-semibold">{d.barrio}</span>
-                  <span className="font-semibold">{d.cliente}</span>
+                  <span className="font-semibold">{d.cliente}{d.inactivo && <span className="ml-2 rounded-full bg-rojo-50 px-2 py-0.5 text-xs font-semibold text-rojo-700">Inactivo</span>}</span>
                   <span className="text-sm">{[d.alias, d.direccion].filter(Boolean).join(" · ")}</span>
                   <span className="text-sm text-stone-600">{d.zona}</span>
                 </button>
@@ -85,7 +85,7 @@ export function NuevoPedido({ esDueno, esVendedor = false }: { esDueno: boolean;
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-stone-300 bg-white px-5 py-3 shadow-sm">
             <p className="min-w-0">
-              <span className="font-bold">{destino.cliente}</span>
+              <span className="font-bold">{destino.cliente}</span>{destino.inactivo && <span className="ml-2 rounded-full bg-rojo-50 px-2 py-0.5 text-xs font-semibold text-rojo-700">Cliente inactivo</span>}
               <span className="text-stone-600"> · {destino.sucursal}</span>
             </p>
             <button type="button" onClick={() => setDestino(null)} className="shrink-0 rounded-md border border-stone-400 bg-white px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-crema-100">Cambiar cliente</button>

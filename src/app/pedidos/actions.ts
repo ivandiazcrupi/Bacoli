@@ -16,7 +16,7 @@ import { exigirCarga, exigirOficina, vendedorDeUsuario } from "@/lib/session";
 import { importarPedidosWeb, type ResultadoImportacion } from "@/lib/empretienda";
 import { productosParaCliente, type ProductoPedido } from "./datos";
 
-export type Destino = { puntoId: string; clienteId: string; cliente: string; alias: string | null; direccion: string; barrio: string; zona: string; telefono: string };
+export type Destino = { puntoId: string; clienteId: string; cliente: string; alias: string | null; direccion: string; barrio: string; zona: string; telefono: string; inactivo: boolean };
 export type EstadoPedidoForm = { ok?: string; error?: string; aviso?: string } | undefined;
 export type DatosPedido = {
   puntoId: string;
@@ -25,10 +25,12 @@ export type DatosPedido = {
   sucursal: string;
   facturado: boolean;
   lista: string | null;
+  inactivo: boolean;
   productos: ProductoPedido[];
 };
 
-/** Busca sucursales por cliente, marca, sucursal, dirección o barrio: cada palabra puede coincidir con cualquiera. */
+/** Busca sucursales por cliente, marca, sucursal, dirección o barrio: cada palabra puede coincidir con cualquiera.
+ *  Sin escribir nada solo hay activos; al buscar también salen los inactivos (marcados), para no creer que un cliente no está cargado. */
 export async function buscarDestinos(q: string): Promise<Destino[]> {
   const usuario = await exigirCarga();
   const propio = usuario.rol === "VENDEDOR" ? (await vendedorDeUsuario(usuario.id))?.id ?? "-" : null; // un vendedor solo ve sus clientes
@@ -36,8 +38,8 @@ export async function buscarDestinos(q: string): Promise<Destino[]> {
   if (palabras.length === 0 && !propio) return []; // el vendedor, sin escribir nada, ve la lista de sus clientes
   const puntos = await db.puntoEntrega.findMany({
     where: {
-      activo: true,
-      cliente: { activo: true, ...(propio ? { vendedorId: propio } : {}) },
+      ...(palabras.length ? {} : { activo: true }),
+      cliente: { ...(palabras.length ? {} : { activo: true }), ...(propio ? { vendedorId: propio } : {}) },
       AND: palabras.map((w) => {
         const contiene = { contains: w, mode: "insensitive" as const };
         return { OR: [{ alias: contiene }, { direccion: contiene }, { barrio: contiene }, { razonSocial: contiene }, { cliente: { nombre: contiene } }, { cliente: { razonSocial: contiene } }] };
@@ -45,11 +47,12 @@ export async function buscarDestinos(q: string): Promise<Destino[]> {
     },
     include: { cliente: true, zona: true },
     orderBy: [{ cliente: { nombre: "asc" } }, { alias: "asc" }],
-    take: propio ? 40 : 20,
+    take: propio ? 40 : 30,
   });
-  return puntos.map((p) => ({
-    puntoId: p.id, clienteId: p.clienteId, cliente: p.cliente.nombre, alias: p.alias, direccion: titulo(p.direccion), barrio: p.barrio, zona: p.zona.nombre, telefono: p.telefono ?? "",
+  const destinos = puntos.map((p) => ({
+    puntoId: p.id, clienteId: p.clienteId, cliente: p.cliente.nombre, alias: p.alias, direccion: titulo(p.direccion), barrio: p.barrio, zona: p.zona.nombre, telefono: p.telefono ?? "", inactivo: !p.activo || !p.cliente.activo,
   }));
+  return [...destinos.filter((d) => !d.inactivo), ...destinos.filter((d) => d.inactivo)].slice(0, propio ? 40 : 20); // primero los activos
 }
 
 export async function datosNuevoPedido(puntoId: string): Promise<DatosPedido | null> {
@@ -64,6 +67,7 @@ export async function datosNuevoPedido(puntoId: string): Promise<DatosPedido | n
     sucursal: [punto.alias, titulo(punto.direccion)].filter(Boolean).join(" · "),
     facturado: punto.cliente.facturado,
     lista: punto.cliente.listaPrecios?.nombre ?? null,
+    inactivo: !punto.activo || !punto.cliente.activo,
     productos: await productosParaCliente(punto.clienteId),
   };
 }
@@ -219,7 +223,7 @@ export async function cambiarClientePedido(pedidoId: string, puntoId: string): P
   if (pedido.ncAplicaciones.length > 0) return { ok: false, error: "El pedido tiene una nota de crédito aplicada: no se le puede cambiar el cliente." };
   if (await errorSiHojaFija(pedido.fechaEntrega)) return { ok: false, error: "La hoja de ruta de ese día ya está lista o cerrada: volvela a armar para cambiar el cliente." };
   const punto = await db.puntoEntrega.findUnique({ where: { id: puntoId }, include: { cliente: true } });
-  if (!punto || !punto.activo || !punto.cliente.activo) return { ok: false, error: "Ese cliente o sucursal no está disponible." };
+  if (!punto || !punto.activo || !punto.cliente.activo) return { ok: false, error: "Ese cliente o sucursal está inactivo: activalo primero en su ficha." };
   if (punto.id === pedido.puntoId) return { ok: false, error: "El pedido ya está cargado a esa sucursal." };
 
   const viejoClienteId = pedido.clienteId;

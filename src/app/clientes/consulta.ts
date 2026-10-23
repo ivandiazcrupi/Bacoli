@@ -20,7 +20,8 @@ export function filtroClientes({ q, zona, estado }: { q: string; zona: string; e
     });
   }
   if (zona) where.puntos = { some: { zonaId: zona } };
-  if (estado === "activos") where.activo = true;
+  // Por defecto solo activos; pero si se busca algo, también salen los inactivos que coincidan (para no creer que no están cargados).
+  if (estado === "activos" && palabras.length === 0) where.activo = true;
   if (estado === "inactivos") where.activo = false;
   return where;
 }

@@ -81,7 +81,7 @@ function ElegirCliente({ elegido }: { elegido: (d: DatosPedido) => void }) {
           {lista.map((d) => (
             <li key={d.puntoId}>
               <button type="button" onClick={() => abrir(d)} disabled={abriendo !== null} className="w-full rounded-xl border border-stone-300 bg-white px-4 py-3 text-left active:bg-stone-100 disabled:opacity-60">
-                <span className="block text-[16px] font-semibold text-stone-900">{d.cliente}</span>
+                <span className="block text-[16px] font-semibold text-stone-900">{d.cliente}{d.inactivo && <span className="ml-2 rounded-full bg-rojo-50 px-2 py-0.5 text-xs font-semibold text-rojo-700">Inactivo</span>}</span>
                 <span className="block text-[14px] text-stone-600">{d.barrio} · {[d.alias, d.direccion].filter(Boolean).join(" · ")}</span>
                 {abriendo === d.puntoId && <span className="text-xs text-stone-500">Abriendo…</span>}
               </button>
