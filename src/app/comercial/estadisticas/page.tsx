@@ -88,6 +88,9 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
     }
     if (desde > 0) filasDia.push({ tipo: "semana", desde, hasta, t: acc }); }
   const diasDeVenta = resumenDia.filter((x) => x.pedidos > 0).length;
+  // Proyección al cierre (solo el mes en curso): lo vendido hasta hoy + el promedio por día de venta × los días de reparto que faltan (lunes a sábado, hoy incluido si todavía no tiene entregas; sin descontar feriados).
+  const diasQueFaltan = mes === actual ? resumenDia.filter((x) => !x.domingo && (x.f > hoy() || (x.f === hoy() && x.pedidos === 0))).length : 0;
+  const hayProyeccion = mes === actual && diasDeVenta > 0 && diasQueFaltan > 0;
   const totalDia = resumenDia.reduce((t, x) => ({ pedidos: t.pedidos + x.pedidos, paq: t.paq + x.paq, uni: t.uni + x.uni, tomate: t.tomate + x.tomate, cebolla: t.cebolla + x.cebolla, pizzas: t.pizzas + x.pizzas, foc: t.foc + x.foc, neto: t.neto + x.neto }), { pedidos: 0, paq: 0, uni: 0, tomate: 0, cebolla: 0, pizzas: 0, foc: 0, neto: 0 });
   const COLS_DIA = "grid-cols-[minmax(0,1.5fr)_repeat(7,minmax(0,1fr))_minmax(0,1.5fr)]";
   const CELDAS = "[&>span]:px-2"; // aire parejo en cada celda (las líneas verticales separan las columnas)
@@ -206,6 +209,12 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
                       <span className="!pl-3 text-left text-[12px] font-bold uppercase tracking-[0.12em]">Promedio por día</span>
                       {(() => { const d = diasDeVenta || 1; const m = (v: number, dec = 1) => (diasDeVenta === 0 ? "—" : (v / d).toLocaleString("es-AR", { maximumFractionDigits: dec })); return <><span>{m(totalDia.pedidos)}</span><span>{m(totalDia.paq)}</span><span>{m(totalDia.uni, 0)}</span><span>{m(totalDia.tomate, 0)}</span><span>{m(totalDia.cebolla, 0)}</span><span>{m(totalDia.pizzas, 0)}</span><span>{m(totalDia.foc, 0)}</span><span className="text-white">{diasDeVenta === 0 ? "—" : pesos(totalDia.neto / d)}</span></>; })()}
                     </div>
+                    {hayProyeccion && (
+                      <div className={`grid ${COLS_DIA} ${CELDAS} divide-x divide-stone-700 border-t border-stone-600 bg-stone-800 py-3 text-center text-[14px] font-bold tabular-nums text-emerald-300`}>
+                        <span className="!pl-3 text-left text-[12px] uppercase tracking-[0.12em]">Proyección al cierre<span className="block text-[11px] font-normal normal-case tracking-normal text-stone-400">faltan {diasQueFaltan} {diasQueFaltan === 1 ? "día" : "días"} de reparto</span></span>
+                        {(() => { const d = diasDeVenta; const pr = (v: number, dec = 0) => (v + (v / d) * diasQueFaltan).toLocaleString("es-AR", { maximumFractionDigits: dec }); return <><span>{pr(totalDia.pedidos)}</span><span>{pr(totalDia.paq, 1)}</span><span>{pr(totalDia.uni)}</span><span>{pr(totalDia.tomate)}</span><span>{pr(totalDia.cebolla)}</span><span>{pr(totalDia.pizzas)}</span><span>{pr(totalDia.foc)}</span><span className="text-[15px] text-white">{pesos(totalDia.neto + (totalDia.neto / d) * diasQueFaltan)}</span></>; })()}
+                      </div>
+                    )}
                     <p className="border-t border-stone-700 px-3 py-2 text-[12px] text-stone-400">
                       <b className="text-[13px] text-white">{diasDeVenta}</b> {diasDeVenta === 1 ? "día de venta" : "días de venta"} en el mes (días con entregas). Los promedios se calculan sobre esos días.
                     </p>
