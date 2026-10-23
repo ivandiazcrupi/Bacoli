@@ -85,7 +85,6 @@ export default async function EstadoDeCuenta({ params, searchParams }: { params:
             {aFavor > 0.01 && <div className="flex justify-between text-neutral-600"><dt>Saldo a favor</dt><dd className="tabular-nums">−{formatoPesos(aFavor)}</dd></div>}
             <div className="flex justify-between border-t border-neutral-900 pt-2 text-[17px] font-bold"><dt>Total a pagar</dt><dd className="tabular-nums">{formatoPesos(Math.max(0, debe - aFavor))}</dd></div>
           </dl>
-          <p className="mt-10 text-[10.5px] text-neutral-500">{[empresa?.razonSocial, empresa?.domicilio, empresa?.telefono, empresa?.email].filter(Boolean).join(" · ")}</p>
         </section>
       </div>
     </div>
