@@ -536,15 +536,8 @@ export async function reabrirPedido(formData: FormData) {
 }
 export async function cancelarPedido(formData: FormData) {
   const id = String(formData.get("id"));
-  const pedido = await db.pedido.findUnique({ where: { id }, select: { clienteId: true, cobro: true, estado: true, fechaEntrega: true, conFactura: true, numeroFactura: true } });
-  // Una factura ya emitida (con número) no se anula "porque sí": se anula con una nota de crédito (CUENTA CORRIENTE), así no se pierde de la cuenta ni de la numeración.
-  if (pedido?.conFactura && pedido.numeroFactura?.trim()) {
-    // ...salvo que las notas de crédito (no anuladas) ya cubran toda la factura: ahí el pedido sí se puede cancelar.
-    const completo = await db.pedido.findUnique({ where: { id }, include: { items: true, ncAplicaciones: { where: { nota: { anuladaEn: null } } } } });
-    const total = completo ? importeVigente(completo.items, Number(completo.ivaPct), completo.estado === "ENTREGADO" ? "ENTREGADO" : "PENDIENTE", completo.webTotal) : 0;
-    const cubierto = completo?.ncAplicaciones.reduce((t, a) => t + Number(a.monto), 0) ?? 0;
-    if (!(total > 0 && cubierto >= total - 0.01)) return;
-  }
+  const pedido = await db.pedido.findUnique({ where: { id }, select: { clienteId: true, cobro: true, estado: true, fechaEntrega: true } });
+  // Un pedido con factura emitida también se cancela: la factura de ARCA sigue en Cuenta corriente como "Falta NC" hasta que se aplique su nota de crédito de ARCA.
   if (await errorSiHojaFija(pedido?.fechaEntrega)) return; // con la hoja lista o cerrada no se cancela: se usa "No entregado" o se reabre la hoja
   // Un pedido ya cobrado no se cancela hasta deshacer el cobro (si no, el pago quedaría suelto como saldo a favor).
   if (pedido?.clienteId && pedido.estado === "ENTREGADO" && pedido.cobro === "COBRADO") return;

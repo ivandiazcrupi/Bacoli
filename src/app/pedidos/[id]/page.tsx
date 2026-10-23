@@ -120,9 +120,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
         )}
         {pedido.estado !== "CANCELADO" && (
           <div className="border-t border-stone-200 pt-2">
-            {pedido.clienteId && pedido.conFactura && pedido.numeroFactura?.trim() && pedido.ncAplicaciones.reduce((t, a) => t + Number(a.monto), 0) < total - 0.01 ? (
-              <Link href={`/cuentas/${pedido.clienteId}/nc?factura=${pedido.id}`} title="Una factura emitida no se cancela: se anula con una nota de crédito" className={`${btn} border-rojo-600 bg-white text-rojo-700 hover:bg-rojo-50`}>Anular con nota de crédito</Link>
-            ) : !web && pedido.estado === "ENTREGADO" && pedido.cobro === "COBRADO" ? (
+            {!web && pedido.estado === "ENTREGADO" && pedido.cobro === "COBRADO" ? (
               <>
                 <button type="button" disabled className={`${btn} cursor-not-allowed border-stone-300 bg-white text-stone-400`}>Cancelar pedido</button>
                 <p className="mt-1 text-[12px] text-stone-500">Para cancelarlo primero hay que deshacer el cobro.</p>
@@ -130,7 +128,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
             ) : (
               <form action={cancelarPedido}>
                 <input type="hidden" name="id" value={pedido.id} />
-                <BotonConAviso texto="Cancelar pedido" aviso="¿Cancelar este pedido? Deja de sumar a la cuenta del cliente. Si tiene remito, el remito queda como ANULADO." clase={`${btn} border-rojo-600 bg-white text-rojo-700 hover:bg-rojo-50`} />
+                <BotonConAviso texto="Cancelar pedido" aviso={pedido.conFactura && pedido.numeroFactura?.trim() ? `¿Cancelar este pedido? La factura ${pedido.numeroFactura} sigue en Cuenta corriente como "Falta NC" hasta que subas la nota de crédito de ARCA y la apliques.` : "¿Cancelar este pedido? Deja de sumar a la cuenta del cliente. Si tiene remito, el remito queda como ANULADO."} clase={`${btn} border-rojo-600 bg-white text-rojo-700 hover:bg-rojo-50`} />
               </form>
             )}
           </div>

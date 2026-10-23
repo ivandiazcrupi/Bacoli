@@ -22,6 +22,7 @@ export type FilaComprobante = {
   bruto: number;
   nc: number;
   cubierta: boolean;
+  pedidoCancelado?: boolean; // factura de ARCA cuyo pedido se canceló: se sigue debiendo hasta aplicar su nota de crédito
   anulado?: string | null; // "Anulado" o "No entregado": tiene número pero ya no se debe
   ncTexto: string; // "NC 0001-00000045" (vacío si no tiene)
   monto: number;
@@ -81,6 +82,7 @@ function estadoDe(f: FilaComprobante): string {
   if (f.anulado) return "Anulado";
   if (f.pagada) return "Pagada";
   if (f.cubierta) return "Anulada por NC";
+  if (f.pedidoCancelado) return "Falta NC";
   if (!f.entregado) return "Por entregar";
   return "Pendiente";
 }
@@ -276,7 +278,7 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
   const razonUnica = (filtros.razon ?? "").split(SEP).filter(Boolean); // filtrando una sola razón social, el PDF muestra solo esa
   const celdaBase = "min-w-0 truncate";
   const entrada = "h-7 w-full min-w-0 rounded border border-stone-300 bg-white px-1.5 text-center text-[12px] font-normal normal-case tracking-normal text-stone-800 placeholder:text-stone-300 focus:border-verde-700 focus:outline-none";
-  const opcionesEstado = esArca && tipo !== "CUENTA" ? ["Pendiente", "Pagada", "Anulada por NC", "NC sin aplicar", "NC aplicada"] : ["Pendiente", "Pagada", "Por entregar", "Anulada por NC", "Anulado"];
+  const opcionesEstado = esArca && tipo !== "CUENTA" ? ["Pendiente", "Pagada", "Falta NC", "Anulada por NC", "NC sin aplicar", "NC aplicada"] : ["Pendiente", "Pagada", "Por entregar", "Anulada por NC", "Anulado"];
 
   return (
     <div>
@@ -369,13 +371,14 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
                     case "monto": return <span key={c.id} className={`whitespace-nowrap text-[14px] font-bold tabular-nums ${f.cubierta || f.anulado ? "text-stone-300 line-through" : f.esNc ? "text-stone-500" : "text-stone-900"}`}>{f.esNc ? "−" : ""}{formatoPesos(f.cubierta || f.anulado || f.esNc ? f.bruto : f.monto)}</span>;
                     case "estado": {
                       const e = estadoDe(f);
-                      const color = e === "Pendiente" && f.avisoPago ? "bg-[#fdf8e3] text-[#8a6a05]" : e === "Pendiente" ? "bg-rojo-50 text-rojo-700" : e === "Pagada" ? "bg-verde-50 text-verde-700" : e === "NC sin aplicar" ? "bg-[#fdf8e3] text-[#8a6a05]" : e === "NC aplicada" || e === "Anulada por NC" ? "text-sky-700" : "";
+                      const color = e === "Pendiente" && f.avisoPago ? "bg-[#fdf8e3] text-[#8a6a05]" : e === "Pendiente" ? "bg-rojo-50 text-rojo-700" : e === "Pagada" ? "bg-verde-50 text-verde-700" : e === "NC sin aplicar" || e === "Falta NC" ? "bg-[#fdf8e3] text-[#8a6a05]" : e === "NC aplicada" || e === "Anulada por NC" ? "text-sky-700" : "";
                       return <span key={c.id} className="flex min-w-0 items-center justify-center gap-2" title={e === "Pendiente" && f.atraso > 0 ? `Vencida hace ${f.atraso} días` : undefined}>
                         <span className={`flex h-7 w-fit max-w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 font-bold ${color}`}>
                           {e === "NC sin aplicar" ? <button type="button" onClick={() => { setMotivoNc(""); setPicker(picker === f.id ? null : f.id); }} className="font-bold hover:underline">Aplicar a factura</button>
                             : e === "Pagada" ? <><span>Pagada{f.medio ? <span className="text-[11.5px] font-medium"> · {TEXTO_MEDIO[f.medio] ?? ""}</span> : null}</span><button type="button" title="Deshacer el pago" aria-label="Deshacer el pago" onClick={() => deshacer(f.id, !!f.arca)} className="text-[11px] opacity-50 hover:opacity-100">✕</button></>
                             : e === "Pendiente" && f.avisoPago ? <><span title={`${f.avisoPago} indicó que se pagó. Falta tu confirmación: registrá el pago (tildá el comprobante) o descartá el aviso con la ✕.`}>{f.avisoPago.split(" ")[0].slice(0, 12)} avisó pago</span><button type="button" title="Descartar el aviso (no se pagó)" aria-label="Descartar el aviso" onClick={() => window.confirm(`¿Descartar el aviso de ${f.avisoPago}? El comprobante sigue pendiente.`) && f.pedidoId !== null && empezar(async () => { await descartarAvisoPago(f.pedidoId ?? f.id); router.refresh(); })} className="text-[11px] opacity-50 hover:opacity-100">✕</button></>
                             : e === "Pendiente" ? <span>Pendiente{f.atraso > 0 ? <span className="text-[12px] font-medium opacity-80"> · {f.atraso} d</span> : null}</span>
+                            : e === "Falta NC" ? <span title="El pedido se canceló. La factura sigue debiéndose hasta que subas la nota de crédito de ARCA y la apliques a esta factura.">Falta NC</span>
                             : <span className={e === "NC aplicada" || e === "Anulada por NC" ? "font-bold" : "font-medium text-stone-500"}>{e === "Anulado" ? f.anulado : e}</span>}
                         </span>
                       </span>;
