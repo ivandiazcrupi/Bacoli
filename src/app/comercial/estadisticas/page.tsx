@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Cabecera } from "@/components/Cabecera";
 import { desgloseIva } from "@/lib/cuenta";
 import { db } from "@/lib/db";
-import { esFechaValida, hoy, sumarDias } from "@/lib/fechas";
+import { esFechaValida, hoy, nombreDia, sumarDias } from "@/lib/fechas";
 import { bultosDe, focacciasPorTipo, totalUnidades, unidadesPorSabor } from "@/lib/ruta";
 import { exigirOficina } from "@/lib/session";
 import { vendedoresDesbloqueado } from "@/lib/claveVendedores";
@@ -68,6 +68,16 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
   const diasDelMes = Number(sumarDias(`${mesSiguiente(mes)}-01`, -1).slice(8));
   const porDia = Array.from({ length: diasDelMes }, (_, i) => { const f = `${mes}-${String(i + 1).padStart(2, "0")}`; const d = delMes.filter((p) => p.f === f); return { may: d.filter((p) => !p.web).length, web: d.filter((p) => p.web).length }; });
   const diaTop = porDia.reduce((m, d, i) => (d.may + d.web > porDia[m].may + porDia[m].web ? i : m), 0);
+
+  // Resumen diario: todos los días del mes; los domingos no se vende (quedan anulados).
+  const resumenDia = Array.from({ length: diasDelMes }, (_, i) => {
+    const f = `${mes}-${String(i + 1).padStart(2, "0")}`;
+    const d = delMes.filter((p) => p.f === f);
+    const suma = (fn: (p: P) => number) => d.reduce((t, p) => t + fn(p), 0);
+    return { f, dia: i + 1, nombre: nombreDia(f), domingo: nombreDia(f) === "Domingo", pedidos: d.length, paq: suma((p) => p.paq), uni: suma(unidadesDe), tomate: suma((p) => p.sabores.tomate), cebolla: suma((p) => p.sabores.cebolla), pizzas: suma((p) => p.sabores.pizzas), foc: suma((p) => p.foc), neto: suma((p) => p.neto) };
+  });
+  const totalDia = resumenDia.reduce((t, x) => ({ pedidos: t.pedidos + x.pedidos, paq: t.paq + x.paq, uni: t.uni + x.uni, tomate: t.tomate + x.tomate, cebolla: t.cebolla + x.cebolla, pizzas: t.pizzas + x.pizzas, foc: t.foc + x.foc, neto: t.neto + x.neto }), { pedidos: 0, paq: 0, uni: 0, tomate: 0, cebolla: 0, pizzas: 0, foc: 0, neto: 0 });
+  const COLS_DIA = "grid-cols-[minmax(0,1.3fr)_repeat(7,minmax(0,1fr))_minmax(0,1.4fr)]";
 
   // Zonas y tipo de comprobante
   const cuenta = (xs: string[]) => [...xs.reduce((m, x) => m.set(x, (m.get(x) ?? 0) + 1), new Map<string, number>())].map(([nombre, valor]) => ({ nombre, valor })).sort((a, b) => b.valor - a.valor);
@@ -153,6 +163,33 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
           </Panel>
           <Panel titulo="Pedidos por zona" nota="mayoristas"><Donut partes={porZona} /></Panel>
 
+          <Panel titulo="Resumen por día" nota="solo pedidos entregados · los domingos no se reparte" className="lg:col-span-3">
+            {total.pedidos === 0 ? <SinDatos /> : (
+              <div className="overflow-x-auto">
+                <div className="min-w-[760px] overflow-hidden rounded-md border border-stone-200">
+                  <div className={`grid ${COLS_DIA} gap-x-3 bg-crema-100 px-3 py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-stone-500`}>
+                    <span className="text-left">Día</span><span>Pedidos</span><span>Paquetes</span><span>Unidades</span><span>Tomate</span><span>Cebolla</span><span>Pizzas</span><span>Focaccias</span><span>Facturación sin IVA</span>
+                  </div>
+                  {resumenDia.map((x) => {
+                    const vacio = x.pedidos === 0;
+                    const num = (n: number) => (vacio || n === 0 ? <span className="text-stone-300">—</span> : n.toLocaleString("es-AR", { maximumFractionDigits: 1 }));
+                    return (
+                      <div key={x.f} className={`grid ${COLS_DIA} items-center gap-x-3 border-t border-stone-200 px-3 py-2 text-center text-[13.5px] tabular-nums ${x.domingo ? "bg-stone-100 text-stone-400" : x.f === hoy() ? "bg-crema-50" : ""}`}>
+                        <span className={`text-left ${x.domingo ? "line-through" : "font-semibold text-stone-800"}`}>{x.nombre.slice(0, 3)} {x.dia}{x.domingo && <span className="ml-2 text-[11px] font-medium no-underline">sin reparto</span>}</span>
+                        <span>{num(x.pedidos)}</span><span>{num(x.paq)}</span><span>{num(x.uni)}</span><span>{num(x.tomate)}</span><span>{num(x.cebolla)}</span><span>{num(x.pizzas)}</span><span>{num(x.foc)}</span>
+                        <span className={x.domingo ? "" : "font-bold text-stone-900"}>{vacio ? <span className="text-stone-300">—</span> : pesos(x.neto)}</span>
+                      </div>
+                    );
+                  })}
+                  <div className={`grid ${COLS_DIA} gap-x-3 border-t-2 border-stone-300 bg-crema-50 px-3 py-2.5 text-center text-[13.5px] font-bold tabular-nums`}>
+                    <span className="text-left">Total del mes</span>
+                    <span>{totalDia.pedidos}</span><span>{paq(totalDia.paq)}</span><span>{totalDia.uni.toLocaleString("es-AR")}</span><span>{totalDia.tomate.toLocaleString("es-AR")}</span><span>{totalDia.cebolla.toLocaleString("es-AR")}</span><span>{totalDia.pizzas.toLocaleString("es-AR")}</span><span>{totalDia.foc.toLocaleString("es-AR")}</span><span>{pesos(totalDia.neto)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </Panel>
+
           <Panel titulo="Clientes que más piden" nota="cada cliente, todas sus sucursales juntas" className="lg:col-span-2"><TopClientes filas={[...porCliente.values()]} /></Panel>
           <Panel titulo="Tipo de comprobante"><Donut partes={porTipo} /></Panel>
 
@@ -184,7 +221,7 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
           <Panel titulo="Paquetes por mes" nota="últimos 6 meses"><Barras etiquetas={evo.map((e) => etiqMes(e.m))} resaltar={5} formato={paq} series={[{ nombre: "Paquetes", color: PALETA[0], valores: evo.map((e) => e.paq) }]} alto={170} ancho={340} /></Panel>
           <Panel titulo="Facturación por mes" nota="sin IVA · últimos 6 meses" className="lg:col-span-2"><Barras etiquetas={evo.map((e) => etiqMes(e.m))} resaltar={5} formato={corto} series={[{ nombre: "Facturación", color: PALETA[1], valores: evo.map((e) => e.neto) }]} alto={170} /></Panel>
         </div>
-        <p className="text-[12px] text-stone-500">Cada pedido cuenta en el mes de su día de reparto (o, si todavía no tiene día, el de carga). No se cuentan pedidos cancelados ni sin entregar. Las comisiones se calculan con el porcentaje cargado en cada cliente.</p>
+        <p className="text-[12px] text-stone-500">Solo se cuentan los pedidos entregados, en el mes de su día de entrega. Las comisiones se calculan con el porcentaje cargado en cada cliente.</p>
       </main>
     </>
   );
