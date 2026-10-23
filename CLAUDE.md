@@ -411,3 +411,4 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Factura de ARCA ↔ cliente: manda el pedido (pedido del dueño: RABIETA Palermo/Pilar mal cruzados)
 - Dos clientes pueden compartir CUIT/razón social (ej. RABIETA PALERMO y RABIETA PILAR = LA YUNGERE S.A.). Antes la factura de ARCA iba al cliente por CUIT (uno solo, el último) aunque su pedido fuera de otro. Ahora, **si la factura cruza con un pedido (por N°), es del cliente de ese pedido**; solo las facturas sin pedido se asignan por CUIT (`cargarFacturas`, `src/lib/facturas.ts`). Si dos clientes comparten CUIT, conviene cargarle a uno el "CUIT propio" en la sucursal o unirlos.
+- **Aviso de CUIT compartido** (pestaña FACTURAS, `controles.cuitsCompartidos`): si dos clientes tienen el mismo CUIT, arriba de la hoja se listan con cuántas facturas sin pedido no se pueden repartir solas.

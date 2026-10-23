@@ -54,9 +54,11 @@ export async function Listado({ tipo, searchParams, ruta }: { tipo: "FACTURA" | 
   let ncSinAplicar = 0;
   const cantidadArca = tipo === "FACTURA" ? await db.comprobanteArca.count() : 0;
   let escritasSinArca: string[] = [];
+  let compartidos: { cuit: string; nombres: string[]; sinPedido: number }[] = [];
   if (tipo === "FACTURA") {
     const { filas, controles, puntosDeCuit } = await cargarFacturas();
     ncSinAplicar = controles.ncSinAplicar.length;
+    compartidos = controles.cuitsCompartidos;
     escritasSinArca = controles.sinArca.map((p) => p.numeroFactura ?? "");
     for (const f of filas) todas.push(filaDeArca(f, puntosDeCuit(f.cuit)));
   }
@@ -109,6 +111,15 @@ export async function Listado({ tipo, searchParams, ruta }: { tipo: "FACTURA" | 
         ]} />
 
         {tipo === "FACTURA" && escritasSinArca.length > 0 && <p className="text-sm font-semibold text-rojo-700">Números escritos en pedidos que ARCA no tiene: {escritasSinArca.join(", ")}</p>}
+
+        {tipo === "FACTURA" && compartidos.length > 0 && (
+          <div className="rounded-md border border-stone-300 bg-white p-3 text-sm text-stone-700">
+            <p className="font-semibold">Clientes distintos con el mismo CUIT (conviene darle un CUIT propio a una de sus sucursales):</p>
+            <ul className="mt-1 list-disc pl-5">
+              {compartidos.map((g) => <li key={g.cuit}>{g.nombres.join(" · ")} — CUIT {g.cuit}{g.sinPedido > 0 && <span className="font-semibold text-rojo-700"> · {g.sinPedido} factura(s) sin pedido que no se pueden repartir solas</span>}</li>)}
+            </ul>
+          </div>
+        )}
 
         <section className={CONTENEDOR_TABLA} aria-label={`Listado de ${nombre}`}>
           <ListaComprobantes filas={visibles} tipo={tipo} acciones={tipo === "FACTURA" ? <AccionesArca esDueno={usuario.rol === "DUENO"} cantidad={cantidadArca} /> : undefined} />

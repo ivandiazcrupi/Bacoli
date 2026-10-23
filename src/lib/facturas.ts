@@ -116,7 +116,13 @@ export async function cargarFacturas() {
     };
   });
 
+  // Clientes distintos con el mismo CUIT: sus facturas sin pedido no se pueden repartir solas (se asignan a uno).
+  const gruposCuit = new Map<string, string[]>();
+  for (const c of clientes) { const k = soloDigitos(c.cuit); if (k) gruposCuit.set(k, [...(gruposCuit.get(k) ?? []), c.nombre]); }
+  const cuitsCompartidos = [...gruposCuit.entries()].filter(([, n]) => n.length > 1).map(([cuit, nombres]) => ({ cuit, nombres, sinPedido: filas.filter((f) => !f.esNc && !f.pedidoId && f.cuit === cuit).length }));
+
   const controles = {
+    cuitsCompartidos,
     sinPedido: filas.filter((f) => !f.esNc && !f.pedidoId),
     sinArca,
     conDiferencias: filas.filter((f) => f.problemas.length > 0),
