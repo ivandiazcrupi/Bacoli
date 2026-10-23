@@ -25,6 +25,17 @@ export default async function Semana({ searchParams }: { searchParams: Promise<{
   const cerradosSet = new Set(cerrados.map((d) => deFecha(d.fecha)));
   const fechas = diasDeSemana(inicio); // MAR a SÁB y LUN: el domingo no se reparte
 
+  // Totales de la semana (los mismos cálculos que cada día, sumados).
+  const todos = pedidos.filter((p) => p.fechaEntrega && fechas.includes(deFecha(p.fechaEntrega)));
+  const total = {
+    pedidos: todos.length,
+    paquetes: todos.reduce((s, p) => s + bultosDe(p.items), 0),
+    unidades: todos.reduce((s, p) => s + totalUnidades(unidadesPorSabor(p.items)), 0),
+    monto: todos.reduce((s, p) => s + importeVigente(p.items, Number(p.ivaPct), p.estado === "ENTREGADO" ? "ENTREGADO" : "PENDIENTE", p.webTotal), 0),
+    entregados: todos.filter((p) => p.estado === "ENTREGADO").length,
+    vehiculos: fechas.reduce((s, f) => s + salidas.filter((x) => deFecha(x.fecha) === f).length, 0),
+  };
+
   const COLUMNAS = "lg:grid-cols-[12rem_1fr_1fr_1fr_1fr_1fr_1fr_7rem]";
 
   return (
@@ -73,6 +84,16 @@ export default async function Semana({ searchParams }: { searchParams: Promise<{
               </Link>
             );
           })}
+          <div className={`grid items-center gap-x-4 gap-y-1 border-t-2 border-stone-400 bg-crema-100 px-5 py-5 text-center text-[15px] ${COLUMNAS}`}>
+            <span className="text-base font-bold uppercase tracking-wide">Total semana</span>
+            <span className="font-bold tabular-nums"><span className="text-xs font-normal text-stone-500 lg:hidden">Pedidos: </span>{total.pedidos}</span>
+            <span className="font-bold tabular-nums"><span className="text-xs font-normal text-stone-500 lg:hidden">Paquetes: </span>{num(total.paquetes)}</span>
+            <span className="font-bold tabular-nums"><span className="text-xs font-normal text-stone-500 lg:hidden">Unidades: </span>{total.unidades}</span>
+            <span className="font-bold tabular-nums"><span className="text-xs font-normal text-stone-500 lg:hidden">Facturación: </span>{total.pedidos === 0 ? "—" : formatoPesos(total.monto)}</span>
+            <span className="font-bold tabular-nums"><span className="text-xs font-normal text-stone-500 lg:hidden">Entregas: </span>{total.pedidos === 0 ? "—" : `${total.entregados} de ${total.pedidos}`}</span>
+            <span className="font-bold tabular-nums"><span className="text-xs font-normal text-stone-500 lg:hidden">Vehículos: </span>{total.vehiculos}</span>
+            <span />
+          </div>
         </div>
       </main>
     </>

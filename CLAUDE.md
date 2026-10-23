@@ -415,3 +415,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Nombre del PDF de la cuenta corriente (pedido del dueño)
 - El estado de cuenta (`/cuentas/[id]/estado`) tiene como título de la pestaña **"Cuenta corriente - NOMBRE DEL CLIENTE - dd-mm-aaaa"** (si se filtró por razón social, esa), así el navegador propone ese nombre al "Guardar como PDF" y no hay que renombrarlo.
+
+## SEMANA: fila de totales (pedido del dueño)
+- Al pie de la tabla de `/pedidos/semana` hay una fila **TOTAL SEMANA** (misma grilla y columnas que los días, en negrita sobre fondo gris cálido con línea gruesa arriba): Pedidos · Paquetes · Unidades · Facturación · Entregas ("N de M") · Vehículos (suma de los vehículos de cada día). Sin botón Abrir.
