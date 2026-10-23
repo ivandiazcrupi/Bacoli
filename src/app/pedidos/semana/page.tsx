@@ -8,7 +8,7 @@ import { formatoPesos } from "@/lib/numeros";
 import { bultosDe, num, totalUnidades, unidadesPorSabor } from "@/lib/ruta";
 import { exigirOficina } from "@/lib/session";
 import { vendedoresDesbloqueado } from "@/lib/claveVendedores";
-import { TotalFacturacion } from "./TotalFacturacion";
+import { DesbloquearTotales, OcultarTotales } from "./TotalFacturacion";
 import { CONTENEDOR_PEDIDOS, EncabezadoPedidos } from "../Encabezado";
 
 // SEMANA: cada día con lo que tiene asignado. Al entrar a un día se arma su hoja de ruta (qué vehículos salen y qué lleva cada uno).
@@ -89,13 +89,19 @@ export default async function Semana({ searchParams }: { searchParams: Promise<{
           })}
           <div className={`grid items-center gap-x-4 gap-y-1 border-t-2 border-stone-400 bg-crema-100 px-5 py-5 text-center text-[15px] ${COLUMNAS}`}>
             <span className="text-base font-bold uppercase tracking-wide">Total semana</span>
-            <span className="font-bold tabular-nums"><span className="text-xs font-normal text-stone-500 lg:hidden">Pedidos: </span>{total.pedidos}</span>
-            <span className="font-bold tabular-nums"><span className="text-xs font-normal text-stone-500 lg:hidden">Paquetes: </span>{num(total.paquetes)}</span>
-            <span className="font-bold tabular-nums"><span className="text-xs font-normal text-stone-500 lg:hidden">Unidades: </span>{total.unidades}</span>
-            <TotalFacturacion desbloqueado={verTotales} valor={total.pedidos === 0 ? "—" : formatoPesos(total.monto)} />
-            <span className="font-bold tabular-nums"><span className="text-xs font-normal text-stone-500 lg:hidden">Entregas: </span>{total.pedidos === 0 ? "—" : `${total.entregados} de ${total.pedidos}`}</span>
-            <span className="font-bold tabular-nums"><span className="text-xs font-normal text-stone-500 lg:hidden">Vehículos: </span>{total.vehiculos}</span>
-            <span />
+            {verTotales ? (
+              <>
+                <span className="font-bold tabular-nums"><span className="text-xs font-normal text-stone-500 lg:hidden">Pedidos: </span>{total.pedidos}</span>
+                <span className="font-bold tabular-nums"><span className="text-xs font-normal text-stone-500 lg:hidden">Paquetes: </span>{num(total.paquetes)}</span>
+                <span className="font-bold tabular-nums"><span className="text-xs font-normal text-stone-500 lg:hidden">Unidades: </span>{total.unidades}</span>
+                <span className="font-bold tabular-nums"><span className="text-xs font-normal text-stone-500 lg:hidden">Facturación: </span>{total.pedidos === 0 ? "—" : formatoPesos(total.monto)}</span>
+                <span className="font-bold tabular-nums"><span className="text-xs font-normal text-stone-500 lg:hidden">Entregas: </span>{total.pedidos === 0 ? "—" : `${total.entregados} de ${total.pedidos}`}</span>
+                <span className="font-bold tabular-nums"><span className="text-xs font-normal text-stone-500 lg:hidden">Vehículos: </span>{total.vehiculos}</span>
+                <OcultarTotales />
+              </>
+            ) : (
+              <span className="lg:col-span-7"><DesbloquearTotales /></span>
+            )}
           </div>
         </div>
       </main>
