@@ -90,3 +90,4 @@ Hay un bloqueo de 15 minutos tras 5 intentos fallidos con el mismo email. Se lib
 - Si en Railway → Deployments aparece "Limited Access / Deploys have been paused", es una pausa de Railway (no del código): mirar su página de estado. Los planes se habilitan por orden (Pro, Hobby, Free y Trial).
 - Después de un incidente puede hacer falta **desconectar y volver a conectar el repositorio de GitHub** (Bacoli → Settings → Source). Re-publicar un deploy viejo ("Redeploy") puede dar error: hay que subir un commit nuevo a la rama para que Railway reciba el código.
 - Mientras tanto el sistema sigue andando con la última versión publicada y el código está a salvo en GitHub. Bajar la copia de seguridad (Empresa → "Descargar copia ahora") antes y después de cualquier incidente.
+- Al reactivarse Railway, los commits subidos durante la pausa no arman deploy solos: hay que subir **un commit nuevo** a la rama (así se publicó todo lo acumulado el 23/10/2026).
