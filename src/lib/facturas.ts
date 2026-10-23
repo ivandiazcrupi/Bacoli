@@ -85,8 +85,10 @@ export async function cargarFacturas() {
     const total = Number(a.total);
     const cuit = a.cuitReceptor;
     const dePunto = cuit ? porCuitDePunto.get(cuit) : undefined;
-    const cli = cuit ? dePunto?.cliente ?? porCuit.get(cuit) : undefined;
     const pedido = a.esNotaCredito ? undefined : pedidoDe.get(a.id);
+    // Si la factura cruza con un pedido, es del cliente de ese pedido (dos clientes pueden compartir CUIT); si no, se busca por CUIT.
+    const porCuitCli = cuit ? dePunto?.cliente ?? porCuit.get(cuit) : undefined;
+    const cli = pedido?.cliente ? { id: pedido.cliente.id, nombre: pedido.cliente.nombre } : porCuitCli;
     const aplicado = redondear2(a.esNotaCredito && a.anulaTexto ? total : a.esNotaCredito ? a.notasAplicadas.reduce((t, x) => t + Number(x.monto), 0) : a.creditosRecibidos.reduce((t, x) => t + Number(x.monto), 0));
     const pagada = !a.esNotaCredito && (a.pagado || pedido?.cobro === "COBRADO");
     const problemas: string[] = [];
