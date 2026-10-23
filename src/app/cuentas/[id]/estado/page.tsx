@@ -11,6 +11,16 @@ import { filaDeArca, filaDeRemito } from "../../filas";
 
 const corta = (s: string | null | undefined) => (s ? `${s.slice(8)}/${s.slice(5, 7)}/${s.slice(0, 4)}` : "—");
 
+// El título es el nombre con el que el navegador propone guardar el PDF: cliente y fecha.
+export async function generateMetadata({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ razon?: string }> }) {
+  const { id } = await params;
+  const { razon } = await searchParams;
+  const c = await db.cliente.findUnique({ where: { id }, select: { nombre: true } });
+  const limpio = (t: string) => t.replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim();
+  const [a, m, d] = hoy().split("-");
+  return { title: `Cuenta corriente - ${limpio(razon || c?.nombre || "Cliente")} - ${d}-${m}-${a}` };
+}
+
 // Estado de cuenta para pasarle al cliente: una hoja A4 limpia (sin datos internos) que se imprime o se guarda como PDF.
 // Por defecto muestra lo que debe; ?ver=todas suma también lo pagado.
 export default async function EstadoDeCuenta({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ ver?: string; razon?: string }> }) {
