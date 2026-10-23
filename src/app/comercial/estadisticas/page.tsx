@@ -75,7 +75,8 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
     const suma = (fn: (p: P) => number) => d.reduce((t, p) => t + fn(p), 0);
     return { f, dia: i + 1, nombre: nombreDia(f), domingo: nombreDia(f) === "Domingo", pedidos: d.length, paq: suma((p) => p.paq), uni: suma(unidadesDe), tomate: suma((p) => p.sabores.tomate), cebolla: suma((p) => p.sabores.cebolla), pizzas: suma((p) => p.sabores.pizzas), foc: suma((p) => p.foc), neto: suma((p) => p.neto) };
   });
-  // En el lugar de cada domingo (no se reparte) va el mini resumen de la semana que termina (los días de arriba); si el mes termina a mitad de semana, uno al final.
+  // La semana de BACOLI va de martes a lunes (como en Pedidos → Semana): el resumen cierra después de cada lunes. El domingo no se reparte, no tiene fila (si hubiera algo, suma en su semana).
+  // Si el mes empieza o termina a mitad de semana, ese resumen suma solo los días del mes.
   type Dia = (typeof resumenDia)[number];
   const CERO = { pedidos: 0, paq: 0, uni: 0, tomate: 0, cebolla: 0, pizzas: 0, foc: 0, neto: 0 };
   const sumar = (a: typeof CERO, x: Dia) => ({ pedidos: a.pedidos + x.pedidos, paq: a.paq + x.paq, uni: a.uni + x.uni, tomate: a.tomate + x.tomate, cebolla: a.cebolla + x.cebolla, pizzas: a.pizzas + x.pizzas, foc: a.foc + x.foc, neto: a.neto + x.neto });
@@ -83,13 +84,14 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
   const filasDia: FilaDia[] = [];
   { let acc = CERO, desde = 0, hasta = 0;
     for (const x of resumenDia) {
-      if (desde === 0 && !x.domingo) desde = x.dia;
-      acc = sumar(acc, x);
-      if (x.domingo) { if (desde > 0) filasDia.push({ tipo: "semana", desde, hasta, t: acc }); acc = CERO; desde = 0; continue; }
+      if (desde === 0) desde = x.dia;
       hasta = x.dia;
-      filasDia.push({ tipo: "dia", x });
+      acc = sumar(acc, x);
+      if (!x.domingo) filasDia.push({ tipo: "dia", x });
+      if (x.nombre === "Lunes") { filasDia.push({ tipo: "semana", desde, hasta, t: acc }); acc = CERO; desde = 0; }
     }
     if (desde > 0) filasDia.push({ tipo: "semana", desde, hasta, t: acc }); }
+  const diasDeVenta = resumenDia.filter((x) => x.pedidos > 0).length;
   const totalDia = resumenDia.reduce((t, x) => ({ pedidos: t.pedidos + x.pedidos, paq: t.paq + x.paq, uni: t.uni + x.uni, tomate: t.tomate + x.tomate, cebolla: t.cebolla + x.cebolla, pizzas: t.pizzas + x.pizzas, foc: t.foc + x.foc, neto: t.neto + x.neto }), { pedidos: 0, paq: 0, uni: 0, tomate: 0, cebolla: 0, pizzas: 0, foc: 0, neto: 0 });
   const COLS_DIA = "grid-cols-[minmax(0,1.3fr)_repeat(7,minmax(0,1fr))_minmax(0,1.4fr)]";
 
@@ -210,6 +212,14 @@ export default async function Graficos({ searchParams }: { searchParams: Promise
                   <div className={`grid ${COLS_DIA} gap-x-3 border-t-2 border-stone-300 bg-crema-50 px-3 py-2.5 text-center text-[13.5px] font-bold tabular-nums`}>
                     <span className="text-left">Total del mes</span>
                     <span>{totalDia.pedidos}</span><span>{paq(totalDia.paq)}</span><span>{totalDia.uni.toLocaleString("es-AR")}</span><span>{totalDia.tomate.toLocaleString("es-AR")}</span><span>{totalDia.cebolla.toLocaleString("es-AR")}</span><span>{totalDia.pizzas.toLocaleString("es-AR")}</span><span>{totalDia.foc.toLocaleString("es-AR")}</span><span>{pesos(totalDia.neto)}</span>
+                  </div>
+                  <div className={`grid ${COLS_DIA} items-center gap-x-3 border-t border-stone-200 px-3 py-2 text-center text-[13.5px] tabular-nums text-stone-700`}>
+                    <span className="text-left font-semibold">Días de venta</span>
+                    <span className="col-span-8 text-left font-semibold text-stone-800">{diasDeVenta} <span className="font-normal text-stone-500">{diasDeVenta === 1 ? "día con entregas" : "días con entregas"}</span></span>
+                  </div>
+                  <div className={`grid ${COLS_DIA} items-center gap-x-3 border-t border-stone-200 bg-crema-50 px-3 py-2 text-center text-[13.5px] font-semibold tabular-nums text-stone-700`}>
+                    <span className="text-left">Promedio por día de venta</span>
+                    {(() => { const d = diasDeVenta || 1; const m = (v: number, dec = 1) => (diasDeVenta === 0 ? "—" : (v / d).toLocaleString("es-AR", { maximumFractionDigits: dec })); return <><span>{m(totalDia.pedidos)}</span><span>{m(totalDia.paq)}</span><span>{m(totalDia.uni, 0)}</span><span>{m(totalDia.tomate, 0)}</span><span>{m(totalDia.cebolla, 0)}</span><span>{m(totalDia.pizzas, 0)}</span><span>{m(totalDia.foc, 0)}</span><span>{diasDeVenta === 0 ? "—" : pesos(totalDia.neto / d)}</span></>; })()}
                   </div>
                 </div>
               </div>
