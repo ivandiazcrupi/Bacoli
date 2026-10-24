@@ -24,9 +24,10 @@ export async function guardarConfigAviso(c: ConfigAviso): Promise<{ ok: boolean;
 }
 
 async function pedidoParaAvisar(pedidoId: string) {
-  const p = await db.pedido.findUnique({ where: { id: pedidoId }, select: { id: true, origen: true, estado: true, webEmail: true, webNombre: true, webOrden: true } });
+  const p = await db.pedido.findUnique({ where: { id: pedidoId }, select: { id: true, origen: true, estado: true, webEmail: true, webNombre: true, webOrden: true, webAvisoEn: true } });
   if (!p || p.origen !== "WEB") return { error: "Solo los pedidos de la tienda online llevan aviso por email." } as const;
   if (!p.webEmail) return { error: "Este pedido no tiene email: cargalo en “Editar pedido”." } as const;
+  if (p.webAvisoEn) return { error: "A este cliente ya se le mandó el email. Si necesitás escribirle algo más, hacelo a mano." } as const;
   if (p.estado === "CANCELADO") return { error: "El pedido está cancelado." } as const;
   const cfg = await leerConfigAviso();
   if (/\{dia\}/.test(cfg.texto + cfg.asunto) && !cfg.dia) return { error: "Falta el día del mail: cargalo en Pedidos → Minoristas (web) → Email al cliente." } as const;

@@ -110,6 +110,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
     <section className="rounded-xl border border-stone-200 bg-white p-5" aria-label="Acciones del pedido">
       <h2 className="mb-3 text-[11px] font-medium uppercase tracking-[0.1em] text-stone-400">Acciones</h2>
       <div className="space-y-2.5">
+        {web && pedido.webEmail && pedido.estado !== "CANCELADO" && <BotonAvisoEmail grande pedidoId={pedido.id} tieneEmail avisoEn={fechaAviso(pedido.webAvisoEn)} />}
         {!web && !pedido.conFactura && pedido.estado !== "CANCELADO" && (
           <BotonRemito pedidoId={pedido.id} numero={pedido.remitoNumero ? `Imprimir remito ${formatoRemito(pedido.remitoNumero)}` : null} textoSinNumero="Emitir remito" clase={`${btn} border-stone-300 bg-white text-stone-700 hover:bg-crema-100`} />
         )}
