@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { mayus } from "@/lib/mayusculas";
-import type { OrdenDeMail } from "@/lib/empretienda-mail";
+import { barrioDeTabla, type OrdenDeMail } from "@/lib/empretienda-mail";
 
 /**
  * Barrio de los pedidos de la tienda. El mail solo trae el código postal y la tabla del script de Google es aproximada
@@ -13,14 +13,27 @@ const sinTilde = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toUpp
 // Solo barrios sueltos de CABA: las zonas del GBA ("TIGRE / ZONA NORTE") se dejan como vienen.
 const esBarrioSuelto = (localidad: string) => !localidad.includes("/");
 
-/** Cambia el barrio de cada orden por el que el equipo suele usar para ese código postal (si ya lo aprendió). */
-export async function aplicarBarriosAprendidos<T extends OrdenDeMail>(ordenes: T[]): Promise<T[]> {
+export type OrdenConBarrio = OrdenDeMail & { dudoso?: string };
+
+/**
+ * Cambia el barrio de cada orden por el que el equipo suele usar para ese código postal (si ya lo aprendió).
+ * Si el barrio queda EN DUDA (el equipo usó barrios distintos para ese código, o el código no figura en ninguna tabla)
+ * la orden trae `dudoso` con las opciones: el pedido entra con el barrio vacío ("Completar" en rojo) para completarlo a mano.
+ */
+export async function aplicarBarriosAprendidos<T extends OrdenDeMail>(ordenes: T[]): Promise<(T & { dudoso?: string })[]> {
   const filas = await db.barrioCp.findMany();
-  if (filas.length === 0) return ordenes;
-  const mapa = new Map(filas.map((f) => [f.cp, f.barrio]));
+  const mapa = new Map(filas.map((f) => [f.cp, f]));
   return ordenes.map((o) => {
-    const aprendido = mapa.get(cpDe(o.cp));
-    return aprendido && esBarrioSuelto(o.localidad) ? { ...o, localidad: aprendido } : o;
+    if (!esBarrioSuelto(o.localidad)) return o;
+    const cp = cpDe(o.cp);
+    const aprendido = mapa.get(cp);
+    if (aprendido) {
+      if (aprendido.veces < aprendido.total) return { ...o, localidad: aprendido.barrio, dudoso: aprendido.detalle ?? aprendido.barrio };
+      return { ...o, localidad: aprendido.barrio };
+    }
+    const n = parseInt(cp, 10);
+    if (n >= 1000 && n <= 1499 && !barrioDeTabla(cp)) return { ...o, dudoso: o.localidad || "CABA" };
+    return o;
   });
 }
 

@@ -1,4 +1,5 @@
 "use client";
+import { Barrio } from "@/components/Barrio";
 
 import { NombreCliente } from "./NombreCliente";
 import Link from "next/link";
@@ -104,7 +105,7 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
       {filas.map((f) => (
         <div key={f.id} data-pedido={f.id} className="rounded-lg border border-stone-300 bg-white px-4 py-2">
           <div className={`hidden items-center gap-x-4 text-center lg:grid ${COLUMNAS}`}>
-            <span className="text-[12.5px] font-semibold">{f.barrio}</span>
+            <span className="text-[12.5px] font-semibold"><Barrio v={f.barrio} /></span>
             <span className="text-[12.5px] font-semibold leading-snug">
               <NombreCliente clienteId={f.clienteId} nombre={f.cliente} />
               <EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} ingreso={f.ingreso} />
@@ -131,7 +132,7 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
           <div className="space-y-3 lg:hidden">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="font-semibold">{f.barrio}</p>
+                <p className="font-semibold"><Barrio v={f.barrio} /></p>
                 <p className="font-semibold"><NombreCliente clienteId={f.clienteId} nombre={f.cliente} /></p>
                 <EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} ingreso={f.ingreso} />
                 <p className="text-[13px]">{f.direccion}</p>

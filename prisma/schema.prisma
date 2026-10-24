@@ -226,6 +226,7 @@ model Pedido {
   webDireccion String?
   webBarrio    String?
   webTelefono  String?
+  webBarrioSugerido String? // si el barrio quedó en duda (a completar): qué opciones había
   webEmail     String? // email del comprador (viene del mail de la orden de Empretienda)
   webTotal     Decimal?  @db.Decimal(14, 2) // lo que pagó el cliente en la tienda
   webExtra     Decimal?  @db.Decimal(14, 2) // lo agregado por fuera después del pedido (ya sumado a webTotal)

@@ -1,4 +1,6 @@
 "use client";
+import { Barrio } from "@/components/Barrio";
+import { BARRIO_A_COMPLETAR } from "@/lib/barrio";
 
 import Link from "next/link";
 import { NombreCliente } from "../../NombreCliente";
@@ -283,7 +285,7 @@ function FilaHoja({ f, n, bloqueada, armando, fija, acc, salidas }: { f: Fila; n
       <div role="cell" className="flex justify-center">
         <button type="button" disabled={fija} aria-label={`Mover el pedido ${n}`} className="flex h-7 w-7 cursor-grab items-center justify-center rounded-full bg-stone-800 text-xs font-semibold text-white disabled:cursor-default" {...attributes} {...listeners}>{n}</button>
       </div>
-      <div role="cell" className="text-[11px] font-bold uppercase leading-tight tracking-wide text-stone-800">{f.barrio}</div>
+      <div role="cell" className="text-[11px] font-bold uppercase leading-tight tracking-wide text-stone-800"><Barrio v={f.barrio} /></div>
       <div role="cell" className="leading-snug">
         <p className="font-bold"><NombreCliente clienteId={f.clienteId} nombre={f.cliente} /></p>
         <EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} ingreso={f.ingreso} />
@@ -320,7 +322,7 @@ function FilaHoja({ f, n, bloqueada, armando, fija, acc, salidas }: { f: Fila; n
 function FilaSilueta({ x }: { x: Silueta }) {
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-dashed border-stone-400 bg-stone-100/80 px-3 py-2 text-sm text-stone-500">
-      <span className="text-xs font-bold uppercase tracking-wide">{x.barrio}</span>
+      <span className="text-xs font-bold uppercase tracking-wide"><Barrio v={x.barrio} /></span>
       <span className="font-semibold text-stone-600">{x.cliente}</span>
       <span>{x.direccion}</span>
       <span className="text-xs">{x.items.map((i) => `${i.cantidad} ${i.nombre}`).join(" · ")}</span>
@@ -352,7 +354,7 @@ function FilaSiluetaTabla({ x, n }: { x: Silueta; n: number }) {
   return (
     <div role="row" style={{ gridTemplateColumns: COLUMNAS }} className="grid items-center gap-x-2 rounded-lg border border-dashed border-stone-400 bg-stone-100 px-2 py-2.5 text-center text-sm text-stone-500">
       <div role="cell"><span className="inline-flex h-7 min-w-7 items-center justify-center rounded bg-stone-400 px-1 text-sm font-bold text-white">{n}</span></div>
-      <div role="cell" className="text-xs font-bold uppercase leading-tight">{x.barrio}</div>
+      <div role="cell" className="text-xs font-bold uppercase leading-tight"><Barrio v={x.barrio} /></div>
       <div role="cell" className="font-bold uppercase leading-snug text-stone-600">{x.cliente}</div>
       <div role="cell" className="leading-snug">{x.direccion}<span className="block text-xs font-semibold text-rojo-700/80">No se entregó · {x.motivo}</span></div>
       <div role="cell">—</div>
@@ -370,7 +372,7 @@ function FilaSiluetaTabla({ x, n }: { x: Silueta; n: number }) {
 function FilaSiluetaTarjeta({ x, n }: { x: Silueta; n: number }) {
   return (
     <div className="rounded-xl border border-dashed border-stone-400 bg-stone-100 p-3 text-sm text-stone-500">
-      <p className="flex items-center gap-2 font-bold uppercase"><span className="inline-flex h-6 min-w-6 items-center justify-center rounded bg-stone-400 px-1 text-white">{n}</span>{x.barrio} · {x.cliente}</p>
+      <p className="flex items-center gap-2 font-bold uppercase"><span className="inline-flex h-6 min-w-6 items-center justify-center rounded bg-stone-400 px-1 text-white">{n}</span><Barrio v={x.barrio} /> · {x.cliente}</p>
       <p>{x.direccion}</p>
       <p className="text-xs">{x.items.map((i) => `${i.cantidad} ${i.nombre}`).join(" · ")}</p>
       <p className="font-semibold text-rojo-700/80">No se entregó · {x.motivo}</p>
@@ -418,7 +420,7 @@ function FilaUbicar({ f, salidas, bloqueada, acc }: { f: Fila; salidas: SalidaIn
     >
       <div className={`grid items-center gap-x-4 gap-y-2 text-center ${COLUMNAS_UBICAR}`}>
         <button type="button" disabled={bloqueada} aria-label="Arrastrar el pedido a un vehículo" className="hidden cursor-grab text-lg leading-none text-stone-500 disabled:cursor-default disabled:opacity-30 lg:block" {...attributes} {...listeners}>⋮⋮</button>
-        <span className="text-[13px] font-semibold">{f.barrio}</span>
+        <span className="text-[13px] font-semibold"><Barrio v={f.barrio} /></span>
         <span className="text-[13px] font-semibold leading-snug"><NombreCliente clienteId={f.clienteId} nombre={f.cliente} /><EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} ingreso={f.ingreso} /></span>
         <span className="text-[13px] leading-snug">
           {f.direccion}
@@ -445,7 +447,7 @@ function FilaUbicar({ f, salidas, bloqueada, acc }: { f: Fila; salidas: SalidaIn
 }
 
 const digitos = (t: string) => t.replace(/[^\d+]/g, "");
-const mapa = (f: Fila) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${f.direccion}, ${f.barrio}`)}`;
+const mapa = (f: Fila) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${f.direccion}, ${f.barrio === BARRIO_A_COMPLETAR ? "" : f.barrio}`)}`;
 
 // El mismo pedido, en el celular: una tarjeta con botones grandes (dirección a Google Maps, teléfono que llama).
 function FilaTarjeta({ f, n, bloqueada, armando, fija, acc, salidas }: { f: Fila; n: number; bloqueada: boolean; armando: boolean; fija: boolean; acc: Acciones; salidas: SalidaInfo[] }) {
@@ -460,7 +462,7 @@ function FilaTarjeta({ f, n, bloqueada, armando, fija, acc, salidas }: { f: Fila
         <div className="min-w-0 flex-1">
           <h3 className="text-lg font-bold leading-snug"><NombreCliente clienteId={f.clienteId} nombre={f.cliente} /></h3>
           <EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} ingreso={f.ingreso} />
-          <p className="text-sm text-stone-600">{f.barrio}</p>
+          <p className="text-sm text-stone-600"><Barrio v={f.barrio} /></p>
         </div>
         <span className={`shrink-0 rounded px-2 py-0.5 text-xs font-semibold ${f.conFactura ? "bg-stone-800 text-white" : "bg-stone-200 text-stone-700"}`}>{f.conFactura ? "FACTURA" : "REMITO"}</span>
       </header>
@@ -536,7 +538,7 @@ function FilaTarjeta({ f, n, bloqueada, armando, fija, acc, salidas }: { f: Fila
   );
 }
 
-const urlRuta = (filas: Fila[]) => `https://www.google.com/maps/dir/${filas.map((f) => encodeURIComponent(`${f.direccion}, ${f.barrio}`)).join("/")}`;
+const urlRuta = (filas: Fila[]) => `https://www.google.com/maps/dir/${filas.map((f) => encodeURIComponent(`${f.direccion}, ${f.barrio === BARRIO_A_COMPLETAR ? "" : f.barrio}`)).join("/")}`;
 
 // Resumen de la vuelta de un vehículo (al final de su cuadro): a la izquierda la barra de paquetes contra la capacidad; a la derecha la facturación.
 function ResumenVuelta({ grupo, capacidad, salida, cerrado }: { grupo: Fila[]; capacidad: number | null; salida: SalidaInfo; cerrado: boolean }) {

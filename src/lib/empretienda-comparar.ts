@@ -32,7 +32,7 @@ export async function compararConSistema(ordenes: OrdenDeMail[]): Promise<Resume
     const cmp = (campo: Diferencia["campo"], sistema: string | null, mail: string | null) => { if (sinTilde(sistema) !== sinTilde(mail)) dif.push({ campo, texto: `sistema «${sistema ?? ""}» · mail «${mail ?? ""}»` }); };
     cmp("Nombre", p.webNombre ?? "", mayus(o.cliente.replace(/\(\s*x\d+\s*\)/i, "").trim()) || "SIN NOMBRE");
     cmp("Dirección", p.webDireccion, limpiarDireccion(o.direccion) || null);
-    cmp("Barrio", p.webBarrio, mayus(o.localidad) || null);
+    if (!o.dudoso) cmp("Barrio", p.webBarrio, mayus(o.localidad) || null);
     cmp("Teléfono", p.webTelefono, o.telefono || null);
     // El total puede haber subido si el equipo agregó algo "por fuera" al pedido: eso no cuenta como diferencia.
     const totalSistema = p.webTotal === null ? null : Number(p.webTotal) - Number(p.webExtra ?? 0);

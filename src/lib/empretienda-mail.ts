@@ -47,6 +47,9 @@ const BARRIOS: [string, Cp[]][] = [
 const TABLA_CP = new Map<number, string>();
 for (const [nombre, cps] of BARRIOS) for (const cp of cps) { if (typeof cp === "number") TABLA_CP.set(cp, nombre); else for (let n = cp[0]; n <= cp[1]; n++) TABLA_CP.set(n, nombre); }
 
+/** Barrio que la tabla da para un código postal (o undefined si no figura). */
+export const barrioDeTabla = (cp: string) => TABLA_CP.get(parseInt(String(cp).replace(/\D/g, ""), 10));
+
 /** Localidad que va a la columna "Localidad" (= barrio del pedido): zona del GBA si el envío la trae, barrio de CABA por código postal, o la ciudad. */
 export function obtenerLocalidad(ciudad: string, provincia: string, cp: string, metodoEnvio: string): string {
   const cpNum = parseInt(String(cp).replace(/[^0-9]/g, ""), 10);

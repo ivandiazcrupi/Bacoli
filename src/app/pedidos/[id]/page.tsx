@@ -9,6 +9,8 @@ import { db } from "@/lib/db";
 import { estadoDelDia } from "@/lib/dias";
 import { deFecha, diaMes, nombreDia } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
+import { Barrio } from "@/components/Barrio";
+import { BARRIO_A_COMPLETAR } from "@/lib/barrio";
 import { enlaceWhatsApp } from "@/lib/telefonos";
 import { exigirOficina } from "@/lib/session";
 import { cancelarPedido, reabrirPedido } from "../actions";
@@ -89,7 +91,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
   const cargado = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Argentina/Buenos_Aires" }).format(pedido.creadoEn);
   const horaCarga = pedido.creadoEn.toLocaleTimeString("es-AR", { hour: "2-digit", hourCycle: "h23", minute: "2-digit", timeZone: "America/Argentina/Buenos_Aires" });
   const wa = enlaceWhatsApp(entrega.telefono);
-  const direccion = web ? [entrega.direccion, entrega.barrio].filter(Boolean).join(" · ") : [titulo(pedido.punto?.direccion), pedido.punto?.barrio, pedido.punto?.zona.nombre].filter(Boolean).join(" · ");
+  const direccion = web ? [entrega.direccion].filter(Boolean).join(" · ") : [titulo(pedido.punto?.direccion), pedido.punto?.barrio, pedido.punto?.zona.nombre].filter(Boolean).join(" · ");
   const pastilla = { PENDIENTE: "bg-[#fdf8e3] text-[#8a6a05]", ENTREGADO: "bg-verde-50 text-verde-700", NO_ENTREGADO: "bg-rojo-50 text-rojo-700", CANCELADO: "bg-rojo-50 text-rojo-700" } as const;
   const celda = (etiqueta: string, valor: React.ReactNode, detalle?: React.ReactNode) => (
     <div className="min-w-0 px-6 py-4">
@@ -150,7 +152,8 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
                 <span className={`inline-flex h-7 items-center rounded-full px-3 text-[12.5px] font-medium ${pastilla[pedido.estado]}`}>{ETIQUETA[pedido.estado]}</span>
                 <span className="inline-flex h-7 items-center rounded-full border border-stone-200 bg-white px-3 text-[11.5px] font-medium uppercase tracking-wide text-stone-500">{web ? "Tienda online" : pedido.conFactura ? "Con factura" : "Con remito"}</span>
               </div>
-              <p className="mt-2 text-[14px] text-stone-600">{direccion}</p>
+              <p className="mt-2 text-[14px] text-stone-600">{direccion}{web && <>{direccion ? " · " : ""}<Barrio v={entrega.barrio} />{entrega.barrio === BARRIO_A_COMPLETAR && pedido.webBarrioSugerido && <span className="text-[12.5px] text-stone-500"> (opciones: {pedido.webBarrioSugerido}) — completalo en “Editar pedido”</span>}</>}</p>
+              {web && pedido.webEmail && <p className="mt-0.5 text-[13.5px] text-stone-600">Email <a href={`mailto:${pedido.webEmail}`} className="font-semibold text-verde-800 hover:underline">{pedido.webEmail}</a></p>}
               {entrega.telefono && <p className="mt-0.5 text-[13.5px] text-stone-600">Tel. {wa ? <a href={wa} target="_blank" rel="noreferrer" className="font-semibold text-verde-800 hover:underline">{entrega.telefono} · WhatsApp</a> : entrega.telefono}</p>}
             </div>
             <BotonVolver fallback={fecha ? `/pedidos/dia/${fecha}` : "/pedidos"} />

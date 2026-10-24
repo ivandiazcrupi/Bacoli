@@ -1,3 +1,4 @@
+import { BARRIO_A_COMPLETAR } from "@/lib/barrio";
 import { webPagado, textoPagoWeb } from "@/lib/webpago";
 import type { Prisma } from "@prisma/client";
 import { importeVigente } from "@/lib/cuenta";
@@ -20,7 +21,7 @@ export function datosEntrega(p: { cliente: { nombre: string } | null; punto: { a
     // Solo el nombre del cliente: el barrio ya tiene su propia columna (el alias de la sucursal no se muestra).
     return { nombre: p.cliente.nombre, barrio: p.punto.barrio, direccion: titulo(p.punto.direccion), comentario: oracion(p.punto.comentario), telefono: p.punto.telefono ?? "" };
   }
-  return { nombre: p.webNombre ?? "", barrio: p.webBarrio ?? "", direccion: titulo(p.webDireccion), comentario: "", telefono: p.webTelefono ?? "" };
+  return { nombre: p.webNombre ?? "", barrio: p.webBarrio || BARRIO_A_COMPLETAR, direccion: titulo(p.webDireccion), comentario: "", telefono: p.webTelefono ?? "" };
 }
 
 /** Lo que se ve en rojo debajo de la dirección: el comentario de la sucursal y la nota importante del pedido ("Entregar en el vecino"). */

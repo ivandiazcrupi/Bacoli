@@ -146,7 +146,7 @@ export async function cargarCatalogo(): Promise<Catalogo> {
 
 export type ResultadoImportacion = { ok: boolean; nuevos: number; yaCargados: number; mensaje: string };
 
-type OrdenNueva = PedidoPlanilla & { email?: string };
+type OrdenNueva = PedidoPlanilla & { email?: string; dudoso?: string };
 
 /** Crea un pedido por cada orden que todavía no está en el sistema. Nunca repite un N° de orden (es único en la base). */
 async function crearPedidosWeb(pedidos: OrdenNueva[]): Promise<ResultadoImportacion> {
@@ -172,7 +172,8 @@ async function crearPedidosWeb(pedidos: OrdenNueva[]): Promise<ResultadoImportac
           webOrden: p.orden,
           webNombre: mayus(p.cliente.replace(/\(\s*x\d+\s*\)/i, "").trim()) || "SIN NOMBRE",
           webDireccion: limpiarDireccion(p.direccion) || null,
-          webBarrio: mayus(p.localidad) || null,
+          webBarrio: p.dudoso ? null : mayus(p.localidad) || null,
+          webBarrioSugerido: p.dudoso ? mayus(p.dudoso) : null,
           webTelefono: p.telefono || null,
           webEmail: p.email?.trim().toLowerCase() || null,
           webTotal: p.monto,
