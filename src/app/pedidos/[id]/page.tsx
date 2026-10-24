@@ -11,7 +11,6 @@ import { deFecha, diaMes, nombreDia } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
 import { Barrio } from "@/components/Barrio";
 import { BotonAvisoEmail } from "@/components/BotonAvisoEmail";
-import { BARRIO_A_COMPLETAR } from "@/lib/barrio";
 import { enlaceWhatsApp } from "@/lib/telefonos";
 import { exigirOficina } from "@/lib/session";
 import { cancelarPedido, reabrirPedido } from "../actions";
@@ -154,7 +153,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
                 <span className={`inline-flex h-7 items-center rounded-full px-3 text-[12.5px] font-medium ${pastilla[pedido.estado]}`}>{ETIQUETA[pedido.estado]}</span>
                 <span className="inline-flex h-7 items-center rounded-full border border-stone-200 bg-white px-3 text-[11.5px] font-medium uppercase tracking-wide text-stone-500">{web ? "Tienda online" : pedido.conFactura ? "Con factura" : "Con remito"}</span>
               </div>
-              <p className="mt-2 text-[14px] text-stone-600">{direccion}{web && <>{direccion ? " · " : ""}<Barrio v={entrega.barrio} />{entrega.barrio === BARRIO_A_COMPLETAR && pedido.webBarrioSugerido && <span className="text-[12.5px] text-stone-500"> (opciones: {pedido.webBarrioSugerido}) — completalo en “Editar pedido”</span>}</>}</p>
+              <p className="mt-2 text-[14px] text-stone-600">{direccion}{web && <>{direccion ? " · " : ""}<Barrio v={entrega.barrio} /></>}</p>
               {web && pedido.webEmail && <p className="mt-0.5 text-[13.5px] text-stone-600">Email <a href={`mailto:${pedido.webEmail}`} className="font-semibold text-verde-800 hover:underline">{pedido.webEmail}</a></p>}
               {web && pedido.webEmail && <div className="mt-1.5"><BotonAvisoEmail grande pedidoId={pedido.id} tieneEmail avisoEn={fechaAviso(pedido.webAvisoEn)} /></div>}
               {entrega.telefono && <p className="mt-0.5 text-[13.5px] text-stone-600">Tel. {wa ? <a href={wa} target="_blank" rel="noreferrer" className="font-semibold text-verde-800 hover:underline">{entrega.telefono} · WhatsApp</a> : entrega.telefono}</p>}
