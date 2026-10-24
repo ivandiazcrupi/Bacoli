@@ -83,7 +83,7 @@ export function leerPlanilla(csv: string): PedidoPlanilla[] {
   return pedidos;
 }
 
-type Catalogo = { tomate: { id: string; nombre: string; sku: string | null } | null; cebolla: { id: string; nombre: string; sku: string | null } | null };
+export type Catalogo = { tomate: { id: string; nombre: string; sku: string | null } | null; cebolla: { id: string; nombre: string; sku: string | null } | null };
 
 /**
  * De los renglones de la planilla a los renglones del pedido. La tienda siempre vende en paquetes:
@@ -135,6 +135,13 @@ export function limpiarDireccion(t: string) {
   return titulo(t);
 }
 
+/** Las dos prepizzas del catálogo (por SKU, o por nombre si se cambió el SKU). */
+export async function cargarCatalogo(): Promise<Catalogo> {
+  const productos = await db.producto.findMany({ where: { OR: [{ sku: { in: ["PPT01", "PPC02"] } }, { nombre: { in: ["PREPIZZA TOMATE", "PREPIZZA CEBOLLA"] } }] } });
+  const buscar = (sku: string, nombre: string) => productos.find((p) => p.sku === sku) ?? productos.find((p) => p.nombre === nombre) ?? null;
+  return { tomate: buscar("PPT01", "PREPIZZA TOMATE"), cebolla: buscar("PPC02", "PREPIZZA CEBOLLA") };
+}
+
 export type ResultadoImportacion = { ok: boolean; nuevos: number; yaCargados: number; mensaje: string };
 
 /** Crea un pedido por cada orden nueva (a partir de EMPRETIENDA_DESDE). Es seguro correrlo varias veces: nunca repite un N° de orden. */
@@ -159,9 +166,7 @@ export async function importarPedidosWeb(csvManual?: string): Promise<ResultadoI
   if (pedidos.length === 0) return { ok: true, nuevos: 0, yaCargados: 0, mensaje: "No hay pedidos nuevos en la tienda." };
 
   const existentes = new Set((await db.pedido.findMany({ where: { webOrden: { in: pedidos.map((p) => p.orden) } }, select: { webOrden: true } })).map((p) => p.webOrden));
-  const productos = await db.producto.findMany({ where: { OR: [{ sku: { in: ["PPT01", "PPC02"] } }, { nombre: { in: ["PREPIZZA TOMATE", "PREPIZZA CEBOLLA"] } }] } });
-  const buscar = (sku: string, nombre: string) => productos.find((p) => p.sku === sku) ?? productos.find((p) => p.nombre === nombre) ?? null;
-  const catalogo: Catalogo = { tomate: buscar("PPT01", "PREPIZZA TOMATE"), cebolla: buscar("PPC02", "PREPIZZA CEBOLLA") };
+  const catalogo = await cargarCatalogo();
 
   let nuevos = 0;
   let yaCargados = 0;
