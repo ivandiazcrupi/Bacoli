@@ -551,3 +551,13 @@ model Vendedor {
 
   clientes Cliente[]
 }
+
+/// Barrio que el equipo usa para cada código postal de la tienda online (aprendido de los pedidos ya corregidos a mano).
+model BarrioCp {
+  cp         String   @id
+  barrio     String
+  veces      Int      @default(1)
+  total      Int      @default(1)
+  detalle    String?
+  actualizado DateTime @updatedAt
+}

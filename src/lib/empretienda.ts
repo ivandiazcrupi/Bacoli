@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { mayus, titulo } from "@/lib/mayusculas";
+import { aplicarBarriosAprendidos } from "@/lib/empretienda-barrios";
 import { casillaConfigurada, leerOrdenesDeGmail } from "@/lib/empretienda-imap";
 
 /**
@@ -202,7 +203,7 @@ export async function importarPedidosWeb(csvManual?: string): Promise<ResultadoI
     const web = await db.pedido.findMany({ where: { origen: "WEB", webOrden: { not: null } }, select: { webOrden: true } });
     const ultimo = web.reduce((m, p) => Math.max(m, parseInt(p.webOrden ?? "", 10) || 0), 0);
     const minimo = Math.max(ultimo + 1, Number.isFinite(desde) ? desde : 0);
-    return crearPedidosWeb(lectura.ordenes.filter((o) => Number(o.orden) >= minimo));
+    return crearPedidosWeb(await aplicarBarriosAprendidos(lectura.ordenes.filter((o) => Number(o.orden) >= minimo)));
   }
 
   const url = process.env.EMPRETIENDA_CSV_URL;

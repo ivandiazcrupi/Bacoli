@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { mayus } from "@/lib/mayusculas";
 import { armarItems, cargarCatalogo, limpiarDireccion } from "@/lib/empretienda";
 import type { OrdenDeMail } from "@/lib/empretienda-mail";
+import { aplicarBarriosAprendidos } from "@/lib/empretienda-barrios";
 
 /**
  * Modo comparación: pone cada orden leída del mail al lado del pedido que cargó la planilla y dice en qué difieren.
@@ -16,7 +17,7 @@ const plata = (n: number | null) => (n === null ? "—" : n.toLocaleString("es-A
 
 export async function compararConSistema(ordenes: OrdenDeMail[]): Promise<ResumenComparacion> {
   const desde = Number(process.env.EMPRETIENDA_DESDE ?? "") || 0;
-  const lista = ordenes.filter((o) => Number(o.orden) >= desde);
+  const lista = await aplicarBarriosAprendidos(ordenes.filter((o) => Number(o.orden) >= desde));
   const pedidos = await db.pedido.findMany({ where: { webOrden: { in: lista.map((o) => o.orden) } }, include: { items: true } });
   const porOrden = new Map(pedidos.map((p) => [p.webOrden, p]));
   const catalogo = await cargarCatalogo();
