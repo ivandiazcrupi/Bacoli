@@ -25,7 +25,7 @@ export default async function Empresa() {
           inicial={{
             razonSocial: empresa?.razonSocial ?? "", nombreComercial: empresa?.nombreComercial ?? "BACOLI", cuit: empresa?.cuit ?? "", condicionIva: empresa?.condicionIva ?? "",
             domicilio: empresa?.domicilio ?? "", telefono: empresa?.telefono ?? "", email: empresa?.email ?? "", ingresosBrutos: empresa?.ingresosBrutos ?? "",
-            inicioActividades: empresa?.inicioActividades ?? "", puntoVenta: empresa?.puntoVenta ?? "",
+            inicioActividades: empresa?.inicioActividades ?? "", puntoVenta: empresa?.puntoVenta ?? "", avisoHorario: empresa?.avisoHorario ?? "", avisoTexto: empresa?.avisoTexto ?? "",
           }}
         />
         <section className="rounded-xl border border-stone-300 bg-white p-5 shadow-sm" aria-label="Copia de seguridad">

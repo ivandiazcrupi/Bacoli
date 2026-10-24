@@ -18,6 +18,7 @@ import { asignarADia, marcarPagoWeb } from "../../actions";
 import { agregarSalida, asignarAVehiculo, devolverAPedidos, guardarHorario, ordenarSalida, quitarSalida } from "../../ruta/actions";
 import { emitirRemitosDia } from "../../remito/actions";
 import { cerrarDia, dejarEnCuentaCorriente, dejarListo, reabrirHoja, deshacerCobro, guardarNumeroFactura, marcarEntrega, reabrirDia, registrarCobro, registrarNoEntrega, type Resultado } from "../actions";
+import { AvisoEmail } from "./AvisoEmail";
 import { NotaRapida } from "@/components/NotaRapida";
 import { EstadoPagoWeb } from "@/components/EstadoPagoWeb";
 import { ModalMotivo } from "@/components/ModalMotivo";
@@ -605,6 +606,7 @@ function HorarioVuelta({ salida, cerrado }: { salida: SalidaInfo; cerrado: boole
 }
 
 type Props = {
+  avisos: { pendientes: number; avisados: number; sinEmail: number; horario: string; diaTexto: string };
   estadoDia: { estado: "ARMANDO" | "LISTA" | "CERRADA"; por: string; cuando: string };
   hoy: string;
   siluetas: Silueta[];
@@ -661,7 +663,7 @@ function BarraEstado({ estado, esDueno, hayPedidos, resumen, onDejarLista, onVol
   );
 }
 
-export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciales, salidas, vehiculosLibres, repartidores, diasSemana, cerrado, esDueno }: Props) {
+export function HojaDia({ avisos, estadoDia, hoy, siluetas, titulo, fecha, filasIniciales, salidas, vehiculosLibres, repartidores, diasSemana, cerrado, esDueno }: Props) {
   const router = useRouter();
   const [filas, setFilas] = useState(filasIniciales);
   const [error, setError] = useState<string | null>(null);
@@ -871,6 +873,7 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
           {sinVehiculo.length > 0 && <>Sin ubicar <span className="font-medium normal-case tracking-normal text-stone-600">· {sinVehiculo.length} {sinVehiculo.length === 1 ? "pedido" : "pedidos"}</span>{salidas.length === 0 && <span className="ml-2 font-medium normal-case tracking-normal text-stone-500">· primero sumá un vehículo</span>}</>}
         </h2>
         <div className="flex flex-wrap items-center gap-2 sm:justify-self-end">
+          <AvisoEmail fecha={fecha} diaTexto={avisos.diaTexto} pendientes={avisos.pendientes} avisados={avisos.avisados} sinEmail={avisos.sinEmail} horario={avisos.horario} />
           {salidas.length > 0 && <a href={`/pedidos/dia/${fecha}/imprimir`} target="_blank" rel="noreferrer" className="rounded-md border border-stone-400 bg-white px-3 py-2 font-medium shadow-sm">Imprimir hoja de ruta</a>}
           {filas.length > 0 && <button type="button" onClick={imprimirTodos} className="rounded-md border border-stone-400 bg-white px-3 py-2 font-medium shadow-sm">Imprimir todos los remitos</button>}
         </div>

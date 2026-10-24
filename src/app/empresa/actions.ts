@@ -38,6 +38,8 @@ export async function guardarEmpresa(_: EstadoEmpresa, formData: FormData): Prom
     ingresosBrutos: texto(formData.get("ingresosBrutos")),
     inicioActividades: texto(formData.get("inicioActividades")),
     puntoVenta: texto(formData.get("puntoVenta")),
+    avisoHorario: texto(formData.get("avisoHorario")),
+    avisoTexto: texto(formData.get("avisoTexto")),
   };
   await db.empresa.upsert({ where: { id: "principal" }, update: datos, create: { id: "principal", ...datos } });
   revalidatePath("/empresa");
