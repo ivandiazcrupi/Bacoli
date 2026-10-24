@@ -7,7 +7,7 @@ import { exigirOficina } from "@/lib/session";
 import { UbicarPedido } from "@/components/UbicarPedido";
 import { Bandeja } from "./Bandeja";
 import { ContadorPedidos } from "./ContadorPedidos";
-import { TraerPedidosWeb } from "./TraerPedidosWeb";
+import { BotonActualizarBarrios, BotonTraerPedidos } from "./TraerPedidosWeb";
 import { PanelAvisoEmail } from "./PanelAvisoEmail";
 import { leerConfigAviso } from "./aviso-email";
 import { aFilaBandeja, incluirPedido } from "./filas";
@@ -60,6 +60,8 @@ export default async function Pedidos({ searchParams }: { searchParams: Promise<
             <Link href={enlace({ lista: "web" })} className={`${pastilla} ${esWeb ? "bg-stone-800 text-white" : "border border-stone-400 bg-white text-stone-700 hover:border-verde-700"}`}>Minoristas (web) <span className={esWeb ? "text-verde-100" : "text-stone-500"}>{cuentaWeb}</span></Link>
             <Link href={enlace({ lista: "cobranza" })} className={`${pastilla} ${esCobranza ? "bg-stone-800 text-white" : "border border-stone-400 bg-white text-stone-700 hover:border-verde-700"}`}>Cobranzas <span className={esCobranza ? "text-verde-100" : "text-stone-500"}>{cuentaCobranzas}</span></Link>
           </div>
+          <div className="flex flex-wrap items-center gap-3">
+          {esWeb && <BotonTraerPedidos />}
           <nav className="flex flex-wrap items-center gap-3 text-sm" aria-label="Semana en la que se asigna">
             <span className="text-xs font-semibold uppercase tracking-wide text-stone-600">Asignar a</span>
             <Link href={enlace({ semana: sumarDias(inicio, -7) })} className="rounded-md border border-stone-400 bg-white px-3 py-2 shadow-sm hover:border-verde-700" aria-label="Semana anterior">←</Link>
@@ -67,14 +69,11 @@ export default async function Pedidos({ searchParams }: { searchParams: Promise<
             <Link href={enlace({ semana: sumarDias(inicio, 7) })} className="rounded-md border border-stone-400 bg-white px-3 py-2 shadow-sm hover:border-verde-700" aria-label="Semana siguiente">→</Link>
             {inicio !== esta && <Link href={enlace({ semana: "" })} className="rounded-md border border-stone-400 bg-white px-3 py-2 shadow-sm hover:border-verde-700">Esta semana</Link>}
           </nav>
+          {esWeb && <BotonActualizarBarrios />}
+          </div>
         </div>
 
-        {esWeb && (
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            <TraerPedidosWeb />
-            <PanelAvisoEmail inicial={await leerConfigAviso()} />
-          </div>
-        )}
+        {esWeb && <PanelAvisoEmail inicial={await leerConfigAviso()} />}
 
         {!esCobranza && <ContadorPedidos esperando={pedidos} />}
 
