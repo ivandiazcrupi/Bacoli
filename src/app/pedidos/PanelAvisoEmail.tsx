@@ -25,6 +25,10 @@ export function PanelAvisoEmail({ inicial }: { inicial: ConfigAviso }) {
               <input value={c.horario} onChange={(e) => setC({ ...c, horario: e.target.value })} placeholder="9 a 18 hs" className={campo} />
             </label>
           </div>
+          <label className="block text-xs font-semibold uppercase tracking-wide text-stone-600">Asunto
+            <input value={c.asunto} onChange={(e) => setC({ ...c, asunto: e.target.value })} className={campo} />
+            <span className="mt-1 block text-[11.5px] font-normal normal-case tracking-normal text-stone-500">Usa {"{dia}"} y {"{orden}"} (el N° de pedido de la tienda).</span>
+          </label>
           <label className="block text-xs font-semibold uppercase tracking-wide text-stone-600">Texto del mail
             <textarea value={c.texto} onChange={(e) => setC({ ...c, texto: e.target.value })} rows={8} className={campo} />
             <span className="mt-1 block text-[11.5px] font-normal normal-case tracking-normal text-stone-500">Se reemplazan solos: {"{nombre}"} (el del cliente), {"{dia}"} y {"{horario}"}. Podés agregar avisos, por ejemplo “por alta demanda puede haber demoras”.</span>
@@ -36,6 +40,7 @@ export function PanelAvisoEmail({ inicial }: { inicial: ConfigAviso }) {
         </div>
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-stone-600">Así le llega (ejemplo)</p>
+          <p className="mt-1 text-sm font-semibold text-stone-800">Asunto: {c.asunto.replace(/\{dia\}/g, c.dia || "…").replace(/\{orden\}/g, "14111")}</p>
           <pre className="mt-1 whitespace-pre-wrap rounded-md border border-stone-300 bg-crema-50 p-3 font-sans text-sm text-stone-800">{vista}</pre>
           <p className="mt-2 text-[12px] text-stone-500">El botón “✉ Enviar email” está en cada pedido de la tienda (Pedidos, hoja de ruta y detalle). Pide confirmar y después queda marcado como enviado.</p>
         </div>

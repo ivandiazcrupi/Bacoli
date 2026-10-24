@@ -2,14 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { armarAviso, crearEnvio, envioConfigurado, HORARIO_AVISO, TEXTO_AVISO } from "@/lib/avisos-email";
+import { armarAviso, ASUNTO_AVISO, crearEnvio, envioConfigurado, HORARIO_AVISO, TEXTO_AVISO } from "@/lib/avisos-email";
 import { exigirOficina } from "@/lib/session";
 
-export type ConfigAviso = { dia: string; horario: string; texto: string };
+export type ConfigAviso = { dia: string; horario: string; texto: string; asunto: string };
 
 export async function leerConfigAviso(): Promise<ConfigAviso> {
-  const e = await db.empresa.findUnique({ where: { id: "principal" }, select: { avisoDia: true, avisoHorario: true, avisoTexto: true } });
-  return { dia: e?.avisoDia ?? "", horario: e?.avisoHorario?.trim() || HORARIO_AVISO, texto: e?.avisoTexto?.trim() || TEXTO_AVISO };
+  const e = await db.empresa.findUnique({ where: { id: "principal" }, select: { avisoDia: true, avisoHorario: true, avisoTexto: true, avisoAsunto: true } });
+  return { dia: e?.avisoDia ?? "", horario: e?.avisoHorario?.trim() || HORARIO_AVISO, texto: e?.avisoTexto?.trim() || TEXTO_AVISO, asunto: e?.avisoAsunto?.trim() || ASUNTO_AVISO };
 }
 
 /** Guarda el mail armado: el día, el horario y el texto (con {nombre}, {dia} y {horario}). */
@@ -17,7 +17,7 @@ export async function guardarConfigAviso(c: ConfigAviso): Promise<{ ok: boolean;
   await exigirOficina();
   const texto = c.texto.trim();
   if (texto.length < 10) return { ok: false, mensaje: "El texto del mail está vacío o es muy corto." };
-  const datos = { avisoDia: c.dia.trim() || null, avisoHorario: c.horario.trim() || null, avisoTexto: texto === TEXTO_AVISO ? null : texto };
+  const datos = { avisoDia: c.dia.trim() || null, avisoHorario: c.horario.trim() || null, avisoTexto: texto === TEXTO_AVISO ? null : texto, avisoAsunto: c.asunto.trim() && c.asunto.trim() !== ASUNTO_AVISO ? c.asunto.trim() : null };
   await db.empresa.upsert({ where: { id: "principal" }, update: datos, create: { id: "principal", ...datos } });
   revalidatePath("/pedidos", "layout");
   return { ok: true, mensaje: "Mail guardado. Los próximos avisos salen así." };
@@ -29,7 +29,7 @@ async function pedidoParaAvisar(pedidoId: string) {
   if (!p.webEmail) return { error: "Este pedido no tiene email: cargalo en “Editar pedido”." } as const;
   if (p.estado === "CANCELADO") return { error: "El pedido está cancelado." } as const;
   const cfg = await leerConfigAviso();
-  if (/\{dia\}/.test(cfg.texto) && !cfg.dia) return { error: "Falta el día del mail: cargalo en Pedidos → Minoristas (web) → Email al cliente." } as const;
+  if (/\{dia\}/.test(cfg.texto + cfg.asunto) && !cfg.dia) return { error: "Falta el día del mail: cargalo en Pedidos → Minoristas (web) → Email al cliente." } as const;
   return { p, cfg } as const;
 }
 
@@ -39,7 +39,7 @@ export async function prepararAviso(pedidoId: string): Promise<{ ok: boolean; er
   const r = await pedidoParaAvisar(pedidoId);
   if ("error" in r) return { ok: false, error: r.error };
   if (!envioConfigurado()) return { ok: false, error: "Falta conectar la casilla de envío (variables GMAIL_ENVIO_USUARIO y GMAIL_ENVIO_CLAVE_APP en Railway)." };
-  const m = armarAviso(r.cfg.texto, { nombre: r.p.webNombre ?? "", dia: r.cfg.dia, horario: r.cfg.horario });
+  const m = armarAviso(r.cfg.texto, { nombre: r.p.webNombre ?? "", dia: r.cfg.dia, horario: r.cfg.horario, orden: r.p.webOrden ?? "", asunto: r.cfg.asunto });
   return { ok: true, para: r.p.webEmail!, ...m };
 }
 
@@ -50,7 +50,7 @@ export async function enviarAviso(pedidoId: string): Promise<{ ok: boolean; erro
   if ("error" in r) return { ok: false, error: r.error };
   if (!envioConfigurado()) return { ok: false, error: "Falta conectar la casilla de envío." };
   const empresa = await db.empresa.findUnique({ where: { id: "principal" }, select: { email: true } });
-  const m = armarAviso(r.cfg.texto, { nombre: r.p.webNombre ?? "", dia: r.cfg.dia, horario: r.cfg.horario });
+  const m = armarAviso(r.cfg.texto, { nombre: r.p.webNombre ?? "", dia: r.cfg.dia, horario: r.cfg.horario, orden: r.p.webOrden ?? "", asunto: r.cfg.asunto });
   try {
     await crearEnvio()(r.p.webEmail!, m.asunto, m.texto, empresa?.email);
   } catch {

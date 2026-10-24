@@ -8,15 +8,16 @@ import nodemailer from "nodemailer";
  */
 
 export const TEXTO_AVISO = "Hola, {nombre}. ¿Cómo estás?\n\nTu pedido llegará el día {dia} entre las {horario}.\n\nEn caso de un problema, duda o lo que sea, escribinos al 1133555353.\n\nSaludos.";
+export const ASUNTO_AVISO = "BACOLI · Tu entrega es el {dia} (#{orden})";
 export const HORARIO_AVISO = "9 a 18 hs";
 
 export const envioConfigurado = () => !!(process.env.GMAIL_ENVIO_USUARIO && process.env.GMAIL_ENVIO_CLAVE_APP);
 
 const primeraMayus = (t: string) => t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
 
-export function armarAviso(plantilla: string | null, d: { nombre: string; dia: string; horario: string }) {
-  const texto = (plantilla?.trim() || TEXTO_AVISO).replace(/\{nombre\}/g, primeraMayus(d.nombre)).replace(/\{dia\}/g, d.dia).replace(/\{horario\}/g, d.horario);
-  return { asunto: `Tu pedido de BACOLI llegará ${d.dia ? `el ${d.dia}` : "pronto"}`, texto };
+export function armarAviso(plantilla: string | null, d: { nombre: string; dia: string; horario: string; orden?: string; asunto?: string | null }) {
+  const llenar = (t: string) => t.replace(/\{nombre\}/g, primeraMayus(d.nombre)).replace(/\{dia\}/g, d.dia).replace(/\{horario\}/g, d.horario).replace(/\{orden\}/g, d.orden ?? "");
+  return { asunto: llenar(d.asunto?.trim() || ASUNTO_AVISO).replace(/\s+/g, " ").trim(), texto: llenar(plantilla?.trim() || TEXTO_AVISO) };
 }
 
 const escapar = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");

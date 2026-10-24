@@ -326,6 +326,7 @@ model Empresa {
   ultimaCopia       DateTime? // la última vez que se descargó una copia de seguridad
   ultimaCopiaPor    String?
   avisoDia            String? // día que va en el mail al cliente de la tienda ("martes 24")
+  avisoAsunto         String? // asunto del mail al cliente de la tienda (con {dia} y {orden})
   avisoHorario        String? // horario fijo del aviso por email a clientes de la tienda ("entre las 14 y las 18 hs")
   avisoTexto          String? // texto del aviso (con {nombre} {orden} {dia} {horario}); vacío = el texto de siempre
   claveVendedoresHash String? // contraseña (cifrada) para entrar al apartado Vendedores de Comercial
