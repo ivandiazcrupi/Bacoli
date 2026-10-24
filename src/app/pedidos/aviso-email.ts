@@ -55,7 +55,7 @@ export async function enviarAviso(pedidoId: string): Promise<{ ok: boolean; erro
   try {
     await crearEnvio()(r.p.webEmail!, m.asunto, m.texto, empresa?.email);
   } catch {
-    return { ok: false, error: "No se pudo enviar el mail. Revisá el email del cliente y probá de nuevo en unos minutos." };
+    return { ok: false, error: "No se pudo enviar el mail (no se pudo conectar con Gmail o rechazó el envío). Si pasa siempre, puede ser que Railway tenga bloqueado el envío de mails en este plan." };
   }
   const ahora = new Date();
   await db.pedido.update({ where: { id: pedidoId }, data: { webAvisoEn: ahora, webAvisoDia: r.cfg.dia || null } });

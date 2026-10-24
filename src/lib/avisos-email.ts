@@ -25,7 +25,7 @@ const escapar = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").re
 export function crearEnvio() {
   const user = process.env.GMAIL_ENVIO_USUARIO!;
   const pass = (process.env.GMAIL_ENVIO_CLAVE_APP ?? "").replace(/\s+/g, "");
-  const transporte = nodemailer.createTransport({ host: "smtp.gmail.com", port: 465, secure: true, auth: { user, pass } });
+  const transporte = nodemailer.createTransport({ host: "smtp.gmail.com", port: 465, secure: true, auth: { user, pass }, connectionTimeout: 10_000, greetingTimeout: 10_000, socketTimeout: 20_000 });
   return async (para: string, asunto: string, texto: string, responderA?: string | null) => {
     await transporte.sendMail({
       from: `BACOLI <${user}>`,
