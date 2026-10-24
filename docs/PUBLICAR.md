@@ -66,6 +66,7 @@ Hay un bloqueo de 15 minutos tras 5 intentos fallidos con el mismo email. Se lib
 1. Bacoli → **Deployments** → tocar el intento marcado **Failed** o **Crashed** → **View logs**.
 2. Copiar las últimas 15 líneas. Ahí Railway dice el motivo.
 3. Causas comunes: falta una variable, `SESSION_SECRET` con menos de 32 caracteres, o la base todavía no está en línea.
+4. Si dice "Failed to build an image" en el paso **Build image** y el código compila bien en otra máquina, suele ser un tropiezo pasajero de Railway al armar la imagen: en un intento fallido solo aparece "Remove" (no "Redeploy"), así que se vuelve a publicar subiendo un cambio nuevo a la rama. El sistema en uso sigue con la última versión que se publicó bien.
 
 ## Copias de seguridad
 - **Railway no incluye backups automáticos en el plan actual** (solo en el plan Pro). Por eso el sistema tiene su **copia propia**:
