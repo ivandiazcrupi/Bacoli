@@ -8,6 +8,8 @@ import { UbicarPedido } from "@/components/UbicarPedido";
 import { Bandeja } from "./Bandeja";
 import { ContadorPedidos } from "./ContadorPedidos";
 import { TraerPedidosWeb } from "./TraerPedidosWeb";
+import { PanelAvisoEmail } from "./PanelAvisoEmail";
+import { leerConfigAviso } from "./aviso-email";
 import { aFilaBandeja, incluirPedido } from "./filas";
 import { CONTENEDOR_PEDIDOS, EncabezadoPedidos } from "./Encabezado";
 
@@ -70,6 +72,7 @@ export default async function Pedidos({ searchParams }: { searchParams: Promise<
         {esWeb && (
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <TraerPedidosWeb />
+            <PanelAvisoEmail inicial={await leerConfigAviso()} />
           </div>
         )}
 

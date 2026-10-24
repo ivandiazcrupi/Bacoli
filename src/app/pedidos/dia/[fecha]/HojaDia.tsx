@@ -18,7 +18,6 @@ import { asignarADia, marcarPagoWeb } from "../../actions";
 import { agregarSalida, asignarAVehiculo, devolverAPedidos, guardarHorario, ordenarSalida, quitarSalida } from "../../ruta/actions";
 import { emitirRemitosDia } from "../../remito/actions";
 import { cerrarDia, dejarEnCuentaCorriente, dejarListo, reabrirHoja, deshacerCobro, guardarNumeroFactura, marcarEntrega, reabrirDia, registrarCobro, registrarNoEntrega, type Resultado } from "../actions";
-import { AvisoEmail } from "./AvisoEmail";
 import { NotaRapida } from "@/components/NotaRapida";
 import { EstadoPagoWeb } from "@/components/EstadoPagoWeb";
 import { ModalMotivo } from "@/components/ModalMotivo";
@@ -50,6 +49,8 @@ export type Fila = {
   webOrden: string | null; // pedido de la tienda online: sin cuenta corriente ni remito
   pagoMp: boolean; // pedido de la tienda ya pagado (Mercado Pago o transferencia confirmada)
   pagoTexto: string | null;
+  tieneEmail: boolean; // pedido de la tienda con email cargado
+  avisoEn: string | null; // cuándo se le mandó el aviso por email
   ingreso: string; // día en que entró el pedido al sistema (dd/mm)
 };
 
@@ -289,7 +290,7 @@ function FilaHoja({ f, n, bloqueada, armando, fija, acc, salidas }: { f: Fila; n
       <div role="cell" className="text-[11px] font-bold uppercase leading-tight tracking-wide text-stone-800"><Barrio v={f.barrio} /></div>
       <div role="cell" className="leading-snug">
         <p className="font-bold"><NombreCliente clienteId={f.clienteId} nombre={f.cliente} /></p>
-        <EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} ingreso={f.ingreso} />
+        <EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} ingreso={f.ingreso} pedidoId={f.id} tieneEmail={f.tieneEmail} avisoEn={f.avisoEn} />
       </div>
       <div role="cell" className="min-w-0 break-words leading-snug">
         <a href={mapa(f)} target="_blank" rel="noreferrer" className="hover:underline">{f.direccion}</a>
@@ -422,7 +423,7 @@ function FilaUbicar({ f, salidas, bloqueada, acc }: { f: Fila; salidas: SalidaIn
       <div className={`grid items-center gap-x-4 gap-y-2 text-center ${COLUMNAS_UBICAR}`}>
         <button type="button" disabled={bloqueada} aria-label="Arrastrar el pedido a un vehículo" className="hidden cursor-grab text-lg leading-none text-stone-500 disabled:cursor-default disabled:opacity-30 lg:block" {...attributes} {...listeners}>⋮⋮</button>
         <span className="text-[13px] font-semibold"><Barrio v={f.barrio} /></span>
-        <span className="text-[13px] font-semibold leading-snug"><NombreCliente clienteId={f.clienteId} nombre={f.cliente} /><EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} ingreso={f.ingreso} /></span>
+        <span className="text-[13px] font-semibold leading-snug"><NombreCliente clienteId={f.clienteId} nombre={f.cliente} /><EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} ingreso={f.ingreso} pedidoId={f.id} tieneEmail={f.tieneEmail} avisoEn={f.avisoEn} /></span>
         <span className="text-[13px] leading-snug">
           {f.direccion}
           {f.comentario && <span className="mt-0.5 block text-[12px] font-medium text-rojo-700">{f.comentario}</span>}
@@ -462,7 +463,7 @@ function FilaTarjeta({ f, n, bloqueada, armando, fija, acc, salidas }: { f: Fila
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-stone-800 text-sm font-semibold text-white">{n}</span>
         <div className="min-w-0 flex-1">
           <h3 className="text-lg font-bold leading-snug"><NombreCliente clienteId={f.clienteId} nombre={f.cliente} /></h3>
-          <EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} ingreso={f.ingreso} />
+          <EstadoPagoWeb webOrden={f.webOrden} pagado={f.pagoMp} medio={f.pagoTexto} ingreso={f.ingreso} pedidoId={f.id} tieneEmail={f.tieneEmail} avisoEn={f.avisoEn} />
           <p className="text-sm text-stone-600"><Barrio v={f.barrio} /></p>
         </div>
         <span className={`shrink-0 rounded px-2 py-0.5 text-xs font-semibold ${f.conFactura ? "bg-stone-800 text-white" : "bg-stone-200 text-stone-700"}`}>{f.conFactura ? "FACTURA" : "REMITO"}</span>
@@ -606,7 +607,6 @@ function HorarioVuelta({ salida, cerrado }: { salida: SalidaInfo; cerrado: boole
 }
 
 type Props = {
-  avisos: { pendientes: number; avisados: number; sinEmail: number; horario: string; diaTexto: string };
   estadoDia: { estado: "ARMANDO" | "LISTA" | "CERRADA"; por: string; cuando: string };
   hoy: string;
   siluetas: Silueta[];
@@ -663,7 +663,7 @@ function BarraEstado({ estado, esDueno, hayPedidos, resumen, onDejarLista, onVol
   );
 }
 
-export function HojaDia({ avisos, estadoDia, hoy, siluetas, titulo, fecha, filasIniciales, salidas, vehiculosLibres, repartidores, diasSemana, cerrado, esDueno }: Props) {
+export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciales, salidas, vehiculosLibres, repartidores, diasSemana, cerrado, esDueno }: Props) {
   const router = useRouter();
   const [filas, setFilas] = useState(filasIniciales);
   const [error, setError] = useState<string | null>(null);
@@ -873,7 +873,6 @@ export function HojaDia({ avisos, estadoDia, hoy, siluetas, titulo, fecha, filas
           {sinVehiculo.length > 0 && <>Sin ubicar <span className="font-medium normal-case tracking-normal text-stone-600">· {sinVehiculo.length} {sinVehiculo.length === 1 ? "pedido" : "pedidos"}</span>{salidas.length === 0 && <span className="ml-2 font-medium normal-case tracking-normal text-stone-500">· primero sumá un vehículo</span>}</>}
         </h2>
         <div className="flex flex-wrap items-center gap-2 sm:justify-self-end">
-          <AvisoEmail fecha={fecha} diaTexto={avisos.diaTexto} pendientes={avisos.pendientes} avisados={avisos.avisados} sinEmail={avisos.sinEmail} horario={avisos.horario} />
           {salidas.length > 0 && <a href={`/pedidos/dia/${fecha}/imprimir`} target="_blank" rel="noreferrer" className="rounded-md border border-stone-400 bg-white px-3 py-2 font-medium shadow-sm">Imprimir hoja de ruta</a>}
           {filas.length > 0 && <button type="button" onClick={imprimirTodos} className="rounded-md border border-stone-400 bg-white px-3 py-2 font-medium shadow-sm">Imprimir todos los remitos</button>}
         </div>

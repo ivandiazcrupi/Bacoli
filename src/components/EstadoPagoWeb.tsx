@@ -1,6 +1,8 @@
+import { BotonAvisoEmail } from "@/components/BotonAvisoEmail";
+
 // Estado de pago de un pedido de la tienda, bajo el nombre: verde si ya está pago, rojo si falta.
 // Debajo, en gris chico, el día en que el pedido entró al sistema (siempre en su propia línea para que la fila no cambie de forma).
-export function EstadoPagoWeb({ webOrden, pagado, medio, ingreso }: { webOrden: string | null; pagado: boolean; medio: string | null; ingreso?: string }) {
+export function EstadoPagoWeb({ webOrden, pagado, medio, ingreso, pedidoId, tieneEmail, avisoEn }: { webOrden: string | null; pagado: boolean; medio: string | null; ingreso?: string; pedidoId?: string; tieneEmail?: boolean; avisoEn?: string | null }) {
   if (!webOrden) return null;
   return (
     <>
@@ -8,6 +10,7 @@ export function EstadoPagoWeb({ webOrden, pagado, medio, ingreso }: { webOrden: 
         ? <span className="block text-[12px] font-semibold text-verde-700">{medio === "Sin cargo" ? "Sin cargo · no paga" : `Pagado · ${medio ?? "Transferencia"}`}</span>
         : <span className="block text-[12px] font-semibold text-rojo-700">Pendiente de pago</span>}
       {ingreso && <span className="block text-[11px] font-normal leading-tight text-stone-400" title="Día en que entró al sistema">Ingresó {ingreso}</span>}
+      {pedidoId && <BotonAvisoEmail pedidoId={pedidoId} tieneEmail={!!tieneEmail} avisoEn={avisoEn ?? null} />}
     </>
   );
 }

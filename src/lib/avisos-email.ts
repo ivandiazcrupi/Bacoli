@@ -1,24 +1,22 @@
 import "server-only";
 import nodemailer from "nodemailer";
-import { nombreDia, diaMes } from "@/lib/fechas";
 
 /**
- * Aviso por email a los clientes de la tienda online: "tu pedido llega el martes 27/10 entre las 14 y las 18 hs".
- * Sale de la casilla de envío de BACOLI (Gmail, clave de aplicación en variables de Railway: GMAIL_ENVIO_USUARIO y GMAIL_ENVIO_CLAVE_APP).
+ * Aviso por email a UN cliente de la tienda online ("tu pedido llegará el martes 24 entre las 9 a 18 hs").
+ * El mail está armado en un solo lugar (Pedidos → Minoristas (web) → Email al cliente): se cambia el día, el horario y el texto.
+ * Sale de la casilla de envío de BACOLI (Gmail, clave de aplicación en Railway: GMAIL_ENVIO_USUARIO y GMAIL_ENVIO_CLAVE_APP).
  */
 
-export const TEXTO_AVISO = "Hola {nombre}, ¡gracias por tu compra en BACOLI! Tu pedido #{orden} llega el {dia}, {horario}.\n\nSi necesitás cambiar algo, respondé este mail.";
+export const TEXTO_AVISO = "Hola, {nombre}. ¿Cómo estás?\n\nTu pedido llegará el día {dia} entre las {horario}.\n\nEn caso de un problema, duda o lo que sea, escribinos al 1133555353.\n\nSaludos.";
+export const HORARIO_AVISO = "9 a 18 hs";
 
 export const envioConfigurado = () => !!(process.env.GMAIL_ENVIO_USUARIO && process.env.GMAIL_ENVIO_CLAVE_APP);
 
-/** "martes 27/10" */
-export const diaLargo = (fecha: string) => `${nombreDia(fecha).toLowerCase()} ${diaMes(fecha)}`;
-
 const primeraMayus = (t: string) => t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
 
-export function armarAviso(plantilla: string | null, d: { nombre: string; orden: string; fecha: string; horario: string }) {
-  const llenar = (t: string) => t.replace(/\{nombre\}/g, primeraMayus(d.nombre)).replace(/\{orden\}/g, d.orden).replace(/\{dia\}/g, diaLargo(d.fecha)).replace(/\{horario\}/g, d.horario);
-  return { asunto: `Tu pedido #${d.orden} de BACOLI llega el ${diaLargo(d.fecha)}`, texto: llenar(plantilla?.trim() || TEXTO_AVISO) };
+export function armarAviso(plantilla: string | null, d: { nombre: string; dia: string; horario: string }) {
+  const texto = (plantilla?.trim() || TEXTO_AVISO).replace(/\{nombre\}/g, primeraMayus(d.nombre)).replace(/\{dia\}/g, d.dia).replace(/\{horario\}/g, d.horario);
+  return { asunto: `Tu pedido de BACOLI llegará ${d.dia ? `el ${d.dia}` : "pronto"}`, texto };
 }
 
 const escapar = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");

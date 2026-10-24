@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { Bloque, Campo, Mensajes, estiloCampo, estiloDato } from "@/components/campos";
 import { guardarEmpresa, type EstadoEmpresa } from "./actions";
 
-type Datos = Record<"razonSocial" | "nombreComercial" | "cuit" | "condicionIva" | "domicilio" | "telefono" | "email" | "ingresosBrutos" | "inicioActividades" | "puntoVenta" | "avisoHorario" | "avisoTexto", string>;
+type Datos = Record<"razonSocial" | "nombreComercial" | "cuit" | "condicionIva" | "domicilio" | "telefono" | "email" | "ingresosBrutos" | "inicioActividades" | "puntoVenta", string>;
 
 export function FormularioEmpresa({ inicial, proximoRemito }: { inicial: Datos; proximoRemito: number }) {
   const [estado, enviar, cargando] = useActionState(guardarEmpresa, undefined as EstadoEmpresa);
@@ -33,17 +33,6 @@ export function FormularioEmpresa({ inicial, proximoRemito }: { inicial: Datos; 
           <Campo etiqueta="Ingresos Brutos"><input name="ingresosBrutos" defaultValue={v("ingresosBrutos")} className={estiloCampo} /></Campo>
           <Campo etiqueta="Inicio de actividades"><input name="inicioActividades" defaultValue={v("inicioActividades")} placeholder="dd/mm/aaaa" className={estiloCampo} /></Campo>
           <Campo etiqueta="Punto de venta"><input name="puntoVenta" inputMode="numeric" defaultValue={v("puntoVenta")} className={estiloCampo} /></Campo>
-        </div>
-      </Bloque>
-
-      <Bloque titulo="Aviso por email" ayuda="Mail a los clientes de la tienda con el día en que reciben su pedido (botón “Avisar por email” en la hoja de ruta de cada día).">
-        <div className="grid gap-3 sm:grid-cols-[1fr_2fr]">
-          <Campo etiqueta="Horario (fijo)" ayuda="Se escribe como va a salir en el mail.">
-            <input name="avisoHorario" defaultValue={v("avisoHorario")} placeholder="entre las 14 y las 18 hs" className={estiloCampo} />
-          </Campo>
-          <Campo etiqueta="Texto del mail" ayuda="Podés usar {nombre}, {orden}, {dia} y {horario}. Vacío = el texto de siempre.">
-            <textarea name="avisoTexto" rows={4} defaultValue={v("avisoTexto")} placeholder="Hola {nombre}, ¡gracias por tu compra en BACOLI! Tu pedido #{orden} llega el {dia}, {horario}." className={estiloCampo + " h-auto py-2"} />
-          </Campo>
         </div>
       </Bloque>
 

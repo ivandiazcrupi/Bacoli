@@ -228,7 +228,7 @@ model Pedido {
   webTelefono  String?
   webBarrioSugerido String? // si el barrio quedó en duda (a completar): qué opciones había
   webAvisoEn   DateTime? // cuándo se le mandó el aviso por email
-  webAvisoDia  String? // para qué día se le avisó (AAAA-MM-DD)
+  webAvisoDia  String? // el día que decía el mail ("martes 24")
   webApellido  String? // apellido del comprador: solo se ve en el detalle del pedido
   webEmail     String? // email del comprador (viene del mail de la orden de Empretienda)
   webTotal     Decimal?  @db.Decimal(14, 2) // lo que pagó el cliente en la tienda
@@ -325,6 +325,7 @@ model Empresa {
   puntoVenta        String? // para la factura electrónica, más adelante
   ultimaCopia       DateTime? // la última vez que se descargó una copia de seguridad
   ultimaCopiaPor    String?
+  avisoDia            String? // día que va en el mail al cliente de la tienda ("martes 24")
   avisoHorario        String? // horario fijo del aviso por email a clientes de la tienda ("entre las 14 y las 18 hs")
   avisoTexto          String? // texto del aviso (con {nombre} {orden} {dia} {horario}); vacío = el texto de siempre
   claveVendedoresHash String? // contraseña (cifrada) para entrar al apartado Vendedores de Comercial

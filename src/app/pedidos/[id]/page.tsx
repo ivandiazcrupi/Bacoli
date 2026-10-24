@@ -10,6 +10,7 @@ import { estadoDelDia } from "@/lib/dias";
 import { deFecha, diaMes, nombreDia } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
 import { Barrio } from "@/components/Barrio";
+import { BotonAvisoEmail } from "@/components/BotonAvisoEmail";
 import { BARRIO_A_COMPLETAR } from "@/lib/barrio";
 import { enlaceWhatsApp } from "@/lib/telefonos";
 import { exigirOficina } from "@/lib/session";
@@ -19,7 +20,7 @@ import { BotonRemito } from "../BotonRemito";
 import { NumeroFactura } from "../NumeroFactura";
 import { BotonNoEntregado } from "./BotonNoEntregado";
 import { CONTENEDOR_PEDIDOS } from "../Encabezado";
-import { datosEntrega, ordenarItems } from "../filas";
+import { datosEntrega, fechaAviso, ordenarItems } from "../filas";
 import { BotonConAviso, TablaPedido } from "./Acciones";
 import { BotonVolver } from "@/components/BotonVolver";
 import { FormularioCobranza } from "../FormularioCobranza";
@@ -154,6 +155,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
               </div>
               <p className="mt-2 text-[14px] text-stone-600">{direccion}{web && <>{direccion ? " · " : ""}<Barrio v={entrega.barrio} />{entrega.barrio === BARRIO_A_COMPLETAR && pedido.webBarrioSugerido && <span className="text-[12.5px] text-stone-500"> (opciones: {pedido.webBarrioSugerido}) — completalo en “Editar pedido”</span>}</>}</p>
               {web && pedido.webEmail && <p className="mt-0.5 text-[13.5px] text-stone-600">Email <a href={`mailto:${pedido.webEmail}`} className="font-semibold text-verde-800 hover:underline">{pedido.webEmail}</a></p>}
+              {web && pedido.webEmail && <div className="mt-1.5"><BotonAvisoEmail grande pedidoId={pedido.id} tieneEmail avisoEn={fechaAviso(pedido.webAvisoEn)} /></div>}
               {entrega.telefono && <p className="mt-0.5 text-[13.5px] text-stone-600">Tel. {wa ? <a href={wa} target="_blank" rel="noreferrer" className="font-semibold text-verde-800 hover:underline">{entrega.telefono} · WhatsApp</a> : entrega.telefono}</p>}
             </div>
             <BotonVolver fallback={fecha ? `/pedidos/dia/${fecha}` : "/pedidos"} />

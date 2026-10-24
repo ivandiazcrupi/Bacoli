@@ -11,8 +11,6 @@ import { aFila, clientesConDeuda, incluirPedido } from "../../filas";
 import { CONTENEDOR_PEDIDOS, EncabezadoPedidos } from "../../Encabezado";
 import { DiasSemana } from "./DiasSemana";
 import { HojaDia } from "./HojaDia";
-import { datosAvisos } from "../avisos";
-import { diaLargo } from "@/lib/avisos-email";
 
 // Hoja de ruta de un día: qué vehículos salen, qué lleva cada uno y en qué orden (con las entregas y cobros de cada pedido).
 export default async function HojaDelDia({ params }: { params: Promise<{ fecha: string }> }) {
@@ -30,7 +28,6 @@ export default async function HojaDelDia({ params }: { params: Promise<{ fecha: 
   ]);
   pedidos.sort(porReparto);
   const est = await estadoDelDia(fecha);
-  const avisos = { ...(await datosAvisos(fecha)), diaTexto: diaLargo(fecha) };
   const quien = est.por ? (await db.usuario.findUnique({ where: { id: est.por }, select: { nombre: true } }))?.nombre ?? "" : "";
   const cuando = est.cuando ? new Intl.DateTimeFormat("es-AR", { hour: "2-digit", hourCycle: "h23", minute: "2-digit", day: "numeric", month: "numeric", timeZone: "America/Argentina/Buenos_Aires" }).format(est.cuando).replace(",", " ·") : "";
 
@@ -87,7 +84,6 @@ export default async function HojaDelDia({ params }: { params: Promise<{ fecha: 
           siluetas={siluetas}
           titulo={`Hoja de ruta · ${nombreDia(fecha)} ${diaMes(fecha)}`}
           fecha={fecha}
-          avisos={avisos}
           filasIniciales={filas}
           salidas={salidas.map((s) => ({ id: s.id, nombre: titulo(s.vehiculo.nombre), patente: s.vehiculo.patente ?? "", capacidad: s.vehiculo.capacidad, repartidorId: s.repartidorId ?? "", horaInicio: s.horaInicio ?? "", horaFin: s.horaFin ?? "" }))}
           vehiculosLibres={vehiculos.filter((v) => !salen.has(v.id)).map((v) => ({ id: v.id, nombre: titulo(v.nombre) }))}
