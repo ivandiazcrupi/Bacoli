@@ -5,7 +5,7 @@ import { Mensajes, estiloBoton } from "@/components/campos";
 import { actualizarPedidoWeb, type EstadoPedidoForm } from "../../actions";
 
 type Renglon = { id: string; nombre: string; unidad: string; cantidad: number };
-type Datos = { nombre: string; barrio: string; direccion: string; telefono: string; email: string; apellido: string; sugerido: string; total: string; nota: string };
+type Datos = { nombre: string; barrio: string; direccion: string; telefono: string; email: string; apellido: string; total: string; nota: string };
 
 const campo = "mt-1 h-10 w-full rounded-md border border-stone-400 bg-white px-3 text-base font-normal text-stone-900 shadow-sm focus:border-verde-700 focus:outline-none focus:ring-2 focus:ring-verde-700/25";
 const etiqueta = "block text-xs font-semibold uppercase tracking-wide text-stone-600";
@@ -41,11 +41,7 @@ export function EditorWeb({ pedidoId, items, datos, extras, pagado }: { pedidoId
         <div className="grid gap-3 lg:grid-cols-[1fr_1fr_1fr_2fr_1fr_1.4fr]">
           <label className={etiqueta}>Nombre<input name="nombre" defaultValue={datos.nombre} required className={`${campo} dato`} autoCapitalize="characters" /></label>
           <label className={etiqueta}>Apellido<input name="apellido" defaultValue={datos.apellido} className={`${campo} dato`} autoCapitalize="characters" /></label>
-          <label className={etiqueta}>
-            <span className={!datos.barrio ? "text-rojo-700" : ""}>Barrio{!datos.barrio && " — completar"}</span>
-            <input name="barrio" defaultValue={datos.barrio} placeholder={datos.sugerido ? `Opciones: ${datos.sugerido}` : ""} className={`${campo} dato ${!datos.barrio ? "!border-rojo-600" : ""}`} autoCapitalize="characters" />
-            {!datos.barrio && datos.sugerido && <span className="mt-1 block text-[11.5px] font-normal normal-case tracking-normal text-stone-500">Opciones: {datos.sugerido}</span>}
-          </label>
+          <label className={etiqueta}>Barrio<input name="barrio" defaultValue={datos.barrio} className={`${campo} dato`} autoCapitalize="characters" /></label>
           <label className={etiqueta}>Dirección<input name="direccion" defaultValue={datos.direccion} className={campo} /></label>
           <label className={etiqueta}>Teléfono<input name="telefono" defaultValue={datos.telefono} inputMode="tel" className={campo} /></label>
           <label className={etiqueta}>Email<input name="email" type="email" defaultValue={datos.email} autoCapitalize="none" className={campo} /></label>

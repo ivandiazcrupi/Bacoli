@@ -13,8 +13,6 @@ import { db } from "@/lib/db";
 import { aFecha, esFechaValida, hoy } from "@/lib/fechas";
 import { formatoPesos, leerMonto } from "@/lib/numeros";
 import { exigirCarga, exigirOficina, vendedorDeUsuario } from "@/lib/session";
-import { leerOrdenesDeGmail } from "@/lib/empretienda-imap";
-import { aprenderBarrios } from "@/lib/empretienda-barrios";
 import { importarPedidosWeb, type ResultadoImportacion } from "@/lib/empretienda";
 import { productosParaCliente, type ProductoPedido } from "./datos";
 
@@ -416,7 +414,6 @@ export async function actualizarPedidoWeb(pedidoId: string, _: EstadoPedidoForm,
         ...(quedaSinCosto ? { webPago: "SIN_COSTO" } : {}),
         webNombre: nombre,
         webBarrio: mayus(String(formData.get("barrio") ?? "")) || null,
-        ...(String(formData.get("barrio") ?? "").trim() ? { webBarrioSugerido: null } : {}),
         webDireccion: titulo(String(formData.get("direccion") ?? "").trim()) || null,
         webTelefono: String(formData.get("telefono") ?? "").trim() || null,
         webApellido: mayus(String(formData.get("apellido") ?? "")) || null,
@@ -583,13 +580,4 @@ export async function guardarNotaPedido(pedidoId: string, texto: string): Promis
   await db.pedido.update({ where: { id: pedidoId }, data: { nota: nota || null } });
   revalidatePath("/pedidos", "layout");
   return { ok: true, texto: nota };
-}
-
-/** Botón "Actualizar barrios": aprende, para cada código postal de la tienda, el barrio que el equipo usa (mira los pedidos ya cargados). No cambia pedidos. */
-export async function actualizarBarriosTienda(): Promise<{ ok: boolean; mensaje: string; dudosos: { cp: string; detalle: string }[] }> {
-  await exigirOficina();
-  const lectura = await leerOrdenesDeGmail(60, 400);
-  if (!lectura.ok) return { ok: false, mensaje: lectura.mensaje, dudosos: [] };
-  const r = await aprenderBarrios(lectura.ordenes);
-  return { ok: true, mensaje: `Listo: aprendí el barrio de ${r.cps} códigos postales a partir de ${r.pedidos} pedidos. Los pedidos nuevos usan esos barrios.`, dudosos: r.dudosos };
 }

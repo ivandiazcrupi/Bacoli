@@ -9,7 +9,6 @@ import { db } from "@/lib/db";
 import { estadoDelDia } from "@/lib/dias";
 import { deFecha, diaMes, nombreDia } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
-import { Barrio } from "@/components/Barrio";
 import { CopiarEmail } from "@/components/CopiarEmail";
 import { enlaceWhatsApp } from "@/lib/telefonos";
 import { exigirOficina } from "@/lib/session";
@@ -152,7 +151,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
                 <span className={`inline-flex h-7 items-center rounded-full px-3 text-[12.5px] font-medium ${pastilla[pedido.estado]}`}>{ETIQUETA[pedido.estado]}</span>
                 <span className="inline-flex h-7 items-center rounded-full border border-stone-200 bg-white px-3 text-[11.5px] font-medium uppercase tracking-wide text-stone-500">{web ? "Tienda online" : pedido.conFactura ? "Con factura" : "Con remito"}</span>
               </div>
-              <p className="mt-2 text-[14px] text-stone-600">{direccion}{web && <>{direccion ? " · " : ""}<Barrio v={entrega.barrio} /></>}</p>
+              <p className="mt-2 text-[14px] text-stone-600">{[direccion, web ? entrega.barrio : ""].filter(Boolean).join(" · ")}</p>
               {web && <CopiarEmail email={pedido.webEmail} />}
               {entrega.telefono && <p className="mt-0.5 text-[13.5px] text-stone-600">Tel. {wa ? <a href={wa} target="_blank" rel="noreferrer" className="font-semibold text-verde-800 hover:underline">{entrega.telefono} · WhatsApp</a> : entrega.telefono}</p>}
             </div>

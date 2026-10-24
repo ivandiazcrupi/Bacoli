@@ -1,6 +1,5 @@
 "use client";
 import { Barrio } from "@/components/Barrio";
-import { BARRIO_A_COMPLETAR } from "@/lib/barrio";
 
 import Link from "next/link";
 import { NombreCliente } from "../../NombreCliente";
@@ -447,7 +446,7 @@ function FilaUbicar({ f, salidas, bloqueada, acc }: { f: Fila; salidas: SalidaIn
 }
 
 const digitos = (t: string) => t.replace(/[^\d+]/g, "");
-const mapa = (f: Fila) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${f.direccion}, ${f.barrio === BARRIO_A_COMPLETAR ? "" : f.barrio}`)}`;
+const mapa = (f: Fila) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${f.direccion}, ${f.barrio}`)}`;
 
 // El mismo pedido, en el celular: una tarjeta con botones grandes (dirección a Google Maps, teléfono que llama).
 function FilaTarjeta({ f, n, bloqueada, armando, fija, acc, salidas }: { f: Fila; n: number; bloqueada: boolean; armando: boolean; fija: boolean; acc: Acciones; salidas: SalidaInfo[] }) {
@@ -538,7 +537,7 @@ function FilaTarjeta({ f, n, bloqueada, armando, fija, acc, salidas }: { f: Fila
   );
 }
 
-const urlRuta = (filas: Fila[]) => `https://www.google.com/maps/dir/${filas.map((f) => encodeURIComponent(`${f.direccion}, ${f.barrio === BARRIO_A_COMPLETAR ? "" : f.barrio}`)).join("/")}`;
+const urlRuta = (filas: Fila[]) => `https://www.google.com/maps/dir/${filas.map((f) => encodeURIComponent(`${f.direccion}, ${f.barrio}`)).join("/")}`;
 
 // Resumen de la vuelta de un vehículo (al final de su cuadro): a la izquierda la barra de paquetes contra la capacidad; a la derecha la facturación.
 function ResumenVuelta({ grupo, capacidad, salida, cerrado }: { grupo: Fila[]; capacidad: number | null; salida: SalidaInfo; cerrado: boolean }) {

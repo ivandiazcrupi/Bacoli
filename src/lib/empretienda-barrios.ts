@@ -3,69 +3,37 @@ import { mayus } from "@/lib/mayusculas";
 import { barrioDeTabla, type OrdenDeMail } from "@/lib/empretienda-mail";
 
 /**
- * Barrio de los pedidos de la tienda. El mail solo trae el código postal y la tabla del script de Google es aproximada
- * (un mismo código puede cubrir dos barrios). Por eso el sistema aprende: mira los pedidos que el equipo ya tiene cargados
- * (con el barrio que corrigió a mano) y, para cada código postal, usa el barrio que más se repite.
+ * Barrio de los pedidos de la tienda: SIEMPRE queda cargado, sin pasos extra y sin servicios externos.
+ * Se usa, en este orden: 1) el barrio que el equipo ya usaba para ese código postal (tabla `BarrioCp`, si existe),
+ * 2) la tabla de códigos postales de CABA, 3) "CABA". Las zonas del GBA ("TIGRE / ZONA NORTE") se dejan como vienen.
  */
 
 const cpDe = (t: string) => String(t ?? "").replace(/\D/g, "");
-const sinTilde = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase().replace(/\s+/g, " ").trim();
-// Solo barrios sueltos de CABA: las zonas del GBA ("TIGRE / ZONA NORTE") se dejan como vienen.
-const esBarrioSuelto = (localidad: string) => !localidad.includes("/");
+const esCaba = (o: OrdenDeMail) => !o.localidad.includes("/") && (/capital|caba|ciudad aut/i.test(`${o.provincia} ${o.ciudad}`) || (parseInt(cpDe(o.cp), 10) >= 1000 && parseInt(cpDe(o.cp), 10) <= 1499));
 
-export type OrdenConBarrio = OrdenDeMail & { dudoso?: string };
+async function mapaAprendido() {
+  return new Map((await db.barrioCp.findMany()).map((f) => [f.cp, f.barrio]));
+}
+const barrioPara = (o: OrdenDeMail, aprendidos: Map<string, string>) => mayus(aprendidos.get(cpDe(o.cp)) ?? barrioDeTabla(cpDe(o.cp)) ?? "CABA");
 
-/**
- * Cambia el barrio de cada orden por el que el equipo suele usar para ese código postal (si ya lo aprendió).
- * Si el barrio queda EN DUDA (el equipo usó barrios distintos para ese código, o el código no figura en ninguna tabla)
- * la orden trae `dudoso` con las opciones: el pedido entra con el barrio vacío ("Completar" en rojo) para completarlo a mano.
- */
-export async function aplicarBarriosAprendidos<T extends OrdenDeMail>(ordenes: T[]): Promise<(T & { dudoso?: string })[]> {
-  const filas = await db.barrioCp.findMany();
-  const mapa = new Map(filas.map((f) => [f.cp, f]));
-  return ordenes.map((o) => {
-    if (!esBarrioSuelto(o.localidad)) return o;
-    const cp = cpDe(o.cp);
-    const aprendido = mapa.get(cp);
-    if (aprendido) {
-      if (aprendido.veces < aprendido.total) return { ...o, localidad: aprendido.barrio, dudoso: aprendido.detalle ?? aprendido.barrio };
-      return { ...o, localidad: aprendido.barrio };
-    }
-    const n = parseInt(cp, 10);
-    if (n >= 1000 && n <= 1499 && !barrioDeTabla(cp)) return { ...o, dudoso: o.localidad || "CABA" };
-    return o;
-  });
+export async function aplicarBarriosAprendidos<T extends OrdenDeMail>(ordenes: T[]): Promise<T[]> {
+  const aprendidos = await mapaAprendido();
+  return ordenes.map((o) => (esCaba(o) ? { ...o, localidad: barrioPara(o, aprendidos) } : o));
 }
 
-export type ResultadoAprender = { cps: number; dudosos: { cp: string; detalle: string }[]; pedidos: number };
-
-/** Mira, orden por orden, el barrio que tiene el pedido cargado y se queda con el más usado de cada código postal. */
-export async function aprenderBarrios(ordenes: OrdenDeMail[]): Promise<ResultadoAprender> {
-  const pedidos = await db.pedido.findMany({ where: { webOrden: { in: ordenes.map((o) => o.orden) } }, select: { webOrden: true, webBarrio: true } });
-  const barrioDe = new Map(pedidos.map((p) => [p.webOrden, p.webBarrio]));
-  const cuenta = new Map<string, Map<string, number>>();
-  let usados = 0;
-  for (const o of ordenes) {
-    const barrio = barrioDe.get(o.orden);
-    const cp = cpDe(o.cp);
-    if (!barrio || !cp || !esBarrioSuelto(barrio) || !esBarrioSuelto(o.localidad)) continue;
-    const b = mayus(barrio);
-    const m = cuenta.get(cp) ?? new Map<string, number>();
-    m.set(b, (m.get(b) ?? 0) + 1);
-    cuenta.set(cp, m);
-    usados++;
+/**
+ * Completa los pedidos de la tienda que quedaron sin barrio (los cargados antes de este arreglo), con el código postal de su mail.
+ * Se corre solo con cada lectura de pedidos. Si el mail ya no está entre los leídos, queda "CABA".
+ */
+export async function completarBarriosVacios(ordenes: OrdenDeMail[]): Promise<number> {
+  const vacios = await db.pedido.findMany({ where: { origen: "WEB", webBarrio: null, estado: { not: "CANCELADO" } }, select: { id: true, webOrden: true }, take: 50 });
+  if (vacios.length === 0) return 0;
+  const aprendidos = await mapaAprendido();
+  const porOrden = new Map(ordenes.map((o) => [o.orden, o]));
+  for (const p of vacios) {
+    const o = p.webOrden ? porOrden.get(p.webOrden) : undefined;
+    const barrio = o ? (esCaba(o) ? barrioPara(o, aprendidos) : mayus(o.localidad)) : "CABA";
+    await db.pedido.update({ where: { id: p.id }, data: { webBarrio: barrio || "CABA", webBarrioSugerido: null } });
   }
-  const dudosos: ResultadoAprender["dudosos"] = [];
-  for (const [cp, m] of cuenta) {
-    const orden = [...m.entries()].sort((a, b) => b[1] - a[1] || sinTilde(a[0]).localeCompare(sinTilde(b[0])));
-    const total = orden.reduce((n, [, v]) => n + v, 0);
-    const detalle = orden.map(([b, v]) => `${b} ${v}`).join(" · ");
-    await db.barrioCp.upsert({
-      where: { cp },
-      create: { cp, barrio: orden[0][0], veces: orden[0][1], total, detalle },
-      update: { barrio: orden[0][0], veces: orden[0][1], total, detalle },
-    });
-    if (orden.length > 1) dudosos.push({ cp, detalle });
-  }
-  return { cps: cuenta.size, dudosos: dudosos.sort((a, b) => a.cp.localeCompare(b.cp)), pedidos: usados };
+  return vacios.length;
 }

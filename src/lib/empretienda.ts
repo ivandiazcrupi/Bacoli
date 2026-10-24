@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { mayus, titulo } from "@/lib/mayusculas";
-import { aplicarBarriosAprendidos } from "@/lib/empretienda-barrios";
+import { aplicarBarriosAprendidos, completarBarriosVacios } from "@/lib/empretienda-barrios";
 import { casillaConfigurada, leerOrdenesDeGmail } from "@/lib/empretienda-imap";
 
 /**
@@ -146,7 +146,7 @@ export async function cargarCatalogo(): Promise<Catalogo> {
 
 export type ResultadoImportacion = { ok: boolean; nuevos: number; yaCargados: number; mensaje: string };
 
-type OrdenNueva = PedidoPlanilla & { email?: string; apellido?: string; dudoso?: string };
+type OrdenNueva = PedidoPlanilla & { email?: string; apellido?: string};
 
 /** Crea un pedido por cada orden que todavía no está en el sistema. Nunca repite un N° de orden (es único en la base). */
 async function crearPedidosWeb(pedidos: OrdenNueva[]): Promise<ResultadoImportacion> {
@@ -172,8 +172,7 @@ async function crearPedidosWeb(pedidos: OrdenNueva[]): Promise<ResultadoImportac
           webOrden: p.orden,
           webNombre: mayus(p.cliente.replace(/\(\s*x\d+\s*\)/i, "").trim()) || "SIN NOMBRE",
           webDireccion: limpiarDireccion(p.direccion) || null,
-          webBarrio: p.dudoso ? null : mayus(p.localidad) || null,
-          webBarrioSugerido: p.dudoso ? mayus(p.dudoso) : null,
+          webBarrio: mayus(p.localidad) || null,
           webTelefono: p.telefono || null,
           webApellido: mayus(p.apellido ?? "") || null,
           webEmail: p.email?.trim().toLowerCase() || null,
@@ -205,7 +204,9 @@ export async function importarPedidosWeb(csvManual?: string): Promise<ResultadoI
     const web = await db.pedido.findMany({ where: { origen: "WEB", webOrden: { not: null } }, select: { webOrden: true } });
     const ultimo = web.reduce((m, p) => Math.max(m, parseInt(p.webOrden ?? "", 10) || 0), 0);
     const minimo = Math.max(ultimo + 1, Number.isFinite(desde) ? desde : 0);
-    return crearPedidosWeb(await aplicarBarriosAprendidos(lectura.ordenes.filter((o) => Number(o.orden) >= minimo)));
+    const resultado = await crearPedidosWeb(await aplicarBarriosAprendidos(lectura.ordenes.filter((o) => Number(o.orden) >= minimo)));
+    await completarBarriosVacios(lectura.ordenes).catch(() => 0);
+    return resultado;
   }
 
   const url = process.env.EMPRETIENDA_CSV_URL;
