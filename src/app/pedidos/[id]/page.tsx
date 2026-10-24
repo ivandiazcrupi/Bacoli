@@ -148,7 +148,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
           <div className="flex flex-wrap items-start justify-between gap-3 px-6 py-5">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-3">
-                <h1 className="text-[22px] font-semibold tracking-tight text-stone-900">{entrega.nombre}</h1>
+                <h1 className="text-[22px] font-semibold tracking-tight text-stone-900">{entrega.nombre}{web && pedido.webApellido ? ` ${pedido.webApellido}` : ""}</h1>
                 <span className={`inline-flex h-7 items-center rounded-full px-3 text-[12.5px] font-medium ${pastilla[pedido.estado]}`}>{ETIQUETA[pedido.estado]}</span>
                 <span className="inline-flex h-7 items-center rounded-full border border-stone-200 bg-white px-3 text-[11.5px] font-medium uppercase tracking-wide text-stone-500">{web ? "Tienda online" : pedido.conFactura ? "Con factura" : "Con remito"}</span>
               </div>

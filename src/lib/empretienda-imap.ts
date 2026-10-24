@@ -14,13 +14,11 @@ export type LecturaMails = {
   ordenes: OrdenDeMail[];
   leidos: number; // mails que se revisaron
   ilegibles: { asunto: string; fecha: string; texto: string }[]; // mails de la etiqueta de los que no se pudo sacar una orden
-  campos: { nombre: string; veces: number; ejemplo: string }[]; // todos los datos "Nombre: valor" que traen los mails
-  ejemplo: string; // el último mail, tal cual lo lee el sistema (para ver qué otros datos trae)
 };
 
 export const casillaConfigurada = () => !!(process.env.GMAIL_USUARIO && process.env.GMAIL_CLAVE_APP && process.env.GMAIL_ETIQUETA);
 
-const vacio = (mensaje: string): LecturaMails => ({ ok: false, mensaje, ordenes: [], leidos: 0, ilegibles: [], campos: [], ejemplo: "" });
+const vacio = (mensaje: string): LecturaMails => ({ ok: false, mensaje, ordenes: [], leidos: 0, ilegibles: [] });
 
 /** Lee los últimos `dias` días (hasta `maximo` mails) de la etiqueta y devuelve las órdenes que pudo interpretar. */
 export async function leerOrdenesDeGmail(dias = 30, maximo = 400): Promise<LecturaMails> {
@@ -34,8 +32,6 @@ export async function leerOrdenesDeGmail(dias = 30, maximo = 400): Promise<Lectu
   const ordenes = new Map<string, OrdenDeMail>();
   const ilegibles: LecturaMails["ilegibles"] = [];
   let leidos = 0;
-  const campos = new Map<string, { veces: number; ejemplo: string }>();
-  let ejemplo = "";
   try {
     await client.connect();
     const lock = await client.getMailboxLock(etiqueta, { readOnly: true });
@@ -52,15 +48,6 @@ export async function leerOrdenesDeGmail(dias = 30, maximo = 400): Promise<Lectu
           const html = typeof mail.html === "string" ? mail.html : "";
           const texto = html ? htmlATexto(html) : (mail.text ?? "");
           const orden = leerMailOrden(texto) ?? (mail.text ? leerMailOrden(mail.text) : null);
-          if (orden) {
-            for (const linea of texto.split("\n")) {
-              const m = linea.match(/^([A-Za-zÁÉÍÓÚáéíóúñÑ][A-Za-zÁÉÍÓÚáéíóúñÑ ()/.-]{1,40}):\s*(.*)$/);
-              if (!m) continue;
-              const previo = campos.get(m[1].trim());
-              campos.set(m[1].trim(), { veces: (previo?.veces ?? 0) + 1, ejemplo: m[2].trim() || previo?.ejemplo || "" });
-            }
-            ejemplo = texto.slice(0, 3500);
-          }
           if (orden) ordenes.set(orden.orden, orden); // si una orden llegó dos veces, queda la última
           else ilegibles.push({ asunto: mail.subject ?? "(sin asunto)", fecha: mail.date ? mail.date.toISOString() : "", texto: texto.slice(0, 400) });
         }
@@ -82,7 +69,5 @@ export async function leerOrdenesDeGmail(dias = 30, maximo = 400): Promise<Lectu
     ordenes: [...ordenes.values()].sort((a, b) => Number(a.orden) - Number(b.orden)),
     leidos,
     ilegibles,
-    campos: [...campos.entries()].map(([nombre, v]) => ({ nombre, ...v })).sort((a, b) => b.veces - a.veces),
-    ejemplo,
   };
 }

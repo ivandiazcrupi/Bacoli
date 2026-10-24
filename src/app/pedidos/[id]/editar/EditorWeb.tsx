@@ -5,7 +5,7 @@ import { Mensajes, estiloBoton } from "@/components/campos";
 import { actualizarPedidoWeb, type EstadoPedidoForm } from "../../actions";
 
 type Renglon = { id: string; nombre: string; unidad: string; cantidad: number };
-type Datos = { nombre: string; barrio: string; direccion: string; telefono: string; email: string; sugerido: string; total: string; nota: string };
+type Datos = { nombre: string; barrio: string; direccion: string; telefono: string; email: string; apellido: string; sugerido: string; total: string; nota: string };
 
 const campo = "mt-1 h-10 w-full rounded-md border border-stone-400 bg-white px-3 text-base font-normal text-stone-900 shadow-sm focus:border-verde-700 focus:outline-none focus:ring-2 focus:ring-verde-700/25";
 const etiqueta = "block text-xs font-semibold uppercase tracking-wide text-stone-600";
@@ -38,8 +38,9 @@ export function EditorWeb({ pedidoId, items, datos, extras, pagado }: { pedidoId
     <form action={enviar} onSubmit={confirmar} className="space-y-4">
       <section className="rounded-xl border border-stone-300 bg-white p-4 shadow-sm">
         <p className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-stone-600">Datos de entrega</p>
-        <div className="grid gap-3 lg:grid-cols-[1fr_1fr_2fr_1fr_1.4fr]">
+        <div className="grid gap-3 lg:grid-cols-[1fr_1fr_1fr_2fr_1fr_1.4fr]">
           <label className={etiqueta}>Nombre<input name="nombre" defaultValue={datos.nombre} required className={`${campo} dato`} autoCapitalize="characters" /></label>
+          <label className={etiqueta}>Apellido<input name="apellido" defaultValue={datos.apellido} className={`${campo} dato`} autoCapitalize="characters" /></label>
           <label className={etiqueta}>
             <span className={!datos.barrio ? "text-rojo-700" : ""}>Barrio{!datos.barrio && " — completar"}</span>
             <input name="barrio" defaultValue={datos.barrio} placeholder={datos.sugerido ? `Opciones: ${datos.sugerido}` : ""} className={`${campo} dato ${!datos.barrio ? "!border-rojo-600" : ""}`} autoCapitalize="characters" />

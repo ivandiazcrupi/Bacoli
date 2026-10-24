@@ -70,7 +70,6 @@ export default async function Pedidos({ searchParams }: { searchParams: Promise<
         {esWeb && (
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <TraerPedidosWeb />
-            <Link href="/pedidos/tienda-mails" className="text-sm font-medium text-stone-600 underline decoration-stone-300 underline-offset-4 hover:text-stone-900">Revisar la lectura de los mails ›</Link>
           </div>
         )}
 
