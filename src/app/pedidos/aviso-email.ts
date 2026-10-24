@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { armarAviso, ASUNTO_AVISO, crearEnvio, envioConfigurado, HORARIO_AVISO, TEXTO_AVISO } from "@/lib/avisos-email";
+import { armarAviso, ASUNTO_AVISO, HORARIO_AVISO, TEXTO_AVISO } from "@/lib/avisos-email";
 import { exigirOficina } from "@/lib/session";
 
 export type ConfigAviso = { dia: string; horario: string; texto: string; asunto: string };
@@ -34,31 +34,29 @@ async function pedidoParaAvisar(pedidoId: string) {
   return { p, cfg } as const;
 }
 
-/** Cómo va a quedar el mail de este pedido (para mostrarlo antes de confirmar). */
+/** Cómo queda el mail de este pedido, listo para copiar. */
 export async function prepararAviso(pedidoId: string): Promise<{ ok: boolean; error?: string; para?: string; asunto?: string; texto?: string }> {
   await exigirOficina();
   const r = await pedidoParaAvisar(pedidoId);
   if ("error" in r) return { ok: false, error: r.error };
-  if (!envioConfigurado()) return { ok: false, error: "Falta conectar la casilla de envío (variables GMAIL_ENVIO_USUARIO y GMAIL_ENVIO_CLAVE_APP en Railway)." };
   const m = armarAviso(r.cfg.texto, { nombre: r.p.webNombre ?? "", dia: r.cfg.dia, horario: r.cfg.horario, orden: r.p.webOrden ?? "", asunto: r.cfg.asunto });
   return { ok: true, para: r.p.webEmail!, ...m };
 }
 
-/** Manda el mail a este cliente y deja anotado que se emitió. */
-export async function enviarAviso(pedidoId: string): Promise<{ ok: boolean; error?: string; cuando?: string }> {
+/** Deja anotado que el mail ya se le mandó a este cliente (se manda a mano desde Gmail). */
+export async function marcarAvisoEnviado(pedidoId: string): Promise<{ ok: boolean; error?: string }> {
   await exigirOficina();
   const r = await pedidoParaAvisar(pedidoId);
   if ("error" in r) return { ok: false, error: r.error };
-  if (!envioConfigurado()) return { ok: false, error: "Falta conectar la casilla de envío." };
-  const empresa = await db.empresa.findUnique({ where: { id: "principal" }, select: { email: true } });
-  const m = armarAviso(r.cfg.texto, { nombre: r.p.webNombre ?? "", dia: r.cfg.dia, horario: r.cfg.horario, orden: r.p.webOrden ?? "", asunto: r.cfg.asunto });
-  try {
-    await crearEnvio()(r.p.webEmail!, m.asunto, m.texto, empresa?.email);
-  } catch {
-    return { ok: false, error: "No se pudo enviar el mail (no se pudo conectar con Gmail o rechazó el envío). Si pasa siempre, puede ser que Railway tenga bloqueado el envío de mails en este plan." };
-  }
-  const ahora = new Date();
-  await db.pedido.update({ where: { id: pedidoId }, data: { webAvisoEn: ahora, webAvisoDia: r.cfg.dia || null } });
+  await db.pedido.update({ where: { id: pedidoId }, data: { webAvisoEn: new Date(), webAvisoDia: r.cfg.dia || null } });
   revalidatePath("/pedidos", "layout");
-  return { ok: true, cuando: ahora.toISOString() };
+  return { ok: true };
+}
+
+/** Saca la marca de "email enviado" (por si se marcó por error). */
+export async function quitarMarcaAviso(pedidoId: string): Promise<{ ok: boolean }> {
+  await exigirOficina();
+  await db.pedido.update({ where: { id: pedidoId }, data: { webAvisoEn: null, webAvisoDia: null } });
+  revalidatePath("/pedidos", "layout");
+  return { ok: true };
 }

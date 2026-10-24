@@ -42,7 +42,7 @@ export function PanelAvisoEmail({ inicial }: { inicial: ConfigAviso }) {
           <p className="text-xs font-semibold uppercase tracking-wide text-stone-600">Así le llega (ejemplo)</p>
           <p className="mt-1 text-sm font-semibold text-stone-800">Asunto: {c.asunto.replace(/\{dia\}/g, c.dia || "…").replace(/\{orden\}/g, "14111")}</p>
           <pre className="mt-1 whitespace-pre-wrap rounded-md border border-stone-300 bg-crema-50 p-3 font-sans text-sm text-stone-800">{vista}</pre>
-          <p className="mt-2 text-[12px] text-stone-500">El botón “✉ Enviar email” está en cada pedido de la tienda (Pedidos, hoja de ruta y detalle). Pide confirmar y después queda marcado como enviado.</p>
+          <p className="mt-2 text-[12px] text-stone-500">El botón “✉ Preparar email” está en cada pedido de la tienda (Pedidos, hoja de ruta y detalle): arma este mail para ese cliente, lo copiás y lo mandás desde Gmail, y después tocás “Ya lo envié”.</p>
         </div>
       </div>
     </details>
