@@ -12,9 +12,6 @@ import type { Fila } from "./dia/[fecha]/HojaDia";
 export const incluirPedido = { cliente: true, punto: true, items: { include: { producto: { select: { orden: true } } } } } satisfies Prisma.PedidoInclude;
 export type PedidoCompleto = Prisma.PedidoGetPayload<{ include: typeof incluirPedido }>;
 
-/** "24/10 14:05" (hora argentina) o null. */
-export const fechaAviso = (d: Date | null) => (d ? new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "America/Argentina/Buenos_Aires" }).format(d).replace(",", "") : null);
-
 /** Los renglones en el orden del catálogo; los que no son del catálogo (combo, otros de la tienda) van al final. */
 export const ordenarItems = <T extends { producto?: { orden: number } | null }>(items: T[]) => [...items].sort((a, b) => (a.producto?.orden ?? 999) - (b.producto?.orden ?? 999));
 
@@ -52,8 +49,6 @@ export type FilaBandeja = {
   webOrden: string | null; // N° de orden de Empretienda (solo pedidos de la tienda)
   pagoMp: boolean; // pedido de la tienda ya pagado (Mercado Pago o transferencia confirmada)
   pagoTexto: string | null; // cómo pagó: "Mercado Pago" / "Transferencia"
-  tieneEmail: boolean; // pedido de la tienda con email cargado
-  avisoEn: string | null; // cuándo se le mandó el aviso por email (dd/mm hh:mm)
   ingreso: string; // día en que entró el pedido al sistema (dd/mm), para los de la tienda
   intento?: string; // "No se entregó el 1/10 · Local cerrado": el último intento que falló, si lo hubo
 };
@@ -96,8 +91,6 @@ export function aFila(p: PedidoCompleto, debe: Set<string>): Fila {
     webOrden: p.webOrden,
     pagoMp: webPagado(p.webOrden, p.webPago),
     pagoTexto: textoPagoWeb(p.webPago),
-    tieneEmail: !!p.webEmail,
-    avisoEn: fechaAviso(p.webAvisoEn),
     ingreso: p.creadoEn.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", timeZone: "America/Argentina/Buenos_Aires" }),
   };
 }
@@ -120,8 +113,6 @@ export function aFilaBandeja(p: PedidoCompleto, intento = ""): FilaBandeja {
     webOrden: p.webOrden,
     pagoMp: webPagado(p.webOrden, p.webPago),
     pagoTexto: textoPagoWeb(p.webPago),
-    tieneEmail: !!p.webEmail,
-    avisoEn: fechaAviso(p.webAvisoEn),
     ingreso: p.creadoEn.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", timeZone: "America/Argentina/Buenos_Aires" }),
     intento,
   };
