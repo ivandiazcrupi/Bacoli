@@ -44,6 +44,7 @@ export async function leerOrdenesDeGmail(dias = 30, maximo = 400): Promise<Lectu
           leidos++;
           if (!msg.source) continue;
           const mail = await simpleParser(msg.source);
+          if (/caducad/i.test(mail.subject ?? "")) continue; // "La orden #N ha caducado": no es un pedido
           const html = typeof mail.html === "string" ? mail.html : "";
           const texto = html ? htmlATexto(html) : (mail.text ?? "");
           const orden = leerMailOrden(texto) ?? (mail.text ? leerMailOrden(mail.text) : null);

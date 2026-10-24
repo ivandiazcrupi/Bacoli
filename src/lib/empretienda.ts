@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { mayus, titulo } from "@/lib/mayusculas";
+import { casillaConfigurada, leerOrdenesDeGmail } from "@/lib/empretienda-imap";
 
 /**
  * Pedidos de la tienda online (Empretienda). La planilla "Minorista" se llena sola con los mails de cada orden; el sistema la lee
@@ -144,25 +145,10 @@ export async function cargarCatalogo(): Promise<Catalogo> {
 
 export type ResultadoImportacion = { ok: boolean; nuevos: number; yaCargados: number; mensaje: string };
 
-/** Crea un pedido por cada orden nueva (a partir de EMPRETIENDA_DESDE). Es seguro correrlo varias veces: nunca repite un N° de orden. */
-export async function importarPedidosWeb(csvManual?: string): Promise<ResultadoImportacion> {
-  const url = process.env.EMPRETIENDA_CSV_URL;
-  const desde = Number(process.env.EMPRETIENDA_DESDE ?? "");
-  if (!csvManual && !url) return { ok: false, nuevos: 0, yaCargados: 0, mensaje: "Falta conectar la planilla de la tienda (variable EMPRETIENDA_CSV_URL)." };
-  if (!Number.isFinite(desde) || desde <= 0) return { ok: false, nuevos: 0, yaCargados: 0, mensaje: "Falta indicar desde qué N° de orden traer pedidos (variable EMPRETIENDA_DESDE), para no cargar los viejos." };
+type OrdenNueva = PedidoPlanilla & { email?: string };
 
-  let csv = csvManual;
-  if (!csv) {
-    try {
-      const r = await fetch(url!, { cache: "no-store", signal: AbortSignal.timeout(25_000) });
-      if (!r.ok) return { ok: false, nuevos: 0, yaCargados: 0, mensaje: `No se pudo leer la planilla (error ${r.status}).` };
-      csv = await r.text();
-    } catch {
-      return { ok: false, nuevos: 0, yaCargados: 0, mensaje: "No se pudo leer la planilla de la tienda. Probá de nuevo en unos minutos." };
-    }
-  }
-
-  const pedidos = leerPlanilla(csv).filter((p) => Number(p.orden) >= desde).sort((a, b) => Number(a.orden) - Number(b.orden));
+/** Crea un pedido por cada orden que todavía no está en el sistema. Nunca repite un N° de orden (es único en la base). */
+async function crearPedidosWeb(pedidos: OrdenNueva[]): Promise<ResultadoImportacion> {
   if (pedidos.length === 0) return { ok: true, nuevos: 0, yaCargados: 0, mensaje: "No hay pedidos nuevos en la tienda." };
 
   const existentes = new Set((await db.pedido.findMany({ where: { webOrden: { in: pedidos.map((p) => p.orden) } }, select: { webOrden: true } })).map((p) => p.webOrden));
@@ -187,6 +173,7 @@ export async function importarPedidosWeb(csvManual?: string): Promise<ResultadoI
           webDireccion: limpiarDireccion(p.direccion) || null,
           webBarrio: mayus(p.localidad) || null,
           webTelefono: p.telefono || null,
+          webEmail: p.email?.trim().toLowerCase() || null,
           webTotal: p.monto,
           webPago: sinTildes(p.estado).includes("MP") ? "PAGO_MP" : "PENDIENTE",
           items: { create: items.map((i) => ({ productoId: i.productoId, nombre: i.nombre, sku: i.sku, unidad: i.unidad, cantidad: i.cantidad, paquetesPor: i.paquetesPor, precioUnitario: 0 })) },
@@ -198,4 +185,39 @@ export async function importarPedidosWeb(csvManual?: string): Promise<ResultadoI
     }
   }
   return { ok: true, nuevos, yaCargados, mensaje: nuevos ? `Se cargaron ${nuevos} ${nuevos === 1 ? "pedido nuevo" : "pedidos nuevos"} de la tienda.` : "No hay pedidos nuevos en la tienda." };
+}
+
+/**
+ * Trae los pedidos nuevos de la tienda. Si la casilla de Gmail está conectada, los lee de los MAILS de Empretienda (fuente principal:
+ * ya no depende de la planilla ni del script de Google). Si no, usa la planilla CSV como antes.
+ * Mails: solo se cargan órdenes con N° mayor al último pedido de la tienda ya cargado (y desde EMPRETIENDA_DESDE si está), así lo viejo no se toca.
+ */
+export async function importarPedidosWeb(csvManual?: string): Promise<ResultadoImportacion> {
+  const desde = Number(process.env.EMPRETIENDA_DESDE ?? "");
+  const usaMails = !csvManual && casillaConfigurada();
+
+  if (usaMails) {
+    const lectura = await leerOrdenesDeGmail(7, 250);
+    if (!lectura.ok) return { ok: false, nuevos: 0, yaCargados: 0, mensaje: lectura.mensaje };
+    const web = await db.pedido.findMany({ where: { origen: "WEB", webOrden: { not: null } }, select: { webOrden: true } });
+    const ultimo = web.reduce((m, p) => Math.max(m, parseInt(p.webOrden ?? "", 10) || 0), 0);
+    const minimo = Math.max(ultimo + 1, Number.isFinite(desde) ? desde : 0);
+    return crearPedidosWeb(lectura.ordenes.filter((o) => Number(o.orden) >= minimo));
+  }
+
+  const url = process.env.EMPRETIENDA_CSV_URL;
+  if (!csvManual && !url) return { ok: false, nuevos: 0, yaCargados: 0, mensaje: "Falta conectar la tienda: la casilla de Gmail (GMAIL_USUARIO, GMAIL_CLAVE_APP, GMAIL_ETIQUETA) o la planilla (EMPRETIENDA_CSV_URL)." };
+  if (!Number.isFinite(desde) || desde <= 0) return { ok: false, nuevos: 0, yaCargados: 0, mensaje: "Falta indicar desde qué N° de orden traer pedidos (variable EMPRETIENDA_DESDE), para no cargar los viejos." };
+
+  let csv = csvManual;
+  if (!csv) {
+    try {
+      const r = await fetch(url!, { cache: "no-store", signal: AbortSignal.timeout(25_000) });
+      if (!r.ok) return { ok: false, nuevos: 0, yaCargados: 0, mensaje: `No se pudo leer la planilla (error ${r.status}).` };
+      csv = await r.text();
+    } catch {
+      return { ok: false, nuevos: 0, yaCargados: 0, mensaje: "No se pudo leer la planilla de la tienda. Probá de nuevo en unos minutos." };
+    }
+  }
+  return crearPedidosWeb(leerPlanilla(csv).filter((p) => Number(p.orden) >= desde).sort((a, b) => Number(a.orden) - Number(b.orden)));
 }
