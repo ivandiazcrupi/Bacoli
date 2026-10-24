@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { compararMailsAhora, type ResultadoComparacion } from "./actions";
 
 const color = { igual: "bg-verde-50 text-verde-700", difiere: "bg-rojo-50 text-rojo-700", "sin-pedido": "bg-[#fdf8e3] text-[#8a6a05]" } as const;
@@ -10,7 +10,16 @@ export function Comparacion() {
   const [r, setR] = useState<ResultadoComparacion | null>(null);
   const [leyendo, empezar] = useTransition();
   const [soloDif, setSoloDif] = useState(true);
-  const filas = r?.resumen?.filas.filter((f) => !soloDif || f.estado !== "igual").slice().reverse() ?? [];
+  const [sinBarrio, setSinBarrio] = useState(false); // el barrio lo corrige el equipo a mano: se puede dejar de mirar
+  // Con "ignorar barrio", una orden que solo difería en el barrio pasa a "igual".
+  const todas = useMemo(() => (r?.resumen?.filas ?? []).map((f) => {
+    if (f.estado === "sin-pedido") return f;
+    const dif = sinBarrio ? f.diferencias.filter((d) => d.campo !== "Barrio") : f.diferencias;
+    return { ...f, diferencias: dif, estado: dif.length ? ("difiere" as const) : ("igual" as const) };
+  }), [r, sinBarrio]);
+  const porCampo = useMemo(() => { const m = new Map<string, number>(); for (const f of todas) for (const d of f.diferencias) m.set(d.campo, (m.get(d.campo) ?? 0) + 1); return [...m.entries()].sort((a, b) => b[1] - a[1]); }, [todas]);
+  const cuentan = { iguales: todas.filter((f) => f.estado === "igual").length, difieren: todas.filter((f) => f.estado === "difiere").length, sinPedido: todas.filter((f) => f.estado === "sin-pedido").length };
+  const filas = todas.filter((f) => !soloDif || f.estado !== "igual").slice().reverse();
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
@@ -24,9 +33,9 @@ export function Comparacion() {
         <>
           <section className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-stone-300 bg-stone-300 sm:grid-cols-4" aria-label="Resumen">
             {[
-              { t: "Iguales", v: r.resumen.iguales, c: "text-verde-700" },
-              { t: "Con diferencias", v: r.resumen.difieren, c: r.resumen.difieren ? "text-rojo-700" : "text-stone-800" },
-              { t: "Sin pedido todavía", v: r.resumen.sinPedido, c: "text-stone-800" },
+              { t: "Iguales", v: cuentan.iguales, c: "text-verde-700" },
+              { t: "Con diferencias", v: cuentan.difieren, c: cuentan.difieren ? "text-rojo-700" : "text-stone-800" },
+              { t: "Sin pedido todavía", v: cuentan.sinPedido, c: "text-stone-800" },
               { t: "Con email", v: `${r.resumen.conEmail} de ${r.resumen.filas.length}`, c: "text-stone-800" },
             ].map((x) => (
               <div key={x.t} className="bg-white px-4 py-3 text-center">
@@ -35,6 +44,16 @@ export function Comparacion() {
               </div>
             ))}
           </section>
+
+          <div className="rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm">
+            <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-stone-500">Diferencias por tipo</p>
+            {porCampo.length === 0 ? <p className="text-verde-700">Ninguna: todo coincide.</p> : (
+              <p className="flex flex-wrap gap-x-5 gap-y-1">{porCampo.map(([campo, n]) => <span key={campo}><b className="tabular-nums">{n}</b> <span className="text-stone-600">{campo.toLowerCase()}</span></span>)}</p>
+            )}
+            <label className="mt-2 flex items-center gap-2 text-stone-700">
+              <input type="checkbox" checked={sinBarrio} onChange={(e) => setSinBarrio(e.target.checked)} className="h-4 w-4 accent-[#026433]" /> Ignorar el barrio <span className="text-stone-400">(el equipo lo corrige a mano al armar el reparto; el mail lo calcula por código postal)</span>
+            </label>
+          </div>
 
           <label className="flex items-center gap-2 text-sm text-stone-700">
             <input type="checkbox" checked={soloDif} onChange={(e) => setSoloDif(e.target.checked)} className="h-4 w-4 accent-[#026433]" /> Mostrar solo lo que no coincide
@@ -49,7 +68,7 @@ export function Comparacion() {
               <div key={f.orden} className="grid grid-cols-[90px_minmax(0,1fr)_minmax(0,1.6fr)_150px] items-start gap-x-3 border-t border-stone-200 px-4 py-2.5 text-[13px]">
                 <span className="font-semibold tabular-nums">#{f.orden}</span>
                 <span className="min-w-0"><span className="block truncate font-medium">{f.cliente || "—"}</span><span className="block truncate text-[12px] text-stone-500">{f.email || "sin email"}</span></span>
-                <span className="space-y-0.5 text-stone-700">{f.diferencias.length ? f.diferencias.map((d) => <span key={d} className="block">{d}</span>) : <span className="text-stone-400">—</span>}</span>
+                <span className="space-y-0.5 text-stone-700">{f.diferencias.length ? f.diferencias.map((d) => <span key={d.campo} className="block"><b className="font-semibold">{d.campo}:</b> {d.texto}</span>) : <span className="text-stone-400">—</span>}</span>
                 <span className={`mx-auto rounded-full px-3 py-0.5 text-center text-[12px] font-bold ${color[f.estado]}`}>{texto[f.estado]}</span>
               </div>
             ))}
