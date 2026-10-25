@@ -2,11 +2,14 @@ import { Cabecera } from "@/components/Cabecera";
 import { db } from "@/lib/db";
 import { exigirOficina } from "@/lib/session";
 import { CONTENEDOR_PEDIDOS, EncabezadoPedidos } from "../Encabezado";
+import { TOPE_COSTO_POR_PIZZA } from "@/lib/ruta";
+import { CostoLogisticoUnidad } from "./CostoLogisticoUnidad";
 import { EncabezadoVehiculos, FilaVehiculo } from "./FilaVehiculo";
 
 // Los vehículos de la empresa. Cada día, en la hoja de ruta, se elige cuáles salen.
 export default async function Vehiculos() {
   const usuario = await exigirOficina();
+  const empresa = usuario.rol === "DUENO" ? await db.empresa.findUnique({ where: { id: "principal" }, select: { costoLogisticoUnidad: true } }) : null;
   const vehiculos = await db.vehiculo.findMany({ where: { eliminado: false }, orderBy: [{ activo: "desc" }, { orden: "asc" }] });
 
   return (
@@ -18,6 +21,7 @@ export default async function Vehiculos() {
           Cargá tus camionetas y autos. La <b>capacidad máxima</b> es cuántos <b>paquetes</b> puede llevar cada uno: en la hoja de ruta ves cuánto
           lleva cargado y se pone en rojo si te pasás (avisa, no te frena). Vacía = sin tope.
         </p>
+        {usuario.rol === "DUENO" && <CostoLogisticoUnidad inicial={empresa?.costoLogisticoUnidad ? String(Number(empresa.costoLogisticoUnidad)) : ""} porDefecto={TOPE_COSTO_POR_PIZZA} />}
         <div className="overflow-hidden rounded-xl border-2 border-stone-300 bg-white shadow-sm">
           <EncabezadoVehiculos />
           {vehiculos.map((v) => (

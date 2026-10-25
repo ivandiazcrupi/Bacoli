@@ -4,7 +4,7 @@ import { UbicarPedido } from "@/components/UbicarPedido";
 import { db } from "@/lib/db";
 import { aFecha, deFecha, diaMes, esFechaValida, diasDeSemana, finDeSemana, hoy, inicioSemana, nombreDia, sumarDias } from "@/lib/fechas";
 import { titulo } from "@/lib/mayusculas";
-import { porReparto } from "@/lib/ruta";
+import { porReparto, TOPE_COSTO_POR_PIZZA } from "@/lib/ruta";
 import { estadoDelDia } from "@/lib/dias";
 import { exigirOficina } from "@/lib/session";
 import { aFila, clientesConDeuda, incluirPedido } from "../../filas";
@@ -28,6 +28,7 @@ export default async function HojaDelDia({ params }: { params: Promise<{ fecha: 
   ]);
   pedidos.sort(porReparto);
   const est = await estadoDelDia(fecha);
+  const topeCosto = usuario.rol === "DUENO" ? Number((await db.empresa.findUnique({ where: { id: "principal" }, select: { costoLogisticoUnidad: true } }))?.costoLogisticoUnidad ?? TOPE_COSTO_POR_PIZZA) : TOPE_COSTO_POR_PIZZA;
   const quien = est.por ? (await db.usuario.findUnique({ where: { id: est.por }, select: { nombre: true } }))?.nombre ?? "" : "";
   const cuando = est.cuando ? new Intl.DateTimeFormat("es-AR", { hour: "2-digit", hourCycle: "h23", minute: "2-digit", day: "numeric", month: "numeric", timeZone: "America/Argentina/Buenos_Aires" }).format(est.cuando).replace(",", " ·") : "";
 
@@ -91,6 +92,7 @@ export default async function HojaDelDia({ params }: { params: Promise<{ fecha: 
           diasSemana={diasSemana}
           cerrado={!!cerrado}
           esDueno={usuario.rol === "DUENO"}
+          topeCosto={topeCosto}
         />
       </main>
     </>

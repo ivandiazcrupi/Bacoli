@@ -134,6 +134,17 @@ export async function guardarCostoLogistica(salidaId: string, texto: string): Pr
   return { ok: true };
 }
 
+/** Costo de logística por unidad que no hay que pasar (el "tope"); vacío = el de siempre. Solo dueños. */
+export async function guardarCostoLogisticoUnidad(texto: string): Promise<Resultado> {
+  const usuario = await exigirOficina();
+  if (usuario.rol !== "DUENO") return { ok: false, error: "Solo un dueño cambia el costo logístico por unidad." };
+  const valor = texto.trim() ? leerMonto(texto) : null;
+  if (texto.trim() && (valor === null || valor <= 0)) return { ok: false, error: "Tiene que ser un monto mayor a 0 (o dejarlo vacío para usar el de siempre)." };
+  await db.empresa.upsert({ where: { id: "principal" }, update: { costoLogisticoUnidad: valor }, create: { id: "principal", costoLogisticoUnidad: valor } });
+  refrescar();
+  return { ok: true };
+}
+
 /** Pone un pedido del día en un vehículo (al final de su recorrido) o lo deja "sin vehículo" (salidaId = null). */
 export async function asignarAVehiculo(pedidoId: string, salidaId: string | null): Promise<Resultado> {
   const usuario = await exigirOficina();

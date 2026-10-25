@@ -9,7 +9,7 @@ import { DndContext, MouseSensor, TouchSensor, closestCenter, pointerWithin, use
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { formatoPesos, leerMonto } from "@/lib/numeros";
-import { TOPE_COSTO_POR_PIZZA, UNIDADES_POR_PAQUETE, num } from "@/lib/ruta";
+import { UNIDADES_POR_PAQUETE, num } from "@/lib/ruta";
 import { enlaceWhatsApp } from "@/lib/telefonos";
 import { BotonRemito } from "../../BotonRemito";
 import { normalizarFactura, soloNumeroFactura } from "@/lib/remito";
@@ -540,7 +540,7 @@ function FilaTarjeta({ f, n, bloqueada, armando, fija, acc, salidas }: { f: Fila
 const urlRuta = (filas: Fila[]) => `https://www.google.com/maps/dir/${filas.map((f) => encodeURIComponent(`${f.direccion}, ${f.barrio}`)).join("/")}`;
 
 // Resumen de la vuelta de un vehículo (al final de su cuadro): a la izquierda la barra de paquetes contra la capacidad; a la derecha la facturación.
-function ResumenVuelta({ grupo, capacidad, salida, cerrado, verCosto }: { grupo: Fila[]; capacidad: number | null; salida: SalidaInfo; cerrado: boolean; verCosto: boolean }) {
+function ResumenVuelta({ grupo, capacidad, salida, cerrado, verCosto, tope }: { grupo: Fila[]; capacidad: number | null; salida: SalidaInfo; cerrado: boolean; verCosto: boolean; tope: number }) {
   const paquetes = grupo.reduce((t, f) => t + f.bultos, 0);
   const total = grupo.filter((f) => !f.cobranza).reduce((t, f) => t + f.monto, 0); // las cobranzas no son facturación
   return (
@@ -554,20 +554,21 @@ function ResumenVuelta({ grupo, capacidad, salida, cerrado, verCosto }: { grupo:
       <p className="text-sm text-stone-500">
         Facturación <span className="ml-1 text-base font-semibold tabular-nums text-stone-900">{formatoPesos(total)}</span>
       </p>
-      {verCosto && <CostoLogistica key={salida.costo} salida={salida} pizzas={grupo.reduce((t, f) => t + f.sabores.tomate + f.sabores.cebolla + f.sabores.pizzas, 0)} cerrado={cerrado} />}
+      {verCosto && <CostoLogistica key={salida.costo} salida={salida} unidades={grupo.reduce((t, f) => t + f.sabores.tomate + f.sabores.cebolla + f.sabores.pizzas + f.focOliva + f.focCherry, 0)} tope={tope} cerrado={cerrado} />}
     </footer>
   );
 }
 
-// Costo de la vuelta (lo carga un dueño, cada día) dividido por las pizzas que lleva: cuánto sale cada una contra el tope. Solo lo ven los dueños y no sale impreso.
-function CostoLogistica({ salida, pizzas, cerrado }: { salida: SalidaInfo; pizzas: number; cerrado: boolean }) {
+// Costo de la vuelta (lo carga un dueño, cada día) dividido por las unidades que lleva —pizzas, prepizzas (paquete = 2) y focaccias; los demás productos de la tienda no cuentan—:
+// cuánto sale cada una contra el tope (Vehículos → Costo logístico por unidad). Solo lo ven los dueños y no sale impreso.
+function CostoLogistica({ salida, unidades, tope, cerrado }: { salida: SalidaInfo; unidades: number; tope: number; cerrado: boolean }) {
   const router = useRouter();
   const [texto, setTexto] = useState(salida.costo ? Number(salida.costo).toLocaleString("es-AR", { maximumFractionDigits: 2 }) : "");
   const [error, setError] = useState("");
   const [, empezar] = useTransition();
   const costo = texto.trim() ? leerMonto(texto) : null;
-  const porPizza = costo !== null && pizzas > 0 ? costo / pizzas : null;
-  const pasa = porPizza !== null && porPizza > TOPE_COSTO_POR_PIZZA;
+  const porUnidad = costo !== null && unidades > 0 ? costo / unidades : null;
+  const pasa = porUnidad !== null && porUnidad > tope;
   const guardar = () => {
     setError("");
     empezar(async () => {
@@ -577,19 +578,19 @@ function CostoLogistica({ salida, pizzas, cerrado }: { salida: SalidaInfo; pizza
     });
   };
   return (
-    <div className="flex basis-full flex-wrap items-center gap-x-5 gap-y-1 border-t border-stone-200 pt-3 text-sm text-stone-600" title="Costo de logística de esta vuelta, dividido por las pizzas que lleva (solo lo ven los dueños; no sale impreso)">
+    <div className="flex basis-full flex-wrap items-center gap-x-5 gap-y-1 border-t border-stone-200 pt-3 text-sm text-stone-600" title="Costo de logística de esta vuelta, dividido por las unidades que lleva: pizzas, prepizzas y focaccias (solo lo ven los dueños; no sale impreso)">
       <label className="flex items-center gap-2">
         <span className="text-xs font-medium uppercase tracking-wide text-stone-500">Costo de logística</span>
         <span className="flex items-center gap-1">$
           <input inputMode="decimal" value={texto} disabled={cerrado} placeholder="0" onChange={(e) => setTexto(e.target.value)} onBlur={guardar} onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} className="h-9 w-32 rounded-md border border-stone-300 bg-white px-2 text-right tabular-nums text-stone-900 focus:border-stone-500 focus:outline-none disabled:opacity-60" aria-label="Costo de logística de esta vuelta" />
         </span>
       </label>
-      {costo !== null && (pizzas > 0 ? (
-        <span className="tabular-nums">÷ {num(pizzas)} pizzas = <span className={`text-base font-semibold ${pasa ? "text-rojo-700" : "text-stone-900"}`}>{formatoPesos(porPizza!)}</span> por pizza
-          <span className="ml-2 text-xs text-stone-500">tope {formatoPesos(TOPE_COSTO_POR_PIZZA)}</span>
-          {pasa && <span className="ml-2 text-xs font-semibold text-rojo-700">se pasa {formatoPesos(porPizza! - TOPE_COSTO_POR_PIZZA)}</span>}
+      {costo !== null && (unidades > 0 ? (
+        <span className="tabular-nums">÷ {num(unidades)} unidades = <span className={`text-base font-semibold ${pasa ? "text-rojo-700" : "text-stone-900"}`}>{formatoPesos(porUnidad!)}</span> por unidad
+          <span className="ml-2 text-xs text-stone-500">tope {formatoPesos(tope)}</span>
+          {pasa && <span className="ml-2 text-xs font-semibold text-rojo-700">se pasa {formatoPesos(porUnidad! - tope)}</span>}
         </span>
-      ) : <span className="text-xs text-stone-500">Todavía no lleva pizzas.</span>)}
+      ) : <span className="text-xs text-stone-500">Todavía no lleva unidades.</span>)}
       {error && <span className="text-xs font-semibold text-rojo-700" role="alert">{error}</span>}
     </div>
   );
@@ -653,6 +654,7 @@ type Props = {
   diasSemana: { fecha: string; corta: string }[]; // corta = "Lun 28/9"
   cerrado: boolean;
   esDueno: boolean;
+  topeCosto: number;
 };
 
 // Los tres estados de un día, siempre a la vista: ① Armando → ② Lista → ③ Cerrada, con lo que se puede hacer en cada uno.
@@ -697,7 +699,7 @@ function BarraEstado({ estado, esDueno, hayPedidos, resumen, onDejarLista, onVol
   );
 }
 
-export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciales, salidas, vehiculosLibres, repartidores, diasSemana, cerrado, esDueno }: Props) {
+export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciales, salidas, vehiculosLibres, repartidores, diasSemana, cerrado, esDueno, topeCosto }: Props) {
   const router = useRouter();
   const [filas, setFilas] = useState(filasIniciales);
   const [error, setError] = useState<string | null>(null);
@@ -950,7 +952,7 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
             {grupo.length === 0 && siluetasDe(sa.id).length === 0 ? (
               <p className="p-6 text-center text-sm text-stone-600">Todavía no tiene pedidos. Arrastralos desde “Sin ubicar”.</p>
             ) : tabla(grupo, sa, siluetasDe(sa.id))}
-            <ResumenVuelta grupo={grupo} capacidad={sa.capacidad} salida={sa} cerrado={estadoDia.estado === "CERRADA"} verCosto={esDueno} />
+            <ResumenVuelta grupo={grupo} capacidad={sa.capacidad} salida={sa} cerrado={estadoDia.estado === "CERRADA"} verCosto={esDueno} tope={topeCosto} />
           </Zona>
         );
       })}

@@ -329,6 +329,7 @@ model Empresa {
   avisoAsunto         String? // asunto del mail al cliente de la tienda (con {dia} y {orden})
   avisoHorario        String? // horario fijo del aviso por email a clientes de la tienda ("entre las 14 y las 18 hs")
   avisoTexto          String? // texto del aviso (con {nombre} {orden} {dia} {horario}); vacío = el texto de siempre
+  costoLogisticoUnidad Decimal? @db.Decimal(10, 2) // tope de costo de logística por unidad (pizza, prepizza o focaccia); vacío = $275
   claveVendedoresHash String? // contraseña (cifrada) para entrar al apartado Vendedores de Comercial
 }
 
