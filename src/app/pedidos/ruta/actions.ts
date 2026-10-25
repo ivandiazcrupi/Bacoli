@@ -1,5 +1,6 @@
 "use server";
 
+import { conIvaLogistica } from "@/lib/ruta";
 import { revalidatePath } from "next/cache";
 import { sincronizarCuentaPedido } from "@/lib/cuenta";
 import { db } from "@/lib/db";
@@ -33,7 +34,7 @@ export async function guardarVehiculo(vehiculoId: string | null, _: EstadoForm, 
   if (vehiculoId) {
     await db.vehiculo.update({ where: { id: vehiculoId }, data: { nombre, patente, capacidad, ...datosCosto } });
     // Al cambiar el costo del vehículo se aplica directo a TODAS sus hojas de ruta (también las anteriores): la hoja recalcula el costo por unidad.
-    if (costo !== undefined && costo !== null) await db.salida.updateMany({ where: { vehiculoId, fecha: { notIn: (await db.diaListo.findMany({ select: { fecha: true } })).map((d) => d.fecha) } }, data: { costoLogistica: costo } }); // las hojas ya "listas" no se tocan: ya pasaron por la aprobación
+    if (costo !== undefined && costo !== null) await db.salida.updateMany({ where: { vehiculoId, fecha: { notIn: (await db.diaListo.findMany({ select: { fecha: true } })).map((d) => d.fecha) } }, data: { costoLogistica: conIvaLogistica(costo) } }); // las hojas ya "listas" no se tocan: ya pasaron por la aprobación
   } else {
     const ultimo = await db.vehiculo.aggregate({ _max: { orden: true } });
     await db.vehiculo.create({ data: { nombre, patente, capacidad, ...datosCosto, orden: (ultimo._max.orden ?? -1) + 1 } });
@@ -86,7 +87,7 @@ export async function agregarSalida(fecha: string, vehiculoId: string, repartido
   if (!vehiculo || !vehiculo.activo) return { ok: false, error: "Ese vehículo no está disponible." };
   if (await db.salida.findUnique({ where: { fecha_vehiculoId: { fecha: aFecha(fecha), vehiculoId } } })) return { ok: false, error: "Ese vehículo ya sale ese día." };
   const ultimo = await db.salida.aggregate({ where: { fecha: aFecha(fecha) }, _max: { orden: true } });
-  await db.salida.create({ data: { fecha: aFecha(fecha), vehiculoId, repartidorId: repartidorId || null, costoLogistica: vehiculo.costoLogistico, orden: (ultimo._max.orden ?? -1) + 1 } });
+  await db.salida.create({ data: { fecha: aFecha(fecha), vehiculoId, repartidorId: repartidorId || null, costoLogistica: vehiculo.costoLogistico === null ? null : conIvaLogistica(Number(vehiculo.costoLogistico)), orden: (ultimo._max.orden ?? -1) + 1 } });
   refrescar();
   return { ok: true };
 }
@@ -133,8 +134,9 @@ export async function guardarCostoLogistica(salidaId: string, texto: string): Pr
   await exigirOficina();
   const costo = texto.trim() ? leerMonto(texto) : null;
   if (texto.trim() && (costo === null || costo < 0)) return { ok: false, error: "El costo tiene que ser un monto válido." };
-  const salida = await db.salida.findUnique({ where: { id: salidaId } });
+  const salida = await db.salida.findUnique({ where: { id: salidaId }, include: { vehiculo: { select: { costoLogistico: true } } } });
   if (!salida) return { ok: false, error: "Ese vehículo ya no está en el día." };
+  if (salida.vehiculo.costoLogistico !== null) return { ok: false, error: "El costo de este vehículo viene de Vehículos y no se cambia desde la hoja de ruta." };
   if (await db.diaCerrado.findUnique({ where: { fecha: salida.fecha } })) return { ok: false, error: "El día está cerrado." };
   if (await db.diaListo.findUnique({ where: { fecha: salida.fecha } })) return { ok: false, error: "La hoja está lista: para cambiar el costo hay que volver a armarla." };
   await db.salida.update({ where: { id: salidaId }, data: { costoLogistica: costo } });

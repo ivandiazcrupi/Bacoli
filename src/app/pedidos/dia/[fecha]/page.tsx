@@ -88,7 +88,7 @@ export default async function HojaDelDia({ params }: { params: Promise<{ fecha: 
           titulo={`Hoja de ruta · ${nombreDia(fecha)} ${diaMes(fecha)}`}
           fecha={fecha}
           filasIniciales={filas}
-          salidas={salidas.map((s) => ({ id: s.id, nombre: titulo(s.vehiculo.nombre), patente: s.vehiculo.patente ?? "", capacidad: s.vehiculo.capacidad, repartidorId: s.repartidorId ?? "", costo: s.costoLogistica !== null ? String(Number(s.costoLogistica)) : "" }))}
+          salidas={salidas.map((s) => ({ id: s.id, nombre: titulo(s.vehiculo.nombre), patente: s.vehiculo.patente ?? "", capacidad: s.vehiculo.capacidad, repartidorId: s.repartidorId ?? "", costo: s.costoLogistica !== null ? String(Number(s.costoLogistica)) : "", costoFijo: s.vehiculo.costoLogistico !== null }))}
           vehiculosLibres={vehiculos.filter((v) => !salen.has(v.id)).map((v) => ({ id: v.id, nombre: titulo(v.nombre) }))}
           repartidores={repartidores.map((r) => ({ id: r.id, nombre: r.nombre }))}
           diasSemana={diasSemana}

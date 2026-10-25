@@ -8,7 +8,8 @@ import { useEffect, useState, useTransition } from "react";
 import { DndContext, MouseSensor, TouchSensor, closestCenter, pointerWithin, useDraggable, useDroppable, useSensor, useSensors, type CollisionDetection, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { formatoPesos, leerMonto, milesDeBase, milesEscribiendo } from "@/lib/numeros";
+import { CampoMonto } from "@/components/CampoMonto";
+import { formatoPesos, leerMonto, milesDeBase } from "@/lib/numeros";
 import { UNIDADES_POR_PAQUETE, num } from "@/lib/ruta";
 import { enlaceWhatsApp } from "@/lib/telefonos";
 import { BotonRemito } from "../../BotonRemito";
@@ -66,7 +67,7 @@ export type Silueta = {
   destino: string; // qué pasó después: "Se entregó el 9/10", "Reprogramado: Jue 9/10", "En Pedidos, esperando día"…
 };
 
-export type SalidaInfo = { id: string; nombre: string; patente: string; capacidad: number | null; repartidorId: string; costo: string };
+export type SalidaInfo = { id: string; nombre: string; patente: string; capacidad: number | null; repartidorId: string; costo: string; costoFijo: boolean };
 export type Opcion = { id: string; nombre: string };
 
 // Todo entra a lo ancho (sin deslizar): columnas justas y todo centrado.
@@ -600,9 +601,9 @@ function CostoLogistica({ salida, unidades, tope, cerrado }: { salida: SalidaInf
       <p className={`text-xs tabular-nums ${pasa ? "font-semibold text-rojo-700" : "text-stone-500"}`}>
         tope {formatoPesos(tope)}{pasa && porUnidad !== null ? ` · se pasa ${formatoPesos(porUnidad - tope)}` : ""}
       </p>
-      <label className="flex items-center justify-center gap-1.5 text-xs text-stone-500" title="Costo de esta vuelta, de este día. Escribilo para cambiarlo.">
-        <span>Vuelta $</span>
-        <input inputMode="decimal" value={texto} disabled={cerrado} placeholder="Cargar" onChange={(e) => setTexto(milesEscribiendo(e.target.value))} onBlur={guardar} onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} className={`h-7 w-24 rounded border bg-white px-1.5 text-center text-sm font-semibold tabular-nums text-stone-800 focus:border-stone-500 focus:outline-none disabled:opacity-60 ${costo === null ? "border-stone-400" : "border-stone-300"}`} aria-label="Costo de logística de esta vuelta" />
+      <label className="flex items-center justify-center gap-1.5 text-xs text-stone-500" title={salida.costoFijo ? "Este costo viene de Vehículos y no se cambia acá." : "Costo de esta vuelta de este día, con IVA. Escribilo para cargarlo."}>
+        <span>{salida.costoFijo ? "🔒 " : ""}Vuelta (con IVA)</span>
+        <CampoMonto valor={texto} onValor={setTexto} disabled={cerrado || salida.costoFijo} placeholder="Cargar" onBlur={guardar} onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} className={`h-7 w-28 rounded border bg-white px-1.5 text-center text-sm font-semibold tabular-nums text-stone-800 focus:border-stone-500 focus:outline-none disabled:opacity-60 ${costo === null ? "border-stone-400" : "border-stone-300"}`} aria-label="Costo de logística de esta vuelta, con IVA" />
         {costo !== null && unidades > 0 && <span className="tabular-nums">÷ {num(unidades)} un.</span>}
       </label>
       {costo === null && <p className="text-[11px] text-stone-500">Hay que cargarlo para dejar lista e imprimir.</p>}

@@ -86,3 +86,9 @@ export function enlaceUbicar(p: { id: string; estado: string; fechaEntrega: Date
   if (p.estado === "PENDIENTE" || p.estado === "NO_ENTREGADO") return `/pedidos?ver=${p.id}`;
   return null;
 }
+
+/** El costo de logística se carga SIN IVA en Vehículos y para los cálculos se usa el que lleva IVA (siempre 21%). */
+export const IVA_LOGISTICA = 21;
+export function conIvaLogistica(costo: number) {
+  return Math.round(costo * (1 + IVA_LOGISTICA / 100) * 100) / 100;
+}
