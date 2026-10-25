@@ -5,30 +5,31 @@ import { useActionState } from "react";
 import { cabeceraTabla, estiloCampo } from "@/components/campos";
 import { cambiarActivoVehiculo, eliminarVehiculo, guardarVehiculo } from "../ruta/actions";
 
-export type DatosVehiculo = { id: string; nombre: string; patente: string; capacidad: string; activo: boolean };
+export type DatosVehiculo = { id: string; nombre: string; patente: string; capacidad: string; costo: string; activo: boolean };
 
 const COLUMNAS = "lg:grid-cols-[2fr_1.2fr_1.4fr_23rem]";
+const COLUMNAS_COSTO = "lg:grid-cols-[2fr_1.2fr_1.3fr_1.5fr_23rem]";
 const campo = `${estiloCampo} mt-0 py-3 text-base`;
 const boton = "rounded-md px-4 py-3 text-sm font-semibold shadow-sm";
 const etiquetaChica = "mb-0.5 block text-xs font-semibold text-stone-600 lg:hidden";
 
-export function EncabezadoVehiculos() {
+export function EncabezadoVehiculos({ verCosto }: { verCosto?: boolean }) {
   return (
-    <div className={`hidden gap-3 px-5 py-3.5 lg:grid ${cabeceraTabla} ${COLUMNAS}`}>
-      <span>Vehículo</span><span>Patente</span><span>Capacidad máxima (paquetes)</span><span className="w-[23rem]" />
+    <div className={`hidden gap-3 px-5 py-3.5 lg:grid ${cabeceraTabla} ${verCosto ? COLUMNAS_COSTO : COLUMNAS}`}>
+      <span>Vehículo</span><span>Patente</span><span>Capacidad máxima (paquetes)</span>{verCosto && <span>Costo de logística por día ($)</span>}<span className="w-[23rem]" />
     </div>
   );
 }
 
 // Un vehículo por fila, editable ahí mismo. Sin `vehiculo`, agrega uno nuevo.
-export function FilaVehiculo({ vehiculo }: { vehiculo?: DatosVehiculo }) {
+export function FilaVehiculo({ vehiculo, verCosto }: { vehiculo?: DatosVehiculo; verCosto?: boolean }) {
   const [estado, enviar, cargando] = useActionState(guardarVehiculo.bind(null, vehiculo?.id ?? null), undefined);
   const [estadoBorrar, borrar] = useActionState(eliminarVehiculo, undefined);
-  const v = (c: "nombre" | "patente" | "capacidad") => estado?.valores?.[c] ?? vehiculo?.[c] ?? "";
+  const v = (c: "nombre" | "patente" | "capacidad" | "costo") => estado?.valores?.[c] ?? vehiculo?.[c] ?? "";
   const activo = vehiculo?.activo ?? true;
 
   return (
-    <div className={`grid grid-cols-2 items-end gap-3 border-t border-stone-300 px-5 py-4 lg:items-center ${COLUMNAS} ${vehiculo ? "bg-white even:bg-crema-50" : "border-t-2 border-t-verde-700 bg-crema-100"} ${activo ? "" : "opacity-60"}`}>
+    <div className={`grid grid-cols-2 items-end gap-3 border-t border-stone-300 px-5 py-4 lg:items-center ${verCosto ? COLUMNAS_COSTO : COLUMNAS} ${vehiculo ? "bg-white even:bg-crema-50" : "border-t-2 border-t-verde-700 bg-crema-100"} ${activo ? "" : "opacity-60"}`}>
       <form key={JSON.stringify(estado ?? null)} action={enviar} className="contents">
         {vehiculo && <input type="hidden" name="id" value={vehiculo.id} />}
         <label className="col-span-2 min-w-0 lg:col-span-1">
@@ -43,6 +44,12 @@ export function FilaVehiculo({ vehiculo }: { vehiculo?: DatosVehiculo }) {
           <span className={etiquetaChica}>Capacidad máxima (paquetes)</span>
           <input name="capacidad" aria-label="Capacidad máxima en paquetes" inputMode="numeric" placeholder="Sin tope" defaultValue={v("capacidad")} className={campo} />
         </label>
+        {verCosto && (
+          <label className="min-w-0">
+            <span className={etiquetaChica}>Costo de logística por día ($)</span>
+            <input name="costo" aria-label="Costo de logística por día" inputMode="decimal" placeholder="Se carga cada día" defaultValue={v("costo")} className={campo} />
+          </label>
+        )}
         <div className="col-span-2 flex flex-wrap items-center gap-3 lg:col-span-1 lg:w-[23rem] lg:flex-nowrap">
           <button disabled={cargando} className={`${boton} bg-verde-700 text-white hover:bg-verde-800 disabled:opacity-60`}>{cargando ? "…" : vehiculo ? "Guardar" : "+ Agregar"}</button>
           {vehiculo && (

@@ -23,6 +23,8 @@ export default async function ImprimirHojaDeRuta({ params, searchParams }: { par
   pedidos.sort(porReparto);
   const debe = await clientesConDeuda(pedidos.flatMap((p) => (p.clienteId ? [p.clienteId] : [])));
   const filas = pedidos.map((p) => aFila(p, debe));
+  // Sin el costo de logística cargado no se imprime la hoja (regla del dueño).
+  const sinCosto = salidas.filter((sa) => sa.costoLogistica === null && pedidos.some((p) => p.salidaId === sa.id));
   const f = deFecha(aFecha(fecha));
   const textoFecha = `${nombreDia(f)} ${diaMes(f)}`;
 
@@ -30,7 +32,12 @@ export default async function ImprimirHojaDeRuta({ params, searchParams }: { par
     <div className="bg-stone-200 print:bg-white">
       <style>{"@page { size: A4 landscape; margin: 11mm 12mm } @media print { html { font-size: 14px !important } body { background: #fff !important; padding-bottom: 0 !important } }"}</style>
       <BarraImpresion volver={`/pedidos/dia/${fecha}`} textoVolver="Volver a la hoja de ruta" />
-      {salidas.length === 0 ? (
+      {sinCosto.length > 0 ? (
+        <div className="mx-auto my-10 max-w-xl rounded-xl border border-stone-300 bg-white p-8 text-center print:hidden">
+          <p className="text-lg font-semibold text-stone-900">Falta cargar el costo de logística</p>
+          <p className="mt-2 text-stone-600">Para imprimir la hoja de ruta hay que cargar el costo de logística de: <b>{sinCosto.map((sa) => titulo(sa.vehiculo.nombre)).join(", ")}</b>. Se carga al pie de su cuadro en la hoja de ruta.</p>
+        </div>
+      ) : salidas.length === 0 ? (
         <p className="p-10">No hay camionetas con pedidos para imprimir en este día.</p>
       ) : (
         <div className="space-y-6 py-6 print:space-y-0 print:py-0">

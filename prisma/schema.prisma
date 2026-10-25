@@ -352,6 +352,7 @@ model Vehiculo {
   nombre    String
   patente   String?
   capacidad Int? // paquetes máximos; vacío = sin tope
+  costoLogistico Decimal? @db.Decimal(12, 2) // costo de logística por día ya seteado: al sumar el vehículo a un día se copia solo (se puede editar); vacío = hay que cargarlo a mano
   activo    Boolean  @default(true)
   eliminado Boolean  @default(false) // "borrado" por el usuario pero con historial: se oculta en todas las listas y no se pierde ninguna hoja de ruta vieja
   orden     Int      @default(0)

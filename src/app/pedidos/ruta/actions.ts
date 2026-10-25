@@ -15,7 +15,7 @@ const refrescar = () => revalidatePath("/pedidos", "layout");
 // ---------- Vehículos (los carga el equipo; la capacidad máxima, en paquetes, la define cada uno) ----------
 
 export async function guardarVehiculo(vehiculoId: string | null, _: EstadoForm, formData: FormData): Promise<EstadoForm> {
-  await exigirOficina();
+  const usuario = await exigirOficina();
   const valores = valoresDe(formData);
   const nombre = titulo(String(formData.get("nombre") ?? "").replace(/\s+/g, " ").trim()); // "Camioneta 1": minúscula con la primera letra de cada palabra en mayúscula
   if (nombre.length < 2) return { error: "Falta el nombre del vehículo.", valores };
@@ -24,11 +24,17 @@ export async function guardarVehiculo(vehiculoId: string | null, _: EstadoForm, 
   const capacidad = textoCapacidad ? Number(textoCapacidad) : null;
   if (capacidad !== null && capacidad < 1) return { error: "La capacidad tiene que ser mayor a 0 (o dejarla vacía = sin tope).", valores };
 
+  // El costo de logística por día ya seteado de este vehículo lo cambia solo un dueño (si no viene el campo, se conserva).
+  const textoCosto = formData.has("costo") && usuario.rol === "DUENO" ? String(formData.get("costo") ?? "").trim() : undefined;
+  const costo = textoCosto === undefined ? undefined : textoCosto ? leerMonto(textoCosto) : null;
+  if (costo !== undefined && textoCosto && (costo === null || costo < 0)) return { error: "El costo de logística tiene que ser un monto válido (o dejarlo vacío para cargarlo a mano cada día).", valores };
+  const datosCosto = costo === undefined ? {} : { costoLogistico: costo };
+
   if (vehiculoId) {
-    await db.vehiculo.update({ where: { id: vehiculoId }, data: { nombre, patente, capacidad } });
+    await db.vehiculo.update({ where: { id: vehiculoId }, data: { nombre, patente, capacidad, ...datosCosto } });
   } else {
     const ultimo = await db.vehiculo.aggregate({ _max: { orden: true } });
-    await db.vehiculo.create({ data: { nombre, patente, capacidad, orden: (ultimo._max.orden ?? -1) + 1 } });
+    await db.vehiculo.create({ data: { nombre, patente, capacidad, ...datosCosto, orden: (ultimo._max.orden ?? -1) + 1 } });
   }
   refrescar();
   return { ok: vehiculoId ? "Vehículo guardado." : "Vehículo agregado." };
@@ -78,7 +84,7 @@ export async function agregarSalida(fecha: string, vehiculoId: string, repartido
   if (!vehiculo || !vehiculo.activo) return { ok: false, error: "Ese vehículo no está disponible." };
   if (await db.salida.findUnique({ where: { fecha_vehiculoId: { fecha: aFecha(fecha), vehiculoId } } })) return { ok: false, error: "Ese vehículo ya sale ese día." };
   const ultimo = await db.salida.aggregate({ where: { fecha: aFecha(fecha) }, _max: { orden: true } });
-  await db.salida.create({ data: { fecha: aFecha(fecha), vehiculoId, repartidorId: repartidorId || null, orden: (ultimo._max.orden ?? -1) + 1 } });
+  await db.salida.create({ data: { fecha: aFecha(fecha), vehiculoId, repartidorId: repartidorId || null, costoLogistica: vehiculo.costoLogistico, orden: (ultimo._max.orden ?? -1) + 1 } });
   refrescar();
   return { ok: true };
 }
@@ -120,10 +126,9 @@ export async function guardarHorario(salidaId: string, inicio: string, fin: stri
   return { ok: true };
 }
 
-/** Costo de logística de esa vuelta (en pesos, vacío = sin cargar). Solo dueños. Se puede cargar con la hoja lista; solo se frena con el día cerrado. */
+/** Costo de logística de esa vuelta (en pesos; vacío = sin cargar, y entonces no se puede dejar lista la hoja ni imprimirla). Lo carga cualquiera de oficina; solo se frena con el día cerrado. */
 export async function guardarCostoLogistica(salidaId: string, texto: string): Promise<Resultado> {
-  const usuario = await exigirOficina();
-  if (usuario.rol !== "DUENO") return { ok: false, error: "Solo un dueño carga el costo de logística." };
+  await exigirOficina();
   const costo = texto.trim() ? leerMonto(texto) : null;
   if (texto.trim() && (costo === null || costo < 0)) return { ok: false, error: "El costo tiene que ser un monto válido." };
   const salida = await db.salida.findUnique({ where: { id: salidaId } });

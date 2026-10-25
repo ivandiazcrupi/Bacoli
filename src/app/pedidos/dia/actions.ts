@@ -287,6 +287,8 @@ export async function dejarListo(fecha: string): Promise<Resultado> {
   if (sinPago > 0) problemas.push(`${plural(sinPago, "pedido de la tienda sin pago confirmado", "pedidos de la tienda sin pago confirmado")}`);
   const sinFactura = pedidos.filter((p) => p.clienteId && p.conFactura && !p.numeroFactura?.trim()).length;
   if (sinFactura > 0) problemas.push(`${plural(sinFactura, "pedido con factura sin número", "pedidos con factura sin número")}`);
+  const sinCosto = await db.salida.findMany({ where: { fecha: f, costoLogistica: null, pedidos: { some: { estado: { not: "CANCELADO" } } } }, include: { vehiculo: true } });
+  if (sinCosto.length > 0) problemas.push(`falta cargar el costo de logística de: ${sinCosto.map((x) => titulo(x.vehiculo.nombre)).join(", ")}`);
   if (problemas.length > 0) return { ok: false, error: `Para dejar lista la hoja falta:\n${problemas.map((x) => `• ${x}`).join("\n")}` };
 
   await db.diaListo.create({ data: { fecha: f, listoPor: usuario.id } });
