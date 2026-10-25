@@ -92,3 +92,20 @@ export const IVA_LOGISTICA = 21;
 export function conIvaLogistica(costo: number) {
   return Math.round(costo * (1 + IVA_LOGISTICA / 100) * 100) / 100;
 }
+
+/**
+ * Productos "de afuera" de un grupo de pedidos: todo lo que NO es pizza, prepizza ni focaccia (latas, fideos, accesorios, pizzeta…), juntando
+ * los iguales y sumando lo cobrado más lo sin cargo. No incluye el envío ni los combos (el combo cuenta como prepizza).
+ */
+export function otrosProductos(items: RenglonRuta[]) {
+  const total = new Map<string, number>();
+  for (const i of items) {
+    const nombre = (i.nombre ?? "").trim();
+    const n = sinTildes(nombre.toUpperCase());
+    if (!nombre || i.paquetesPor === 0 || n.startsWith("ENVIO")) continue; // el envío no es un producto
+    if (claseDe(nombre) || n.includes("COMBO NAPOLITANO")) continue; // pizzas y prepizzas
+    if (focacciasPorTipo([i]).oliva + focacciasPorTipo([i]).cherry > 0) continue; // focaccias
+    total.set(nombre.toUpperCase(), (total.get(nombre.toUpperCase()) ?? 0) + i.cantidad + (i.sinCargo ?? 0));
+  }
+  return [...total.entries()].map(([nombre, cantidad]) => ({ nombre, cantidad })).filter((x) => x.cantidad > 0).sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+}

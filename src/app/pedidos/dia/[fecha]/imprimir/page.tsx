@@ -4,7 +4,7 @@ import { estadoDelDia } from "@/lib/dias";
 import { db } from "@/lib/db";
 import { aFecha, deFecha, diaMes, esFechaValida, nombreDia } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
-import { bultosDe, focacciasPorTipo, num, porReparto, totalUnidades, UNIDADES_POR_PAQUETE, unidadesPorSabor } from "@/lib/ruta";
+import { bultosDe, focacciasPorTipo, num, otrosProductos, porReparto, totalUnidades, UNIDADES_POR_PAQUETE, unidadesPorSabor } from "@/lib/ruta";
 import { exigirOficina } from "@/lib/session";
 import { titulo } from "@/lib/mayusculas";
 import { BarraImpresion } from "../../../remito/BarraImpresion";
@@ -65,6 +65,7 @@ export default async function ImprimirHojaDeRuta({ params, searchParams }: { par
             const paquetes = pedidos.filter((p) => p.salidaId === sa.id).reduce((s, p) => s + bultosDe(p.items), 0);
             const focaccias = pedidos.filter((p) => p.salidaId === sa.id).reduce((t, p) => { const x = focacciasPorTipo(p.items); return { oliva: t.oliva + x.oliva, cherry: t.cherry + x.cherry }; }, { oliva: 0, cherry: 0 });
             const sabores = pedidos.filter((p) => p.salidaId === sa.id).reduce((t, p) => { const x = unidadesPorSabor(p.items); return { tomate: t.tomate + x.tomate, cebolla: t.cebolla + x.cebolla, pizzas: t.pizzas + x.pizzas }; }, { tomate: 0, cebolla: 0, pizzas: 0 });
+            const otros = otrosProductos(pedidos.filter((p) => p.salidaId === sa.id).flatMap((p) => p.items));
             return (
               <section key={sa.id} className="mx-auto w-[277mm] bg-white p-[8mm] font-[Helvetica,Arial,sans-serif] text-neutral-900 shadow print:w-full print:p-0 print:shadow-none [&:not(:last-child)]:break-after-page">
                 <header className="mb-6 flex items-end justify-between border-b border-neutral-900 pb-3">
@@ -153,6 +154,17 @@ export default async function ImprimirHojaDeRuta({ params, searchParams }: { par
                     ))}
                   </tbody>
                 </table>
+
+                {otros.length > 0 && (
+                  <div className="mt-6 break-inside-avoid">
+                    <p className="border-b border-neutral-900 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-neutral-700">Otros productos para cargar</p>
+                    <ul className="mt-2 columns-3 gap-x-10 text-[13px] leading-snug">
+                      {otros.map((o) => (
+                        <li key={o.nombre} className="flex break-inside-avoid gap-2.5 border-b border-neutral-200 py-1"><span className="w-8 shrink-0 text-right text-[14px] font-bold tabular-nums">{num(o.cantidad)}</span><span className="font-medium uppercase">{o.nombre}</span></li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
               </section>
             );
