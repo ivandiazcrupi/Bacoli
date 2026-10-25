@@ -2,6 +2,8 @@
 
 import { titulo } from "@/lib/mayusculas";
 import { useActionState } from "react";
+import { CampoMonto } from "@/components/CampoMonto";
+import { milesDeBase } from "@/lib/numeros";
 import { cabeceraTabla, estiloCampo } from "@/components/campos";
 import { cambiarActivoVehiculo, eliminarVehiculo, guardarVehiculo } from "../ruta/actions";
 
@@ -47,7 +49,7 @@ export function FilaVehiculo({ vehiculo, verCosto }: { vehiculo?: DatosVehiculo;
         {verCosto && (
           <label className="min-w-0">
             <span className={etiquetaChica}>Costo de logística por día ($)</span>
-            <input name="costo" aria-label="Costo de logística por día" inputMode="decimal" placeholder="Se carga cada día" defaultValue={v("costo")} className={campo} />
+            <CampoMonto name="costo" aria-label="Costo de logística por día" placeholder="Se carga cada día" inicial={estado?.valores?.costo ?? milesDeBase(vehiculo?.costo)} className={campo} />
           </label>
         )}
         <div className="col-span-2 flex flex-wrap items-center gap-3 lg:col-span-1 lg:w-[23rem] lg:flex-nowrap">

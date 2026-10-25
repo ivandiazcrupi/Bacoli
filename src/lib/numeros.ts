@@ -23,3 +23,17 @@ export function cuitValido(texto: string) {
   const verificador = resto === 11 ? 0 : resto === 10 ? 9 : resto;
   return verificador === Number(d[10]);
 }
+
+/** Mientras se escribe un monto: pone el punto de miles solo ("100000" → "100.000"; los decimales van con coma: "1.500,5"). */
+export function milesEscribiendo(texto: string) {
+  const [ent, ...resto] = texto.replace(/[^\d,]/g, "").split(",");
+  const miles = ent.replace(/^0+(?=\d)/, "").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return resto.length ? `${miles},${resto.join("").slice(0, 2)}` : miles;
+}
+
+/** Un monto que viene de la base ("110000" o "110000.5") listo para mostrar en un campo: "110.000" / "110.000,5". */
+export function milesDeBase(valor: string | number | null | undefined) {
+  if (valor === null || valor === undefined || valor === "") return "";
+  const n = Number(valor);
+  return Number.isFinite(n) ? n.toLocaleString("es-AR", { maximumFractionDigits: 2 }) : "";
+}

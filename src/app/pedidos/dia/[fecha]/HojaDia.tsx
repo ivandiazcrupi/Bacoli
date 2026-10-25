@@ -8,7 +8,7 @@ import { useEffect, useState, useTransition } from "react";
 import { DndContext, MouseSensor, TouchSensor, closestCenter, pointerWithin, useDraggable, useDroppable, useSensor, useSensors, type CollisionDetection, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { formatoPesos, leerMonto } from "@/lib/numeros";
+import { formatoPesos, leerMonto, milesDeBase, milesEscribiendo } from "@/lib/numeros";
 import { UNIDADES_POR_PAQUETE, num } from "@/lib/ruta";
 import { enlaceWhatsApp } from "@/lib/telefonos";
 import { BotonRemito } from "../../BotonRemito";
@@ -572,7 +572,7 @@ function ResumenVuelta({ grupo, capacidad, salida, tope, cerrado }: { grupo: Fil
 // —pizzas, prepizzas (paquete = 2) y focaccias; los demás productos de la tienda no cuentan—. No sale impreso.
 function CostoLogistica({ salida, unidades, tope, cerrado, titulito }: { salida: SalidaInfo; unidades: number; tope: number; cerrado: boolean; titulito: string }) {
   const router = useRouter();
-  const [texto, setTexto] = useState(salida.costo ? Number(salida.costo).toLocaleString("es-AR", { maximumFractionDigits: 2 }) : "");
+  const [texto, setTexto] = useState(milesDeBase(salida.costo));
   const [error, setError] = useState("");
   const [, empezar] = useTransition();
   const costo = texto.trim() ? leerMonto(texto) : null;
@@ -599,7 +599,7 @@ function CostoLogistica({ salida, unidades, tope, cerrado, titulito }: { salida:
       )}
       <label className="flex items-center justify-center gap-1.5 text-xs text-stone-500" title="Costo de esta vuelta, de este día. Escribilo para cambiarlo.">
         <span>Vuelta $</span>
-        <input inputMode="decimal" value={texto} disabled={cerrado} placeholder="Cargar" onChange={(e) => setTexto(e.target.value)} onBlur={guardar} onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} className={`h-7 w-24 rounded border bg-white px-1.5 text-center text-sm font-medium tabular-nums text-stone-800 focus:border-stone-500 focus:outline-none disabled:opacity-60 ${costo === null ? "border-stone-400" : "border-stone-300"}`} aria-label="Costo de logística de esta vuelta" />
+        <input inputMode="decimal" value={texto} disabled={cerrado} placeholder="Cargar" onChange={(e) => setTexto(milesEscribiendo(e.target.value))} onBlur={guardar} onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} className={`h-7 w-24 rounded border bg-white px-1.5 text-center text-sm font-medium tabular-nums text-stone-800 focus:border-stone-500 focus:outline-none disabled:opacity-60 ${costo === null ? "border-stone-400" : "border-stone-300"}`} aria-label="Costo de logística de esta vuelta" />
         {costo !== null && unidades > 0 && <span className="tabular-nums">÷ {num(unidades)} un.</span>}
       </label>
       {costo === null && <p className="text-[11px] text-stone-500">Hay que cargarlo para dejar lista e imprimir.</p>}
@@ -885,11 +885,21 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
         onReabrirDia={reabrir}
       />
       {costoPorUnidadDia !== null && (
-        <div className="flex justify-center">
-          <div className={`flex min-w-[17rem] flex-col items-center gap-0.5 rounded-md border px-6 py-2 text-center ${diaSePasa ? "border-rojo-700 bg-white" : "border-stone-300 bg-white"}`} title="Costo de todas las camionetas del día ÷ las unidades que llevan entre todas">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-500">Costo logístico del día · por unidad</p>
-            <p className="leading-none"><span className={`text-xl font-semibold tabular-nums ${diaSePasa ? "text-rojo-700" : "text-verde-700"}`}>{formatoPesos(costoPorUnidadDia)}</span><span className="ml-2 text-[11px] tabular-nums text-stone-500">tope {formatoPesos(topeCosto)}</span></p>
-            <p className="text-[11px] tabular-nums text-stone-500">{formatoPesos(costoDia)} ÷ {num(unidadesDia)} unidades{diaSePasa ? <span className="ml-1 font-semibold text-rojo-700">· se pasa {formatoPesos(costoPorUnidadDia - topeCosto)}</span> : null}</p>
+        <div className="flex justify-center py-1">
+          <div className={`grid w-full max-w-3xl grid-cols-3 divide-x rounded-md border bg-white py-3 text-center ${diaSePasa ? "divide-rojo-700/30 border-rojo-700" : "divide-stone-200 border-stone-300"}`} title="Costo de todas las camionetas del día ÷ las unidades que llevan entre todas">
+            <div className="flex flex-col items-center justify-center gap-1.5 px-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-500">Costo logístico del día</p>
+              <p className="text-base font-semibold tabular-nums text-stone-800">{formatoPesos(costoDia)}</p>
+            </div>
+            <div className="flex flex-col items-center justify-center gap-1.5 px-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-500">Por unidad</p>
+              <p className={`text-2xl font-semibold leading-none tabular-nums ${diaSePasa ? "text-rojo-700" : "text-verde-700"}`}>{formatoPesos(costoPorUnidadDia)}</p>
+              <p className={`text-[11px] tabular-nums ${diaSePasa ? "font-semibold text-rojo-700" : "text-stone-500"}`}>tope {formatoPesos(topeCosto)}{diaSePasa ? ` · se pasa ${formatoPesos(costoPorUnidadDia - topeCosto)}` : ""}</p>
+            </div>
+            <div className="flex flex-col items-center justify-center gap-1.5 px-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-500">Unidades del día</p>
+              <p className="text-base font-semibold tabular-nums text-stone-800">{num(unidadesDia)}</p>
+            </div>
           </div>
         </div>
       )}
