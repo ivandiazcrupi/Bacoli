@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { aFecha, deFecha, diaMes, esFechaValida, nombreDia } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
-import { bultosDe, focacciasPorTipo, num, porReparto, totalUnidades, unidadesPorSabor } from "@/lib/ruta";
+import { bultosDe, focacciasPorTipo, num, porReparto, totalUnidades, UNIDADES_POR_PAQUETE, unidadesPorSabor } from "@/lib/ruta";
 import { exigirOficina } from "@/lib/session";
 import { titulo } from "@/lib/mayusculas";
 import { BarraImpresion } from "../../../remito/BarraImpresion";
@@ -57,12 +57,12 @@ export default async function ImprimirHojaDeRuta({ params, searchParams }: { par
                         <dd className="mt-1 text-[24px] font-bold leading-none tabular-nums">{totalUnidades(sabores)}</dd>
                       </div>
                       <div>
-                        <dt className="text-[9px] font-semibold uppercase tracking-[0.2em] text-neutral-500">Tomate</dt>
-                        <dd className="mt-1 text-[24px] font-bold leading-none tabular-nums">{sabores.tomate}</dd>
+                        <dt className="text-[9px] font-semibold uppercase tracking-[0.2em] text-neutral-500">Tomate (paq.)</dt>
+                        <dd className="mt-1 text-[24px] font-bold leading-none tabular-nums">{num(sabores.tomate / UNIDADES_POR_PAQUETE)}</dd>
                       </div>
                       <div>
-                        <dt className="text-[9px] font-semibold uppercase tracking-[0.2em] text-neutral-500">Cebolla</dt>
-                        <dd className="mt-1 text-[24px] font-bold leading-none tabular-nums">{sabores.cebolla}</dd>
+                        <dt className="text-[9px] font-semibold uppercase tracking-[0.2em] text-neutral-500">Cebolla (paq.)</dt>
+                        <dd className="mt-1 text-[24px] font-bold leading-none tabular-nums">{num(sabores.cebolla / UNIDADES_POR_PAQUETE)}</dd>
                       </div>
                       {sabores.pizzas > 0 && (
                         <div>
