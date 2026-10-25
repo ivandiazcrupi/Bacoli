@@ -138,7 +138,7 @@ export async function guardarCostoLogistica(salidaId: string, texto: string): Pr
   if (!salida) return { ok: false, error: "Ese vehículo ya no está en el día." };
   if (salida.vehiculo.costoLogistico !== null) return { ok: false, error: "El costo de este vehículo viene de Vehículos y no se cambia desde la hoja de ruta." };
   if (await db.diaCerrado.findUnique({ where: { fecha: salida.fecha } })) return { ok: false, error: "El día está cerrado." };
-  if (await db.diaListo.findUnique({ where: { fecha: salida.fecha } })) return { ok: false, error: "La hoja está lista: para cambiar el costo hay que volver a armarla." };
+  if (salida.costoLogistica !== null && (await db.diaListo.findUnique({ where: { fecha: salida.fecha } }))) return { ok: false, error: "La hoja está lista: para cambiar el costo hay que volver a armarla." };
   await db.salida.update({ where: { id: salidaId }, data: { costoLogistica: costo } });
   refrescar();
   return { ok: true };
@@ -223,6 +223,21 @@ export async function moverSalida(salidaId: string, sentido: "arriba" | "abajo")
 export async function ordenarVehiculos(ids: string[]): Promise<Resultado> {
   await exigirOficina();
   await db.$transaction(ids.map((id, n) => db.vehiculo.update({ where: { id }, data: { orden: n } })));
+  refrescar();
+  return { ok: true };
+}
+
+/** Cambia la camioneta de una vuelta (ej. cambió el repartidor a mitad del día) sin tocar los pedidos ni su recorrido. Pasa a valer la capacidad y el costo (con IVA) de la nueva camioneta. Se puede con la hoja armando o lista; cerrada no. */
+export async function cambiarVehiculoSalida(salidaId: string, vehiculoId: string): Promise<Resultado> {
+  await exigirOficina();
+  const salida = await db.salida.findUnique({ where: { id: salidaId } });
+  if (!salida) return { ok: false, error: "Esa vuelta ya no está en el día." };
+  if (await db.diaCerrado.findUnique({ where: { fecha: salida.fecha } })) return { ok: false, error: "El día está cerrado." };
+  const vehiculo = await db.vehiculo.findUnique({ where: { id: vehiculoId } });
+  if (!vehiculo || !vehiculo.activo || vehiculo.eliminado) return { ok: false, error: "Ese vehículo no está disponible." };
+  if (vehiculo.id === salida.vehiculoId) return { ok: true };
+  if (await db.salida.findFirst({ where: { fecha: salida.fecha, vehiculoId } })) return { ok: false, error: "Ese vehículo ya sale ese día." };
+  await db.salida.update({ where: { id: salidaId }, data: { vehiculoId, costoLogistica: vehiculo.costoLogistico === null ? null : conIvaLogistica(Number(vehiculo.costoLogistico)) } });
   refrescar();
   return { ok: true };
 }

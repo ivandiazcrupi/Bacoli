@@ -15,7 +15,7 @@ import { enlaceWhatsApp } from "@/lib/telefonos";
 import { BotonRemito } from "../../BotonRemito";
 import { normalizarFactura, soloNumeroFactura } from "@/lib/remito";
 import { asignarADia, marcarPagoWeb } from "../../actions";
-import { agregarSalida, asignarAVehiculo, devolverAPedidos, guardarCostoLogistica, moverSalida, ordenarSalida, quitarSalida } from "../../ruta/actions";
+import { agregarSalida, asignarAVehiculo, devolverAPedidos, guardarCostoLogistica, cambiarVehiculoSalida, moverSalida, ordenarSalida, quitarSalida } from "../../ruta/actions";
 import { emitirRemitosDia } from "../../remito/actions";
 import { cerrarDia, dejarEnCuentaCorriente, dejarListo, reabrirHoja, aprobarCostoDia, deshacerCobro, guardarNumeroFactura, marcarEntrega, reabrirDia, registrarCobro, registrarNoEntrega, type Resultado } from "../actions";
 import { NotaRapida } from "@/components/NotaRapida";
@@ -919,7 +919,7 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
               <div className="flex items-center justify-center gap-3 border-t border-stone-200 bg-crema-50 px-4 py-2 text-xs">
                 {aprobado
                   ? <p className="font-semibold text-verde-700">✓ Costo aprobado por {aprobacion?.por}</p>
-                  : esDueno && estadoDia.estado === "ARMANDO"
+                  : esDueno && estadoDia.estado !== "CERRADA"
                     ? <><p className="font-semibold text-rojo-700">El costo se pasa del tope: para dejar lista la hoja hace falta aprobarlo.</p><button type="button" onClick={aprobarCosto} className="rounded-md border border-stone-400 bg-white px-3 py-1 font-semibold shadow-sm hover:bg-crema-100">Aprobar este costo</button></>
                     : <p className="font-semibold text-stone-700">El costo se pasa del tope: lo tiene que aprobar un gerente.</p>}
               </div>
@@ -992,6 +992,18 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
+                {estadoDia.estado !== "CERRADA" && vehiculosLibres.length > 0 && (
+                  <select
+                    aria-label={`Cambiar la camioneta de ${sa.nombre}`}
+                    title="Si cambió el repartidor: la vuelta pasa a otra camioneta con los mismos pedidos (cambian capacidad y costo)"
+                    value=""
+                    onChange={(e) => { const v = vehiculosLibres.find((x) => x.id === e.target.value); if (v && window.confirm(`¿Pasar esta vuelta de ${sa.nombre} a ${v.nombre}? Los pedidos y el recorrido quedan igual; cambian la capacidad y el costo.`)) llamar(() => cambiarVehiculoSalida(sa.id, v.id)); }}
+                    className="h-9 rounded-md border border-stone-400 bg-white px-2 text-sm font-medium shadow-sm"
+                  >
+                    <option value="">Cambiar camioneta…</option>
+                    {vehiculosLibres.map((v) => <option key={v.id} value={v.id}>{v.nombre}</option>)}
+                  </select>
+                )}
                 {grupo.length > 0 && (bloqueoImprimir
                   ? <span title={bloqueoImprimir} className="cursor-not-allowed rounded-md border border-stone-300 bg-stone-100 px-3 py-1.5 text-sm font-medium text-stone-400">Imprimir</span>
                   : <a href={`/pedidos/dia/${fecha}/imprimir?salida=${sa.id}`} target="_blank" rel="noreferrer" className="rounded-md border border-stone-400 bg-white px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-crema-50">Imprimir</a>)}
@@ -1002,7 +1014,7 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
             {grupo.length === 0 && siluetasDe(sa.id).length === 0 ? (
               <p className="p-6 text-center text-sm text-stone-600">Todavía no tiene pedidos. Arrastralos desde “Sin ubicar”.</p>
             ) : tabla(grupo, sa, siluetasDe(sa.id))}
-            <ResumenVuelta grupo={grupo} capacidad={sa.capacidad} salida={sa} tope={topeCosto} cerrado={estadoDia.estado !== "ARMANDO"} />
+            <ResumenVuelta grupo={grupo} capacidad={sa.capacidad} salida={sa} tope={topeCosto} cerrado={estadoDia.estado === "CERRADA" || (estadoDia.estado === "LISTA" && !!sa.costo)} />
           </Zona>
         );
       })}

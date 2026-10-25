@@ -308,7 +308,7 @@ export async function aprobarCostoDia(fecha: string): Promise<Resultado> {
   if (usuario.rol !== "DUENO") return { ok: false, error: "Solo un gerente puede aprobar el costo logístico." };
   if (!esFechaValida(fecha)) return { ok: false, error: "Fecha inválida." };
   const { estado } = await estadoDelDia(fecha);
-  if (estado !== "ARMANDO") return { ok: false, error: "La hoja ya está lista o cerrada." };
+  if (estado === "CERRADA") return { ok: false, error: "El día está cerrado." };
   const c = await costoLogisticoDelDia(fecha);
   if (c.porUnidad === null) return { ok: false, error: "Falta cargar el costo de alguna camioneta." };
   if (!c.sePasa) return { ok: false, error: "El costo está dentro del tope: no hace falta aprobarlo." };
