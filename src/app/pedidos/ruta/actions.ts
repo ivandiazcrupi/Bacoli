@@ -32,6 +32,8 @@ export async function guardarVehiculo(vehiculoId: string | null, _: EstadoForm, 
 
   if (vehiculoId) {
     await db.vehiculo.update({ where: { id: vehiculoId }, data: { nombre, patente, capacidad, ...datosCosto } });
+    // Al cambiar el costo del vehículo se aplica directo a TODAS sus hojas de ruta (también las anteriores): la hoja recalcula el costo por unidad.
+    if (costo !== undefined && costo !== null) await db.salida.updateMany({ where: { vehiculoId }, data: { costoLogistica: costo } });
   } else {
     const ultimo = await db.vehiculo.aggregate({ _max: { orden: true } });
     await db.vehiculo.create({ data: { nombre, patente, capacidad, ...datosCosto, orden: (ultimo._max.orden ?? -1) + 1 } });
