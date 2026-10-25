@@ -15,7 +15,7 @@ import { enlaceWhatsApp } from "@/lib/telefonos";
 import { BotonRemito } from "../../BotonRemito";
 import { normalizarFactura, soloNumeroFactura } from "@/lib/remito";
 import { asignarADia, marcarPagoWeb } from "../../actions";
-import { agregarSalida, asignarAVehiculo, devolverAPedidos, guardarCostoLogistica, ordenarSalida, quitarSalida } from "../../ruta/actions";
+import { agregarSalida, asignarAVehiculo, devolverAPedidos, guardarCostoLogistica, moverSalida, ordenarSalida, quitarSalida } from "../../ruta/actions";
 import { emitirRemitosDia } from "../../remito/actions";
 import { cerrarDia, dejarEnCuentaCorriente, dejarListo, reabrirHoja, aprobarCostoDia, deshacerCobro, guardarNumeroFactura, marcarEntrega, reabrirDia, registrarCobro, registrarNoEntrega, type Resultado } from "../actions";
 import { NotaRapida } from "@/components/NotaRapida";
@@ -979,9 +979,17 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
         return (
           <Zona key={sa.id} id={sa.id} bloqueada={fija} clase={`overflow-hidden rounded-xl border border-stone-400 shadow-sm ${tono.cuadro}`}>
             <header className={`flex flex-wrap items-center justify-between gap-3 border-b border-stone-300 px-5 py-3 text-stone-900 ${tono.cabecera}`}>
-              <div>
-                <h2 className="text-lg font-bold leading-tight">{sa.nombre}</h2>
-                {sa.patente && <p className="text-xs text-stone-600">{sa.patente}</p>}
+              <div className="flex items-center gap-3">
+                {!fija && salidas.length > 1 && (
+                  <div className="flex flex-col gap-0.5" role="group" aria-label={`Mover ${sa.nombre}`}>
+                    <button type="button" disabled={idx === 0} onClick={() => llamar(() => moverSalida(sa.id, "arriba"))} title="Subir esta camioneta" aria-label="Subir esta camioneta" className="h-6 w-8 rounded border border-stone-400 bg-white text-xs font-bold leading-none shadow-sm hover:bg-crema-50 disabled:opacity-30">▲</button>
+                    <button type="button" disabled={idx === salidas.length - 1} onClick={() => llamar(() => moverSalida(sa.id, "abajo"))} title="Bajar esta camioneta" aria-label="Bajar esta camioneta" className="h-6 w-8 rounded border border-stone-400 bg-white text-xs font-bold leading-none shadow-sm hover:bg-crema-50 disabled:opacity-30">▼</button>
+                  </div>
+                )}
+                <div>
+                  <h2 className="text-lg font-bold leading-tight">{sa.nombre}</h2>
+                  {sa.patente && <p className="text-xs text-stone-600">{sa.patente}</p>}
+                </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {grupo.length > 0 && (bloqueoImprimir

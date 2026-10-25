@@ -202,3 +202,27 @@ export async function devolverAPedidos(pedidoId: string): Promise<Resultado> {
   refrescar();
   return { ok: true };
 }
+
+/** Sube o baja una camioneta dentro de la hoja de ese día (para dejar arriba la que se agregó última). Solo con la hoja todavía en armado. */
+export async function moverSalida(salidaId: string, sentido: "arriba" | "abajo"): Promise<Resultado> {
+  await exigirOficina();
+  const salida = await db.salida.findUnique({ where: { id: salidaId } });
+  if (!salida) return { ok: false, error: "Ese vehículo ya no está en el día." };
+  if (!(await diaAbierto(salida.fecha))) return { ok: false, error: "La hoja de ese día está lista o cerrada: hay que reabrirla para moverla." };
+  const todas = await db.salida.findMany({ where: { fecha: salida.fecha }, orderBy: [{ orden: "asc" }, { id: "asc" }] });
+  const i = todas.findIndex((x) => x.id === salidaId);
+  const j = sentido === "arriba" ? i - 1 : i + 1;
+  if (i < 0 || j < 0 || j >= todas.length) return { ok: true };
+  [todas[i], todas[j]] = [todas[j], todas[i]];
+  await db.$transaction(todas.map((x, n) => db.salida.update({ where: { id: x.id }, data: { orden: n } })));
+  refrescar();
+  return { ok: true };
+}
+
+/** Guarda el orden de los vehículos tal como los dejó el equipo arrastrándolos. */
+export async function ordenarVehiculos(ids: string[]): Promise<Resultado> {
+  await exigirOficina();
+  await db.$transaction(ids.map((id, n) => db.vehiculo.update({ where: { id }, data: { orden: n } })));
+  refrescar();
+  return { ok: true };
+}
