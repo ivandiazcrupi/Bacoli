@@ -14,7 +14,7 @@ import { enlaceWhatsApp } from "@/lib/telefonos";
 import { BotonRemito } from "../../BotonRemito";
 import { normalizarFactura, soloNumeroFactura } from "@/lib/remito";
 import { asignarADia, marcarPagoWeb } from "../../actions";
-import { agregarSalida, asignarAVehiculo, devolverAPedidos, guardarCostoLogistica, guardarHorario, ordenarSalida, quitarSalida } from "../../ruta/actions";
+import { agregarSalida, asignarAVehiculo, devolverAPedidos, guardarCostoLogistica, ordenarSalida, quitarSalida } from "../../ruta/actions";
 import { emitirRemitosDia } from "../../remito/actions";
 import { cerrarDia, dejarEnCuentaCorriente, dejarListo, reabrirHoja, deshacerCobro, guardarNumeroFactura, marcarEntrega, reabrirDia, registrarCobro, registrarNoEntrega, type Resultado } from "../actions";
 import { NotaRapida } from "@/components/NotaRapida";
@@ -66,7 +66,7 @@ export type Silueta = {
   destino: string; // qué pasó después: "Se entregó el 9/10", "Reprogramado: Jue 9/10", "En Pedidos, esperando día"…
 };
 
-export type SalidaInfo = { id: string; nombre: string; patente: string; capacidad: number | null; repartidorId: string; horaInicio: string; horaFin: string; costo: string };
+export type SalidaInfo = { id: string; nombre: string; patente: string; capacidad: number | null; repartidorId: string; costo: string };
 export type Opcion = { id: string; nombre: string };
 
 // Todo entra a lo ancho (sin deslizar): columnas justas y todo centrado.
@@ -549,7 +549,6 @@ function ResumenVuelta({ grupo, capacidad, salida, cerrado, verCosto, tope }: { 
       <div className="flex flex-wrap items-center gap-x-8 gap-y-2">
         <BarraCarga cantidad={paquetes} capacidad={capacidad} nombre="paquetes" />
         <BarraCarga cantidad={grupo.reduce((t, f) => t + f.sabores.tomate + f.sabores.cebolla + f.sabores.pizzas, 0)} capacidad={capacidad === null ? null : capacidad * UNIDADES_POR_PAQUETE} nombre="unidades" />
-        <HorarioVuelta salida={salida} cerrado={cerrado} />
       </div>
       <p className="text-sm text-stone-500">
         Facturación <span className="ml-1 text-base font-semibold tabular-nums text-stone-900">{formatoPesos(total)}</span>
@@ -611,32 +610,6 @@ function BarraCarga({ cantidad, capacidad, nombre }: { cantidad: number; capacid
           <div className={`h-full rounded-full ${pasado ? "bg-rojo-600" : "bg-stone-600"}`} style={{ width: `${pct}%` }} />
         </div>
       )}
-    </div>
-  );
-}
-
-// Horario del reparto (opcional, apagado a propósito: solo para ver cuándo sale y cuándo vuelve cada camioneta). Se guarda al cambiar.
-function HorarioVuelta({ salida, cerrado }: { salida: SalidaInfo; cerrado: boolean }) {
-  const router = useRouter();
-  const [inicio, setInicio] = useState(salida.horaInicio);
-  const [fin, setFin] = useState(salida.horaFin);
-  const [error, setError] = useState("");
-  const [, empezar] = useTransition();
-  const guardar = (i: string, f: string) => {
-    setError("");
-    empezar(async () => {
-      const r = await guardarHorario(salida.id, i, f);
-      if (!r.ok) setError(r.error ?? "No se pudo guardar.");
-      else router.refresh();
-    });
-  };
-  const campo = "h-9 w-28 rounded-md border border-stone-300 bg-white px-2 text-center text-sm tabular-nums text-stone-600 hover:border-stone-300 focus:border-stone-400 focus:bg-white focus:outline-none disabled:opacity-60";
-  return (
-    <div className="flex items-center gap-2 text-sm text-stone-500" title="Horario del reparto: salida y regreso (opcional)">
-      <input type="time" aria-label="Hora de salida" value={inicio} disabled={cerrado} onChange={(e) => { setInicio(e.target.value); guardar(e.target.value, fin); }} className={campo} />
-      <span aria-hidden="true" className="px-1 text-xs font-medium uppercase tracking-wide text-stone-500">Horario</span>
-      <input type="time" aria-label="Hora de regreso" value={fin} disabled={cerrado} onChange={(e) => { setFin(e.target.value); guardar(inicio, e.target.value); }} className={campo} />
-      {error && <span className="text-rojo-700" role="alert">{error}</span>}
     </div>
   );
 }
