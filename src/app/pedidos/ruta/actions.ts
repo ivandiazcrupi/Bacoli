@@ -5,6 +5,7 @@ import { sincronizarCuentaPedido } from "@/lib/cuenta";
 import { db } from "@/lib/db";
 import { aFecha, esFechaValida, hoy } from "@/lib/fechas";
 import { mayus, titulo } from "@/lib/mayusculas";
+import { leerMonto } from "@/lib/numeros";
 import { exigirOficina } from "@/lib/session";
 import { valoresDe, type EstadoForm } from "../../clientes/validacion";
 
@@ -115,6 +116,20 @@ export async function guardarHorario(salidaId: string, inicio: string, fin: stri
   if (!salida) return { ok: false, error: "Ese vehículo ya no está en el día." };
   if (await db.diaCerrado.findUnique({ where: { fecha: salida.fecha } })) return { ok: false, error: "El día está cerrado." };
   await db.salida.update({ where: { id: salidaId }, data: { horaInicio: inicio || null, horaFin: fin || null } });
+  refrescar();
+  return { ok: true };
+}
+
+/** Costo de logística de esa vuelta (en pesos, vacío = sin cargar). Solo dueños. Se puede cargar con la hoja lista; solo se frena con el día cerrado. */
+export async function guardarCostoLogistica(salidaId: string, texto: string): Promise<Resultado> {
+  const usuario = await exigirOficina();
+  if (usuario.rol !== "DUENO") return { ok: false, error: "Solo un dueño carga el costo de logística." };
+  const costo = texto.trim() ? leerMonto(texto) : null;
+  if (texto.trim() && (costo === null || costo < 0)) return { ok: false, error: "El costo tiene que ser un monto válido." };
+  const salida = await db.salida.findUnique({ where: { id: salidaId } });
+  if (!salida) return { ok: false, error: "Ese vehículo ya no está en el día." };
+  if (await db.diaCerrado.findUnique({ where: { fecha: salida.fecha } })) return { ok: false, error: "El día está cerrado." };
+  await db.salida.update({ where: { id: salidaId }, data: { costoLogistica: costo } });
   refrescar();
   return { ok: true };
 }

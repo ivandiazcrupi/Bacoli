@@ -368,6 +368,7 @@ model Salida {
   orden        Int      @default(0)
   horaInicio   String? // horario del reparto (HH:MM), opcional: solo para verlo
   horaFin      String?
+  costoLogistica Decimal? @db.Decimal(12, 2) // lo que costó esa vuelta ese día (solo lo ven los dueños); se divide por las pizzas que lleva
   creadoEn     DateTime @default(now())
 
   vehiculo   Vehiculo @relation(fields: [vehiculoId], references: [id])

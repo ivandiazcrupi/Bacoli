@@ -8,13 +8,13 @@ import { useEffect, useState, useTransition } from "react";
 import { DndContext, MouseSensor, TouchSensor, closestCenter, pointerWithin, useDraggable, useDroppable, useSensor, useSensors, type CollisionDetection, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { formatoPesos } from "@/lib/numeros";
-import { UNIDADES_POR_PAQUETE, num } from "@/lib/ruta";
+import { formatoPesos, leerMonto } from "@/lib/numeros";
+import { TOPE_COSTO_POR_PIZZA, UNIDADES_POR_PAQUETE, num } from "@/lib/ruta";
 import { enlaceWhatsApp } from "@/lib/telefonos";
 import { BotonRemito } from "../../BotonRemito";
 import { normalizarFactura, soloNumeroFactura } from "@/lib/remito";
 import { asignarADia, marcarPagoWeb } from "../../actions";
-import { agregarSalida, asignarAVehiculo, devolverAPedidos, guardarHorario, ordenarSalida, quitarSalida } from "../../ruta/actions";
+import { agregarSalida, asignarAVehiculo, devolverAPedidos, guardarCostoLogistica, guardarHorario, ordenarSalida, quitarSalida } from "../../ruta/actions";
 import { emitirRemitosDia } from "../../remito/actions";
 import { cerrarDia, dejarEnCuentaCorriente, dejarListo, reabrirHoja, deshacerCobro, guardarNumeroFactura, marcarEntrega, reabrirDia, registrarCobro, registrarNoEntrega, type Resultado } from "../actions";
 import { NotaRapida } from "@/components/NotaRapida";
@@ -66,7 +66,7 @@ export type Silueta = {
   destino: string; // qué pasó después: "Se entregó el 9/10", "Reprogramado: Jue 9/10", "En Pedidos, esperando día"…
 };
 
-export type SalidaInfo = { id: string; nombre: string; patente: string; capacidad: number | null; repartidorId: string; horaInicio: string; horaFin: string };
+export type SalidaInfo = { id: string; nombre: string; patente: string; capacidad: number | null; repartidorId: string; horaInicio: string; horaFin: string; costo: string };
 export type Opcion = { id: string; nombre: string };
 
 // Todo entra a lo ancho (sin deslizar): columnas justas y todo centrado.
@@ -540,7 +540,7 @@ function FilaTarjeta({ f, n, bloqueada, armando, fija, acc, salidas }: { f: Fila
 const urlRuta = (filas: Fila[]) => `https://www.google.com/maps/dir/${filas.map((f) => encodeURIComponent(`${f.direccion}, ${f.barrio}`)).join("/")}`;
 
 // Resumen de la vuelta de un vehículo (al final de su cuadro): a la izquierda la barra de paquetes contra la capacidad; a la derecha la facturación.
-function ResumenVuelta({ grupo, capacidad, salida, cerrado }: { grupo: Fila[]; capacidad: number | null; salida: SalidaInfo; cerrado: boolean }) {
+function ResumenVuelta({ grupo, capacidad, salida, cerrado, verCosto }: { grupo: Fila[]; capacidad: number | null; salida: SalidaInfo; cerrado: boolean; verCosto: boolean }) {
   const paquetes = grupo.reduce((t, f) => t + f.bultos, 0);
   const total = grupo.filter((f) => !f.cobranza).reduce((t, f) => t + f.monto, 0); // las cobranzas no son facturación
   return (
@@ -554,7 +554,44 @@ function ResumenVuelta({ grupo, capacidad, salida, cerrado }: { grupo: Fila[]; c
       <p className="text-sm text-stone-500">
         Facturación <span className="ml-1 text-base font-semibold tabular-nums text-stone-900">{formatoPesos(total)}</span>
       </p>
+      {verCosto && <CostoLogistica key={salida.costo} salida={salida} pizzas={grupo.reduce((t, f) => t + f.sabores.tomate + f.sabores.cebolla + f.sabores.pizzas, 0)} cerrado={cerrado} />}
     </footer>
+  );
+}
+
+// Costo de la vuelta (lo carga un dueño, cada día) dividido por las pizzas que lleva: cuánto sale cada una contra el tope. Solo lo ven los dueños y no sale impreso.
+function CostoLogistica({ salida, pizzas, cerrado }: { salida: SalidaInfo; pizzas: number; cerrado: boolean }) {
+  const router = useRouter();
+  const [texto, setTexto] = useState(salida.costo ? Number(salida.costo).toLocaleString("es-AR", { maximumFractionDigits: 2 }) : "");
+  const [error, setError] = useState("");
+  const [, empezar] = useTransition();
+  const costo = texto.trim() ? leerMonto(texto) : null;
+  const porPizza = costo !== null && pizzas > 0 ? costo / pizzas : null;
+  const pasa = porPizza !== null && porPizza > TOPE_COSTO_POR_PIZZA;
+  const guardar = () => {
+    setError("");
+    empezar(async () => {
+      const r = await guardarCostoLogistica(salida.id, texto);
+      if (!r.ok) setError(r.error ?? "No se pudo guardar.");
+      else router.refresh();
+    });
+  };
+  return (
+    <div className="flex basis-full flex-wrap items-center gap-x-5 gap-y-1 border-t border-stone-200 pt-3 text-sm text-stone-600" title="Costo de logística de esta vuelta, dividido por las pizzas que lleva (solo lo ven los dueños; no sale impreso)">
+      <label className="flex items-center gap-2">
+        <span className="text-xs font-medium uppercase tracking-wide text-stone-500">Costo de logística</span>
+        <span className="flex items-center gap-1">$
+          <input inputMode="decimal" value={texto} disabled={cerrado} placeholder="0" onChange={(e) => setTexto(e.target.value)} onBlur={guardar} onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} className="h-9 w-32 rounded-md border border-stone-300 bg-white px-2 text-right tabular-nums text-stone-900 focus:border-stone-500 focus:outline-none disabled:opacity-60" aria-label="Costo de logística de esta vuelta" />
+        </span>
+      </label>
+      {costo !== null && (pizzas > 0 ? (
+        <span className="tabular-nums">÷ {num(pizzas)} pizzas = <span className={`text-base font-semibold ${pasa ? "text-rojo-700" : "text-stone-900"}`}>{formatoPesos(porPizza!)}</span> por pizza
+          <span className="ml-2 text-xs text-stone-500">tope {formatoPesos(TOPE_COSTO_POR_PIZZA)}</span>
+          {pasa && <span className="ml-2 text-xs font-semibold text-rojo-700">se pasa {formatoPesos(porPizza! - TOPE_COSTO_POR_PIZZA)}</span>}
+        </span>
+      ) : <span className="text-xs text-stone-500">Todavía no lleva pizzas.</span>)}
+      {error && <span className="text-xs font-semibold text-rojo-700" role="alert">{error}</span>}
+    </div>
   );
 }
 
@@ -913,7 +950,7 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
             {grupo.length === 0 && siluetasDe(sa.id).length === 0 ? (
               <p className="p-6 text-center text-sm text-stone-600">Todavía no tiene pedidos. Arrastralos desde “Sin ubicar”.</p>
             ) : tabla(grupo, sa, siluetasDe(sa.id))}
-            <ResumenVuelta grupo={grupo} capacidad={sa.capacidad} salida={sa} cerrado={estadoDia.estado === "CERRADA"} />
+            <ResumenVuelta grupo={grupo} capacidad={sa.capacidad} salida={sa} cerrado={estadoDia.estado === "CERRADA"} verCosto={esDueno} />
           </Zona>
         );
       })}

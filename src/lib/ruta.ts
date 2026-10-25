@@ -5,6 +5,8 @@ export const porReparto = (a: ConRuta, b: ConRuta) =>
 
 /** Cada paquete trae 2 unidades (pedido del dueño: 500 paquetes = 1000 unidades). */
 export const UNIDADES_POR_PAQUETE = 2;
+/** Tope de costo de envío por pizza (pesos): la hoja de ruta avisa si una vuelta se pasa. */
+export const TOPE_COSTO_POR_PIZZA = 275;
 
 type RenglonRuta = { nombre?: string; unidad?: string; cantidad: number; sinCargo?: number; paquetesPor?: number };
 
