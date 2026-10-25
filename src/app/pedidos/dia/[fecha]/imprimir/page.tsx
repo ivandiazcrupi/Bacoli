@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
+import { costoLogisticoDelDia } from "@/lib/costoDia";
+import { estadoDelDia } from "@/lib/dias";
 import { db } from "@/lib/db";
 import { aFecha, deFecha, diaMes, esFechaValida, nombreDia } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
-import { bultosDe, focacciasPorTipo, num, TOPE_COSTO_POR_PIZZA, porReparto, totalUnidades, UNIDADES_POR_PAQUETE, unidadesPorSabor } from "@/lib/ruta";
+import { bultosDe, focacciasPorTipo, num, porReparto, totalUnidades, UNIDADES_POR_PAQUETE, unidadesPorSabor } from "@/lib/ruta";
 import { exigirOficina } from "@/lib/session";
 import { titulo } from "@/lib/mayusculas";
 import { BarraImpresion } from "../../../remito/BarraImpresion";
@@ -25,18 +27,13 @@ export default async function ImprimirHojaDeRuta({ params, searchParams }: { par
   const filas = pedidos.map((p) => aFila(p, debe));
   // Sin el costo de logística cargado no se imprime la hoja (regla del dueño).
   const sinCosto = salidas.filter((sa) => sa.costoLogistica === null && pedidos.some((p) => p.salidaId === sa.id));
-  // Costo logístico general del día (todas las camionetas con pedidos): si supera el tope, no se imprime (iríamos a pérdida).
-  const [delDia, salidasDia, empresa] = await Promise.all([
-    db.pedido.findMany({ where: { fechaEntrega: aFecha(fecha), estado: { not: "CANCELADO" }, salidaId: { not: null } }, include: { items: { include: { producto: true } } } }),
-    db.salida.findMany({ where: { fecha: aFecha(fecha) } }),
-    db.empresa.findUnique({ where: { id: "principal" } }),
-  ]);
-  const tope = empresa?.costoLogisticoUnidad ? Number(empresa.costoLogisticoUnidad) : TOPE_COSTO_POR_PIZZA;
-  const conPedidosDia = salidasDia.filter((sa) => delDia.some((p) => p.salidaId === sa.id));
-  const costoDia = conPedidosDia.reduce((t, sa) => t + Number(sa.costoLogistica ?? 0), 0);
-  const unidadesDia = delDia.reduce((t, p) => { const a = unidadesPorSabor(p.items); const x = focacciasPorTipo(p.items); return t + a.tomate + a.cebolla + a.pizzas + x.oliva + x.cherry; }, 0);
-  const porUnidadDia = unidadesDia > 0 ? costoDia / unidadesDia : 0;
-  const diaSePasa = sinCosto.length === 0 && porUnidadDia > tope;
+  // Para imprimir la hoja hay que dejarla lista, y para eso el costo logístico del día tiene que estar dentro del tope o aprobado por un gerente.
+  const { estado } = await estadoDelDia(fecha);
+  const c = await costoLogisticoDelDia(fecha);
+  const porUnidadDia = c.porUnidad ?? 0;
+  const tope = c.tope;
+  const diaSePasa = sinCosto.length === 0 && c.sePasa && !c.aprobado;
+  const sinListo = estado === "ARMANDO";
   const f = deFecha(aFecha(fecha));
   const textoFecha = `${nombreDia(f)} ${diaMes(f)}`;
 
@@ -49,10 +46,15 @@ export default async function ImprimirHojaDeRuta({ params, searchParams }: { par
           <p className="text-lg font-semibold text-stone-900">Falta cargar el costo de logística</p>
           <p className="mt-2 text-stone-600">Para imprimir la hoja de ruta hay que cargar el costo de logística de: <b>{sinCosto.map((sa) => titulo(sa.vehiculo.nombre)).join(", ")}</b>. Se carga al pie de su cuadro en la hoja de ruta.</p>
         </div>
+      ) : sinListo ? (
+        <div className="mx-auto my-10 max-w-xl rounded-xl border border-stone-300 bg-white p-8 text-center print:hidden">
+          <p className="text-lg font-semibold text-stone-900">Primero hay que dejar lista la hoja</p>
+          <p className="mt-2 text-stone-600">La hoja de ruta se imprime una vez que el día está <b>listo</b>. Volvé a la hoja de ruta y tocá “Dejar lista”.</p>
+        </div>
       ) : diaSePasa ? (
         <div className="mx-auto my-10 max-w-xl rounded-xl border border-stone-300 bg-white p-8 text-center print:hidden">
-          <p className="text-lg font-semibold text-rojo-700">El costo logístico del día supera el tope</p>
-          <p className="mt-2 text-stone-600">Hoy da <b>{formatoPesos(porUnidadDia)}</b> por unidad y el tope es <b>{formatoPesos(tope)}</b>: no se puede imprimir porque iríamos a pérdida. Revisá el costo de las camionetas o el reparto.</p>
+          <p className="text-lg font-semibold text-rojo-700">El costo logístico del día supera el tope y falta la aprobación</p>
+          <p className="mt-2 text-stone-600">Hoy da <b>{formatoPesos(porUnidadDia)}</b> por unidad y el tope es <b>{formatoPesos(tope)}</b>: lo tiene que aprobar un gerente en la hoja de ruta antes de imprimir.</p>
         </div>
       ) : salidas.length === 0 ? (
         <p className="p-10">No hay camionetas con pedidos para imprimir en este día.</p>

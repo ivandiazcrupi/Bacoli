@@ -133,7 +133,7 @@ export async function crearPedido(_: EstadoPedidoForm, formData: FormData): Prom
   const ivaPct = conFactura ? IVA_PCT : 0; // con factura: cada renglón lleva su propio IVA; este valor solo marca que el pedido lleva IVA
   const total = importeVigente(leidos.renglones.map((r) => ({ cantidad: r.cantidad, cantidadEntregada: null, precioUnitario: r.precioUnitario, descuentoPct: r.descuentoPct, ivaPct: r.ivaPct })), ivaPct, "PENDIENTE");
 
-  // Límites de deuda del cliente: se avisa y solo un dueño puede autorizar (no se bloquea a "cuenta sin límite").
+  // Límites de deuda del cliente: se avisa y solo un gerente puede autorizar (no se bloquea a "cuenta sin límite").
   const cliente = punto.cliente;
   let autorizadoPorId: string | null = null;
   if (!cliente.sinLimite && (cliente.maxMonto !== null || cliente.maxPedidosImpagos !== null)) {
@@ -147,7 +147,7 @@ export async function crearPedido(_: EstadoPedidoForm, formData: FormData): Prom
       motivos.push(`ya tiene ${impagos} ${impagos === 1 ? "pedido sin pagar" : "pedidos sin pagar"} y su máximo es ${cliente.maxPedidosImpagos}`);
     }
     if (motivos.length) {
-      if (usuario.rol !== "DUENO") return { aviso: `Este cliente pasó su límite: ${motivos.join("; ")}. Necesita la autorización de un dueño.` };
+      if (usuario.rol !== "DUENO") return { aviso: `Este cliente pasó su límite: ${motivos.join("; ")}. Necesita la autorización de un gerente.` };
       if (formData.get("autorizar") !== "1") return { aviso: `Este cliente pasó su límite: ${motivos.join("; ")}.` };
       autorizadoPorId = usuario.id;
     }

@@ -17,5 +17,5 @@ export async function errorSiHojaFija(fecha: Date | null | undefined): Promise<s
   if (!fecha) return null;
   const { estado } = await estadoDelDia(fecha);
   if (estado === "ARMANDO") return null;
-  return estado === "LISTA" ? "La hoja de ese día está lista: hay que reabrirla para cambiar esto." : "Ese día está cerrado: un dueño puede reabrirlo.";
+  return estado === "LISTA" ? "La hoja de ese día está lista: hay que reabrirla para cambiar esto." : "Ese día está cerrado: un gerente puede reabrirlo.";
 }

@@ -85,7 +85,7 @@ export function ClienteForm({ accion, inicial, listas, zonas, barrios = [], text
         </div>
       </Bloque>
 
-      <Bloque titulo="Límites de deuda" ayuda="Si no completás nada, no tiene límite. Al pasarse se avisa y solo un dueño autoriza.">
+      <Bloque titulo="Límites de deuda" ayuda="Si no completás nada, no tiene límite. Al pasarse se avisa y solo un gerente autoriza.">
         <div className="grid gap-3 sm:grid-cols-3">
           <Campo etiqueta="Deuda máxima ($)">
             <input name="maxMonto" inputMode="decimal" placeholder="Sin límite" defaultValue={v("maxMonto")} className={estiloCampo} />

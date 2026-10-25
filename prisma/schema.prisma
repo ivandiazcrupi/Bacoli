@@ -310,6 +310,15 @@ model DiaListo {
   listoEn  DateTime @default(now())
 }
 
+// Un gerente aprobó que el costo logístico de ese día (que se pasaba del tope) quede así. Vale solo mientras el costo y las unidades sean los mismos.
+model AprobacionCosto {
+  fecha      DateTime @id @db.Date
+  costoDia   Decimal  @db.Decimal(14, 2)
+  unidades   Int
+  aprobadoPor String
+  aprobadoEn DateTime @default(now())
+}
+
 // Datos de la empresa: salen impresos en el remito (y más adelante en la factura). Hay una sola fila.
 model Empresa {
   id                String    @id @default("principal")

@@ -33,7 +33,7 @@ export async function guardarVehiculo(vehiculoId: string | null, _: EstadoForm, 
   if (vehiculoId) {
     await db.vehiculo.update({ where: { id: vehiculoId }, data: { nombre, patente, capacidad, ...datosCosto } });
     // Al cambiar el costo del vehículo se aplica directo a TODAS sus hojas de ruta (también las anteriores): la hoja recalcula el costo por unidad.
-    if (costo !== undefined && costo !== null) await db.salida.updateMany({ where: { vehiculoId }, data: { costoLogistica: costo } });
+    if (costo !== undefined && costo !== null) await db.salida.updateMany({ where: { vehiculoId, fecha: { notIn: (await db.diaListo.findMany({ select: { fecha: true } })).map((d) => d.fecha) } }, data: { costoLogistica: costo } }); // las hojas ya "listas" no se tocan: ya pasaron por la aprobación
   } else {
     const ultimo = await db.vehiculo.aggregate({ _max: { orden: true } });
     await db.vehiculo.create({ data: { nombre, patente, capacidad, ...datosCosto, orden: (ultimo._max.orden ?? -1) + 1 } });
@@ -136,6 +136,7 @@ export async function guardarCostoLogistica(salidaId: string, texto: string): Pr
   const salida = await db.salida.findUnique({ where: { id: salidaId } });
   if (!salida) return { ok: false, error: "Ese vehículo ya no está en el día." };
   if (await db.diaCerrado.findUnique({ where: { fecha: salida.fecha } })) return { ok: false, error: "El día está cerrado." };
+  if (await db.diaListo.findUnique({ where: { fecha: salida.fecha } })) return { ok: false, error: "La hoja está lista: para cambiar el costo hay que volver a armarla." };
   await db.salida.update({ where: { id: salidaId }, data: { costoLogistica: costo } });
   refrescar();
   return { ok: true };

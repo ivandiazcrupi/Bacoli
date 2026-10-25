@@ -38,12 +38,12 @@ export async function entrarVendedores(_: EstadoVend, f: FormData): Promise<Esta
   redirect(destino(f));
 }
 
-/** Primera vez (la crea un dueño), o cambiarla: la puede cambiar quien ya entró y, si se olvidó, un dueño. */
+/** Primera vez (la crea un gerente), o cambiarla: la puede cambiar quien ya entró y, si se olvidó, un gerente. */
 export async function guardarClaveVendedores(_: EstadoVend, f: FormData): Promise<EstadoVend> {
   const u = await exigirOficina();
   const hay = await hayClaveVendedores();
   const puede = u.rol === "DUENO" || (hay && (await vendedoresDesbloqueado()));
-  if (!puede) return { error: "Solo un dueño puede crear la contraseña." };
+  if (!puede) return { error: "Solo un gerente puede crear la contraseña." };
   const nueva = String(f.get("nueva") ?? "");
   if (nueva.length < MIN_CLAVE_VENDEDORES) return { error: `Tiene que tener al menos ${MIN_CLAVE_VENDEDORES} caracteres.` };
   await ponerClaveVendedores(nueva);

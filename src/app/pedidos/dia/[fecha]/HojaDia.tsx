@@ -16,7 +16,7 @@ import { normalizarFactura, soloNumeroFactura } from "@/lib/remito";
 import { asignarADia, marcarPagoWeb } from "../../actions";
 import { agregarSalida, asignarAVehiculo, devolverAPedidos, guardarCostoLogistica, ordenarSalida, quitarSalida } from "../../ruta/actions";
 import { emitirRemitosDia } from "../../remito/actions";
-import { cerrarDia, dejarEnCuentaCorriente, dejarListo, reabrirHoja, deshacerCobro, guardarNumeroFactura, marcarEntrega, reabrirDia, registrarCobro, registrarNoEntrega, type Resultado } from "../actions";
+import { cerrarDia, dejarEnCuentaCorriente, dejarListo, reabrirHoja, aprobarCostoDia, deshacerCobro, guardarNumeroFactura, marcarEntrega, reabrirDia, registrarCobro, registrarNoEntrega, type Resultado } from "../actions";
 import { NotaRapida } from "@/components/NotaRapida";
 import { EstadoPagoWeb } from "@/components/EstadoPagoWeb";
 import { ModalMotivo } from "@/components/ModalMotivo";
@@ -539,29 +539,32 @@ function FilaTarjeta({ f, n, bloqueada, armando, fija, acc, salidas }: { f: Fila
 
 const urlRuta = (filas: Fila[]) => `https://www.google.com/maps/dir/${filas.map((f) => encodeURIComponent(`${f.direccion}, ${f.barrio}`)).join("/")}`;
 
-// Resumen de la vuelta de un vehículo (al pie de su cuadro): tres recuadros chicos y parejos —carga, costo por unidad y facturación—.
+// Resumen de la vuelta de un vehículo (al pie de su cuadro): tres columnas parejas —carga, costo por unidad y facturación—, con el título arriba, lo importante en grande al medio y el detalle chico abajo.
+const TITULO_PIE = "text-[11px] font-bold uppercase tracking-[0.14em] text-stone-700";
+const CELDA_PIE = "flex min-h-[104px] min-w-0 flex-col items-center justify-center gap-1.5 px-4 py-3 text-center";
+
 function ResumenVuelta({ grupo, capacidad, salida, tope, cerrado }: { grupo: Fila[]; capacidad: number | null; salida: SalidaInfo; tope: number; cerrado: boolean }) {
   const paquetes = grupo.reduce((t, f) => t + f.bultos, 0);
   const unidadesPizza = grupo.reduce((t, f) => t + f.sabores.tomate + f.sabores.cebolla + f.sabores.pizzas, 0);
   // Para el costo cuentan pizzas, prepizzas y focaccias; los demás productos de la tienda no.
   const unidadesCosto = unidadesPizza + grupo.reduce((t, f) => t + f.focOliva + f.focCherry, 0);
   const total = grupo.filter((f) => !f.cobranza).reduce((t, f) => t + f.monto, 0); // las cobranzas no son facturación
-  const caja = "flex min-h-[92px] min-w-0 flex-col items-center justify-center gap-1 rounded-md border border-stone-300 bg-crema-50 px-3 py-2.5 text-center";
-  const titulito = "text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-500";
+  const pedidos = grupo.filter((f) => !f.cobranza).length;
   return (
-    <footer aria-label="Resumen de la vuelta" className="grid gap-2 border-t border-stone-300 bg-white p-3 text-stone-900 md:grid-cols-3">
-      <section className={caja}>
-        <p className={titulito}>Carga</p>
+    <footer aria-label="Resumen de la vuelta" className="grid divide-stone-200 border-t border-stone-300 bg-white text-stone-900 md:grid-cols-3 md:divide-x">
+      <section className={CELDA_PIE}>
+        <p className={TITULO_PIE}>Carga</p>
         <BarraCarga cantidad={paquetes} capacidad={capacidad} nombre="paquetes" />
         {/* La capacidad se carga en paquetes; en unidades es el doble (cada paquete = 2). */}
         <BarraCarga cantidad={unidadesPizza} capacidad={capacidad === null ? null : capacidad * UNIDADES_POR_PAQUETE} nombre="unidades" />
       </section>
-      <section className={caja}>
-        <CostoLogistica key={salida.costo} salida={salida} unidades={unidadesCosto} tope={tope} cerrado={cerrado} titulito={titulito} />
+      <section className={CELDA_PIE}>
+        <CostoLogistica key={salida.costo} salida={salida} unidades={unidadesCosto} tope={tope} cerrado={cerrado} />
       </section>
-      <section className={caja}>
-        <p className={titulito}>Facturación</p>
-        <p className="text-lg font-semibold leading-none tabular-nums">{formatoPesos(total)}</p>
+      <section className={CELDA_PIE}>
+        <p className={TITULO_PIE}>Facturación</p>
+        <p className="text-2xl font-bold leading-none tabular-nums">{formatoPesos(total)}</p>
+        <p className="text-xs text-stone-500">{pedidos} {pedidos === 1 ? "pedido" : "pedidos"}</p>
       </section>
     </footer>
   );
@@ -570,7 +573,7 @@ function ResumenVuelta({ grupo, capacidad, salida, tope, cerrado }: { grupo: Fil
 // Lo importante es el costo POR UNIDAD (verde si está dentro del tope de Vehículos, rojo si lo supera). Se calcula con el costo de la vuelta del día
 // (viene solo si el vehículo ya lo tiene seteado; si no, hay que cargarlo: sin él no se puede dejar lista la hoja ni imprimirla) dividido por las unidades que lleva
 // —pizzas, prepizzas (paquete = 2) y focaccias; los demás productos de la tienda no cuentan—. No sale impreso.
-function CostoLogistica({ salida, unidades, tope, cerrado, titulito }: { salida: SalidaInfo; unidades: number; tope: number; cerrado: boolean; titulito: string }) {
+function CostoLogistica({ salida, unidades, tope, cerrado }: { salida: SalidaInfo; unidades: number; tope: number; cerrado: boolean }) {
   const router = useRouter();
   const [texto, setTexto] = useState(milesDeBase(salida.costo));
   const [error, setError] = useState("");
@@ -588,18 +591,18 @@ function CostoLogistica({ salida, unidades, tope, cerrado, titulito }: { salida:
   };
   return (
     <>
-      <p className={titulito}>Costo por unidad</p>
+      <p className={TITULO_PIE}>Costo por unidad</p>
       {porUnidad !== null ? (
-        <p className="leading-none">
-          <span className={`text-lg font-semibold tabular-nums ${pasa ? "text-rojo-700" : "text-verde-700"}`}>{formatoPesos(porUnidad)}</span>
-          <span className="ml-2 text-[11px] tabular-nums text-stone-500">tope {formatoPesos(tope)}{pasa ? ` · se pasa ${formatoPesos(porUnidad - tope)}` : ""}</span>
-        </p>
+        <p className={`text-2xl font-bold leading-none tabular-nums ${pasa ? "text-rojo-700" : "text-verde-700"}`}>{formatoPesos(porUnidad)}</p>
       ) : (
-        <p className="text-lg font-semibold leading-none text-stone-300">{costo === null ? "—" : "Sin unidades"}</p>
+        <p className="text-2xl font-bold leading-none text-stone-300">{costo === null ? "—" : "Sin unidades"}</p>
       )}
+      <p className={`text-xs tabular-nums ${pasa ? "font-semibold text-rojo-700" : "text-stone-500"}`}>
+        tope {formatoPesos(tope)}{pasa && porUnidad !== null ? ` · se pasa ${formatoPesos(porUnidad - tope)}` : ""}
+      </p>
       <label className="flex items-center justify-center gap-1.5 text-xs text-stone-500" title="Costo de esta vuelta, de este día. Escribilo para cambiarlo.">
         <span>Vuelta $</span>
-        <input inputMode="decimal" value={texto} disabled={cerrado} placeholder="Cargar" onChange={(e) => setTexto(milesEscribiendo(e.target.value))} onBlur={guardar} onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} className={`h-7 w-24 rounded border bg-white px-1.5 text-center text-sm font-medium tabular-nums text-stone-800 focus:border-stone-500 focus:outline-none disabled:opacity-60 ${costo === null ? "border-stone-400" : "border-stone-300"}`} aria-label="Costo de logística de esta vuelta" />
+        <input inputMode="decimal" value={texto} disabled={cerrado} placeholder="Cargar" onChange={(e) => setTexto(milesEscribiendo(e.target.value))} onBlur={guardar} onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} className={`h-7 w-24 rounded border bg-white px-1.5 text-center text-sm font-semibold tabular-nums text-stone-800 focus:border-stone-500 focus:outline-none disabled:opacity-60 ${costo === null ? "border-stone-400" : "border-stone-300"}`} aria-label="Costo de logística de esta vuelta" />
         {costo !== null && unidades > 0 && <span className="tabular-nums">÷ {num(unidades)} un.</span>}
       </label>
       {costo === null && <p className="text-[11px] text-stone-500">Hay que cargarlo para dejar lista e imprimir.</p>}
@@ -613,10 +616,10 @@ function BarraCarga({ cantidad, capacidad, nombre }: { cantidad: number; capacid
   const pct = capacidad ? Math.min(100, Math.round((cantidad / capacidad) * 100)) : 0; // el máximo que se muestra es 100%
   const estado = capacidad === null ? "" : pasado ? `+${num(cantidad - capacidad)}` : cantidad === capacidad ? "completa" : `quedan ${num(capacidad - cantidad)}`;
   return (
-    <div className="w-full max-w-[15rem]" title={pasado ? "Se pasó de la capacidad (solo avisa, no frena)" : undefined}>
+    <div className="w-full max-w-[16rem]" title={pasado ? "Se pasó de la capacidad (solo avisa, no frena)" : undefined}>
       <p className="text-center text-xs tabular-nums text-stone-500">
-        <span className="text-[15px] font-semibold text-stone-900">{num(cantidad)}</span>{capacidad !== null ? ` de ${num(capacidad)}` : ""} {nombre}
-        {capacidad !== null && <span className={`ml-1.5 text-[11px] ${pasado ? "font-semibold text-rojo-700" : ""}`}>· {estado}</span>}
+        <span className="text-base font-bold text-stone-900">{num(cantidad)}</span>{capacidad !== null ? ` de ${num(capacidad)}` : ""} {nombre}
+        {capacidad !== null && <span className={`ml-1.5 ${pasado ? "font-semibold text-rojo-700" : ""}`}>· {estado}</span>}
       </p>
       {capacidad !== null && (
         <div className="mt-1 h-1 overflow-hidden rounded-full bg-stone-200">
@@ -641,6 +644,7 @@ type Props = {
   cerrado: boolean;
   esDueno: boolean;
   topeCosto: number;
+  aprobacion: { costo: number; unidades: number; por: string } | null;
 };
 
 // Los tres estados de un día, siempre a la vista: ① Armando → ② Lista → ③ Cerrada, con lo que se puede hacer en cada uno.
@@ -685,7 +689,7 @@ function BarraEstado({ estado, esDueno, hayPedidos, resumen, onDejarLista, onVol
   );
 }
 
-export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciales, salidas, vehiculosLibres, repartidores, diasSemana, cerrado, esDueno, topeCosto }: Props) {
+export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciales, salidas, vehiculosLibres, repartidores, diasSemana, cerrado, esDueno, topeCosto, aprobacion }: Props) {
   const router = useRouter();
   const [filas, setFilas] = useState(filasIniciales);
   const [error, setError] = useState<string | null>(null);
@@ -790,7 +794,13 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
   const unidadesDia = filas.filter((f) => f.salidaId !== null && !f.cobranza).reduce((t, f) => t + f.sabores.tomate + f.sabores.cebolla + f.sabores.pizzas + f.focOliva + f.focCherry, 0);
   const costoPorUnidadDia = conPedidos.length > 0 && faltaCosto.length === 0 && unidadesDia > 0 ? costoDia / unidadesDia : null;
   const diaSePasa = costoPorUnidadDia !== null && costoPorUnidadDia > topeCosto;
-  const motivoSePasa = `El costo logístico del día ($${Math.round(costoPorUnidadDia ?? 0)} por unidad) supera el tope de $${topeCosto}: no se puede imprimir.`;
+  // Un gerente puede aprobar un costo que se pasa; la aprobación vale solo mientras el costo y las unidades sigan iguales.
+  const aprobado = !!aprobacion && Math.abs(aprobacion.costo - costoDia) < 0.005 && aprobacion.unidades === unidadesDia;
+  // Para imprimir la hoja de ruta hay que dejarla lista, y para dejarla lista el costo tiene que estar bien (o aprobado por un gerente).
+  const bloqueoImprimir = faltaCosto.length > 0 ? `Falta cargar el costo de logística de: ${faltaCosto.join(", ")}`
+    : diaSePasa && !aprobado ? `El costo logístico del día (${formatoPesos(costoPorUnidadDia ?? 0)} por unidad) supera el tope de ${formatoPesos(topeCosto)}: lo tiene que aprobar un gerente.`
+    : estadoDia.estado === "ARMANDO" ? "Primero hay que dejar lista la hoja (arriba, “Dejar lista”)." : null;
+  const aprobarCosto = () => { if (window.confirm(`¿Aprobás que el costo logístico del día quede en ${formatoPesos(costoPorUnidadDia ?? 0)} por unidad, con el tope en ${formatoPesos(topeCosto)}?`)) llamar(() => aprobarCostoDia(fecha)); };
   const imprimirTodos = async () => {
     const ventana = window.open("", "_blank");
     const r = await emitirRemitosDia(fecha);
@@ -804,7 +814,7 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
   };
   const reabrir = () => llamar(() => reabrirDia(fecha));
   const cerrar = () => {
-    if (window.confirm("¿Cerrar el día? Después no se puede mover ni cambiar nada de este día, y solo un dueño lo puede reabrir.")) llamar(() => cerrarDia(fecha));
+    if (window.confirm("¿Cerrar el día? Después no se puede mover ni cambiar nada de este día, y solo un gerente lo puede reabrir.")) llamar(() => cerrarDia(fecha));
   };
   const pasado = fecha < hoy;
   const fija = estadoDia.estado !== "ARMANDO"; // lista o cerrada: la estructura no se mueve
@@ -886,20 +896,33 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
       />
       {costoPorUnidadDia !== null && (
         <div className="flex justify-center py-1">
-          <div className={`grid w-full max-w-3xl grid-cols-3 divide-x rounded-md border bg-white py-3 text-center ${diaSePasa ? "divide-rojo-700/30 border-rojo-700" : "divide-stone-200 border-stone-300"}`} title="Costo de todas las camionetas del día ÷ las unidades que llevan entre todas">
-            <div className="flex flex-col items-center justify-center gap-1.5 px-4">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-500">Costo logístico del día</p>
-              <p className="text-base font-semibold tabular-nums text-stone-800">{formatoPesos(costoDia)}</p>
+          <div className={`w-full max-w-3xl overflow-hidden rounded-md border bg-white ${diaSePasa && !aprobado ? "border-rojo-700" : "border-stone-300"}`} title="Costo de todas las camionetas del día ÷ las unidades que llevan entre todas">
+            <div className="grid grid-cols-3 divide-x divide-stone-200 text-center">
+              <div className="flex min-h-[92px] flex-col items-center justify-center gap-1.5 px-4 py-3">
+                <p className={TITULO_PIE}>Costo logístico del día</p>
+                <p className="text-2xl font-bold leading-none tabular-nums text-stone-900">{formatoPesos(costoDia)}</p>
+                <p className="text-xs text-stone-500">{conPedidos.length} {conPedidos.length === 1 ? "camioneta" : "camionetas"}</p>
+              </div>
+              <div className="flex min-h-[92px] flex-col items-center justify-center gap-1.5 px-4 py-3">
+                <p className={TITULO_PIE}>Por unidad</p>
+                <p className={`text-2xl font-bold leading-none tabular-nums ${diaSePasa ? "text-rojo-700" : "text-verde-700"}`}>{formatoPesos(costoPorUnidadDia)}</p>
+                <p className={`text-xs tabular-nums ${diaSePasa ? "font-semibold text-rojo-700" : "text-stone-500"}`}>tope {formatoPesos(topeCosto)}{diaSePasa ? ` · se pasa ${formatoPesos(costoPorUnidadDia - topeCosto)}` : ""}</p>
+              </div>
+              <div className="flex min-h-[92px] flex-col items-center justify-center gap-1.5 px-4 py-3">
+                <p className={TITULO_PIE}>Unidades del día</p>
+                <p className="text-2xl font-bold leading-none tabular-nums text-stone-900">{num(unidadesDia)}</p>
+                <p className="text-xs text-stone-500">pizzas, prepizzas y focaccias</p>
+              </div>
             </div>
-            <div className="flex flex-col items-center justify-center gap-1.5 px-4">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-500">Por unidad</p>
-              <p className={`text-2xl font-semibold leading-none tabular-nums ${diaSePasa ? "text-rojo-700" : "text-verde-700"}`}>{formatoPesos(costoPorUnidadDia)}</p>
-              <p className={`text-[11px] tabular-nums ${diaSePasa ? "font-semibold text-rojo-700" : "text-stone-500"}`}>tope {formatoPesos(topeCosto)}{diaSePasa ? ` · se pasa ${formatoPesos(costoPorUnidadDia - topeCosto)}` : ""}</p>
-            </div>
-            <div className="flex flex-col items-center justify-center gap-1.5 px-4">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-500">Unidades del día</p>
-              <p className="text-base font-semibold tabular-nums text-stone-800">{num(unidadesDia)}</p>
-            </div>
+            {diaSePasa && (
+              <div className="flex items-center justify-center gap-3 border-t border-stone-200 bg-crema-50 px-4 py-2 text-xs">
+                {aprobado
+                  ? <p className="font-semibold text-verde-700">✓ Costo aprobado por {aprobacion?.por}</p>
+                  : esDueno && estadoDia.estado === "ARMANDO"
+                    ? <><p className="font-semibold text-rojo-700">El costo se pasa del tope: para dejar lista la hoja hace falta aprobarlo.</p><button type="button" onClick={aprobarCosto} className="rounded-md border border-stone-400 bg-white px-3 py-1 font-semibold shadow-sm hover:bg-crema-100">Aprobar este costo</button></>
+                    : <p className="font-semibold text-stone-700">El costo se pasa del tope: lo tiene que aprobar un gerente.</p>}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -923,8 +946,8 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
           {sinVehiculo.length > 0 && <>Sin ubicar <span className="font-medium normal-case tracking-normal text-stone-600">· {sinVehiculo.length} {sinVehiculo.length === 1 ? "pedido" : "pedidos"}</span>{salidas.length === 0 && <span className="ml-2 font-medium normal-case tracking-normal text-stone-500">· primero sumá un vehículo</span>}</>}
         </h2>
         <div className="flex flex-wrap items-center gap-2 sm:justify-self-end">
-          {salidas.length > 0 && (faltaCosto.length > 0 || diaSePasa
-            ? <span title={diaSePasa ? motivoSePasa : `Falta cargar el costo de logística de: ${faltaCosto.join(", ")}`} className="cursor-not-allowed rounded-md border border-stone-300 bg-stone-100 px-3 py-2 font-medium text-stone-400">Imprimir hoja de ruta</span>
+          {salidas.length > 0 && (bloqueoImprimir
+            ? <span title={bloqueoImprimir} className="cursor-not-allowed rounded-md border border-stone-300 bg-stone-100 px-3 py-2 font-medium text-stone-400">Imprimir hoja de ruta</span>
             : <a href={`/pedidos/dia/${fecha}/imprimir`} target="_blank" rel="noreferrer" className="rounded-md border border-stone-400 bg-white px-3 py-2 font-medium shadow-sm">Imprimir hoja de ruta</a>)}
           {filas.length > 0 && <button type="button" onClick={imprimirTodos} className="rounded-md border border-stone-400 bg-white px-3 py-2 font-medium shadow-sm">Imprimir todos los remitos</button>}
         </div>
@@ -960,8 +983,8 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
                 {sa.patente && <p className="text-xs text-stone-600">{sa.patente}</p>}
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                {grupo.length > 0 && (!sa.costo || diaSePasa
-                  ? <span title={diaSePasa ? motivoSePasa : "Cargá el costo de logística (al pie de este cuadro) para poder imprimir"} className="cursor-not-allowed rounded-md border border-stone-300 bg-stone-100 px-3 py-1.5 text-sm font-medium text-stone-400">Imprimir</span>
+                {grupo.length > 0 && (bloqueoImprimir
+                  ? <span title={bloqueoImprimir} className="cursor-not-allowed rounded-md border border-stone-300 bg-stone-100 px-3 py-1.5 text-sm font-medium text-stone-400">Imprimir</span>
                   : <a href={`/pedidos/dia/${fecha}/imprimir?salida=${sa.id}`} target="_blank" rel="noreferrer" className="rounded-md border border-stone-400 bg-white px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-crema-50">Imprimir</a>)}
                 {grupo.length > 0 && <a href={urlRuta(grupo)} target="_blank" rel="noreferrer" className="rounded-md border border-stone-400 bg-white px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-crema-50">Ver ruta en Google Maps</a>}
                 {!fija && <button type="button" onClick={() => { if (window.confirm(`¿Sacar ${sa.nombre} del día? Sus pedidos quedan “sin ubicar”.`)) llamar(() => quitarSalida(sa.id)); }} className="rounded-md border border-stone-400 bg-white px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-crema-50">Sacar del día</button>}
@@ -970,7 +993,7 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
             {grupo.length === 0 && siluetasDe(sa.id).length === 0 ? (
               <p className="p-6 text-center text-sm text-stone-600">Todavía no tiene pedidos. Arrastralos desde “Sin ubicar”.</p>
             ) : tabla(grupo, sa, siluetasDe(sa.id))}
-            <ResumenVuelta grupo={grupo} capacidad={sa.capacidad} salida={sa} tope={topeCosto} cerrado={estadoDia.estado === "CERRADA"} />
+            <ResumenVuelta grupo={grupo} capacidad={sa.capacidad} salida={sa} tope={topeCosto} cerrado={estadoDia.estado !== "ARMANDO"} />
           </Zona>
         );
       })}

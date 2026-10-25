@@ -1,7 +1,7 @@
 import type { Rol } from "@prisma/client";
 
 export const NOMBRE_ROL: Record<Rol, string> = {
-  DUENO: "Dueño",
+  DUENO: "Gerente",
   ADMINISTRACION: "Administración",
   VENDEDOR: "Vendedor",
   REPARTIDOR: "Repartidor",

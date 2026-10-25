@@ -29,6 +29,8 @@ export default async function HojaDelDia({ params }: { params: Promise<{ fecha: 
   pedidos.sort(porReparto);
   const est = await estadoDelDia(fecha);
   const topeCosto = Number((await db.empresa.findUnique({ where: { id: "principal" }, select: { costoLogisticoUnidad: true } }))?.costoLogisticoUnidad ?? TOPE_COSTO_POR_PIZZA);
+  const aprobacion = await db.aprobacionCosto.findUnique({ where: { fecha: aFecha(fecha) } });
+  const aprobacionPor = aprobacion ? (await db.usuario.findUnique({ where: { id: aprobacion.aprobadoPor }, select: { nombre: true } }))?.nombre ?? "un gerente" : "";
   const quien = est.por ? (await db.usuario.findUnique({ where: { id: est.por }, select: { nombre: true } }))?.nombre ?? "" : "";
   const cuando = est.cuando ? new Intl.DateTimeFormat("es-AR", { hour: "2-digit", hourCycle: "h23", minute: "2-digit", day: "numeric", month: "numeric", timeZone: "America/Argentina/Buenos_Aires" }).format(est.cuando).replace(",", " ·") : "";
 
@@ -93,6 +95,7 @@ export default async function HojaDelDia({ params }: { params: Promise<{ fecha: 
           cerrado={!!cerrado}
           esDueno={usuario.rol === "DUENO"}
           topeCosto={topeCosto}
+          aprobacion={aprobacion ? { costo: Number(aprobacion.costoDia), unidades: aprobacion.unidades, por: aprobacionPor } : null}
         />
       </main>
     </>

@@ -3,7 +3,7 @@
 import { cambiarRol } from "./actions";
 
 const ROLES: { valor: string; texto: string }[] = [
-  { valor: "DUENO", texto: "Dueño" },
+  { valor: "DUENO", texto: "Gerente" },
   { valor: "ADMINISTRACION", texto: "Administración" },
   { valor: "VENDEDOR", texto: "Vendedor" },
   { valor: "REPARTIDOR", texto: "Repartidor" },

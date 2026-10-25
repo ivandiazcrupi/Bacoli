@@ -1,11 +1,13 @@
 "use server";
 
+import { costoLogisticoDelDia } from "@/lib/costoDia";
 import { webPagado, ERROR_WEB_SIN_PAGO } from "@/lib/webpago";
 import { revalidatePath } from "next/cache";
 import type { MedioPago } from "@prisma/client";
 import { anotarEntregaEnCuenta, importeVigente, sincronizarCuentaPedido } from "@/lib/cuenta";
 import { db } from "@/lib/db";
 import { aFecha, diaMes, esFechaValida } from "@/lib/fechas";
+import { formatoPesos } from "@/lib/numeros";
 import { titulo } from "@/lib/mayusculas";
 import { datosEntrega, ordenarItems } from "../filas";
 import { leerCobro, marcarCobroEnTx } from "@/lib/cobrar";
@@ -257,7 +259,7 @@ export async function cerrarDia(fecha: string): Promise<Resultado & { faltan?: n
 
 export async function reabrirDia(fecha: string): Promise<Resultado> {
   const usuario = await exigirOficina();
-  if (usuario.rol !== "DUENO") return { ok: false, error: "Solo un dueño puede reabrir un día cerrado." };
+  if (usuario.rol !== "DUENO") return { ok: false, error: "Solo un gerente puede reabrir un día cerrado." };
   if (!esFechaValida(fecha)) return { ok: false, error: "Fecha inválida." };
   await db.diaCerrado.deleteMany({ where: { fecha: aFecha(fecha) } });
   revalidatePath("/pedidos", "layout");
@@ -289,6 +291,10 @@ export async function dejarListo(fecha: string): Promise<Resultado> {
   if (sinFactura > 0) problemas.push(`${plural(sinFactura, "pedido con factura sin número", "pedidos con factura sin número")}`);
   const sinCosto = await db.salida.findMany({ where: { fecha: f, costoLogistica: null, pedidos: { some: { estado: { not: "CANCELADO" } } } }, include: { vehiculo: true } });
   if (sinCosto.length > 0) problemas.push(`falta cargar el costo de logística de: ${sinCosto.map((x) => titulo(x.vehiculo.nombre)).join(", ")}`);
+  if (sinCosto.length === 0) {
+    const c = await costoLogisticoDelDia(fecha);
+    if (c.sePasa && !c.aprobado) problemas.push(`el costo logístico del día es ${formatoPesos(c.porUnidad ?? 0)} por unidad y supera el tope de ${formatoPesos(c.tope)}: lo tiene que aprobar un gerente`);
+  }
   if (problemas.length > 0) return { ok: false, error: `Para dejar lista la hoja falta:\n${problemas.map((x) => `• ${x}`).join("\n")}` };
 
   await db.diaListo.create({ data: { fecha: f, listoPor: usuario.id } });
@@ -296,12 +302,28 @@ export async function dejarListo(fecha: string): Promise<Resultado> {
   return { ok: true };
 }
 
-/** Vuelve la hoja de "lista" a "armando" (cualquiera de oficina; si el día está cerrado, primero lo reabre un dueño). */
+/** Un gerente aprueba el costo logístico del día cuando se pasa del tope (sin esto no se puede dejar lista la hoja ni imprimirla). Solo gerentes: ni administración. */
+export async function aprobarCostoDia(fecha: string): Promise<Resultado> {
+  const usuario = await exigirOficina();
+  if (usuario.rol !== "DUENO") return { ok: false, error: "Solo un gerente puede aprobar el costo logístico." };
+  if (!esFechaValida(fecha)) return { ok: false, error: "Fecha inválida." };
+  const { estado } = await estadoDelDia(fecha);
+  if (estado !== "ARMANDO") return { ok: false, error: "La hoja ya está lista o cerrada." };
+  const c = await costoLogisticoDelDia(fecha);
+  if (c.porUnidad === null) return { ok: false, error: "Falta cargar el costo de alguna camioneta." };
+  if (!c.sePasa) return { ok: false, error: "El costo está dentro del tope: no hace falta aprobarlo." };
+  const datos = { costoDia: c.costo, unidades: c.unidades, aprobadoPor: usuario.id, aprobadoEn: new Date() };
+  await db.aprobacionCosto.upsert({ where: { fecha: aFecha(fecha) }, update: datos, create: { fecha: aFecha(fecha), ...datos } });
+  revalidatePath("/pedidos", "layout");
+  return { ok: true };
+}
+
+/** Vuelve la hoja de "lista" a "armando" (cualquiera de oficina; si el día está cerrado, primero lo reabre un gerente). */
 export async function reabrirHoja(fecha: string): Promise<Resultado> {
   await exigirOficina();
   if (!esFechaValida(fecha)) return { ok: false, error: "Fecha inválida." };
   const { estado } = await estadoDelDia(fecha);
-  if (estado === "CERRADA") return { ok: false, error: "El día está cerrado: primero un dueño tiene que reabrir el día." };
+  if (estado === "CERRADA") return { ok: false, error: "El día está cerrado: primero un gerente tiene que reabrir el día." };
   await db.diaListo.deleteMany({ where: { fecha: aFecha(fecha) } });
   revalidatePath("/pedidos", "layout");
   return { ok: true };
