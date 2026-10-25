@@ -539,17 +539,17 @@ function FilaTarjeta({ f, n, bloqueada, armando, fija, acc, salidas }: { f: Fila
 
 const urlRuta = (filas: Fila[]) => `https://www.google.com/maps/dir/${filas.map((f) => encodeURIComponent(`${f.direccion}, ${f.barrio}`)).join("/")}`;
 
-// Resumen de la vuelta de un vehículo (al pie de su cuadro): tres recuadros parejos y centrados —carga, costo de logística y facturación—.
+// Resumen de la vuelta de un vehículo (al pie de su cuadro): tres recuadros chicos y parejos —carga, costo por unidad y facturación—.
 function ResumenVuelta({ grupo, capacidad, salida, tope, cerrado }: { grupo: Fila[]; capacidad: number | null; salida: SalidaInfo; tope: number; cerrado: boolean }) {
   const paquetes = grupo.reduce((t, f) => t + f.bultos, 0);
   const unidadesPizza = grupo.reduce((t, f) => t + f.sabores.tomate + f.sabores.cebolla + f.sabores.pizzas, 0);
   // Para el costo cuentan pizzas, prepizzas y focaccias; los demás productos de la tienda no.
   const unidadesCosto = unidadesPizza + grupo.reduce((t, f) => t + f.focOliva + f.focCherry, 0);
   const total = grupo.filter((f) => !f.cobranza).reduce((t, f) => t + f.monto, 0); // las cobranzas no son facturación
-  const caja = "flex min-w-0 flex-col items-center justify-center gap-2 rounded-lg border border-stone-300 bg-crema-50 px-5 py-4 text-center";
-  const titulito = "text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-500";
+  const caja = "flex min-h-[92px] min-w-0 flex-col items-center justify-center gap-1 rounded-md border border-stone-300 bg-crema-50 px-3 py-2.5 text-center";
+  const titulito = "text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-500";
   return (
-    <footer aria-label="Resumen de la vuelta" className="grid gap-3 border-t border-stone-300 bg-white p-4 text-stone-900 md:grid-cols-3">
+    <footer aria-label="Resumen de la vuelta" className="grid gap-2 border-t border-stone-300 bg-white p-3 text-stone-900 md:grid-cols-3">
       <section className={caja}>
         <p className={titulito}>Carga</p>
         <BarraCarga cantidad={paquetes} capacidad={capacidad} nombre="paquetes" />
@@ -561,14 +561,15 @@ function ResumenVuelta({ grupo, capacidad, salida, tope, cerrado }: { grupo: Fil
       </section>
       <section className={caja}>
         <p className={titulito}>Facturación</p>
-        <p className="text-[26px] font-semibold leading-none tabular-nums tracking-tight">{formatoPesos(total)}</p>
+        <p className="text-lg font-semibold leading-none tabular-nums">{formatoPesos(total)}</p>
       </section>
     </footer>
   );
 }
 
-// Costo de la vuelta del día (viene solo si el vehículo ya lo tiene seteado; si no, hay que cargarlo: sin él no se puede dejar lista la hoja ni imprimirla) dividido por las
-// unidades que lleva —pizzas, prepizzas (paquete = 2) y focaccias; los demás productos de la tienda no cuentan—. Cuánto sale cada una contra el tope (Vehículos). No sale impreso.
+// Lo importante es el costo POR UNIDAD (verde si está dentro del tope de Vehículos, rojo si lo supera). Se calcula con el costo de la vuelta del día
+// (viene solo si el vehículo ya lo tiene seteado; si no, hay que cargarlo: sin él no se puede dejar lista la hoja ni imprimirla) dividido por las unidades que lleva
+// —pizzas, prepizzas (paquete = 2) y focaccias; los demás productos de la tienda no cuentan—. No sale impreso.
 function CostoLogistica({ salida, unidades, tope, cerrado, titulito }: { salida: SalidaInfo; unidades: number; tope: number; cerrado: boolean; titulito: string }) {
   const router = useRouter();
   const [texto, setTexto] = useState(salida.costo ? Number(salida.costo).toLocaleString("es-AR", { maximumFractionDigits: 2 }) : "");
@@ -587,22 +588,22 @@ function CostoLogistica({ salida, unidades, tope, cerrado, titulito }: { salida:
   };
   return (
     <>
-      <p className={titulito}>Costo de logística</p>
-      <label className="flex items-center justify-center gap-1.5 text-xl font-semibold text-stone-500" title="Se carga una vez por día; escribilo para cambiarlo">
-        $
-        <input inputMode="decimal" value={texto} disabled={cerrado} placeholder="Cargar" onChange={(e) => setTexto(e.target.value)} onBlur={guardar} onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} className={`h-10 w-40 rounded-md border bg-white px-2 text-center text-[22px] font-semibold tabular-nums text-stone-900 focus:border-stone-500 focus:outline-none disabled:opacity-60 ${costo === null ? "border-stone-400" : "border-stone-300"}`} aria-label="Costo de logística de esta vuelta" />
-      </label>
-      {costo === null ? (
-        <p className="text-xs text-stone-500">Hay que cargarlo para dejar lista la hoja e imprimir.</p>
-      ) : unidades > 0 ? (
-        <p className="text-sm tabular-nums text-stone-600">
-          ÷ {num(unidades)} unidades = <span className={`text-base font-semibold ${pasa ? "text-rojo-700" : "text-stone-900"}`}>{formatoPesos(porUnidad!)}</span> por unidad
-          <span className="mt-0.5 block text-xs text-stone-500">tope {formatoPesos(tope)}{pasa && <span className="ml-2 font-semibold text-rojo-700">se pasa {formatoPesos(porUnidad! - tope)}</span>}</span>
+      <p className={titulito}>Costo por unidad</p>
+      {porUnidad !== null ? (
+        <p className="leading-none">
+          <span className={`text-lg font-semibold tabular-nums ${pasa ? "text-rojo-700" : "text-verde-700"}`}>{formatoPesos(porUnidad)}</span>
+          <span className="ml-2 text-[11px] tabular-nums text-stone-500">tope {formatoPesos(tope)}{pasa ? ` · se pasa ${formatoPesos(porUnidad - tope)}` : ""}</span>
         </p>
       ) : (
-        <p className="text-xs text-stone-500">Todavía no lleva unidades.</p>
+        <p className="text-lg font-semibold leading-none text-stone-300">{costo === null ? "—" : "Sin unidades"}</p>
       )}
-      {error && <p className="text-xs font-semibold text-rojo-700" role="alert">{error}</p>}
+      <label className="flex items-center justify-center gap-1.5 text-xs text-stone-500" title="Costo de esta vuelta, de este día. Escribilo para cambiarlo.">
+        <span>Vuelta $</span>
+        <input inputMode="decimal" value={texto} disabled={cerrado} placeholder="Cargar" onChange={(e) => setTexto(e.target.value)} onBlur={guardar} onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} className={`h-7 w-24 rounded border bg-white px-1.5 text-center text-sm font-medium tabular-nums text-stone-800 focus:border-stone-500 focus:outline-none disabled:opacity-60 ${costo === null ? "border-stone-400" : "border-stone-300"}`} aria-label="Costo de logística de esta vuelta" />
+        {costo !== null && unidades > 0 && <span className="tabular-nums">÷ {num(unidades)} un.</span>}
+      </label>
+      {costo === null && <p className="text-[11px] text-stone-500">Hay que cargarlo para dejar lista e imprimir.</p>}
+      {error && <p className="text-[11px] font-semibold text-rojo-700" role="alert">{error}</p>}
     </>
   );
 }
@@ -612,14 +613,14 @@ function BarraCarga({ cantidad, capacidad, nombre }: { cantidad: number; capacid
   const pct = capacidad ? Math.min(100, Math.round((cantidad / capacidad) * 100)) : 0; // el máximo que se muestra es 100%
   const estado = capacidad === null ? "" : pasado ? `+${num(cantidad - capacidad)}` : cantidad === capacidad ? "completa" : `quedan ${num(capacidad - cantidad)}`;
   return (
-    <div className="w-full max-w-[17rem]" title={pasado ? "Se pasó de la capacidad (solo avisa, no frena)" : undefined}>
-      <p className="text-center text-sm tabular-nums text-stone-600">
-        <span className="text-[22px] font-semibold leading-none text-stone-900">{num(cantidad)}</span>{capacidad !== null ? <span className="text-stone-500"> de {num(capacidad)}</span> : null} {nombre}
-        {capacidad !== null && <span className={`ml-2 text-xs ${pasado ? "font-semibold text-rojo-700" : "text-stone-500"}`}>{pct}% · {estado}</span>}
+    <div className="w-full max-w-[15rem]" title={pasado ? "Se pasó de la capacidad (solo avisa, no frena)" : undefined}>
+      <p className="text-center text-xs tabular-nums text-stone-500">
+        <span className="text-[15px] font-semibold text-stone-900">{num(cantidad)}</span>{capacidad !== null ? ` de ${num(capacidad)}` : ""} {nombre}
+        {capacidad !== null && <span className={`ml-1.5 text-[11px] ${pasado ? "font-semibold text-rojo-700" : ""}`}>· {estado}</span>}
       </p>
       {capacidad !== null && (
-        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-stone-200">
-          <div className={`h-full rounded-full ${pasado ? "bg-rojo-600" : "bg-stone-600"}`} style={{ width: `${pct}%` }} />
+        <div className="mt-1 h-1 overflow-hidden rounded-full bg-stone-200">
+          <div className={`h-full rounded-full ${pasado ? "bg-rojo-600" : "bg-stone-500"}`} style={{ width: `${pct}%` }} />
         </div>
       )}
     </div>
