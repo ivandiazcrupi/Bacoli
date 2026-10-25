@@ -15,7 +15,7 @@ const refrescar = () => revalidatePath("/pedidos", "layout");
 // ---------- Vehículos (los carga el equipo; la capacidad máxima, en paquetes, la define cada uno) ----------
 
 export async function guardarVehiculo(vehiculoId: string | null, _: EstadoForm, formData: FormData): Promise<EstadoForm> {
-  const usuario = await exigirOficina();
+  await exigirOficina();
   const valores = valoresDe(formData);
   const nombre = titulo(String(formData.get("nombre") ?? "").replace(/\s+/g, " ").trim()); // "Camioneta 1": minúscula con la primera letra de cada palabra en mayúscula
   if (nombre.length < 2) return { error: "Falta el nombre del vehículo.", valores };
@@ -24,8 +24,8 @@ export async function guardarVehiculo(vehiculoId: string | null, _: EstadoForm, 
   const capacidad = textoCapacidad ? Number(textoCapacidad) : null;
   if (capacidad !== null && capacidad < 1) return { error: "La capacidad tiene que ser mayor a 0 (o dejarla vacía = sin tope).", valores };
 
-  // El costo de logística por día ya seteado de este vehículo lo cambia solo un dueño (si no viene el campo, se conserva).
-  const textoCosto = formData.has("costo") && usuario.rol === "DUENO" ? String(formData.get("costo") ?? "").trim() : undefined;
+  // El costo de logística por día ya seteado de este vehículo (si no viene el campo, se conserva).
+  const textoCosto = formData.has("costo") ? String(formData.get("costo") ?? "").trim() : undefined;
   const costo = textoCosto === undefined ? undefined : textoCosto ? leerMonto(textoCosto) : null;
   if (costo !== undefined && textoCosto && (costo === null || costo < 0)) return { error: "El costo de logística tiene que ser un monto válido (o dejarlo vacío para cargarlo a mano cada día).", valores };
   const datosCosto = costo === undefined ? {} : { costoLogistico: costo };
@@ -139,10 +139,9 @@ export async function guardarCostoLogistica(salidaId: string, texto: string): Pr
   return { ok: true };
 }
 
-/** Costo de logística por unidad que no hay que pasar (el "tope"); vacío = el de siempre. Solo dueños. */
+/** Costo de logística por unidad que no hay que pasar (el "tope"); vacío = el de siempre. Lo cambia cualquiera de oficina. */
 export async function guardarCostoLogisticoUnidad(texto: string): Promise<Resultado> {
-  const usuario = await exigirOficina();
-  if (usuario.rol !== "DUENO") return { ok: false, error: "Solo un dueño cambia el costo logístico por unidad." };
+  await exigirOficina();
   const valor = texto.trim() ? leerMonto(texto) : null;
   if (texto.trim() && (valor === null || valor <= 0)) return { ok: false, error: "Tiene que ser un monto mayor a 0 (o dejarlo vacío para usar el de siempre)." };
   await db.empresa.upsert({ where: { id: "principal" }, update: { costoLogisticoUnidad: valor }, create: { id: "principal", costoLogisticoUnidad: valor } });
