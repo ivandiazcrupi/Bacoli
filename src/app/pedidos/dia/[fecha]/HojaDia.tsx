@@ -784,6 +784,13 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
 
   // Camionetas con pedidos a las que todavía les falta el costo de logística (sin eso no se imprime ni se deja lista).
   const faltaCosto = salidas.filter((sa) => !sa.costo && filas.some((f) => f.salidaId === sa.id)).map((sa) => sa.nombre);
+  // Costo logístico GENERAL del día: lo que cuestan todas las camionetas con pedidos ÷ las unidades que llevan entre todas.
+  const conPedidos = salidas.filter((sa) => filas.some((f) => f.salidaId === sa.id));
+  const costoDia = conPedidos.reduce((t, sa) => t + (sa.costo ? Number(sa.costo) : 0), 0);
+  const unidadesDia = filas.filter((f) => f.salidaId !== null && !f.cobranza).reduce((t, f) => t + f.sabores.tomate + f.sabores.cebolla + f.sabores.pizzas + f.focOliva + f.focCherry, 0);
+  const costoPorUnidadDia = conPedidos.length > 0 && faltaCosto.length === 0 && unidadesDia > 0 ? costoDia / unidadesDia : null;
+  const diaSePasa = costoPorUnidadDia !== null && costoPorUnidadDia > topeCosto;
+  const motivoSePasa = `El costo logístico del día ($${Math.round(costoPorUnidadDia ?? 0)} por unidad) supera el tope de $${topeCosto}: no se puede imprimir.`;
   const imprimirTodos = async () => {
     const ventana = window.open("", "_blank");
     const r = await emitirRemitosDia(fecha);
@@ -877,6 +884,15 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
         onCerrar={cerrar}
         onReabrirDia={reabrir}
       />
+      {costoPorUnidadDia !== null && (
+        <div className="flex justify-center">
+          <div className={`flex min-w-[17rem] flex-col items-center gap-0.5 rounded-md border px-6 py-2 text-center ${diaSePasa ? "border-rojo-700 bg-white" : "border-stone-300 bg-white"}`} title="Costo de todas las camionetas del día ÷ las unidades que llevan entre todas">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-500">Costo logístico del día · por unidad</p>
+            <p className="leading-none"><span className={`text-xl font-semibold tabular-nums ${diaSePasa ? "text-rojo-700" : "text-verde-700"}`}>{formatoPesos(costoPorUnidadDia)}</span><span className="ml-2 text-[11px] tabular-nums text-stone-500">tope {formatoPesos(topeCosto)}</span></p>
+            <p className="text-[11px] tabular-nums text-stone-500">{formatoPesos(costoDia)} ÷ {num(unidadesDia)} unidades{diaSePasa ? <span className="ml-1 font-semibold text-rojo-700">· se pasa {formatoPesos(costoPorUnidadDia - topeCosto)}</span> : null}</p>
+          </div>
+        </div>
+      )}
       <div className="grid items-center gap-3 text-sm sm:grid-cols-[1fr_auto_1fr]">
         {/* Sumar un vehículo a la salida de este día: chico, un solo desplegable; al elegirlo se abre su cuadro */}
         {!fija ? (
@@ -897,8 +913,8 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
           {sinVehiculo.length > 0 && <>Sin ubicar <span className="font-medium normal-case tracking-normal text-stone-600">· {sinVehiculo.length} {sinVehiculo.length === 1 ? "pedido" : "pedidos"}</span>{salidas.length === 0 && <span className="ml-2 font-medium normal-case tracking-normal text-stone-500">· primero sumá un vehículo</span>}</>}
         </h2>
         <div className="flex flex-wrap items-center gap-2 sm:justify-self-end">
-          {salidas.length > 0 && (faltaCosto.length > 0
-            ? <span title={`Falta cargar el costo de logística de: ${faltaCosto.join(", ")}`} className="cursor-not-allowed rounded-md border border-stone-300 bg-stone-100 px-3 py-2 font-medium text-stone-400">Imprimir hoja de ruta</span>
+          {salidas.length > 0 && (faltaCosto.length > 0 || diaSePasa
+            ? <span title={diaSePasa ? motivoSePasa : `Falta cargar el costo de logística de: ${faltaCosto.join(", ")}`} className="cursor-not-allowed rounded-md border border-stone-300 bg-stone-100 px-3 py-2 font-medium text-stone-400">Imprimir hoja de ruta</span>
             : <a href={`/pedidos/dia/${fecha}/imprimir`} target="_blank" rel="noreferrer" className="rounded-md border border-stone-400 bg-white px-3 py-2 font-medium shadow-sm">Imprimir hoja de ruta</a>)}
           {filas.length > 0 && <button type="button" onClick={imprimirTodos} className="rounded-md border border-stone-400 bg-white px-3 py-2 font-medium shadow-sm">Imprimir todos los remitos</button>}
         </div>
@@ -934,8 +950,8 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
                 {sa.patente && <p className="text-xs text-stone-600">{sa.patente}</p>}
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                {grupo.length > 0 && (!sa.costo
-                  ? <span title="Cargá el costo de logística (al pie de este cuadro) para poder imprimir" className="cursor-not-allowed rounded-md border border-stone-300 bg-stone-100 px-3 py-1.5 text-sm font-medium text-stone-400">Imprimir</span>
+                {grupo.length > 0 && (!sa.costo || diaSePasa
+                  ? <span title={diaSePasa ? motivoSePasa : "Cargá el costo de logística (al pie de este cuadro) para poder imprimir"} className="cursor-not-allowed rounded-md border border-stone-300 bg-stone-100 px-3 py-1.5 text-sm font-medium text-stone-400">Imprimir</span>
                   : <a href={`/pedidos/dia/${fecha}/imprimir?salida=${sa.id}`} target="_blank" rel="noreferrer" className="rounded-md border border-stone-400 bg-white px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-crema-50">Imprimir</a>)}
                 {grupo.length > 0 && <a href={urlRuta(grupo)} target="_blank" rel="noreferrer" className="rounded-md border border-stone-400 bg-white px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-crema-50">Ver ruta en Google Maps</a>}
                 {!fija && <button type="button" onClick={() => { if (window.confirm(`¿Sacar ${sa.nombre} del día? Sus pedidos quedan “sin ubicar”.`)) llamar(() => quitarSalida(sa.id)); }} className="rounded-md border border-stone-400 bg-white px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-crema-50">Sacar del día</button>}
