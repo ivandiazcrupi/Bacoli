@@ -206,6 +206,12 @@ export async function importarPedidosWeb(csvManual?: string): Promise<ResultadoI
     const minimo = Math.max(ultimo + 1, Number.isFinite(desde) ? desde : 0);
     const resultado = await crearPedidosWeb(await aplicarBarriosAprendidos(lectura.ordenes.filter((o) => Number(o.orden) >= minimo)));
     await completarBarriosVacios(lectura.ordenes).catch(() => 0);
+    if (lectura.ilegibles.length > 0) {
+      const asuntos = [...new Set(lectura.ilegibles.map((m) => m.asunto))].slice(0, 3).join(" · ");
+      console.error(`[tienda] ${lectura.ilegibles.length} mails de la etiqueta no se entendieron`, lectura.ilegibles.slice(0, 3));
+      return { ...resultado, ok: resultado.nuevos > 0, mensaje: `${resultado.mensaje} Ojo: ${lectura.ilegibles.length} ${lectura.ilegibles.length === 1 ? "mail de la etiqueta no se pudo interpretar" : "mails de la etiqueta no se pudieron interpretar"} (${asuntos}): puede haber cambiado el formato del mail de Empretienda.` };
+    }
+    if (lectura.leidos === 0) return { ...resultado, mensaje: `${resultado.mensaje} La etiqueta no tiene mails de los últimos 7 días: revisá que Empretienda esté mandando los avisos y que el filtro de Gmail los etiquete.` };
     return resultado;
   }
 

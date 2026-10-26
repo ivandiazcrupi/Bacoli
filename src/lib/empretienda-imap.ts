@@ -47,7 +47,8 @@ export async function leerOrdenesDeGmail(dias = 30, maximo = 400): Promise<Lectu
           if (/caducad/i.test(mail.subject ?? "")) continue; // "La orden #N ha caducado": no es un pedido
           const html = typeof mail.html === "string" ? mail.html : "";
           const texto = html ? htmlATexto(html) : (mail.text ?? "");
-          const orden = leerMailOrden(texto) ?? (mail.text ? leerMailOrden(mail.text) : null);
+          const delAsunto = (mail.subject ?? "").match(/#\s*(\d+)/)?.[1]; // si el cuerpo no trae el N°, se toma del asunto ("Tienes una nueva venta #123")
+          const orden = leerMailOrden(texto) ?? (mail.text ? leerMailOrden(mail.text) : null) ?? (delAsunto ? leerMailOrden(`Orden: #${delAsunto}\n${texto}`) : null);
           if (orden) ordenes.set(orden.orden, orden); // si una orden llegó dos veces, queda la última
           else ilegibles.push({ asunto: mail.subject ?? "(sin asunto)", fecha: mail.date ? mail.date.toISOString() : "", texto: texto.slice(0, 400) });
         }

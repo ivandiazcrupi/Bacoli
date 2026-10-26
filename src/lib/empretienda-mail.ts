@@ -99,7 +99,7 @@ export function parsearProductos(texto: string): RenglonPlanilla[] {
 /** Lee un mail de orden (ya pasado a texto, una línea por dato). Devuelve null si no es una orden. */
 export function leerMailOrden(cuerpo: string): OrdenDeMail | null {
   const extraer = (patron: RegExp) => { const m = cuerpo.match(patron); return m ? m[1].trim() : ""; };
-  const orden = extraer(/Orden:\s*#?(\d+)/i);
+  const orden = extraer(/(?:Orden|Venta|Pedido)\s*(?:N[°ºo.]*\s*)?:?\s*#\s*(\d+)/i) || extraer(/(?:Orden|Venta|Pedido)\s*:\s*(\d+)/i); // "Orden: #123", "Orden #123", "Venta #123"…
   if (!orden) return null;
   const metodoPago = extraer(/M.todo de pago:\s*([^\n]+)/i);
   const estadoPago = extraer(/Estado del pago:\s*([^\n]+)/i);
