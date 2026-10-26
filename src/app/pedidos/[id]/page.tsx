@@ -155,6 +155,12 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
               {web && <CopiarEmail email={pedido.webEmail} />}
               {entrega.telefono && <p className="mt-0.5 text-[13.5px] text-stone-600">Tel. {wa ? <a href={wa} target="_blank" rel="noreferrer" className="font-semibold text-verde-800 hover:underline">{entrega.telefono} · WhatsApp</a> : entrega.telefono}</p>}
             </div>
+            {pedido.clienteId && (
+              <nav aria-label="Ir al cliente" className="flex gap-2">
+                <Link href={`/clientes/${pedido.clienteId}/pedidos`} className="inline-flex h-9 items-center rounded-md border border-stone-300 bg-white px-3 text-[11.5px] font-semibold uppercase tracking-wide text-stone-700 hover:bg-crema-100">Pedidos</Link>
+                <Link href={`/cuentas/${pedido.clienteId}`} className="inline-flex h-9 items-center rounded-md border border-stone-300 bg-white px-3 text-[11.5px] font-semibold uppercase tracking-wide text-stone-700 hover:bg-crema-100">Cuenta corriente</Link>
+              </nav>
+            )}
             <BotonVolver fallback={fecha ? `/pedidos/dia/${fecha}` : "/pedidos"} />
           </div>
           <div className={`grid grid-cols-2 divide-x divide-y divide-stone-200 border-t border-stone-200 sm:divide-y-0 ${web ? "sm:grid-cols-4" : "sm:grid-cols-4"}`}>
