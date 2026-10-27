@@ -209,8 +209,14 @@ export async function importarPedidosWeb(csvManual?: string): Promise<ResultadoI
   if (usaMails) {
     const lectura = await leerOrdenesDeGmail(7, 250);
     if (!lectura.ok) return { ok: false, nuevos: 0, yaCargados: 0, mensaje: lectura.mensaje };
-    const web = await db.pedido.findMany({ where: { origen: "WEB", webOrden: { not: null } }, select: { webOrden: true } });
-    const ultimo = web.reduce((m, p) => Math.max(m, parseInt(p.webOrden ?? "", 10) || 0), 0);
+    const web = await db.pedido.findMany({ where: { origen: "WEB", webOrden: { not: null } }, select: { webOrden: true, creadoPorId: true } });
+    // El "último N° cargado" cuenta los pedidos que trajo el sistema y los cargados a mano cuyo N° existe de verdad en los mails:
+    // un N° escrito a mano de más (que no está en ningún mail) ya no tapa a las órdenes reales.
+    const enMails = new Set(lectura.ordenes.map((o) => Number(o.orden)));
+    const ultimo = web.reduce((m, p) => {
+      const n = parseInt(p.webOrden ?? "", 10) || 0;
+      return p.creadoPorId === "empretienda" || enMails.has(n) ? Math.max(m, n) : m;
+    }, 0);
     const minimo = Math.max(ultimo + 1, Number.isFinite(desde) ? desde : 0);
     const resultado = await crearPedidosWeb(await aplicarBarriosAprendidos(lectura.ordenes.filter((o) => Number(o.orden) >= minimo)));
     // Órdenes de los mails que NO están cargadas pero quedan por debajo del último N° del sistema (típico: se cargó a mano un N° de más): no entran solas, se avisa.
