@@ -157,10 +157,12 @@ async function crearPedidosWeb(pedidos: OrdenNueva[]): Promise<ResultadoImportac
 
   let nuevos = 0;
   let yaCargados = 0;
+  const sinProductos: string[] = [];
+  const conError: string[] = [];
   for (const p of pedidos) {
     if (existentes.has(p.orden)) { yaCargados++; continue; }
     const items = armarItems(p.renglones, catalogo);
-    if (items.length === 0) continue;
+    if (items.length === 0) { sinProductos.push(p.orden); continue; }
     try {
       await db.pedido.create({
         data: {
@@ -182,11 +184,17 @@ async function crearPedidosWeb(pedidos: OrdenNueva[]): Promise<ResultadoImportac
         },
       });
       nuevos++;
-    } catch {
-      yaCargados++; // otra copia del sistema lo cargó justo antes: el N° de orden es único
+    } catch (e) {
+      if ((e as { code?: string }).code === "P2002") yaCargados++; // otra copia del sistema lo cargó justo antes: el N° de orden es único
+      else { conError.push(p.orden); console.error(`[tienda] no se pudo cargar la orden ${p.orden}`, e); }
     }
   }
-  return { ok: true, nuevos, yaCargados, mensaje: nuevos ? `Se cargaron ${nuevos} ${nuevos === 1 ? "pedido nuevo" : "pedidos nuevos"} de la tienda.` : "No hay pedidos nuevos en la tienda." };
+  const avisos = [
+    sinProductos.length ? `Ojo: la${sinProductos.length === 1 ? "" : "s"} orden${sinProductos.length === 1 ? "" : "es"} ${sinProductos.map((o) => `#${o}`).join(", ")} no se pudo${sinProductos.length === 1 ? "" : "ieron"} cargar porque no se entendieron sus productos.` : "",
+    conError.length ? `Ojo: falló la carga de ${conError.map((o) => `#${o}`).join(", ")} (error del sistema: avisame).` : "",
+  ].filter(Boolean).join(" ");
+  const base = nuevos ? `Se cargaron ${nuevos} ${nuevos === 1 ? "pedido nuevo" : "pedidos nuevos"} de la tienda.` : "No hay pedidos nuevos en la tienda.";
+  return { ok: sinProductos.length + conError.length === 0, nuevos, yaCargados, mensaje: avisos ? `${base} ${avisos}` : base };
 }
 
 /**
@@ -205,6 +213,15 @@ export async function importarPedidosWeb(csvManual?: string): Promise<ResultadoI
     const ultimo = web.reduce((m, p) => Math.max(m, parseInt(p.webOrden ?? "", 10) || 0), 0);
     const minimo = Math.max(ultimo + 1, Number.isFinite(desde) ? desde : 0);
     const resultado = await crearPedidosWeb(await aplicarBarriosAprendidos(lectura.ordenes.filter((o) => Number(o.orden) >= minimo)));
+    // Órdenes de los mails que NO están cargadas pero quedan por debajo del último N° del sistema (típico: se cargó a mano un N° de más): no entran solas, se avisa.
+    const cargadas = new Set(web.map((p) => p.webOrden));
+    const pisadas = lectura.ordenes.filter((o) => Number(o.orden) < minimo && !cargadas.has(o.orden) && !(Number.isFinite(desde) && Number(o.orden) < desde));
+    if (resultado.nuevos === 0) {
+      const nums = lectura.ordenes.map((o) => Number(o.orden));
+      const rango = nums.length ? `de la #${Math.min(...nums)} a la #${Math.max(...nums)}` : "ninguna";
+      resultado.mensaje += ` Se revisaron ${lectura.leidos} mails de la etiqueta (órdenes ${rango}); el sistema tiene cargada hasta la #${ultimo}.`;
+      if (pisadas.length) resultado.mensaje += ` Hay ${pisadas.length} ${pisadas.length === 1 ? "orden en los mails que no está cargada y no entra sola" : "órdenes en los mails que no están cargadas y no entran solas"} porque ${pisadas.length === 1 ? "es anterior" : "son anteriores"} a la #${ultimo} (${pisadas.slice(0, 8).map((o) => `#${o.orden}`).join(", ")}${pisadas.length > 8 ? "…" : ""}): puede haber un N° de orden cargado a mano de más.`;
+    }
     await completarBarriosVacios(lectura.ordenes).catch(() => 0);
     if (lectura.ilegibles.length > 0) {
       const asuntos = [...new Set(lectura.ilegibles.map((m) => m.asunto))].slice(0, 3).join(" · ");
