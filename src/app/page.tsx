@@ -1,6 +1,7 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Cabecera } from "@/components/Cabecera";
-import { esPersonalDeOficina, esVendedor } from "@/lib/roles";
+import { esPersonalDeOficina, esProduccion, esVendedor } from "@/lib/roles";
 import { exigirUsuario } from "@/lib/session";
 
 // Mensajes de bienvenida: uno al azar cada vez que se entra, según la hora de Argentina.
@@ -23,6 +24,7 @@ function fechaHoy() {
 
 export default async function Inicio() {
   const usuario = await exigirUsuario();
+  if (esProduccion(usuario.rol)) redirect("/produccion");
   const oficina = esPersonalDeOficina(usuario.rol);
 
   return (

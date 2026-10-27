@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { jwtVerify, SignJWT } from "jose";
 import type { Rol } from "@prisma/client";
-import { esPersonalDeOficina, esVendedor } from "./roles";
+import { esPersonalDeOficina, esVendedor, puedeVerProduccion } from "./roles";
 
 const COOKIE = "bacoli_sesion";
 const DURACION_HORAS = 12;
@@ -83,4 +83,11 @@ export async function exigirCarga() {
 export async function vendedorDeUsuario(usuarioId: string) {
   const { db } = await import("./db");
   return db.vendedor.findFirst({ where: { usuarioId, activo: true } }); // un vendedor dado de baja ya no entra a ver ni cargar nada
+}
+
+/** Pantalla de Producción: el rol Producción y la oficina; el resto vuelve al inicio. */
+export async function exigirProduccion() {
+  const usuario = await exigirUsuario();
+  if (!puedeVerProduccion(usuario.rol)) redirect("/");
+  return usuario;
 }

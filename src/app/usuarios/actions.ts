@@ -8,7 +8,7 @@ import { puedeGestionarUsuarios } from "@/lib/roles";
 import { MIN_CLAVE, emailSinCargar } from "@/lib/usuarios";
 import { exigirUsuario } from "@/lib/session";
 
-const ROLES = ["DUENO", "ADMINISTRACION", "VENDEDOR", "REPARTIDOR"] as const;
+const ROLES = ["DUENO", "ADMINISTRACION", "VENDEDOR", "REPARTIDOR", "PRODUCCION"] as const;
 
 const esquema = z.object({
   nombre: z.string().trim().min(2, "Falta el nombre."),

@@ -1,13 +1,14 @@
 import Link from "next/link";
 import type { Usuario } from "@prisma/client";
 import { db } from "@/lib/db";
-import { esPersonalDeOficina, esVendedor, puedeGestionarUsuarios } from "@/lib/roles";
+import { esPersonalDeOficina, esProduccion, esVendedor, puedeGestionarUsuarios } from "@/lib/roles";
 import { salir } from "@/app/actions";
 
 // PC: a la izquierda la marca, en el centro el menú (lo importante grande, el resto más discreto) y a la derecha los botones
 // para cargar pedido / cliente. Celular: marca + "Salir" arriba, botones de carga y el menú en una fila que se desliza.
 export async function Cabecera({ usuario }: { usuario: Usuario }) {
   const oficina = esPersonalDeOficina(usuario.rol);
+  const produccion = esProduccion(usuario.rol);
   const vendedor = esVendedor(usuario.rol); // el vendedor solo ve sus pedidos y sus clientes
   // Para los dueños: punto rojo en EMPRESA si hace más de un día que no se descarga una copia de seguridad.
   let copiaVencida = false;
@@ -44,6 +45,7 @@ export async function Cabecera({ usuario }: { usuario: Usuario }) {
           {oficina && <Link href="/pedidos" className={principal}>Pedidos</Link>}
           {oficina && <Link href="/cuentas" className={principal}>Cuenta corriente</Link>}
           {oficina && <Link href="/comercial" className={principal}>Comercial</Link>}
+          {(oficina || produccion) && <Link href="/produccion" className={principal}>Producción</Link>}
           {oficina && <span aria-hidden className="mx-2 hidden h-5 w-px bg-stone-300 lg:block" />}
           {oficina && <Link href="/productos" className={secundario}>Productos</Link>}
           {puedeGestionarUsuarios(usuario.rol) && <Link href="/usuarios" className={secundario}>Usuarios</Link>}

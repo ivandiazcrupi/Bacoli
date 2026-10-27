@@ -7,6 +7,7 @@ const ROLES: { valor: string; texto: string }[] = [
   { valor: "ADMINISTRACION", texto: "Administración" },
   { valor: "VENDEDOR", texto: "Vendedor" },
   { valor: "REPARTIDOR", texto: "Repartidor" },
+  { valor: "PRODUCCION", texto: "Producción" },
 ];
 
 // Cambia el rol al elegirlo; pide confirmar porque cambia lo que la persona puede ver.

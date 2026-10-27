@@ -12,6 +12,7 @@ enum Rol {
   ADMINISTRACION
   VENDEDOR
   REPARTIDOR
+  PRODUCCION
 }
 
 model Usuario {
@@ -27,6 +28,7 @@ model Usuario {
 
   salidas Salida[]
   vendedor Vendedor? @relation("VendedorUsuario")
+  producciones Produccion[]
   comisionPct Decimal? @db.Decimal(5, 2) // (sin uso: la comisión ahora vive en Vendedor)
   apruebaVendedores Boolean @default(false) // el dueño que aprueba los cambios de vendedor de los clientes (uno solo)
 }
@@ -580,4 +582,21 @@ model BarrioCp {
   total      Int      @default(1)
   detalle    String?
   actualizado DateTime @updatedAt
+}
+
+// Producción de fábrica: cada tanda que carga el equipo (Gastón, Federico). Cantidades en UNIDADES (1 paquete de prepizza = 2).
+// "inicio" es opcional (botón "Empecé"); "fin" es cuando se cargó. Una tanda abierta tiene fin nulo.
+model Produccion {
+  id          String    @id @default(cuid())
+  fecha       DateTime  @db.Date // día de producción (hora de Argentina)
+  producto    String // TOMATE, CEBOLLA, PIZZA, FOCACCIA_OLIVA, FOCACCIA_CHERRY
+  cantidad    Int       @default(0)
+  desperdicio Int       @default(0)
+  inicio      DateTime?
+  fin         DateTime?
+  usuarioId   String
+  usuario     Usuario   @relation(fields: [usuarioId], references: [id])
+  creadoEn    DateTime  @default(now())
+
+  @@index([fecha])
 }
