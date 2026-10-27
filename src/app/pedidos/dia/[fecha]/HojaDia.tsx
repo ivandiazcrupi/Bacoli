@@ -405,7 +405,7 @@ function Zona({ id, bloqueada, clase, children }: { id: string; bloqueada: boole
   return <section ref={setNodeRef} className={`${clase} ${isOver ? "ring-2 ring-verde-700" : ""}`}>{children}</section>;
 }
 
-const COLUMNAS_UBICAR = "lg:grid-cols-[1.5rem_1fr_1.5fr_1.4fr_1fr_2fr_6.5rem_5rem_4rem_9rem_9rem]";
+const COLUMNAS_UBICAR = "lg:grid-cols-[1.5rem_minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,2fr)_6.5rem_5rem_4rem_9rem_9rem]";
 
 // Un pedido sin ubicar: la misma información que en la hoja PEDIDOS, en una sola línea, y se arrastra hasta un vehículo.
 function FilaUbicar({ f, salidas, bloqueada, acc }: { f: Fila; salidas: SalidaInfo[]; bloqueada: boolean; acc: Acciones }) {

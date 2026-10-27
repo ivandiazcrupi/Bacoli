@@ -14,7 +14,7 @@ import type { FilaBandeja } from "./filas";
 
 export type DiaBoton = { fecha: string; letra: string; numero: number; nombre: string; hoy: boolean; cerrado: boolean };
 
-const COLUMNAS = "lg:grid-cols-[1fr_1.4fr_1.9fr_1fr_2fr_6.5rem_5rem_4rem_13.5rem]";
+const COLUMNAS = "lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_minmax(0,1.9fr)_minmax(0,1fr)_minmax(0,2fr)_6.5rem_5rem_4rem_13.5rem]";
 const ENCABEZADOS = ["Barrio", "Cliente", "Dirección", "Teléfono", "Pedido", "Monto", "Factura", "", "Asignar"];
 
 function Comprobante({ conFactura, cobranza }: { conFactura: boolean; cobranza?: boolean }) {
