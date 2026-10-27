@@ -117,7 +117,7 @@ export function Bandeja({ filas: iniciales, dias }: { filas: FilaBandeja[]; dias
               {f.intento && <span className="mt-0.5 block text-[11px] font-normal leading-tight text-stone-500">↺ {f.intento}</span>}
             </span>
             <span className="text-[12.5px] tabular-nums"><Telefono tel={f.telefono} /></span>
-            <span className="inline-grid justify-center justify-self-center gap-x-2 gap-y-0.5 text-left text-[12.5px] [grid-template-columns:auto_auto]">
+            <span className="grid w-[17rem] max-w-full justify-self-center gap-x-2 gap-y-0.5 text-left text-[12.5px] [grid-template-columns:1.75rem_1fr]">
               {f.cobranza && <span className="col-span-2 text-center font-extrabold uppercase tracking-[0.14em] text-stone-700">Cobrar</span>}
               {f.items.map((i, k) => (
                 <span key={k} className="contents"><span className="text-right font-semibold tabular-nums">{i.cantidad}</span><span className="leading-snug">{i.nombre}</span></span>

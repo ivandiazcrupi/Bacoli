@@ -298,7 +298,7 @@ function FilaHoja({ f, n, bloqueada, armando, fija, acc, salidas }: { f: Fila; n
       <div role="cell" className="whitespace-nowrap tabular-nums">
         {f.telefono ? (enlaceWhatsApp(f.telefono) ? <a href={enlaceWhatsApp(f.telefono)!} target="_blank" rel="noreferrer" className="hover:text-verde-800 hover:underline">{f.telefono}</a> : f.telefono) : <span className="text-stone-400">—</span>}
       </div>
-      <div role="cell" className="inline-grid justify-center justify-self-center gap-x-2 gap-y-0.5 text-left [grid-template-columns:auto_auto]">
+      <div role="cell" className="grid w-[17rem] max-w-full justify-self-center gap-x-2 gap-y-0.5 text-left [grid-template-columns:1.75rem_1fr]">
 {f.cobranza && <span className="col-span-2 text-center text-[12px] font-extrabold uppercase tracking-[0.14em] text-stone-700">Cobrar</span>}
         {f.items.map((i, k) => (
           <span key={k} className="contents"><span className="text-right font-bold tabular-nums">{i.cantidad}</span><span className="leading-snug">{i.nombre}</span></span>
@@ -358,7 +358,7 @@ function FilaSiluetaTabla({ x, n }: { x: Silueta; n: number }) {
       <div role="cell" className="font-bold uppercase leading-snug text-stone-600">{x.cliente}</div>
       <div role="cell" className="leading-snug">{x.direccion}<span className="block text-xs font-semibold text-rojo-700/80">No se entregó · {x.motivo}</span></div>
       <div role="cell">—</div>
-      <div role="cell" className="inline-grid justify-center justify-self-center gap-x-2 text-left [grid-template-columns:auto_auto]">
+      <div role="cell" className="grid w-[17rem] max-w-full justify-self-center gap-x-2 text-left [grid-template-columns:1.75rem_1fr]">
         {x.items.map((i, k) => <span key={k} className="contents"><span className="text-right font-semibold tabular-nums">{i.cantidad}</span><span className="leading-snug">{i.nombre}</span></span>)}
       </div>
       <div role="cell">—</div>
@@ -428,7 +428,7 @@ function FilaUbicar({ f, salidas, bloqueada, acc }: { f: Fila; salidas: SalidaIn
           <NotaRapida pedidoId={f.id} nota={f.nota} bloqueada={bloqueada} />
         </span>
         <span className="text-[13px] tabular-nums">{f.telefono ? (wa ? <a href={wa} target="_blank" rel="noreferrer" className="hover:text-verde-800 hover:underline">{f.telefono}</a> : f.telefono) : <span className="text-stone-400">—</span>}</span>
-        <span className="inline-grid justify-center justify-self-center gap-x-2 gap-y-0.5 text-left text-[13px] [grid-template-columns:auto_auto]">
+        <span className="grid w-[17rem] max-w-full justify-self-center gap-x-2 gap-y-0.5 text-left text-[13px] [grid-template-columns:1.75rem_1fr]">
           {f.cobranza && <span className="col-span-2 text-center text-[12px] font-extrabold uppercase tracking-[0.14em] text-stone-700">Cobrar</span>}
           {f.items.map((i, k) => <span key={k} className="contents"><span className="text-right font-semibold tabular-nums">{i.cantidad}</span><span className="leading-snug">{i.nombre}</span></span>)}
         </span>
