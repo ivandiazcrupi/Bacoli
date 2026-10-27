@@ -119,6 +119,21 @@ export function armarItems(renglones: RenglonPlanilla[], cat: Catalogo): ItemNue
       sumar(cat.tomate, r.tomate || cantidadTexto);
     } else if (texto.includes("PREPIZZA CEBOLLA")) {
       sumar(cat.cebolla, r.cebolla || cantidadTexto);
+    } else if (sinTildes((prefijo ? prefijo[2] : r.producto).toUpperCase()).includes("FOCACCIA")) {
+      // Focaccias: "X2" = 2 unidades por cada una comprada. El renglón queda en UNIDADES (la cantidad que se ve es la que hay que cargar);
+      // el pack mixto (oliva + cherry) se parte en una de cada sabor.
+      const base = (prefijo ? prefijo[2] : r.producto).replace(/\s+/g, " ").trim();
+      const nom = sinTildes(base.toUpperCase());
+      const x = nom.match(/\bX\s*(\d+)\b/);
+      const mixto = nom.includes("OLIVA") && nom.includes("CHERRY");
+      const total = cantidadTexto * (x ? Number(x[1]) : mixto ? 2 : 1);
+      const limpio = base.replace(/\s*\bX\s*\d+\b/gi, "").trim();
+      if (mixto) {
+        otros.push({ productoId: null, nombre: "FOCACCIA ACEITE DE OLIVA", sku: null, unidad: "unidad", cantidad: Math.ceil(total / 2), paquetesPor: 1 });
+        otros.push({ productoId: null, nombre: "FOCACCIA CHERRY Y ROMERO", sku: null, unidad: "unidad", cantidad: Math.floor(total / 2), paquetesPor: 1 });
+      } else {
+        otros.push({ productoId: null, nombre: mayus(limpio), sku: null, unidad: "unidad", cantidad: total, paquetesPor: 1 });
+      }
     } else {
       const nombre = mayus((prefijo ? prefijo[2] : r.producto).replace(/\s+/g, " "));
       if (nombre) otros.push({ productoId: null, nombre, sku: null, unidad: "unidad", cantidad: cantidadTexto, paquetesPor: 1 });

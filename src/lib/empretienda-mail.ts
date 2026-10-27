@@ -88,6 +88,7 @@ export function parsearProductos(texto: string): RenglonPlanilla[] {
     else if (item.includes("COMBO NAPOLITANO")) principales.push({ producto: `${cant} x ${nombre}`, tomate: cant * 2, cebolla: 0 });
     else if (item.includes("PREPIZZA NAPOLITANA")) principales.push({ producto: nombre, tomate: cant * 2, cebolla: 0 });
     else if (item.includes("PREPIZZA CEBOLLA")) principales.push({ producto: nombre, tomate: 0, cebolla: cant * 2 });
+    else if (item.includes("FOCACCIA")) otros.push({ producto: `${cant} x ${item.replace(/\(SKU:[^)]*\)/gi, "").replace(/\([^)]*\)/g, "").replace(/\s+/g, " ").trim()}`, tomate: 0, cebolla: 0 }); // las focaccias conservan el "X2": trae 2 unidades por cada una
     else if (nombre.length > 2) otros.push({ producto: `${cant} x ${nombre}`, tomate: 0, cebolla: 0 });
   }
   const prioridad = (p: RenglonPlanilla) => (p.tomate > 0 && p.cebolla === 0 ? 1 : p.cebolla > 0 && p.tomate === 0 ? 2 : p.tomate > 0 && p.cebolla > 0 ? 3 : 4);
