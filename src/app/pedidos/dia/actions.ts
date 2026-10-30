@@ -150,17 +150,20 @@ export async function registrarCobro(pedidoId: string, medio: string, monto?: nu
   if (pedido.estado !== "ENTREGADO") return { ok: false, error: "Primero marcá el pedido como entregado." };
   if (pedido.cobro === "COBRADO") return { ok: false, error: "Este pedido ya está cobrado." };
 
-  const debido = redondear2(importeVigente(pedido.items, Number(pedido.ivaPct), "ENTREGADO", pedido.webTotal) - pedido.ncAplicaciones.reduce((t, a) => t + Number(a.monto), 0));
-  if (debido <= 0) return { ok: false, error: "Este comprobante está cubierto por una nota de crédito: no hay nada que cobrar." };
-  const cobrado = redondear2(monto ?? debido);
-  if (!(cobrado > 0)) return { ok: false, error: "El monto cobrado tiene que ser mayor a 0." };
+  const importe = redondear2(importeVigente(pedido.items, Number(pedido.ivaPct), "ENTREGADO", pedido.webTotal));
+  const debido = redondear2(importe - pedido.ncAplicaciones.reduce((t, a) => t + Number(a.monto), 0));
+  // Un comprobante de $0 (muestra, regalo) se puede marcar como pagado: es "pagó $0". Solo se frena si lo cubre una nota de crédito.
+  const esDeCero = importe <= 0;
+  if (debido <= 0 && !esDeCero) return { ok: false, error: "Este comprobante está cubierto por una nota de crédito: no hay nada que cobrar." };
+  const cobrado = esDeCero ? 0 : redondear2(monto ?? debido);
+  if (!esDeCero && !(cobrado > 0)) return { ok: false, error: "El monto cobrado tiene que ser mayor a 0." };
 
   await db.$transaction(async (tx) => {
     await tx.pedido.update({
       where: { id: pedidoId },
       data: { cobro: "COBRADO", medioCobro: medio as MedioPago, montoCobrado: cobrado, pagado: cobrado + 0.005 >= debido, pagoAvisadoPor: null, pagoAvisadoEn: null },
     });
-    if (pedido.clienteId) {
+    if (pedido.clienteId && cobrado > 0) {
       await tx.movimientoCuenta.create({
         data: { clienteId: pedido.clienteId, pedidoId, tipo: "PAGO", monto: -cobrado, medio: medio as MedioPago, nota: "Cobro del pedido", usuarioId: usuario.id },
       });
@@ -188,7 +191,7 @@ export async function deshacerCobro(pedidoId: string, ignorarCierre = false): Pr
   if ("error" in r) return { ok: false, error: r.error };
   const { pedido } = r;
   await db.$transaction(async (tx) => {
-    if (pedido.cobro === "COBRADO" && pedido.montoCobrado && pedido.clienteId) {
+    if (pedido.cobro === "COBRADO" && pedido.montoCobrado && Number(pedido.montoCobrado) > 0 && pedido.clienteId) {
       await tx.movimientoCuenta.create({
         data: { clienteId: pedido.clienteId, pedidoId, tipo: "ANULACION_PAGO", monto: pedido.montoCobrado, medio: pedido.medioCobro, nota: "Cobro anulado", usuarioId: usuario.id },
       });
