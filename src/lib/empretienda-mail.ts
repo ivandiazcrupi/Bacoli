@@ -85,7 +85,7 @@ export function parsearProductos(texto: string): RenglonPlanilla[] {
     const item = m[2].trim().toUpperCase().replace(/Eleg[ií]\s+.+/gi, "").trim();
     const nombre = limpiarNombre(item);
     if (item.includes("PREPIZZA TOMATE + CEBOLLA") || item.includes("TOMATE + CEBOLLA")) principales.push({ producto: nombre, tomate: cant, cebolla: cant });
-    else if (item.includes("COMBO NAPOLITANO")) principales.push({ producto: `${cant} x ${nombre}`, tomate: cant * 2, cebolla: 0 });
+    else if (item.includes("COMBO NAPOLITANO") || item.includes("COMBO TOSCANO")) principales.push({ producto: `${cant} x ${nombre}`, tomate: cant * 2, cebolla: 0 });
     else if (item.includes("PREPIZZA NAPOLITANA")) principales.push({ producto: nombre, tomate: cant * 2, cebolla: 0 });
     else if (item.includes("PREPIZZA CEBOLLA")) principales.push({ producto: nombre, tomate: 0, cebolla: cant * 2 });
     else if (item.includes("FOCACCIA")) otros.push({ producto: `${cant} x ${item.replace(/\(SKU:[^)]*\)/gi, "").replace(/\([^)]*\)/g, "").replace(/\s+/g, " ").trim()}`, tomate: 0, cebolla: 0 }); // las focaccias conservan el "X2": trae 2 unidades por cada una

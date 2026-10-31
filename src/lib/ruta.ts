@@ -22,7 +22,7 @@ const sinTildes = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, 
  */
 const claseDe = (nombre = ""): Clase | null => {
   const n = sinTildes(nombre.toUpperCase());
-  if (n.includes("PREPIZZA TOMATE") || n.includes("COMBO NAPOLITANO")) return "tomate";
+  if (n.includes("PREPIZZA TOMATE") || n.includes("COMBO NAPOLITANO") || n.includes("COMBO TOSCANO")) return "tomate";
   if (n.includes("PREPIZZA CEBOLLA")) return "cebolla";
   if (/PIZZA (MUZZARELLA|JAMON|FUGAZZETA)/.test(n)) return "pizzas";
   return null;
@@ -53,6 +53,7 @@ export function focacciasPorTipo(items: RenglonRuta[]) {
   for (const i of items) {
     const nom = sinTildes((i.nombre ?? "").toUpperCase());
     const cant = i.cantidad + (i.sinCargo ?? 0);
+    if (nom.includes("COMBO TOSCANO")) { r.oliva += i.cantidad; r.cherry += i.cantidad; continue; } // trae 1 focaccia de oliva y 1 de cherry por combo
     if (nom.includes("COMBO NAPOLITANO")) { if (nom.includes("FOCACCIA")) r.oliva += 2 * i.cantidad; continue; } // solo el combo "+ 2 FOCACCIA" las trae
     const cherry = nom.includes("CHERRY");
     const oliva = nom.includes("OLIVA");

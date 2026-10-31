@@ -492,3 +492,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Comprobantes de $0 se pueden marcar como pagados (pedido del dueño)
 - Una muestra o regalo con remito/factura de **$0,00** se puede "pagar" como cualquier otro (Cuenta corriente → tildar → medio de pago): queda **Pagada · medio** con monto 0 y no genera movimiento en el libro (`registrarCobro`, `src/app/pedidos/dia/actions.ts`). El aviso "cubierto por una nota de crédito" queda solo para los que una NC realmente cubre. Deshacer el pago de uno de $0 también anda y no deja movimiento.
+
+## Tienda: COMBO TOSCANO (pedido del dueño)
+- Producto nuevo de la tienda: **COMBO TOSCANO** = combo napolitano + **1 focaccia de oliva y 1 de cherry y romero** (mismas 2 prepizzas de tomate que el napolitano; confirmado por el dueño). Se carga como **una sola línea "COMBO TOSCANO"** (`armarItems`, `src/lib/empretienda.ts`; `parsearProductos` lo lee como el napolitano, 2 paquetes de tomate por combo). Cuenta como **tomate** (1 combo = 2 paquetes = 4 pizzas, `claseDe`) y suma **1 FOCACCIA OLIVA + 1 FOCACCIA CHERRY por combo** (`focacciasPorTipo`); no aparece en "Otros productos para cargar". El napolitano sigue igual (el común no trae focaccias; "+ 2 FOCACCIA" trae 2 de oliva). Probado con textos de ejemplo; falta ver un mail real de una compra.

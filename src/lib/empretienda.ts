@@ -106,12 +106,14 @@ export function armarItems(renglones: RenglonPlanilla[], cat: Catalogo): ItemNue
     const texto = sinTildes(r.producto);
     const prefijo = r.producto.match(/^\s*(\d+)\s*[xX]\s+(.+)$/);
     const cantidadTexto = prefijo ? Number(prefijo[1]) : 1;
-    if (texto.includes("COMBO") && /NAPOLITANO|MADRE|FOCACCIA/.test(texto)) {
+    if (texto.includes("COMBO") && /NAPOLITANO|TOSCANO|MADRE|FOCACCIA/.test(texto)) {
       // Semana de la madre: la tienda le cambió el nombre y trae 2 focaccias gratis. Se carga siempre con el nombre del sistema.
-      const conFocaccia = /FOCACCIA|MADRE/.test(texto);
+      // COMBO TOSCANO = combo napolitano + 1 focaccia de oliva y 1 de cherry: va como una sola línea (las focaccias las cuenta `focacciasPorTipo`).
+      const toscano = texto.includes("TOSCANO");
+      const conFocaccia = !toscano && /FOCACCIA|MADRE/.test(texto);
       // Cada combo trae 2 paquetes de tomate: si el nombre no dice "2x", la cantidad sale de la columna Tomate (4 paquetes = 2 combos).
       const cantidadCombo = prefijo ? cantidadTexto : Math.max(1, Math.round(r.tomate / 2));
-      otros.push({ productoId: null, nombre: conFocaccia ? "COMBO NAPOLITANO + 2 FOCACCIA" : "COMBO NAPOLITANO", sku: null, unidad: "combo", cantidad: cantidadCombo, paquetesPor: 2 });
+      otros.push({ productoId: null, nombre: toscano ? "COMBO TOSCANO" : conFocaccia ? "COMBO NAPOLITANO + 2 FOCACCIA" : "COMBO NAPOLITANO", sku: null, unidad: "combo", cantidad: cantidadCombo, paquetesPor: 2 });
     } else if (texto.includes("TOMATE + CEBOLLA")) {
       sumar(cat.tomate, r.tomate || cantidadTexto);
       sumar(cat.cebolla, r.cebolla || cantidadTexto);
