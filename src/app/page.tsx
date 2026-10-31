@@ -5,10 +5,19 @@ import { esPersonalDeOficina, esProduccion, esVendedor } from "@/lib/roles";
 import { exigirUsuario } from "@/lib/session";
 
 // Mensajes de bienvenida: uno al azar cada vez que se entra, según la hora de Argentina.
+// Los "picantes" (pedido del dueño): cortos, simpáticos y con un guiño al trabajo; los de "Hola" valen a cualquier hora.
+const CUALQUIER_HORA = [
+  "Hola, {n}. Lindo día para cobrar lo que nos deben.",
+  "Hola, {n}. Un cliente sin pagar es una pizza regalada.",
+  "Hola, {n}. Hoy hay pedidos para cargar y plata para cobrar.",
+];
 const SALUDOS = {
-  manana: ["Buenos días, equipo. ¿Cómo va?", "Buen día, {n}. ¿Arrancamos?", "Buenos días. Hoy hay pizzas para repartir.", "Buen día, equipo. ¿Qué cargamos primero?"],
-  tarde: ["Buenas tardes, equipo. ¿Cómo va?", "Buenas tardes, {n}. ¿Qué hacemos?", "Buenas tardes. ¿Cargamos algo?", "Buena tarde, chicos. ¿Cómo viene el día?"],
-  noche: ["Buenas noches, equipo. ¿Cómo va?", "Buenas noches, {n}. ¿Dejamos algo cargado para mañana?", "Buenas noches. Último repaso del día.", "Buenas noches, chicos. ¿Cómo fue el día?"],
+  manana: ["Buenos días, equipo. ¿Cómo va?", "Buen día, {n}. ¿Arrancamos?", "Buenos días. Hoy hay pizzas para repartir.", "Buen día, equipo. ¿Qué cargamos primero?",
+    "Buen día, {n}. Hoy venimos a facturar, y con ganas.", "Buen día, {n}. Que no se te escape ni un pedido hoy.", ...CUALQUIER_HORA],
+  tarde: ["Buenas tardes, equipo. ¿Cómo va?", "Buenas tardes, {n}. ¿Qué hacemos?", "Buenas tardes. ¿Cargamos algo?", "Buena tarde, chicos. ¿Cómo viene el día?",
+    "Buenas tardes, {n}. ¿Marcaste esas entregas o las dejamos para el año que viene?", "Buenas tardes, {n}. Ese cliente que no pide hace un mes está esperando tu llamado.", "Buenas tardes, {n}. Hora de cobrar: las facturas no se pagan solas.", ...CUALQUIER_HORA],
+  noche: ["Buenas noches, equipo. ¿Cómo va?", "Buenas noches, {n}. ¿Dejamos algo cargado para mañana?", "Buenas noches. Último repaso del día.", "Buenas noches, chicos. ¿Cómo fue el día?",
+    "Buenas noches, {n}. Lo que no se cobra hoy, se cobra mañana. Pero se cobra.", "Buenas noches, {n}. Cerrá el día con todo marcado y dormí tranquilo.", ...CUALQUIER_HORA],
 };
 
 function saludar(nombre: string) {
