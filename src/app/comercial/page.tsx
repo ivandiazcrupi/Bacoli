@@ -24,14 +24,15 @@ export default async function Comercial() {
     db.pedido.findMany({ where: { clienteId: { not: null }, estado: { not: "CANCELADO" }, origen: "MAYORISTA" }, select: { clienteId: true, estado: true, creadoEn: true, fechaEntrega: true, items: { select: { nombre: true, unidad: true, cantidad: true, sinCargo: true, paquetesPor: true } } }, orderBy: { creadoEn: "asc" } }),
   ]);
 
-  type Acum = { fechas: string[]; entregas: string[]; paq30: number };
+  type Acum = { fechas: string[]; entregas: string[]; abiertos: (string | null)[]; paq30: number };
   const porCliente = new Map<string, Acum>();
   const hace180 = sumarDias(hoyStr, -180), hace30 = sumarDias(hoyStr, -30);
   for (const p of pedidos) {
     if (p.estado === "NO_ENTREGADO") continue; // no llegó a entregarse: no cuenta como compra
     const f = fechaAR(p.creadoEn);
-    const a = porCliente.get(p.clienteId!) ?? { fechas: [], entregas: [], paq30: 0 };
+    const a = porCliente.get(p.clienteId!) ?? { fechas: [], entregas: [], abiertos: [], paq30: 0 };
     a.fechas.push(f);
+    if (p.estado === "PENDIENTE") a.abiertos.push(p.fechaEntrega ? deFecha(p.fechaEntrega) : null); // pedido en curso: con su día de entrega, o esperando día
     if (p.estado === "ENTREGADO") { // día en que se entregó (los comprobantes cargados a mano no tienen día: valen el de carga)
       const e = p.fechaEntrega ? deFecha(p.fechaEntrega) : f;
       a.entregas.push(e);
@@ -39,6 +40,17 @@ export default async function Comercial() {
     }
     porCliente.set(p.clienteId!, a);
   }
+
+  const manana = sumarDias(hoyStr, 1);
+  const corto = (d: string) => `${d.slice(8)}/${d.slice(5, 7)}`;
+  // Un cliente con un pedido en curso no hay que llamarlo: ya pidió y le llega. Se dice cuándo (o que falta marcar la entrega).
+  const enCursoDe = (abiertos: (string | null)[]): string | null => {
+    if (abiertos.length === 0) return null;
+    const dias = abiertos.filter((d): d is string => !!d).sort();
+    if (dias.length === 0) return "Pedido sin día";
+    const d = dias[0];
+    return d === hoyStr ? "Entrega hoy" : d === manana ? "Entrega mañana" : d > hoyStr ? `Entrega ${corto(d)}` : `Sin marcar ${corto(d)}`;
+  };
 
   const filas: FilaCliente[] = clientes.map((c) => {
     const a = porCliente.get(c.id);
@@ -54,18 +66,20 @@ export default async function Comercial() {
     const dif = entrega && ultimo ? dias(entrega, ultimo) : null; // días entre el último pedido y la última entrega (negativo = hay un pedido más nuevo sin entregar)
     return {
       id: c.id, nombre: c.nombre, barrios: [...new Set(c.puntos.map((p) => p.barrio).filter(Boolean))].slice(0, 2).join(" · "),
-      ultimo, entrega, sinEntrega, dif,
+      ultimo, entrega, sinEntrega, dif, enCurso: enCursoDe(a?.abiertos ?? []),
       ritmo, paq30: a?.paq30 ?? 0, total: fechas.length,
       telefono: tel?.telefono ?? null, wa: tel ? enlaceWhatsApp(tel.telefono) : null,
     };
   });
 
-  const grupo = (desde: number, hasta: number) => filas.filter((f) => f.sinEntrega !== null && f.sinEntrega > desde && f.sinEntrega <= hasta).length; // cada cliente cae en un solo grupo
+  const sinCurso = filas.filter((f) => f.enCurso === null); // los que tienen un pedido en curso van aparte
+  const grupo = (desde: number, hasta: number) => sinCurso.filter((f) => f.sinEntrega !== null && f.sinEntrega > desde && f.sinEntrega <= hasta).length; // cada cliente cae en un solo grupo
   const resumen = {
     activos: filas.length,
-    d7: filas.filter((f) => f.sinEntrega !== null && f.sinEntrega <= 7).length,
+    curso: filas.length - sinCurso.length,
+    d7: sinCurso.filter((f) => f.sinEntrega !== null && f.sinEntrega <= 7).length,
     s7: grupo(7, 15), s15: grupo(15, 30), s30: grupo(30, 45), s45: grupo(45, Infinity),
-    inactivos: filas.filter((f) => f.entrega === null).length,
+    inactivos: sinCurso.filter((f) => f.entrega === null).length,
   };
 
   return (

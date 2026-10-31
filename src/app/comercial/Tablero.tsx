@@ -7,15 +7,16 @@ import { coincideNumero } from "@/lib/filtroNumero";
 import { FiltroLista, SEP } from "../cuentas/FiltroLista";
 export type FilaCliente = {
   id: string; nombre: string; barrios: string;
-  ultimo: string | null; entrega: string | null; sinEntrega: number | null; dif: number | null;
+  ultimo: string | null; entrega: string | null; sinEntrega: number | null; dif: number | null; enCurso: string | null;
   ritmo: number | null; paq30: number; total: number; telefono: string | null; wa: string | null;
 };
-type Resumen = { activos: number; d7: number; s7: number; s15: number; s30: number; s45: number; inactivos: number };
+type Resumen = { activos: number; curso: number; d7: number; s7: number; s15: number; s30: number; s45: number; inactivos: number };
 
 const fechaCorta = (s: string | null) => (s ? `${s.slice(8)}/${s.slice(5, 7)}/${s.slice(2, 4)}` : "—");
 // Cada cliente cae en UN solo grupo, según hace cuántos días fue su última ENTREGA (no su último pedido). La aclaración sale al pasar el mouse.
 const FILTROS = [
   ["todos", "Todos", "Todos los clientes activos."],
+  ["curso", "Con pedido en curso", "Ya pidieron y el pedido todavía no se entregó (tiene día de entrega o espera día): no hace falta llamarlos."],
   ["d7", "Recibieron en los últimos 7 días", "Se les entregó hace 7 días o menos."],
   ["s7", "Sin entrega hace 7 días", "Su última entrega fue hace más de 7 y hasta 15 días."],
   ["s15", "Sin entrega hace 15 días", "Su última entrega fue hace más de 15 y hasta 30 días."],
@@ -27,6 +28,8 @@ type Filtro = (typeof FILTROS)[number][0];
 const AYUDA = Object.fromEntries(FILTROS.map(([k, , a]) => [k, a])) as Record<Filtro, string>;
 const dentro = (f: FilaCliente, k: Filtro) => {
   const d = f.sinEntrega;
+  if (k === "curso") return f.enCurso !== null;
+  if (k !== "todos" && f.enCurso !== null) return false; // con un pedido en curso no hay que llamarlo: queda solo en su grupo
   switch (k) {
     case "d7": return d !== null && d <= 7;
     case "s7": return d !== null && d > 7 && d <= 15;
@@ -91,6 +94,7 @@ export function Tablero({ filas, resumen }: { filas: FilaCliente[]; resumen: Res
       if (orden.col === "nombre") return f.nombre.toLowerCase();
       if (orden.col === "ultimo") return f.ultimo ?? "";
       if (orden.col === "entrega") return f.entrega ?? "";
+      if (orden.col === "sinEntrega" && f.enCurso !== null) return -1; // con pedido en curso van al final: los primeros son los que hay que llamar
       const v = f[orden.col];
       return v === null ? -Infinity : v; // los que nunca recibieron van al final al ordenar por días sin entrega
     };
@@ -110,8 +114,9 @@ export function Tablero({ filas, resumen }: { filas: FilaCliente[]; resumen: Res
   return (
     <div className="space-y-4">
       {/* Tarjetas: cada una filtra la tabla de abajo (la pantalla no se mueve) */}
-      <section aria-label="Resumen" className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+      <section aria-label="Resumen" className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
         <Tarjeta titulo="Clientes activos" valor={resumen.activos} tono="neutro" activa={filtro === "todos"} ayuda={AYUDA.todos} onClick={() => elegir("todos")} />
+        <Tarjeta titulo="Con pedido en curso" valor={resumen.curso} tono={resumen.curso > 0 ? "neutro" : "apagado"} activa={filtro === "curso"} ayuda={AYUDA.curso} onClick={() => elegir("curso")} onQuitar={() => elegir("todos")} />
         <Tarjeta titulo="Recibieron en los últimos 7 días" valor={resumen.d7} tono={resumen.d7 > 0 ? "verde" : "apagado"} activa={filtro === "d7"} ayuda={AYUDA.d7} onClick={() => elegir("d7")} onQuitar={() => elegir("todos")} />
         <Tarjeta titulo="Sin entrega hace 7 días" valor={resumen.s7} tono={resumen.s7 > 0 ? "rojo1" : "apagado"} activa={filtro === "s7"} ayuda={AYUDA.s7} onClick={() => elegir("s7")} onQuitar={() => elegir("todos")} />
         <Tarjeta titulo="Sin entrega hace 15 días" valor={resumen.s15} tono={resumen.s15 > 0 ? "rojo2" : "apagado"} activa={filtro === "s15"} ayuda={AYUDA.s15} onClick={() => elegir("s15")} onQuitar={() => elegir("todos")} />
@@ -165,7 +170,11 @@ export function Tablero({ filas, resumen }: { filas: FilaCliente[]; resumen: Res
               <span className="tabular-nums text-stone-600">{fechaCorta(f.ultimo)}</span>
               <span className="tabular-nums text-stone-600">{fechaCorta(f.entrega)}</span>
               <span>
-                {f.sinEntrega === null ? <span className="rounded-full bg-crema-100 px-2.5 py-0.5 text-[12px] font-semibold text-stone-500" title="Todavía no se le entregó ningún pedido">Sin entregas</span>
+                {f.enCurso !== null ? <span className="flex flex-col items-center leading-tight" title={`Ya tiene un pedido en curso: no hace falta llamarlo.${f.sinEntrega !== null ? ` Su última entrega fue hace ${f.sinEntrega} días.` : ""}`}>
+                    <span className="rounded-full border border-stone-300 bg-stone-100 px-2.5 py-0.5 text-[12px] font-semibold text-stone-700">{f.enCurso}</span>
+                    {f.sinEntrega !== null && <span className="text-[10.5px] text-stone-400">última hace {f.sinEntrega} d</span>}
+                  </span>
+                  : f.sinEntrega === null ? <span className="rounded-full bg-crema-100 px-2.5 py-0.5 text-[12px] font-semibold text-stone-500" title="Todavía no se le entregó ningún pedido">Sin entregas</span>
                   : <span className={`inline-block min-w-[44px] rounded-full px-2.5 py-0.5 text-[14px] font-bold tabular-nums ${f.sinEntrega > 30 ? "bg-rojo-50 text-rojo-700" : f.sinEntrega > 7 ? "bg-[#fdf8e3] text-[#8a6a05]" : "bg-verde-50 text-verde-800"}`}>{f.sinEntrega === 0 ? "Hoy" : f.sinEntrega}</span>}
               </span>
               <span className="tabular-nums text-stone-600" title={f.dif === null ? "" : f.dif < 0 ? `Tiene un pedido más nuevo (${fechaCorta(f.ultimo)}) que todavía no se entregó` : `Entre el último pedido y la última entrega pasaron ${f.dif} días`}>
