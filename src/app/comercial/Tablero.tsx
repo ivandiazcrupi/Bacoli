@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { num } from "@/lib/ruta";
 import { coincideNumero } from "@/lib/filtroNumero";
 import { FiltroLista, SEP } from "../cuentas/FiltroLista";
 export type FilaCliente = {
-  id: string; nombre: string; barrios: string;
+  id: string; clienteId: string; nombre: string; barrios: string;
   ultimo: string | null; entrega: string | null; sinEntrega: number | null; dif: number | null; enCurso: string | null;
   ritmo: number | null; paq30: number; total: number; telefono: string | null; wa: string | null;
 };
@@ -54,7 +54,13 @@ function Tarjeta({ titulo, valor, tono, activa, ayuda, onClick, onQuitar }: { ti
   );
 }
 
-export function Tablero({ filas }: { filas: FilaCliente[] }) {
+export function Tablero({ clientes, sucursales }: { clientes: FilaCliente[]; sucursales: FilaCliente[] }) {
+  // Se puede mirar por cliente (todas sus sucursales juntas) o por sucursal; se acuerda de lo último que se eligió.
+  const [vista, setVista] = useState<"clientes" | "sucursales">("clientes");
+  useEffect(() => { try { if (localStorage.getItem("comercial_vista") === "sucursales") setVista("sucursales"); } catch { /* sin almacenamiento: queda por cliente */ } }, []);
+  const cambiarVista = (v: "clientes" | "sucursales") => { setVista(v); try { localStorage.setItem("comercial_vista", v); } catch { /* idem */ } };
+  const filas = vista === "clientes" ? clientes : sucursales;
+  const unidad = vista === "clientes" ? ["cliente", "clientes"] : ["sucursal", "sucursales"];
   const [q, setQ] = useState("");
   const [filtro, setFiltro] = useState<Filtro>("todos");
   const [orden, setOrden] = useState<{ col: Col; asc: boolean }>({ col: "sinEntrega", asc: false });
@@ -101,7 +107,7 @@ export function Tablero({ filas }: { filas: FilaCliente[] }) {
       const v = f[orden.col];
       return v === null ? -Infinity : v; // los que nunca recibieron van al final al ordenar por días sin entrega
     };
-    r = [...r].sort((a, b) => { const x = clave(a), y = clave(b); const principal = x < y ? -1 : x > y ? 1 : 0; return principal * (orden.asc ? 1 : -1) || a.nombre.localeCompare(b.nombre, "es"); }); // los empates siempre quedan de la A a la Z
+    r = [...r].sort((a, b) => { const x = clave(a), y = clave(b); const principal = x < y ? -1 : x > y ? 1 : 0; return principal * (orden.asc ? 1 : -1) || a.nombre.localeCompare(b.nombre, "es") || a.barrios.localeCompare(b.barrios, "es"); }); // los empates siempre quedan de la A a la Z
     return r;
   }, [base, filtro, orden]);
 
@@ -111,14 +117,14 @@ export function Tablero({ filas }: { filas: FilaCliente[] }) {
       {children}{orden.col === col && <span className="text-verde-700">{orden.asc ? "▲" : "▼"}</span>}
     </button>
   );
-  const nombres = useMemo(() => filas.map((f) => f.nombre).sort((a, b) => a.localeCompare(b, "es")), [filas]);
+  const nombres = useMemo(() => [...new Set(filas.map((f) => f.nombre))].sort((a, b) => a.localeCompare(b, "es")), [filas]);
   const GRILLA = "grid-cols-[minmax(230px,2.4fr)_104px_104px_118px_112px_104px_112px_130px]";
 
   return (
     <div className="space-y-4">
       {/* Tarjetas: cada una filtra la tabla de abajo (la pantalla no se mueve) */}
       <section aria-label="Resumen" className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
-        <Tarjeta titulo="Clientes activos" valor={resumen.activos} tono="neutro" activa={filtro === "todos"} ayuda={AYUDA.todos} onClick={() => elegir("todos")} />
+        <Tarjeta titulo={vista === "clientes" ? "Clientes activos" : "Sucursales activas"} valor={resumen.activos} tono="neutro" activa={filtro === "todos"} ayuda={AYUDA.todos} onClick={() => elegir("todos")} />
         <Tarjeta titulo="Con pedido en curso" valor={resumen.curso} tono={resumen.curso > 0 ? "neutro" : "apagado"} activa={filtro === "curso"} ayuda={AYUDA.curso} onClick={() => elegir("curso")} onQuitar={() => elegir("todos")} />
         <Tarjeta titulo="Recibieron en los últimos 7 días" valor={resumen.d7} tono={resumen.d7 > 0 ? "verde" : "apagado"} activa={filtro === "d7"} ayuda={AYUDA.d7} onClick={() => elegir("d7")} onQuitar={() => elegir("todos")} />
         <Tarjeta titulo="Sin entrega hace 7 días" valor={resumen.s7} tono={resumen.s7 > 0 ? "rojo1" : "apagado"} activa={filtro === "s7"} ayuda={AYUDA.s7} onClick={() => elegir("s7")} onQuitar={() => elegir("todos")} />
@@ -130,9 +136,14 @@ export function Tablero({ filas }: { filas: FilaCliente[] }) {
 
       {/* Buscador y qué se está mostrando */}
       <div className="flex flex-wrap items-center gap-3">
+        <div role="group" aria-label="Ver por" className="flex overflow-hidden rounded-md border border-stone-300 bg-white text-[13px] font-semibold">
+          {(["clientes", "sucursales"] as const).map((v) => (
+            <button key={v} type="button" onClick={() => cambiarVista(v)} aria-pressed={vista === v} className={`h-10 px-4 ${vista === v ? "bg-stone-800 text-white" : "text-stone-600 hover:bg-crema-100"}`}>{v === "clientes" ? "Por cliente" : "Por sucursal"}</button>
+          ))}
+        </div>
         <input value={q} onChange={(e) => { setQ(e.target.value); if (e.target.value.trim()) setFiltro("todos"); }} title="Al buscar se muestran todos los que coinciden, de cualquier grupo" placeholder="Buscar cliente o barrio…" aria-label="Buscar cliente" className="h-10 w-full max-w-xs rounded-md border border-stone-300 bg-white px-3 text-sm focus:border-verde-700 focus:outline-none" />
         <p className="text-[14px] text-stone-700">
-          Mostrando: <b>{FILTROS.find((f) => f[0] === filtro)![1]}</b> · {lista.length} {lista.length === 1 ? "cliente" : "clientes"}
+          Mostrando: <b>{FILTROS.find((f) => f[0] === filtro)![1]}</b> · {lista.length} {lista.length === 1 ? unidad[0] : unidad[1]}
           {filtro !== "todos" && <button type="button" onClick={() => setFiltro("todos")} className="ml-3 rounded-full border border-stone-300 bg-white px-3 py-1 text-[12.5px] font-semibold text-stone-700 hover:border-stone-600">Ver todos ✕</button>}
           {hayFiltros && <button type="button" onClick={quitarFiltros} className="ml-3 rounded-full border border-stone-300 bg-white px-3 py-1 text-[12.5px] font-semibold text-stone-700 hover:border-stone-600">Quitar filtros de la tabla ✕</button>}
         </p>
@@ -143,7 +154,7 @@ export function Tablero({ filas }: { filas: FilaCliente[] }) {
         <div className="min-w-[1080px]">
           <div className="border-b border-stone-300 bg-crema-100">
           <div className={`grid items-center gap-x-3 px-4 pt-2.5 text-center text-[11px] font-semibold uppercase tracking-wide text-stone-500 ${GRILLA}`}>
-            <Titulo col="nombre">Cliente</Titulo>
+            <Titulo col="nombre">{vista === "clientes" ? "Cliente" : "Cliente · sucursal"}</Titulo>
             <Titulo col="ultimo" ayuda="Fecha del último pedido cargado.">Último pedido</Titulo>
             <Titulo col="entrega" ayuda="Fecha de la última vez que se le entregó.">Última entrega</Titulo>
             <Titulo col="sinEntrega" ayuda="Días que pasaron desde su última ENTREGA. Es el que cuenta: verde hasta 7 días, amarillo hasta 30 y rojo más de 30.">Sin entrega (días)</Titulo>
@@ -167,7 +178,7 @@ export function Tablero({ filas }: { filas: FilaCliente[] }) {
           {lista.map((f) => (
             <div key={f.id} className={`grid h-11 items-center gap-x-3 border-b border-stone-200 px-4 text-center text-[13px] hover:bg-crema-50 ${GRILLA}`}>
               <span className="min-w-0 text-left">
-                <Link href={`/clientes/${f.id}/pedidos`} className="block truncate font-semibold hover:underline" title="Ver el historial de pedidos">{f.nombre}</Link>
+                <Link href={`/clientes/${f.clienteId}/pedidos`} className="block truncate font-semibold hover:underline" title="Ver el historial de pedidos">{f.nombre}</Link>
                 {f.barrios && <span className="block truncate text-[11.5px] leading-tight text-stone-500">{f.barrios}</span>}
               </span>
               <span className="tabular-nums text-stone-600">{fechaCorta(f.ultimo)}</span>
@@ -195,7 +206,7 @@ export function Tablero({ filas }: { filas: FilaCliente[] }) {
           ))}
         </div>
       </div>
-      <p className="text-[12px] text-stone-500">{lista.length} {lista.length === 1 ? "cliente" : "clientes"}. Tocá el título de una columna para ordenar; tocá un cliente para ver todo su historial de pedidos. La tabla empieza por los que hace más tiempo no reciben.</p>
+      <p className="text-[12px] text-stone-500">{lista.length} {lista.length === 1 ? unidad[0] : unidad[1]}. Tocá el título de una columna para ordenar; tocá un cliente para ver todo su historial de pedidos. La tabla empieza por los que hace más tiempo no reciben.</p>
     </div>
   );
 }
