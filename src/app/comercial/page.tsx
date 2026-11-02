@@ -72,22 +72,12 @@ export default async function Comercial() {
     };
   });
 
-  const sinCurso = filas.filter((f) => f.enCurso === null); // los que tienen un pedido en curso van aparte
-  const grupo = (desde: number, hasta: number) => sinCurso.filter((f) => f.sinEntrega !== null && f.sinEntrega > desde && f.sinEntrega <= hasta).length; // cada cliente cae en un solo grupo
-  const resumen = {
-    activos: filas.length,
-    curso: filas.length - sinCurso.length,
-    d7: sinCurso.filter((f) => f.sinEntrega !== null && f.sinEntrega <= 7).length,
-    s7: grupo(7, 15), s15: grupo(15, 30), s30: grupo(30, 45), s45: grupo(45, Infinity),
-    inactivos: sinCurso.filter((f) => f.entrega === null).length,
-  };
-
   return (
     <>
       <Cabecera usuario={usuario} />
       <main className={CONTENEDOR_PEDIDOS}>
         <EncabezadoComercial activa="clientes" />
-        <Tablero filas={filas} resumen={resumen} />
+        <Tablero filas={filas} />
       </main>
     </>
   );

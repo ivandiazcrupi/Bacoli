@@ -10,7 +10,6 @@ export type FilaCliente = {
   ultimo: string | null; entrega: string | null; sinEntrega: number | null; dif: number | null; enCurso: string | null;
   ritmo: number | null; paq30: number; total: number; telefono: string | null; wa: string | null;
 };
-type Resumen = { activos: number; curso: number; d7: number; s7: number; s15: number; s30: number; s45: number; inactivos: number };
 
 const fechaCorta = (s: string | null) => (s ? `${s.slice(8)}/${s.slice(5, 7)}/${s.slice(2, 4)}` : "—");
 // Cada cliente cae en UN solo grupo, según hace cuántos días fue su última ENTREGA (no su último pedido). La aclaración sale al pasar el mouse.
@@ -26,20 +25,14 @@ const FILTROS = [
 ] as const;
 type Filtro = (typeof FILTROS)[number][0];
 const AYUDA = Object.fromEntries(FILTROS.map(([k, , a]) => [k, a])) as Record<Filtro, string>;
-const dentro = (f: FilaCliente, k: Filtro) => {
+// Grupo de un cliente (uno solo, sin acumular). Con un pedido en curso no hay que llamarlo: queda solo en su grupo.
+const grupoDe = (f: FilaCliente): Exclude<Filtro, "todos"> => {
   const d = f.sinEntrega;
-  if (k === "curso") return f.enCurso !== null;
-  if (k !== "todos" && f.enCurso !== null) return false; // con un pedido en curso no hay que llamarlo: queda solo en su grupo
-  switch (k) {
-    case "d7": return d !== null && d <= 7;
-    case "s7": return d !== null && d > 7 && d <= 15;
-    case "s15": return d !== null && d > 15 && d <= 30;
-    case "s30": return d !== null && d > 30 && d <= 45;
-    case "s45": return d !== null && d > 45;
-    case "inactivos": return f.entrega === null; // todavía no se les entregó nada
-    default: return true;
-  }
+  if (f.enCurso !== null) return "curso";
+  if (d === null) return "inactivos"; // todavía no se les entregó nada
+  return d <= 7 ? "d7" : d <= 15 ? "s7" : d <= 30 ? "s15" : d <= 45 ? "s30" : "s45";
 };
+const dentro = (f: FilaCliente, k: Filtro) => k === "todos" || grupoDe(f) === k;
 const estadoContacto = (f: FilaCliente) => (f.wa ? "Con WhatsApp" : f.telefono ? "Teléfono no válido" : "Sin teléfono");
 const entradaFiltro = "h-7 w-full min-w-0 rounded border border-stone-300 bg-white px-1.5 text-center text-[12px] font-normal normal-case tracking-normal text-stone-800 placeholder:text-stone-300 focus:border-verde-700 focus:outline-none";
 
@@ -61,7 +54,7 @@ function Tarjeta({ titulo, valor, tono, activa, ayuda, onClick, onQuitar }: { ti
   );
 }
 
-export function Tablero({ filas, resumen }: { filas: FilaCliente[]; resumen: Resumen }) {
+export function Tablero({ filas }: { filas: FilaCliente[] }) {
   const [q, setQ] = useState("");
   const [filtro, setFiltro] = useState<Filtro>("todos");
   const [orden, setOrden] = useState<{ col: Col; asc: boolean }>({ col: "sinEntrega", asc: false });
@@ -78,11 +71,11 @@ export function Tablero({ filas, resumen }: { filas: FilaCliente[]; resumen: Res
   const quitarFiltros = () => { setFCliente(""); setFUltimo(""); setFEntrega(""); setFSin(""); setFDif(""); setFRitmo(""); setFPaq(""); setFContacto(""); };
   const elegir = (k: Filtro) => setFiltro(k); // al tocar una tarjeta solo cambia la tabla: la pantalla no se mueve
 
-  const lista = useMemo(() => {
+  // Lo que dicen el buscador y los filtros de las columnas, sin mirar la tarjeta elegida: de acá salen los números de las tarjetas.
+  const base = useMemo(() => {
     const palabras = q.toLowerCase().split(/\s+/).filter(Boolean);
-    let r = filas.filter((f) => {
+    return filas.filter((f) => {
       if (!palabras.every((w) => `${f.nombre} ${f.barrios}`.toLowerCase().includes(w))) return false;
-      if (!dentro(f, filtro)) return false;
       if (fCliente && !fCliente.split(SEP).includes(f.nombre)) return false;
       if (fUltimo.trim() && !fechaCorta(f.ultimo).includes(fUltimo.trim())) return false;
       if (fEntrega.trim() && !fechaCorta(f.entrega).includes(fEntrega.trim())) return false;
@@ -90,6 +83,16 @@ export function Tablero({ filas, resumen }: { filas: FilaCliente[]; resumen: Res
       if (fContacto && !fContacto.split(SEP).includes(estadoContacto(f))) return false;
       return true;
     });
+  }, [filas, q, fCliente, fUltimo, fEntrega, fSin, fDif, fRitmo, fPaq, fContacto]);
+
+  const resumen = useMemo(() => {
+    const r = { activos: base.length, curso: 0, d7: 0, s7: 0, s15: 0, s30: 0, s45: 0, inactivos: 0 };
+    for (const f of base) r[grupoDe(f)]++;
+    return r;
+  }, [base]);
+
+  const lista = useMemo(() => {
+    let r = base.filter((f) => dentro(f, filtro));
     const clave = (f: FilaCliente): string | number => {
       if (orden.col === "nombre") return f.nombre.toLowerCase();
       if (orden.col === "ultimo") return f.ultimo ?? "";
@@ -100,7 +103,7 @@ export function Tablero({ filas, resumen }: { filas: FilaCliente[]; resumen: Res
     };
     r = [...r].sort((a, b) => { const x = clave(a), y = clave(b); const principal = x < y ? -1 : x > y ? 1 : 0; return principal * (orden.asc ? 1 : -1) || a.nombre.localeCompare(b.nombre, "es"); }); // los empates siempre quedan de la A a la Z
     return r;
-  }, [filas, q, filtro, orden, fCliente, fUltimo, fEntrega, fSin, fDif, fRitmo, fPaq, fContacto]);
+  }, [base, filtro, orden]);
 
   const ordenarPor = (col: Col) => setOrden((o) => (o.col === col ? { col, asc: !o.asc } : { col, asc: col === "nombre" }));
   const Titulo = ({ col, children, ancho, ayuda }: { col: Col; children: React.ReactNode; ancho?: string; ayuda?: string }) => (
@@ -127,7 +130,7 @@ export function Tablero({ filas, resumen }: { filas: FilaCliente[]; resumen: Res
 
       {/* Buscador y qué se está mostrando */}
       <div className="flex flex-wrap items-center gap-3">
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar cliente o barrio…" aria-label="Buscar cliente" className="h-10 w-full max-w-xs rounded-md border border-stone-300 bg-white px-3 text-sm focus:border-verde-700 focus:outline-none" />
+        <input value={q} onChange={(e) => { setQ(e.target.value); if (e.target.value.trim()) setFiltro("todos"); }} title="Al buscar se muestran todos los que coinciden, de cualquier grupo" placeholder="Buscar cliente o barrio…" aria-label="Buscar cliente" className="h-10 w-full max-w-xs rounded-md border border-stone-300 bg-white px-3 text-sm focus:border-verde-700 focus:outline-none" />
         <p className="text-[14px] text-stone-700">
           Mostrando: <b>{FILTROS.find((f) => f[0] === filtro)![1]}</b> · {lista.length} {lista.length === 1 ? "cliente" : "clientes"}
           {filtro !== "todos" && <button type="button" onClick={() => setFiltro("todos")} className="ml-3 rounded-full border border-stone-300 bg-white px-3 py-1 text-[12.5px] font-semibold text-stone-700 hover:border-stone-600">Ver todos ✕</button>}
@@ -150,7 +153,7 @@ export function Tablero({ filas, resumen }: { filas: FilaCliente[]; resumen: Res
             <span>Contactar</span>
           </div>
             <div className={`grid items-center gap-x-3 px-4 pb-2.5 pt-1.5 ${GRILLA}`}>
-              <FiltroLista varios titulo="Cliente" opciones={nombres} valor={fCliente} onCambio={setFCliente} />
+              <FiltroLista varios titulo="Cliente" opciones={nombres} valor={fCliente} onCambio={(v) => { setFCliente(v); if (v) setFiltro("todos"); }} />
               <input aria-label="Filtrar último pedido" value={fUltimo} onChange={(e) => setFUltimo(e.target.value)} placeholder="Ej: 03/10" className={entradaFiltro} />
               <input aria-label="Filtrar última entrega" value={fEntrega} onChange={(e) => setFEntrega(e.target.value)} placeholder="Ej: 03/10" className={entradaFiltro} />
               <input aria-label="Filtrar días sin entrega" value={fSin} onChange={(e) => setFSin(e.target.value)} placeholder="Ej: >15" title="Número exacto o con signo: 15, >15, >=15, <7" className={entradaFiltro} />
