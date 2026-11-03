@@ -27,6 +27,11 @@ export function esProduccion(rol: Rol) {
   return rol === "PRODUCCION";
 }
 
+/** El módulo Producción está APAGADO hasta que el dueño pida desarrollarlo (se prende con la variable HABILITAR_PRODUCCION=1). Nada se borró. */
+export function produccionActiva() {
+  return process.env.HABILITAR_PRODUCCION === "1";
+}
+
 export function puedeVerProduccion(rol: Rol) {
-  return esPersonalDeOficina(rol) || esProduccion(rol);
+  return produccionActiva() && (esPersonalDeOficina(rol) || esProduccion(rol));
 }

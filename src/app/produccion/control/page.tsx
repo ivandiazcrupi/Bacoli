@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Cabecera } from "@/components/Cabecera";
 import { cabeceraTabla } from "@/components/campos";
 import { db } from "@/lib/db";
 import { aFecha, deFecha, diaMes, esFechaValida, finDeSemana, hoy, inicioSemana, nombreDia, sumarDias } from "@/lib/fechas";
 import { PRODUCTOS_PRODUCCION, horaEnteraArg, minutosATexto, resumirProducto } from "@/lib/produccion";
 import { focacciasPorTipo, unidadesPorSabor } from "@/lib/ruta";
+import { produccionActiva } from "@/lib/roles";
 import { exigirOficina } from "@/lib/session";
 import { CONTENEDOR_PEDIDOS } from "../../pedidos/Encabezado";
 import { EncabezadoProduccion } from "../EncabezadoProduccion";
@@ -15,6 +17,7 @@ const dec = (n: number) => new Intl.NumberFormat("es-AR", { maximumFractionDigit
 // CONTROL de producción (solo oficina): cómo viene el día (producido, desperdicio, ritmo por hora, tiempos) y la semana contra lo pedido.
 export default async function Control({ searchParams }: { searchParams: Promise<{ fecha?: string }> }) {
   const usuario = await exigirOficina();
+  if (!produccionActiva()) redirect("/"); // Producción está apagada hasta que el dueño pida desarrollarla
   const { fecha: f } = await searchParams;
   const fecha = f && esFechaValida(f) ? f : hoy();
   const ini = inicioSemana(fecha);
