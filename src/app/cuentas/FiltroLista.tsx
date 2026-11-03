@@ -45,6 +45,9 @@ export function FiltroLista({ opciones, valor, onCambio, titulo, vacio = "Todos"
   const resumen = varios ? (elegidas.length === 0 ? "" : elegidas.length === 1 ? elegidas[0] : `${elegidas.length} elegidos`) : valor;
   const palabras = texto.toLowerCase().split(/\s+/).filter(Boolean);
   const lista = opciones.filter((o) => palabras.every((w) => o.toLowerCase().includes(w)));
+  // Elegir (o quitar) de una vez todos los que coinciden con lo escrito, sin tildar de a uno. Las que ya estaban elegidas con otra búsqueda se conservan.
+  const todasElegidas = lista.length > 0 && lista.every((o) => elegidas.includes(o));
+  const alternarTodas = () => onCambio((todasElegidas ? elegidas.filter((x) => !lista.includes(x)) : [...new Set([...elegidas, ...lista])]).join(SEP));
 
   return (
     <>
@@ -61,6 +64,11 @@ export function FiltroLista({ opciones, valor, onCambio, titulo, vacio = "Todos"
             }}
             className="mb-1 h-8 w-full rounded border border-stone-300 px-2 focus:border-verde-700 focus:outline-none" />
           <ul className="max-h-64 overflow-auto" role="listbox">
+            {varios && lista.length > 1 && (
+              <li><button type="button" onClick={alternarTodas} className="mb-1 w-full rounded border border-stone-300 bg-crema-50 px-2 py-1.5 text-left font-semibold text-verde-800 hover:bg-crema-100">
+                {todasElegidas ? `✕ Quitar los ${lista.length} que aparecen` : `✓ Elegir los ${lista.length} que aparecen`}
+              </button></li>
+            )}
             <li><button type="button" onClick={() => elegir("")} className={`w-full rounded px-2 py-1 text-left hover:bg-crema-100 ${!valor ? "font-semibold" : ""}`}>{varios ? "Todos (quitar la selección)" : vacio}</button></li>
             {lista.slice(0, 200).map((o) => varios ? (
               <li key={o}><label className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-crema-100"><input type="checkbox" checked={elegidas.includes(o)} onChange={() => alternar(o)} className="accent-[#026433]" /><span className="min-w-0 truncate">{o}</span></label></li>
