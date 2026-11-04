@@ -527,3 +527,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Filtro Estado: "Diego avisó pago" (pedido del dueño: "no me lo filtra, no me los busca")
 - En Facturas, Remitos y la cuenta del cliente, el filtro **Estado** suma una opción por cada vendedor que avisó un pago (**"Diego avisó pago"**, etc.; solo aparecen si hay comprobantes pendientes con aviso en esa hoja). Elegirla muestra los comprobantes pendientes con ese aviso (siguen contando también como "Pendiente"). Antes el filtro buscaba por el estado "Pendiente" y la pastilla amarilla no se podía encontrar (`etiquetaAviso` en `ListaComprobantes.tsx`).
+
+## Comercial → Clientes: siempre arranca "Por sucursal" (pedido del dueño)
+- El tablero **siempre abre en "Por sucursal"** (ya no se acuerda de lo último elegido: se sacó `comercial_vista` del navegador; antes arrancaba por cliente y a los instantes saltaba a sucursal). En el selector, **"Por sucursal" va primero (a la izquierda) y "Por cliente" después**. Se puede pasar a "Por cliente" mientras se está en la pantalla; al volver a entrar vuelve a sucursales.

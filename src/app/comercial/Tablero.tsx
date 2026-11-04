@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { num } from "@/lib/ruta";
 import { coincideNumero } from "@/lib/filtroNumero";
 import { FiltroLista, SEP } from "../cuentas/FiltroLista";
@@ -56,9 +56,9 @@ function Tarjeta({ titulo, valor, tono, activa, ayuda, onClick, onQuitar }: { ti
 
 export function Tablero({ clientes, sucursales }: { clientes: FilaCliente[]; sucursales: FilaCliente[] }) {
   // Se puede mirar por cliente (todas sus sucursales juntas) o por sucursal; se acuerda de lo último que se eligió.
-  const [vista, setVista] = useState<"clientes" | "sucursales">("clientes");
-  useEffect(() => { try { if (localStorage.getItem("comercial_vista") === "sucursales") setVista("sucursales"); } catch { /* sin almacenamiento: queda por cliente */ } }, []);
-  const cambiarVista = (v: "clientes" | "sucursales") => { setVista(v); try { localStorage.setItem("comercial_vista", v); } catch { /* idem */ } };
+  // Siempre arranca "Por sucursal" (pedido del dueño); se puede pasar a "Por cliente" mientras se está en la pantalla, pero al volver a entrar vuelve a sucursales.
+  const [vista, setVista] = useState<"clientes" | "sucursales">("sucursales");
+  const cambiarVista = (v: "clientes" | "sucursales") => setVista(v);
   const filas = vista === "clientes" ? clientes : sucursales;
   const unidad = vista === "clientes" ? ["cliente", "clientes"] : ["sucursal", "sucursales"];
   const [q, setQ] = useState("");
@@ -137,7 +137,7 @@ export function Tablero({ clientes, sucursales }: { clientes: FilaCliente[]; suc
       {/* Buscador y qué se está mostrando */}
       <div className="flex flex-wrap items-center gap-3">
         <div role="group" aria-label="Ver por" className="flex overflow-hidden rounded-md border border-stone-300 bg-white text-[13px] font-semibold">
-          {(["clientes", "sucursales"] as const).map((v) => (
+          {(["sucursales", "clientes"] as const).map((v) => (
             <button key={v} type="button" onClick={() => cambiarVista(v)} aria-pressed={vista === v} className={`h-10 px-4 ${vista === v ? "bg-stone-800 text-white" : "text-stone-600 hover:bg-crema-100"}`}>{v === "clientes" ? "Por cliente" : "Por sucursal"}</button>
           ))}
         </div>
