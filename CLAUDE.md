@@ -517,3 +517,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Producción: APAGADA por ahora (pedido del dueño)
 - El módulo Producción (ver arriba) queda **apagado hasta que el dueño diga "desarrollarlo"**: no hay enlace PRODUCCIÓN en el menú y `/produccion` y `/produccion/control` devuelven al inicio. **No se borró nada** (pantallas, tabla `Produccion`, rol `PRODUCCION`). Se prende con la variable `HABILITAR_PRODUCCION=1` (`produccionActiva()` en `src/lib/roles.ts`); sin ella, un usuario con rol Producción ve solo el inicio.
+
+## Comercial → TIENDA ONLINE: tablero de ventas minoristas (pedido del dueño)
+- Solapa nueva **TIENDA ONLINE** en Comercial (`/comercial/tienda`, `src/app/comercial/tienda/page.tsx`). Solo mira datos. **Se abre con la misma contraseña que Estadísticas/Vendedores** (muestra plata). Flechas ← → de mes como en Estadísticas.
+- **Cada pedido cuenta el día en que se HIZO (`creadoEn`, hora de Argentina), no cuando se entrega** (decisión del dueño). No cuentan los cancelados; los no entregados sí (siguen siendo una venta hecha).
+- **Facturado = pedidos con pago confirmado** (Mercado Pago, transferencia ya cruzada, o sin cargo); **"Por confirmar" = transferencias pendientes**, que se muestran aparte y no suman a lo facturado. El monto es `webTotal` (lo que pagó en la tienda, con lo agregado por fuera).
+- Arriba, **HOY**: pedidos, facturado, por confirmar y ticket promedio, cada uno comparado con **ayer y con el mismo día de la semana pasada hasta esta misma hora** (si no, hoy siempre perdería contra un día entero). Abajo, **gráfico de barras día a día** (facturado + por confirmar) y **tabla por día** (pedidos, facturado, por confirmar, ticket) con total y promedio por día con ventas. Los domingos cuentan (la tienda vende todos los días).

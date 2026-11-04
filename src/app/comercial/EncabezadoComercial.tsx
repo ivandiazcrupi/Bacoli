@@ -1,13 +1,14 @@
 import type { ReactNode } from "react";
 import { PestanasSeccion } from "@/components/PestanasSeccion";
 
-export type PestañaComercial = "clientes" | "leads" | "vendedores" | "estadisticas";
+export type PestañaComercial = "clientes" | "leads" | "vendedores" | "estadisticas" | "tienda";
 
 const ITEMS: { id: PestañaComercial; texto: string; href: string }[] = [
   { id: "clientes", texto: "Clientes", href: "/comercial" },
   { id: "leads", texto: "Leads", href: "/comercial/leads" },
   { id: "vendedores", texto: "Vendedores", href: "/comercial/vendedores" },
   { id: "estadisticas", texto: "Estadísticas", href: "/comercial/estadisticas" },
+  { id: "tienda", texto: "Tienda online", href: "/comercial/tienda" },
 ];
 
 // Título de COMERCIAL (con botones a la derecha) y debajo las solapas, iguales a las de Pedidos y Cuenta corriente.
