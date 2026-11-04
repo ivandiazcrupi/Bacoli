@@ -19,16 +19,18 @@ const pesos = (n: number) => n.toLocaleString("es-AR", { style: "currency", curr
 const fechaLarga = (f: string) => `${nombreDia(f)} ${Number(f.slice(8))} de ${MESES[Number(f.slice(5, 7)) - 1]}`;
 const esFecha = (s?: string) => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s) && esFechaValida(s);
 
-type P = { f: string; en: Date; monto: number };
+type P = { f: string; en: Date; monto: number; quien: string; clave: string };
 const suma = (l: P[]) => ({ pedidos: l.length, total: l.reduce((t, p) => t + p.monto, 0) });
 
 // TIENDA ONLINE: cómo viene la venta minorista. Cada pedido cuenta el día en que se HIZO (no importa cuándo se entregue ni si ya pagó).
 // La facturación es el total de todos los pedidos que entraron; los CANCELADOS no cuentan (si se cancela uno, se resta).
-export default async function Tienda({ searchParams }: { searchParams: Promise<{ mes?: string; dia?: string }> }) {
+export default async function Tienda({ searchParams }: { searchParams: Promise<{ mes?: string; dia?: string; orden?: string; todos?: string }> }) {
   const usuario = await exigirOficina();
   if (!(await vendedoresDesbloqueado())) return <PantallaBloqueada usuario={usuario} activa="tienda" titulo="Tienda online" volver="/comercial/tienda" />;
 
-  const { mes: mesParam, dia: diaParam } = await searchParams;
+  const { mes: mesParam, dia: diaParam, orden: ordenParam, todos: todosParam } = await searchParams;
+  const orden = ordenParam === "pedidos" ? "pedidos" : "facturacion";
+  const verTodos = todosParam === "1";
   const fechaHoy = hoy();
   const dia = esFecha(diaParam) && diaParam! <= fechaHoy ? diaParam! : fechaHoy; // se puede mirar cualquier día hasta hoy
   const mes = mesParam && /^\d{4}-\d{2}$/.test(mesParam) && esFechaValida(`${mesParam}-01`) ? mesParam : dia.slice(0, 7);
@@ -39,9 +41,15 @@ export default async function Tienda({ searchParams }: { searchParams: Promise<{
   const iniComp = inicioDia(sumarDias(dia, -8)), finComp = inicioDia(sumarDias(dia, 1));
   const filas = await db.pedido.findMany({
     where: { origen: "WEB", estado: { not: "CANCELADO" }, OR: [{ creadoEn: { gte: iniMes, lt: finMes } }, { creadoEn: { gte: iniComp, lt: finComp } }] },
-    select: { creadoEn: true, webTotal: true },
+    select: { creadoEn: true, webTotal: true, webNombre: true, webApellido: true, webEmail: true },
   });
-  const todos: P[] = filas.map((p) => ({ f: fechaAR(p.creadoEn), en: p.creadoEn, monto: Number(p.webTotal ?? 0) }));
+  const quitarTildes = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const todos: P[] = filas.map((p) => {
+    const quien = [p.webNombre, p.webApellido].filter(Boolean).join(" ").trim() || "Sin nombre";
+    const email = (p.webEmail ?? "").trim().toLowerCase();
+    // Un mismo comprador se junta por su email; si no tiene, por nombre y apellido.
+    return { f: fechaAR(p.creadoEn), en: p.creadoEn, monto: Number(p.webTotal ?? 0), quien, clave: email || quitarTildes(quien).toLowerCase() };
+  });
 
   // DÍA ELEGIDO contra el día anterior y el mismo día de la semana pasada. Si es hoy, hasta la misma hora (si no, hoy siempre perdería contra un día entero).
   const ahora = new Date();
@@ -69,11 +77,23 @@ export default async function Tienda({ searchParams }: { searchParams: Promise<{
     return { f, dia: i + 1, nombre: nombreDia(f), ...suma(delMes.filter((p) => p.f === f)) };
   });
   const tot = suma(delMes);
+
+  // CLIENTES QUE MÁS COMPRARON en el mes (los de la tienda; se juntan por email o, si no hay, por nombre)
+  const porCliente = new Map<string, { quien: string; pedidos: number; total: number }>();
+  for (const p of delMes) {
+    const c = porCliente.get(p.clave) ?? { quien: p.quien, pedidos: 0, total: 0 };
+    c.pedidos += 1; c.total += p.monto;
+    if (p.quien.length > c.quien.length) c.quien = p.quien; // el nombre más completo
+    porCliente.set(p.clave, c);
+  }
+  const ranking = [...porCliente.values()].sort((a, b) => (orden === "pedidos" ? b.pedidos - a.pedidos || b.total - a.total : b.total - a.total || b.pedidos - a.pedidos) || a.quien.localeCompare(b.quien, "es"));
+  const visibles = verTodos ? ranking : ranking.slice(0, 15);
   const diasConVenta = dias.filter((d) => d.pedidos > 0).length;
   const nav = "flex h-9 items-center rounded-md border border-stone-300 bg-white px-3 text-sm font-semibold hover:border-stone-600";
   const navOff = "flex h-9 items-center rounded-md border border-stone-200 bg-stone-100 px-3 text-sm font-semibold text-stone-300";
   const celda = "px-3 py-1.5 text-center tabular-nums";
   const href = (d: string, m?: string) => `/comercial/tienda?dia=${d}${m ? `&mes=${m}` : ""}`;
+  const hrefRank = (o: string, todos: boolean) => `/comercial/tienda?dia=${dia}&mes=${mes}&orden=${o}${todos ? "&todos=1" : ""}`;
 
   return (
     <>
@@ -164,6 +184,47 @@ export default async function Tienda({ searchParams }: { searchParams: Promise<{
                 </tfoot>
               </table>
             </div>
+          )}
+        </Panel>
+
+        <Panel titulo="Clientes que más compraron" nota={`${nombreMes(mes)} · ${ranking.length} cliente${ranking.length === 1 ? "" : "s"}`}>
+          {ranking.length === 0 ? <SinDatos /> : (
+            <>
+              <div className="mb-3 flex items-center gap-2 text-[13px]">
+                <span className="text-stone-500">Ordenar por:</span>
+                <Link href={hrefRank("facturacion", verTodos)} className={`rounded-md border px-3 py-1 font-semibold ${orden === "facturacion" ? "border-stone-800 bg-stone-800 text-white" : "border-stone-300 bg-white hover:border-stone-600"}`}>Facturación</Link>
+                <Link href={hrefRank("pedidos", verTodos)} className={`rounded-md border px-3 py-1 font-semibold ${orden === "pedidos" ? "border-stone-800 bg-stone-800 text-white" : "border-stone-300 bg-white hover:border-stone-600"}`}>Cantidad de pedidos</Link>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[480px] border-collapse text-[13px]">
+                  <thead>
+                    <tr className="border-b border-stone-300 bg-crema-100 text-[11.5px] uppercase tracking-wide text-stone-600">
+                      <th className={`${celda} w-12`}>#</th>
+                      <th className={`${celda} !text-left`}>Cliente</th>
+                      <th className={celda}>Pedidos</th>
+                      <th className={celda}>Facturación</th>
+                      <th className={celda}>Ticket promedio</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibles.map((c, i) => (
+                      <tr key={`${c.quien}-${i}`} className="border-b border-stone-200">
+                        <td className={`${celda} text-stone-400`}>{i + 1}</td>
+                        <td className={`${celda} !text-left font-medium`}>{c.quien}</td>
+                        <td className={`${celda} ${orden === "pedidos" ? "font-bold" : ""}`}>{c.pedidos}</td>
+                        <td className={`${celda} ${orden === "facturacion" ? "font-bold" : ""}`}>{pesos(c.total)}</td>
+                        <td className={celda}>{pesos(c.total / c.pedidos)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {ranking.length > 15 && (
+                <p className="mt-3 text-center">
+                  <Link href={hrefRank(orden, !verTodos)} className="text-[13px] font-semibold text-stone-700 underline-offset-2 hover:underline">{verTodos ? "Mostrar solo los 15 primeros ▴" : `Ver los ${ranking.length} clientes ▾`}</Link>
+                </p>
+              )}
+            </>
           )}
         </Panel>
       </main>
