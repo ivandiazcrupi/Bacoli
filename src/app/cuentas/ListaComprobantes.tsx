@@ -86,6 +86,8 @@ function estadoDe(f: FilaComprobante): string {
   if (!f.entregado) return "Por entregar";
   return "Pendiente";
 }
+// "Diego avisó pago": la etiqueta que se ve en la pastilla del comprobante pendiente; también es una opción del filtro Estado.
+const etiquetaAviso = (f: FilaComprobante) => (f.avisoPago ? `${f.avisoPago.split(" ")[0].slice(0, 12)} avisó pago` : null);
 const montoDe = (f: FilaComprobante) => (f.esNc ? -f.bruto : f.cubierta || f.anulado ? f.bruto : f.monto);
 const digitos = (t: string | null) => (t ?? "").replace(/\D/g, "");
 
@@ -224,7 +226,12 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
         const v = (filtros[c.id] ?? "").trim();
         if (!v) continue;
         const t = textoDe(f, c.id);
-        if (c.filtro === "estado" || c.filtro === "pedido" || c.filtro === "lista") { if (!v.split(SEP).includes(t)) return false; continue; }
+        if (c.filtro === "estado" || c.filtro === "pedido" || c.filtro === "lista") {
+          const elegidas = v.split(SEP);
+          const aviso = c.id === "estado" && estadoDe(f) === "Pendiente" ? etiquetaAviso(f) : null; // un pendiente con aviso también aparece al elegir "Diego avisó pago"
+          if (!elegidas.includes(t) && !(aviso && elegidas.includes(aviso))) return false;
+          continue;
+        }
         if (c.id === "monto" || c.id === "numero") { if (!digitos(t).includes(digitos(v)) && !t.toLowerCase().includes(v.toLowerCase())) return false; continue; }
         if (!t.toLowerCase().includes(v.toLowerCase())) return false;
       }
@@ -279,7 +286,8 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
   const razonUnica = (filtros.razon ?? "").split(SEP).filter(Boolean); // filtrando una sola razón social, el PDF muestra solo esa
   const celdaBase = "min-w-0 truncate";
   const entrada = "h-7 w-full min-w-0 rounded border border-stone-300 bg-white px-1.5 text-center text-[12px] font-normal normal-case tracking-normal text-stone-800 placeholder:text-stone-300 focus:border-verde-700 focus:outline-none";
-  const opcionesEstado = esArca && tipo !== "CUENTA" ? ["Pendiente", "Pagada", "Falta NC", "Anulada por NC", "NC sin aplicar", "NC aplicada"] : ["Pendiente", "Pagada", "Por entregar", "Anulada por NC", "Anulado"];
+  const avisos = [...new Set(filas.filter((f) => !f.hueco && estadoDe(f) === "Pendiente").map(etiquetaAviso).filter((x): x is string => !!x))].sort();
+  const opcionesEstado = [...(esArca && tipo !== "CUENTA" ? ["Pendiente", "Pagada", "Falta NC", "Anulada por NC", "NC sin aplicar", "NC aplicada"] : ["Pendiente", "Pagada", "Por entregar", "Anulada por NC", "Anulado"]), ...avisos];
 
   return (
     <div>
