@@ -68,7 +68,7 @@ export default async function Inicio() {
         )}
 
         {tareas.length > 0 && (
-          <section aria-label="Tus tareas" className="mt-2 w-full max-w-xl rounded-xl border border-stone-300 bg-white px-5 py-4 text-left">
+          <section aria-label="Tus tareas" className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-5 py-4 text-left">
             <header className="mb-1 flex items-baseline justify-between gap-3">
               <h2 className="text-[13px] font-bold uppercase tracking-[0.12em] text-stone-600">Tus tareas</h2>
               <span className="text-[12.5px] text-stone-500">{pendientes === 0 ? "todo al día ✓" : `${pendientes} pendiente${pendientes === 1 ? "" : "s"}`}</span>
