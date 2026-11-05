@@ -2,7 +2,7 @@ import { Cabecera } from "@/components/Cabecera";
 import { db } from "@/lib/db";
 import { puedeGestionarUsuarios } from "@/lib/roles";
 import { exigirOficina } from "@/lib/session";
-import { BorrarHechas, FilaTarea, NuevaTarea } from "./Controles";
+import { BorrarHechas, ListaTareas, NuevaTarea } from "./Controles";
 
 const primerNombre = (n: string) => n.trim().split(/\s+/)[0] || n;
 
@@ -15,7 +15,7 @@ export default async function Tareas() {
   const personas = await db.usuario.findMany({
     where: { activo: true, rol: { in: ["DUENO", "ADMINISTRACION"] } },
     orderBy: { creadoEn: "asc" },
-    select: { id: true, nombre: true, tareas: { orderBy: [{ hecha: "asc" }, { creadoEn: "asc" }], select: { id: true, titulo: true, hecha: true } } },
+    select: { id: true, nombre: true, tareas: { orderBy: [{ hecha: "asc" }, { orden: "asc" }, { creadoEn: "asc" }], select: { id: true, titulo: true, hecha: true } } },
   });
   const mias = personas.find((p) => p.id === yo.id);
   const otras = personas.filter((p) => p.id !== yo.id);
@@ -24,9 +24,7 @@ export default async function Tareas() {
     const hechas = p.tareas.filter((t) => t.hecha).length;
     return (
       <>
-        <ul className="divide-y divide-stone-100">
-          {p.tareas.map((t) => <FilaTarea key={t.id} id={t.id} titulo={t.titulo} hecha={t.hecha} puedeTildar={propia || gerente} puedeBorrar={gerente} />)}
-        </ul>
+        <ListaTareas key={p.tareas.map((t) => `${t.id}${t.hecha ? 1 : 0}`).join()} asignadaId={p.id} tareas={p.tareas} puedeTildar={propia || gerente} puedeBorrar={gerente} puedeOrdenar={gerente} />
         {p.tareas.length === 0 && <p className="py-2 text-[13px] text-stone-400">{propia ? "No tenés tareas por ahora." : "Sin tareas."}</p>}
         {gerente && <NuevaTarea asignadaId={p.id} />}
         {gerente && hechas > 0 && <p className="mt-2 text-right"><BorrarHechas asignadaId={p.id} cuantas={hechas} /></p>}

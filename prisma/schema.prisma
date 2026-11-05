@@ -611,6 +611,7 @@ model Tarea {
   creadaPorId String? // quién la cargó (sin relación: solo para saber el nombre)
   hecha       Boolean   @default(false)
   hechaEn     DateTime?
+  orden       Int       @default(0) // prioridad dentro de la lista de cada persona (la primera = la más importante); la acomoda el gerente arrastrando
   creadoEn    DateTime  @default(now())
 
   @@index([asignadaId])

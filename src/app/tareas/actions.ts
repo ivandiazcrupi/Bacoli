@@ -16,7 +16,8 @@ export async function crearTarea(asignadaId: string, formData: FormData): Promis
   if (titulo.length > 200) return { error: "Es muy larga (máximo 200 letras)." };
   const persona = await db.usuario.findUnique({ where: { id: asignadaId }, select: { activo: true, rol: true } });
   if (!persona || !persona.activo || !esPersonalDeOficina(persona.rol)) return { error: "Esa persona no puede tener tareas." };
-  await db.tarea.create({ data: { titulo, asignadaId, creadaPorId: yo.id } });
+  const ultima = await db.tarea.aggregate({ where: { asignadaId }, _max: { orden: true } });
+  await db.tarea.create({ data: { titulo, asignadaId, creadaPorId: yo.id, orden: (ultima._max.orden ?? 0) + 1 } }); // la nueva va al final de la lista
   revalidatePath("/", "layout"); // se actualizan el inicio, la lista y el numerito del menú
   return {};
 }
@@ -46,5 +47,17 @@ export async function borrarHechas(asignadaId: string): Promise<Resultado> {
   if (!puedeGestionarUsuarios(yo.rol)) return { error: "Solo el gerente borra tareas." };
   await db.tarea.deleteMany({ where: { asignadaId, hecha: true } });
   revalidatePath("/", "layout"); // se actualizan el inicio, la lista y el numerito del menú
+  return {};
+}
+
+/** El gerente acomoda las tareas pendientes de una persona por prioridad: `ids` viene en el orden nuevo (la primera es la más importante). */
+export async function ordenarTareas(asignadaId: string, ids: string[]): Promise<Resultado> {
+  const yo = await exigirOficina();
+  if (!puedeGestionarUsuarios(yo.rol)) return { error: "Solo el gerente ordena las tareas." };
+  if (!Array.isArray(ids) || ids.length === 0 || ids.some((i) => typeof i !== "string") || new Set(ids).size !== ids.length) return { error: "Orden no válido." };
+  const propias = await db.tarea.count({ where: { asignadaId, id: { in: ids } } });
+  if (propias !== ids.length) return { error: "Esas tareas no son de esa persona." };
+  await db.$transaction(ids.map((id, i) => db.tarea.update({ where: { id }, data: { orden: i + 1 } })));
+  revalidatePath("/", "layout");
   return {};
 }

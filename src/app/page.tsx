@@ -38,7 +38,7 @@ export default async function Inicio() {
   if (produccionActiva() && esProduccion(usuario.rol)) redirect("/produccion");
   const oficina = esPersonalDeOficina(usuario.rol);
   // Tus tareas (solo oficina): pendientes primero; si no tenés ninguna cargada, no se muestra nada.
-  const tareas = oficina ? await db.tarea.findMany({ where: { asignadaId: usuario.id }, orderBy: [{ hecha: "asc" }, { creadoEn: "asc" }], select: { id: true, titulo: true, hecha: true } }) : [];
+  const tareas = oficina ? await db.tarea.findMany({ where: { asignadaId: usuario.id }, orderBy: [{ hecha: "asc" }, { orden: "asc" }, { creadoEn: "asc" }], select: { id: true, titulo: true, hecha: true } }) : [];
   const pendientes = tareas.filter((t) => !t.hecha).length;
   const visibles = tareas.slice(0, 7);
 
