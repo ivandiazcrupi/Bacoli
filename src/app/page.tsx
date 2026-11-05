@@ -2,7 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Cabecera } from "@/components/Cabecera";
 import { esPersonalDeOficina, esProduccion, esVendedor, produccionActiva } from "@/lib/roles";
+import { db } from "@/lib/db";
 import { exigirUsuario } from "@/lib/session";
+import { FilaTarea } from "./tareas/Controles";
 
 // Mensajes de bienvenida: uno al azar cada vez que se entra, según la hora de Argentina.
 // Los "picantes" (pedido del dueño): cortos, simpáticos y con un guiño al trabajo; los de "Hola" valen a cualquier hora.
@@ -35,6 +37,10 @@ export default async function Inicio() {
   const usuario = await exigirUsuario();
   if (produccionActiva() && esProduccion(usuario.rol)) redirect("/produccion");
   const oficina = esPersonalDeOficina(usuario.rol);
+  // Tus tareas (solo oficina): pendientes primero; si no tenés ninguna cargada, no se muestra nada.
+  const tareas = oficina ? await db.tarea.findMany({ where: { asignadaId: usuario.id }, orderBy: [{ hecha: "asc" }, { creadoEn: "asc" }], select: { id: true, titulo: true, hecha: true } }) : [];
+  const pendientes = tareas.filter((t) => !t.hecha).length;
+  const visibles = tareas.slice(0, 7);
 
   return (
     <>
@@ -59,6 +65,19 @@ export default async function Inicio() {
           </div>
         ) : (
           <p className="text-stone-600">Tu ruta del día va a aparecer acá.</p>
+        )}
+
+        {tareas.length > 0 && (
+          <section aria-label="Tus tareas" className="mt-2 w-full max-w-xl rounded-xl border border-stone-300 bg-white px-5 py-4 text-left">
+            <header className="mb-1 flex items-baseline justify-between gap-3">
+              <h2 className="text-[13px] font-bold uppercase tracking-[0.12em] text-stone-600">Tus tareas</h2>
+              <span className="text-[12.5px] text-stone-500">{pendientes === 0 ? "todo al día ✓" : `${pendientes} pendiente${pendientes === 1 ? "" : "s"}`}</span>
+            </header>
+            <ul className="divide-y divide-stone-100">
+              {visibles.map((t) => <FilaTarea key={t.id} id={t.id} titulo={t.titulo} hecha={t.hecha} puedeTildar puedeBorrar={false} />)}
+            </ul>
+            <p className="mt-2 text-right"><Link href="/tareas" className="text-[12.5px] font-semibold text-stone-600 underline-offset-2 hover:underline">{tareas.length > visibles.length ? `Ver las ${tareas.length} y las del equipo ›` : "Ver las del equipo ›"}</Link></p>
+          </section>
         )}
       </main>
     </>

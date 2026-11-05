@@ -17,7 +17,7 @@ export async function crearTarea(asignadaId: string, formData: FormData): Promis
   const persona = await db.usuario.findUnique({ where: { id: asignadaId }, select: { activo: true, rol: true } });
   if (!persona || !persona.activo || !esPersonalDeOficina(persona.rol)) return { error: "Esa persona no puede tener tareas." };
   await db.tarea.create({ data: { titulo, asignadaId, creadaPorId: yo.id } });
-  revalidatePath("/tareas");
+  revalidatePath("/", "layout"); // se actualizan el inicio, la lista y el numerito del menú
   return {};
 }
 
@@ -28,7 +28,7 @@ export async function alternarTarea(id: string): Promise<Resultado> {
   if (t.asignadaId !== yo.id && !puedeGestionarUsuarios(yo.rol)) return { error: "Solo la persona a la que se le asignó puede tildarla." };
   const hecha = !t.hecha;
   await db.tarea.update({ where: { id }, data: { hecha, hechaEn: hecha ? new Date() : null } });
-  revalidatePath("/tareas");
+  revalidatePath("/", "layout"); // se actualizan el inicio, la lista y el numerito del menú
   return {};
 }
 
@@ -36,7 +36,7 @@ export async function borrarTarea(id: string): Promise<Resultado> {
   const yo = await exigirOficina();
   if (!puedeGestionarUsuarios(yo.rol)) return { error: "Solo el gerente borra tareas." };
   await db.tarea.deleteMany({ where: { id } });
-  revalidatePath("/tareas");
+  revalidatePath("/", "layout"); // se actualizan el inicio, la lista y el numerito del menú
   return {};
 }
 
@@ -45,6 +45,6 @@ export async function borrarHechas(asignadaId: string): Promise<Resultado> {
   const yo = await exigirOficina();
   if (!puedeGestionarUsuarios(yo.rol)) return { error: "Solo el gerente borra tareas." };
   await db.tarea.deleteMany({ where: { asignadaId, hecha: true } });
-  revalidatePath("/tareas");
+  revalidatePath("/", "layout"); // se actualizan el inicio, la lista y el numerito del menú
   return {};
 }
