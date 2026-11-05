@@ -530,3 +530,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Comercial → Clientes: siempre arranca "Por sucursal" (pedido del dueño)
 - El tablero **siempre abre en "Por sucursal"** (ya no se acuerda de lo último elegido: se sacó `comercial_vista` del navegador; antes arrancaba por cliente y a los instantes saltaba a sucursal). En el selector, **"Por sucursal" va primero (a la izquierda) y "Por cliente" después**. Se puede pasar a "Por cliente" mientras se está en la pantalla; al volver a entrar vuelve a sucursales.
+
+## TAREAS: checklist del equipo (pedido del dueño: "probar" que cada uno tenga sus tareas)
+- Apartado **TAREAS** en el menú, **a la izquierda de PRODUCTOS** (`/tareas`, `src/app/tareas/`; solo oficina: gerente y administración). Tabla nueva `Tarea` (migración `tareas`: título, a quién, hecha, cuándo; la cargó quién). Un puntito oscuro con el número en el menú muestra cuántas tareas pendientes tiene la persona que entró.
+- **Cada uno ve primero las SUYAS** ("Tus tareas, Miguel") con casilleros para tildar, y debajo **"El equipo"**: una tarjeta por cada otra persona de oficina con sus tareas (solo lectura; las hechas quedan tachadas al final). Minimalista: sin fechas ni prioridades.
+- **Solo el gerente carga y borra tareas** (en cada tarjeta hay un campo "+ Agregar una tarea…", Enter la guarda; ✕ borra una; "Borrar las N hechas" limpia las ya hechas) y puede tildar las de cualquiera. **Cada persona tilda solo las suyas** (lo exige el servidor, `alternarTarea`). Solo se asignan a gerente y administración (los vendedores, repartidores y producción no tienen tareas por ahora). La copia de seguridad incluye las tareas sola.

@@ -29,6 +29,7 @@ model Usuario {
   salidas Salida[]
   vendedor Vendedor? @relation("VendedorUsuario")
   producciones Produccion[]
+  tareas Tarea[] @relation("TareaAsignada")
   comisionPct Decimal? @db.Decimal(5, 2) // (sin uso: la comisión ahora vive en Vendedor)
   apruebaVendedores Boolean @default(false) // el dueño que aprueba los cambios de vendedor de los clientes (uno solo)
 }
@@ -599,4 +600,18 @@ model Produccion {
   creadoEn    DateTime  @default(now())
 
   @@index([fecha])
+}
+
+// Checklist de tareas del equipo de oficina: el gerente las carga para cada persona; cada uno tilda las suyas.
+model Tarea {
+  id          String    @id @default(cuid())
+  titulo      String
+  asignadaId  String
+  asignada    Usuario   @relation("TareaAsignada", fields: [asignadaId], references: [id])
+  creadaPorId String? // quién la cargó (sin relación: solo para saber el nombre)
+  hecha       Boolean   @default(false)
+  hechaEn     DateTime?
+  creadoEn    DateTime  @default(now())
+
+  @@index([asignadaId])
 }

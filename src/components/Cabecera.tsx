@@ -16,6 +16,8 @@ export async function Cabecera({ usuario }: { usuario: Usuario }) {
     const e = await db.empresa.findUnique({ where: { id: "principal" }, select: { ultimaCopia: true } });
     copiaVencida = !e?.ultimaCopia || Date.now() - e.ultimaCopia.getTime() > 24 * 3600 * 1000;
   }
+  // Tareas pendientes de la persona (puntito con el número en TAREAS del menú).
+  const tareasPendientes = oficina ? await db.tarea.count({ where: { asignadaId: usuario.id, hecha: false } }) : 0;
   const principal = "shrink-0 rounded-lg px-2 py-2 text-base font-bold uppercase tracking-wide";
   const secundario = "shrink-0 rounded-lg px-1.5 py-2 text-xs font-medium uppercase tracking-wide text-stone-500 hover:text-stone-900";
   const botonCargar = "rounded-lg px-3 py-2 text-center text-xs font-bold uppercase tracking-wide";
@@ -47,6 +49,7 @@ export async function Cabecera({ usuario }: { usuario: Usuario }) {
           {oficina && <Link href="/comercial" className={principal}>Comercial</Link>}
           {produccionActiva() && (oficina || produccion) && <Link href="/produccion" className={principal}>Producción</Link>}
           {oficina && <span aria-hidden className="mx-2 hidden h-5 w-px bg-stone-300 lg:block" />}
+          {oficina && <Link href="/tareas" className={secundario}>Tareas{tareasPendientes > 0 && <span title={`Tenés ${tareasPendientes} tarea${tareasPendientes === 1 ? "" : "s"} pendiente${tareasPendientes === 1 ? "" : "s"}`} className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-stone-800 px-1 align-middle text-[10px] font-bold leading-none text-white">{tareasPendientes}</span>}</Link>}
           {oficina && <Link href="/productos" className={secundario}>Productos</Link>}
           {puedeGestionarUsuarios(usuario.rol) && <Link href="/usuarios" className={secundario}>Usuarios</Link>}
           {puedeGestionarUsuarios(usuario.rol) && <Link href="/empresa" className={secundario}>Empresa{copiaVencida && <span title="Falta descargar la copia de seguridad de hoy" aria-label="Falta la copia de seguridad" className="ml-1 inline-block h-2 w-2 rounded-full bg-rojo-600 align-middle" />}</Link>}
