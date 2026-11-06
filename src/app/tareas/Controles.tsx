@@ -29,7 +29,7 @@ export function FilaTarea({ id, titulo, hecha, puedeTildar, puedeBorrar }: { id:
   );
 }
 
-// Campo para sumar una tarea (solo lo ve el gerente). Enter la guarda y queda listo para la siguiente.
+// Campo para sumar una tarea (lo ven todos). Enter la guarda y queda listo para la siguiente.
 export function NuevaTarea({ asignadaId }: { asignadaId: string }) {
   const [pendiente, empezar] = useTransition();
   const [error, setError] = useState("");
@@ -56,7 +56,7 @@ export function BorrarHechas({ asignadaId, cuantas }: { asignadaId: string; cuan
   );
 }
 
-type DatosTarea = { id: string; titulo: string; hecha: boolean };
+type DatosTarea = { id: string; titulo: string; hecha: boolean; borrable?: boolean }; // borrable: la cargó quien mira (puede borrarla aunque no sea gerente)
 
 // Una fila que se puede arrastrar (solo las pendientes, solo el gerente): el asa ⋮⋮ de la izquierda.
 function FilaOrdenable({ t, puedeTildar, puedeBorrar }: { t: DatosTarea; puedeTildar: boolean; puedeBorrar: boolean }) {
@@ -104,14 +104,14 @@ export function ListaTareas({ asignadaId, tareas, puedeTildar, puedeBorrar, pued
         <DndContext sensors={sensores} collisionDetection={closestCenter} onDragEnd={alSoltar}>
           <SortableContext items={pendientes.map((t) => t.id)} strategy={verticalListSortingStrategy}>
             <div className="divide-y divide-stone-100">
-              {pendientes.map((t) => <FilaOrdenable key={t.id} t={t} puedeTildar={puedeTildar} puedeBorrar={puedeBorrar} />)}
+              {pendientes.map((t) => <FilaOrdenable key={t.id} t={t} puedeTildar={puedeTildar} puedeBorrar={puedeBorrar || !!t.borrable} />)}
             </div>
           </SortableContext>
         </DndContext>
       ) : (
-        <ul className="divide-y divide-stone-100">{pendientes.map((t) => <FilaTarea key={t.id} id={t.id} titulo={t.titulo} hecha={t.hecha} puedeTildar={puedeTildar} puedeBorrar={puedeBorrar} />)}</ul>
+        <ul className="divide-y divide-stone-100">{pendientes.map((t) => <FilaTarea key={t.id} id={t.id} titulo={t.titulo} hecha={t.hecha} puedeTildar={puedeTildar} puedeBorrar={puedeBorrar || !!t.borrable} />)}</ul>
       )}
-      {hechas.length > 0 && <ul className={`divide-y divide-stone-100 ${pendientes.length ? "border-t border-stone-100" : ""}`}>{hechas.map((t) => <FilaTarea key={t.id} id={t.id} titulo={t.titulo} hecha puedeTildar={puedeTildar} puedeBorrar={puedeBorrar} />)}</ul>}
+      {hechas.length > 0 && <ul className={`divide-y divide-stone-100 ${pendientes.length ? "border-t border-stone-100" : ""}`}>{hechas.map((t) => <FilaTarea key={t.id} id={t.id} titulo={t.titulo} hecha puedeTildar={puedeTildar} puedeBorrar={puedeBorrar || !!t.borrable} />)}</ul>}
       {error && <p className="py-1 text-[12px] text-rojo-700" role="alert">{error}</p>}
     </div>
   );

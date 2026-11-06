@@ -6,7 +6,7 @@ import { BorrarHechas, ListaTareas, NuevaTarea } from "./Controles";
 
 const primerNombre = (n: string) => n.trim().split(/\s+/)[0] || n;
 
-// TAREAS: un checklist por persona del equipo de oficina. El gerente carga las tareas de cada uno; cada uno ve primero las suyas
+// TAREAS: un checklist por persona del equipo de oficina. Todos pueden cargarle tareas a cualquiera; cada uno ve primero las suyas
 // (y las tilda) y, más abajo, las de los demás para mirar cómo viene el equipo.
 export default async function Tareas() {
   const yo = await exigirOficina();
@@ -15,7 +15,7 @@ export default async function Tareas() {
   const personas = await db.usuario.findMany({
     where: { activo: true, rol: { in: ["DUENO", "ADMINISTRACION"] } },
     orderBy: { creadoEn: "asc" },
-    select: { id: true, nombre: true, tareas: { orderBy: [{ hecha: "asc" }, { orden: "asc" }, { creadoEn: "asc" }], select: { id: true, titulo: true, hecha: true } } },
+    select: { id: true, nombre: true, tareas: { orderBy: [{ hecha: "asc" }, { orden: "asc" }, { creadoEn: "asc" }], select: { id: true, titulo: true, hecha: true, creadaPorId: true } } },
   });
   const mias = personas.find((p) => p.id === yo.id);
   const otras = personas.filter((p) => p.id !== yo.id);
@@ -24,9 +24,9 @@ export default async function Tareas() {
     const hechas = p.tareas.filter((t) => t.hecha).length;
     return (
       <>
-        <ListaTareas key={p.tareas.map((t) => `${t.id}${t.hecha ? 1 : 0}`).join()} asignadaId={p.id} tareas={p.tareas} puedeTildar={propia || gerente} puedeBorrar={gerente} puedeOrdenar={gerente} />
+        <ListaTareas key={p.tareas.map((t) => `${t.id}${t.hecha ? 1 : 0}`).join()} asignadaId={p.id} tareas={p.tareas.map((t) => ({ id: t.id, titulo: t.titulo, hecha: t.hecha, borrable: t.creadaPorId === yo.id }))} puedeTildar={propia || gerente} puedeBorrar={gerente} puedeOrdenar={gerente} />
         {p.tareas.length === 0 && <p className="py-2 text-[13px] text-stone-400">{propia ? "No tenés tareas por ahora." : "Sin tareas."}</p>}
-        {gerente && <NuevaTarea asignadaId={p.id} />}
+        <NuevaTarea asignadaId={p.id} />
         {gerente && hechas > 0 && <p className="mt-2 text-right"><BorrarHechas asignadaId={p.id} cuantas={hechas} /></p>}
       </>
     );
@@ -69,7 +69,7 @@ export default async function Tareas() {
           </section>
         )}
 
-        {gerente && <p className="text-[12px] text-stone-400">Vos sos gerente: cargás las tareas de cada persona (campo “Agregar una tarea”) y podés tildar o borrar cualquiera. Cada uno tilda las suyas.</p>}
+        <p className="text-[12px] text-stone-400">{gerente ? "Todos cargan tareas (campo “Agregar una tarea”). Vos, como gerente, podés tildar, borrar y ordenar cualquiera." : "Podés cargarle tareas a cualquiera y borrar las que cargaste vos. Cada uno tilda las suyas."}</p>
       </main>
     </>
   );

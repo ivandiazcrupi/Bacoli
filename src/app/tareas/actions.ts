@@ -7,10 +7,9 @@ import { exigirOficina } from "@/lib/session";
 
 export type Resultado = { error?: string };
 
-// Cargar y borrar tareas: solo el gerente. Tildar: cada uno las suyas (el gerente, cualquiera).
+// Cargar tareas: todos los de oficina (a cualquiera). Borrar: el gerente cualquiera; los demás solo las que cargaron ellos. Ordenar: solo el gerente. Tildar: cada uno las suyas (el gerente, cualquiera).
 export async function crearTarea(asignadaId: string, formData: FormData): Promise<Resultado> {
   const yo = await exigirOficina();
-  if (!puedeGestionarUsuarios(yo.rol)) return { error: "Solo el gerente carga tareas." };
   const titulo = String(formData.get("titulo") ?? "").trim().replace(/\s+/g, " ");
   if (titulo.length < 2) return { error: "Escribí la tarea." };
   if (titulo.length > 200) return { error: "Es muy larga (máximo 200 letras)." };
@@ -35,7 +34,9 @@ export async function alternarTarea(id: string): Promise<Resultado> {
 
 export async function borrarTarea(id: string): Promise<Resultado> {
   const yo = await exigirOficina();
-  if (!puedeGestionarUsuarios(yo.rol)) return { error: "Solo el gerente borra tareas." };
+  const t = await db.tarea.findUnique({ where: { id }, select: { creadaPorId: true } });
+  if (!t) return {};
+  if (!puedeGestionarUsuarios(yo.rol) && t.creadaPorId !== yo.id) return { error: "Solo podés borrar las tareas que cargaste vos." };
   await db.tarea.deleteMany({ where: { id } });
   revalidatePath("/", "layout"); // se actualizan el inicio, la lista y el numerito del menú
   return {};
