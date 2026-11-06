@@ -545,3 +545,4 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## TAREAS: todos cargan (pedido del dueño)
 - **Cualquiera de oficina (gerente y administración) puede cargar tareas a cualquiera** (incluido uno mismo) con el campo "Agregar una tarea" de `/tareas`. **Borrar:** el gerente cualquiera; los demás solo las que cargaron ellos (`borrarTarea` compara `creadaPorId`). **Ordenar por prioridad, "Borrar las hechas" y tildar las de otros siguen siendo solo del gerente.** Cada uno tilda las suyas. Esto reemplaza lo dicho antes de "solo el gerente carga y borra".
+- **Editar una tarea** (pedido del dueño: "una vez que la escribís no podés cambiarla"): lápiz ✎ a la derecha de cada tarea (también en el inicio); al tocarlo el texto pasa a un campo, Enter o salir del campo guarda, Esc cancela (`editarTarea`). Pueden editarla **el gerente, quien la cargó y la persona a la que se le asignó**; el servidor lo exige.

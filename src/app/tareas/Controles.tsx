@@ -4,12 +4,22 @@ import { DndContext, MouseSensor, TouchSensor, closestCenter, useSensor, useSens
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useRef, useState, useTransition } from "react";
-import { alternarTarea, borrarHechas, borrarTarea, crearTarea, ordenarTareas } from "./actions";
+import { alternarTarea, borrarHechas, borrarTarea, crearTarea, editarTarea, ordenarTareas } from "./actions";
 
 // Una tarea: casillero para tildar (si puede) y, para el gerente, una ✕ para borrarla.
 export function FilaTarea({ id, titulo, hecha, puedeTildar, puedeBorrar }: { id: string; titulo: string; hecha: boolean; puedeTildar: boolean; puedeBorrar: boolean }) {
   const [pendiente, empezar] = useTransition();
   const [error, setError] = useState("");
+  const [editando, setEditando] = useState(false);
+  const [texto, setTexto] = useState(titulo);
+  const puedeEditar = puedeBorrar || puedeTildar; // quien la cargó, a quien se le asignó o el gerente (lo vuelve a exigir el servidor)
+  const cancelado = useRef(false);
+  const guardar = () => {
+    if (cancelado.current) { cancelado.current = false; return; }
+    const nuevo = texto.trim();
+    if (nuevo === titulo) { setEditando(false); return; }
+    empezar(async () => { const r = await editarTarea(id, nuevo); setError(r.error ?? ""); if (!r.error) setEditando(false); });
+  };
   return (
     <li className="group flex items-start gap-3 py-1.5">
       <button
@@ -21,7 +31,23 @@ export function FilaTarea({ id, titulo, hecha, puedeTildar, puedeBorrar }: { id:
         onClick={() => empezar(async () => { const r = await alternarTarea(id); setError(r.error ?? ""); })}
         className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border text-[13px] leading-none ${hecha ? "border-verde-700 bg-verde-700 text-white" : "border-stone-400 bg-white"} ${puedeTildar ? "cursor-pointer hover:border-stone-700" : "cursor-default"} disabled:opacity-60`}
       >{hecha ? "✓" : ""}</button>
-      <span className={`min-w-0 flex-1 text-[14px] leading-snug ${hecha ? "text-stone-400 line-through" : "text-stone-900"}`}>{titulo}{error && <span className="ml-2 text-[12px] text-rojo-700 no-underline">{error}</span>}</span>
+      {editando ? (
+        <span className="min-w-0 flex-1">
+          <input
+            autoFocus value={texto} maxLength={200} disabled={pendiente} aria-label="Editar tarea"
+            onChange={(e) => setTexto(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); guardar(); } if (e.key === "Escape") { cancelado.current = true; setTexto(titulo); setError(""); setEditando(false); } }}
+            onBlur={guardar}
+            className="h-8 w-full rounded-md border border-stone-400 bg-white px-2 text-[14px] focus:border-verde-700 focus:outline-none"
+          />
+          {error && <span className="text-[12px] text-rojo-700">{error}</span>}
+        </span>
+      ) : (
+        <span className={`min-w-0 flex-1 text-[14px] leading-snug ${hecha ? "text-stone-400 line-through" : "text-stone-900"}`}>{titulo}{error && <span className="ml-2 text-[12px] text-rojo-700 no-underline">{error}</span>}</span>
+      )}
+      {puedeEditar && !editando && (
+        <button type="button" aria-label="Editar tarea" title="Editar tarea" disabled={pendiente} onClick={() => { cancelado.current = false; setTexto(titulo); setError(""); setEditando(true); }} className="shrink-0 px-1 text-[13px] text-stone-300 hover:text-stone-700">✎</button>
+      )}
       {puedeBorrar && (
         <button type="button" aria-label="Borrar tarea" title="Borrar tarea" disabled={pendiente} onClick={() => window.confirm(`¿Borrar la tarea "${titulo}"?`) && empezar(async () => { await borrarTarea(id); })} className="shrink-0 px-1 text-[13px] text-stone-300 hover:text-rojo-700">✕</button>
       )}

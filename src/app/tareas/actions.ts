@@ -32,6 +32,20 @@ export async function alternarTarea(id: string): Promise<Resultado> {
   return {};
 }
 
+/** Cambiar el texto de una tarea: el gerente, quien la cargó o la persona a la que se le asignó. */
+export async function editarTarea(id: string, tituloNuevo: string): Promise<Resultado> {
+  const yo = await exigirOficina();
+  const titulo = String(tituloNuevo ?? "").trim().replace(/\s+/g, " ");
+  if (titulo.length < 2) return { error: "Escribí la tarea." };
+  if (titulo.length > 200) return { error: "Es muy larga (máximo 200 letras)." };
+  const t = await db.tarea.findUnique({ where: { id }, select: { creadaPorId: true, asignadaId: true } });
+  if (!t) return { error: "Esa tarea ya no existe." };
+  if (!puedeGestionarUsuarios(yo.rol) && t.creadaPorId !== yo.id && t.asignadaId !== yo.id) return { error: "Solo la puede cambiar quien la cargó, a quien se le asignó o el gerente." };
+  await db.tarea.update({ where: { id }, data: { titulo } });
+  revalidatePath("/", "layout");
+  return {};
+}
+
 export async function borrarTarea(id: string): Promise<Resultado> {
   const yo = await exigirOficina();
   const t = await db.tarea.findUnique({ where: { id }, select: { creadaPorId: true } });
