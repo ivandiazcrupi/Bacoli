@@ -313,6 +313,13 @@ model DiaListo {
   listoEn  DateTime @default(now())
 }
 
+// Alguien de oficina avisó a la logística que ese día salimos. Sin este aviso no se imprimen remitos de días de hoy en adelante.
+model AvisoLogistica {
+  fecha      DateTime @id @db.Date
+  avisadoPor String
+  avisadoEn  DateTime @default(now())
+}
+
 // Un gerente aprobó que el costo logístico de ese día (que se pasaba del tope) quede así. Vale solo mientras el costo y las unidades sean los mismos.
 model AprobacionCosto {
   fecha      DateTime @id @db.Date

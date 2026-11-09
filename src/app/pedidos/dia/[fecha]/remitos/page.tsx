@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { aFecha, esFechaValida } from "@/lib/fechas";
 import { porReparto } from "@/lib/ruta";
+import { BotonVolver } from "@/components/BotonVolver";
+import { errorSiFaltaAvisoLogistica } from "@/lib/dias";
 import { exigirOficina } from "@/lib/session";
 import { BarraImpresion } from "../../../remito/BarraImpresion";
 import { datosRemito } from "../../../remito/datos";
@@ -12,6 +14,15 @@ export default async function RemitosDelDia({ params }: { params: Promise<{ fech
   await exigirOficina();
   const { fecha } = await params;
   if (!esFechaValida(fecha)) notFound();
+  const sinAviso = await errorSiFaltaAvisoLogistica(fecha);
+  if (sinAviso) {
+    return (
+      <main className="mx-auto max-w-xl space-y-3 px-4 py-10">
+        <p className="rounded-lg border border-rojo-600 bg-rojo-50 p-3 text-rojo-800" role="alert">{sinAviso}</p>
+        <div className="flex justify-end"><BotonVolver fallback={`/pedidos/dia/${fecha}`} /></div>
+      </main>
+    );
+  }
   const [pedidos, empresa] = await Promise.all([
     db.pedido.findMany({
       where: { fechaEntrega: aFecha(fecha), estado: { not: "CANCELADO" }, remitoNumero: { not: null }, webOrden: null, origen: { not: "COBRANZA" }, conFactura: false },

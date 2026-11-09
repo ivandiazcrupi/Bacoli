@@ -17,6 +17,7 @@ import { normalizarFactura, soloNumeroFactura } from "@/lib/remito";
 import { asignarADia, marcarPagoWeb } from "../../actions";
 import { agregarSalida, asignarAVehiculo, devolverAPedidos, guardarCostoLogistica, cambiarVehiculoSalida, moverSalida, ordenarSalida, quitarSalida } from "../../ruta/actions";
 import { emitirRemitosDia } from "../../remito/actions";
+import { avisarLogistica, deshacerAvisoLogistica } from "../actions";
 import { cerrarDia, dejarEnCuentaCorriente, dejarListo, reabrirHoja, aprobarCostoDia, deshacerCobro, guardarNumeroFactura, marcarEntrega, reabrirDia, registrarCobro, registrarNoEntrega, type Resultado } from "../actions";
 import { NotaRapida } from "@/components/NotaRapida";
 import { EstadoPagoWeb } from "@/components/EstadoPagoWeb";
@@ -646,6 +647,7 @@ type Props = {
   esDueno: boolean;
   topeCosto: number;
   aprobacion: { costo: number; unidades: number; por: string } | null;
+  avisoLogistica: { por: string; cuando: string } | null;
 };
 
 // Los tres estados de un día, siempre a la vista: ① Armando → ② Lista → ③ Cerrada, con lo que se puede hacer en cada uno.
@@ -690,7 +692,7 @@ function BarraEstado({ estado, esDueno, hayPedidos, resumen, onDejarLista, onVol
   );
 }
 
-export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciales, salidas, vehiculosLibres, repartidores, diasSemana, cerrado, esDueno, topeCosto, aprobacion }: Props) {
+export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciales, salidas, vehiculosLibres, repartidores, diasSemana, cerrado, esDueno, topeCosto, aprobacion, avisoLogistica }: Props) {
   const router = useRouter();
   const [filas, setFilas] = useState(filasIniciales);
   const [error, setError] = useState<string | null>(null);
@@ -814,6 +816,8 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
     router.refresh();
   };
   const reabrir = () => llamar(() => reabrirDia(fecha));
+  const aplicaAviso = fecha >= hoy; // los días pasados no se frenan
+  const sinAviso = aplicaAviso && !avisoLogistica;
   const cerrar = () => {
     if (window.confirm("¿Cerrar el día? Después no se puede mover ni cambiar nada de este día, y solo un gerente lo puede reabrir.")) llamar(() => cerrarDia(fecha));
   };
@@ -895,6 +899,20 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
         onCerrar={cerrar}
         onReabrirDia={reabrir}
       />
+      {aplicaAviso && (
+        <div className="flex justify-center">
+          {avisoLogistica ? (
+            <p className="text-[13px] text-stone-600">✓ Logística avisada por <b className="font-semibold">{avisoLogistica.por}</b> · {avisoLogistica.cuando}{" "}
+              <button type="button" onClick={() => window.confirm("¿Sacar el aviso a logística? Los remitos quedan bloqueados hasta que se avise de nuevo.") && llamar(() => deshacerAvisoLogistica(fecha))} className="ml-1 text-stone-400 underline-offset-2 hover:text-stone-700 hover:underline">deshacer</button>
+            </p>
+          ) : (
+            <div className="flex w-full max-w-3xl flex-wrap items-center justify-between gap-3 rounded-md border border-rojo-600 bg-rojo-50 px-4 py-3">
+              <p className="text-sm font-semibold text-rojo-800">Falta avisar a la logística que salimos. Hasta entonces no se imprimen remitos.</p>
+              <button type="button" onClick={() => window.confirm("¿Confirmás que YA se le avisó a la logística que salimos este día?") && llamar(() => avisarLogistica(fecha))} className="rounded-md bg-verde-700 px-4 py-2 text-sm font-bold text-white hover:bg-verde-800">Ya avisé a logística</button>
+            </div>
+          )}
+        </div>
+      )}
       {costoPorUnidadDia !== null && (
         <div className="flex justify-center py-1">
           <div className={`w-full max-w-3xl overflow-hidden rounded-md border bg-white ${diaSePasa && !aprobado ? "border-rojo-700" : "border-stone-300"}`} title="Costo de todas las camionetas del día ÷ las unidades que llevan entre todas">
@@ -950,7 +968,9 @@ export function HojaDia({ estadoDia, hoy, siluetas, titulo, fecha, filasIniciale
           {salidas.length > 0 && (bloqueoImprimir
             ? <span title={bloqueoImprimir} className="cursor-not-allowed rounded-md border border-stone-300 bg-stone-100 px-3 py-2 font-medium text-stone-400">Imprimir hoja de ruta</span>
             : <a href={`/pedidos/dia/${fecha}/imprimir`} target="_blank" rel="noreferrer" className="rounded-md border border-stone-400 bg-white px-3 py-2 font-medium shadow-sm">Imprimir hoja de ruta</a>)}
-          {filas.length > 0 && <button type="button" onClick={imprimirTodos} className="rounded-md border border-stone-400 bg-white px-3 py-2 font-medium shadow-sm">Imprimir todos los remitos</button>}
+          {filas.length > 0 && (sinAviso
+            ? <span title="Primero avisá a la logística (barra de arriba)" className="cursor-not-allowed rounded-md border border-stone-300 bg-stone-100 px-3 py-2 font-medium text-stone-400">Imprimir todos los remitos</span>
+            : <button type="button" onClick={imprimirTodos} className="rounded-md border border-stone-400 bg-white px-3 py-2 font-medium shadow-sm">Imprimir todos los remitos</button>)}
         </div>
       </div>
       {pasado && !cerrado && <p className="rounded-lg border border-stone-400 bg-crema-100 p-3 text-center text-sm font-semibold text-stone-800">Este día ya pasó y falta cerrarlo. No se le pueden sumar pedidos.</p>}

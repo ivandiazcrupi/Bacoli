@@ -331,3 +331,22 @@ export async function reabrirHoja(fecha: string): Promise<Resultado> {
   revalidatePath("/pedidos", "layout");
   return { ok: true };
 }
+
+/** Cualquiera de oficina marca que ya se le avisó a la logística que ese día salimos (sin esto no se imprimen remitos). */
+export async function avisarLogistica(fecha: string): Promise<Resultado> {
+  const usuario = await exigirOficina();
+  if (!esFechaValida(fecha)) return { ok: false, error: "Fecha inválida." };
+  const f = aFecha(fecha);
+  await db.avisoLogistica.upsert({ where: { fecha: f }, update: {}, create: { fecha: f, avisadoPor: usuario.id } });
+  revalidatePath(`/pedidos/dia/${fecha}`);
+  return { ok: true };
+}
+
+/** Por si se marcó sin querer. */
+export async function deshacerAvisoLogistica(fecha: string): Promise<Resultado> {
+  await exigirOficina();
+  if (!esFechaValida(fecha)) return { ok: false, error: "Fecha inválida." };
+  await db.avisoLogistica.deleteMany({ where: { fecha: aFecha(fecha) } });
+  revalidatePath(`/pedidos/dia/${fecha}`);
+  return { ok: true };
+}

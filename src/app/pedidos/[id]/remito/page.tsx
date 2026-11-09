@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { deFecha, hoy } from "@/lib/fechas";
+import { errorSiFaltaAvisoLogistica } from "@/lib/dias";
 import { exigirOficina } from "@/lib/session";
 import { BarraImpresion } from "../../remito/BarraImpresion";
 import { RemitoDoc } from "../../remito/RemitoDoc";
@@ -22,6 +23,15 @@ export default async function RemitoPedido({ params }: { params: Promise<{ id: s
       <main className="mx-auto max-w-xl space-y-3 px-4 py-10">
         <p>Este pedido todavía no tiene remito. Volvé al pedido y tocá “Remito” para emitirlo.</p>
         <div className="flex justify-end"><BotonVolver fallback={`/pedidos/${id}`} /></div>
+      </main>
+    );
+  }
+  const sinAviso = await errorSiFaltaAvisoLogistica(pedido.fechaEntrega);
+  if (sinAviso) {
+    return (
+      <main className="mx-auto max-w-xl space-y-3 px-4 py-10">
+        <p className="rounded-lg border border-rojo-600 bg-rojo-50 p-3 text-rojo-800" role="alert">{sinAviso}</p>
+        <div className="flex justify-end"><BotonVolver fallback={pedido.fechaEntrega ? `/pedidos/dia/${deFecha(pedido.fechaEntrega)}` : `/pedidos/${id}`} /></div>
       </main>
     );
   }

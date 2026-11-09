@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+import { errorSiFaltaAvisoLogistica } from "@/lib/dias";
 import { aFecha, esFechaValida } from "@/lib/fechas";
 import { formatoRemito } from "@/lib/remito";
 import { porReparto } from "@/lib/ruta";
@@ -24,6 +25,9 @@ async function asignarNumero(tx: Prisma.TransactionClient, pedidoId: string) {
 export async function emitirRemito(pedidoId: string): Promise<{ ok: boolean; numero?: string; error?: string }> {
   await exigirOficina();
   try {
+    const p = await db.pedido.findUnique({ where: { id: pedidoId }, select: { fechaEntrega: true } });
+    const sinAviso = await errorSiFaltaAvisoLogistica(p?.fechaEntrega);
+    if (sinAviso) return { ok: false, error: sinAviso };
     const n = await db.$transaction((tx) => asignarNumero(tx, pedidoId));
     revalidatePath(`/pedidos/${pedidoId}`);
     return { ok: true, numero: formatoRemito(n) };
@@ -36,6 +40,8 @@ export async function emitirRemito(pedidoId: string): Promise<{ ok: boolean; num
 export async function emitirRemitosDia(fecha: string): Promise<{ ok: boolean; cantidad: number; error?: string }> {
   await exigirOficina();
   if (!esFechaValida(fecha)) return { ok: false, cantidad: 0, error: "Fecha inválida." };
+  const sinAviso = await errorSiFaltaAvisoLogistica(fecha);
+  if (sinAviso) return { ok: false, cantidad: 0, error: sinAviso };
   const pedidos = (await db.pedido.findMany({
     where: { fechaEntrega: aFecha(fecha), estado: { not: "CANCELADO" }, webOrden: null, origen: { not: "COBRANZA" }, conFactura: false },
     select: { id: true, remitoNumero: true, ordenDia: true, ordenRuta: true, salida: { select: { orden: true } } },
