@@ -77,8 +77,8 @@ export async function registrarPagosArca(ids: string[], medio: string, obs: stri
     if (f.pagada) continue;
     if (f.pedidoId && f.pedidoEntregado) await registrarCobro(f.pedidoId, medio, undefined, true); // si el pedido no se puede cobrar ahora, igual se marca la factura
     if (f.pedidoId) await db.pedido.update({ where: { id: f.pedidoId }, data: { pagoAvisadoPor: null, pagoAvisadoEn: null } });
-    // La observación del pago (ej. N° de OP) queda en la columna Observación de la hoja.
-    const nueva = obs.trim() ? [f.observacion, obs.trim()].filter(Boolean).join(" · ").slice(0, 150) : f.observacion;
+    // La observación del pago (ej. N° de OP) queda en la columna Observación de la hoja y REEMPLAZA a la anterior (ej. "cargada en sistema de facturación", que ya no vale). Sin texto nuevo, queda la que había.
+    const nueva = obs.trim() ? obs.trim().slice(0, 150) : f.observacion;
     await db.comprobanteArca.update({ where: { id }, data: { pagado: true, medioCobro: medio as MedioPago, pagadoEn: new Date(), obsCobro: obs.trim().slice(0, 150) || null, observacion: nueva || null } });
   }
   void usuario;

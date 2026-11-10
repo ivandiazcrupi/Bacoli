@@ -553,3 +553,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Comercial → Clientes: paquetes del último pedido (pedido del dueño)
 - Se **sacaron** las columnas **"Entrega cada"** y **"Paquetes 30 días"** del tablero. En su lugar hay **"Paquetes último pedido"** (`paqUltimo`): los **paquetes de prepizza (tomate + cebolla, unidades ÷ 2)** del **último pedido que hicieron** (el más nuevo por fecha de carga, **esté entregado o todavía en curso**; los cancelados y los no entregados no cuentan). Las pizzas por unidad, focaccias y otros productos no suman. Por sucursal, es el último pedido de esa sucursal; por cliente, el último de cualquiera de sus sucursales. Tiene filtro numérico (`>10`, `<=5`) y se ordena al tocar el título. Esto reemplaza lo dicho antes de "Entrega cada" y "Paquetes 30 días".
+
+## Observación del pago REEMPLAZA a la anterior (pedido del dueño)
+- Al registrar un pago en Cuenta corriente (Facturas, Remitos y cuenta del cliente) con una observación (ej. "OP 5151"), esa observación **reemplaza** a la que había (antes se sumaba: "CARGADA EN SISTEMA DE FACTURACIÓN · OP 5151"). Si no se escribe nada al pagar, la observación anterior se conserva (`registrarPagosArca`, `registrarPagos`).

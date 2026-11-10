@@ -21,8 +21,8 @@ export async function registrarPagos(pedidoIds: string[], medio: string, obs = "
       return { ok: false, error: r.error ?? "No se pudo registrar el pago." };
     }
     if (obs.trim()) {
-      const p = await db.pedido.findUnique({ where: { id }, select: { obsCobro: true } });
-      await db.pedido.update({ where: { id }, data: { obsCobro: [p?.obsCobro, obs.trim()].filter(Boolean).join(" · ").slice(0, 200) } });
+      // La observación del pago reemplaza a la anterior (ya no vale).
+      await db.pedido.update({ where: { id }, data: { obsCobro: obs.trim().slice(0, 200) } });
     }
   }
   revalidatePath("/cuentas", "layout");
