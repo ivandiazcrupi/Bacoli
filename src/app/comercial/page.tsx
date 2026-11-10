@@ -3,7 +3,7 @@ import { Cabecera } from "@/components/Cabecera";
 import { db } from "@/lib/db";
 import { deFecha, hoy, sumarDias } from "@/lib/fechas";
 import { titulo } from "@/lib/mayusculas";
-import { bultosDe } from "@/lib/ruta";
+import { unidadesPorSabor } from "@/lib/ruta";
 import { exigirOficina } from "@/lib/session";
 import { enlaceWhatsApp } from "@/lib/telefonos";
 import { CONTENEDOR_PEDIDOS } from "../pedidos/Encabezado";
@@ -25,9 +25,8 @@ export default async function Comercial() {
     db.pedido.findMany({ where: { clienteId: { not: null }, estado: { not: "CANCELADO" }, origen: "MAYORISTA" }, select: { clienteId: true, puntoId: true, estado: true, creadoEn: true, fechaEntrega: true, items: { select: { nombre: true, unidad: true, cantidad: true, sinCargo: true, paquetesPor: true } } }, orderBy: { creadoEn: "asc" } }),
   ]);
 
-  type Acum = { fechas: string[]; entregas: string[]; abiertos: (string | null)[]; paq30: number };
+  type Acum = { fechas: string[]; entregas: string[]; abiertos: (string | null)[]; paqUltimo: number };
   type PedidoFila = (typeof pedidos)[number];
-  const hace180 = sumarDias(hoyStr, -180), hace30 = sumarDias(hoyStr, -30);
   // Junta los pedidos por la clave que se elija: el cliente (todas sus sucursales juntas) o cada sucursal por separado.
   const acumular = (clave: (p: PedidoFila) => string | null) => {
     const m = new Map<string, Acum>();
@@ -36,13 +35,14 @@ export default async function Comercial() {
       const k = clave(p);
       if (!k) continue;
       const f = fechaAR(p.creadoEn);
-      const a = m.get(k) ?? { fechas: [], entregas: [], abiertos: [], paq30: 0 };
+      const a = m.get(k) ?? { fechas: [], entregas: [], abiertos: [], paqUltimo: 0 };
       a.fechas.push(f);
+      const u = unidadesPorSabor(p.items);
+      a.paqUltimo = (u.tomate + u.cebolla) / 2; // paquetes de prepizza de este pedido; los pedidos van del más viejo al más nuevo, así que queda el del último
       if (p.estado === "PENDIENTE") a.abiertos.push(p.fechaEntrega ? deFecha(p.fechaEntrega) : null); // pedido en curso: con su día de entrega, o esperando día
       if (p.estado === "ENTREGADO") { // día en que se entregó (los comprobantes cargados a mano no tienen día: valen el de carga)
         const e = p.fechaEntrega ? deFecha(p.fechaEntrega) : f;
         a.entregas.push(e);
-        if (e >= hace30) a.paq30 += bultosDe(p.items); // paquetes ENTREGADOS en los últimos 30 días
       }
       m.set(k, a);
     }
@@ -67,14 +67,11 @@ export default async function Comercial() {
     const ultimo = fechas.length ? fechas[fechas.length - 1] : null; // último pedido cargado
     const entregas = [...(a?.entregas ?? [])].sort();
     const entrega = entregas.length ? entregas[entregas.length - 1] : null; // última entrega
-    // Cada cuántos días se le entrega: de sus entregas de los últimos 180 días (un día = una entrega), el tiempo entre la primera y la última dividido por la cantidad de intervalos.
-    const dias180 = [...new Set(entregas.filter((f) => f >= hace180))];
-    const ritmo = dias180.length >= 2 ? Math.max(1, Math.round(dias(dias180[dias180.length - 1], dias180[0]) / (dias180.length - 1))) : null;
     const sinEntrega = entrega ? dias(hoyStr, entrega) : null; // días desde su última entrega (null = todavía no se le entregó nada)
     const dif = entrega && ultimo ? dias(entrega, ultimo) : null; // días entre el último pedido y la última entrega (negativo = hay un pedido más nuevo sin entregar)
     return {
       id, clienteId, nombre, barrios, ultimo, entrega, sinEntrega, dif, enCurso: enCursoDe(a?.abiertos ?? []),
-      ritmo, paq30: a?.paq30 ?? 0, total: fechas.length,
+      paqUltimo: a?.paqUltimo ?? null, total: fechas.length,
       telefono: tel?.telefono ?? null, wa: tel ? enlaceWhatsApp(tel.telefono) : null,
     };
   };
