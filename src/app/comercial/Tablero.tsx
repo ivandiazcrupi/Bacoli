@@ -41,7 +41,7 @@ const entradaFiltro = "h-7 w-full min-w-0 rounded border border-stone-300 bg-whi
 type Col = "nombre" | "ultimo" | "entrega" | "sinEntrega" | "dif" | "montoUltimo";
 
 // Tarjetas minimalistas: blancas, con el número en color (verde = pidieron, rojo = hay clientes sin pedir). La elegida se pinta en gris oscuro.
-const COLOR_NUM: Record<string, string> = { neutro: "text-stone-900", apagado: "text-stone-300", verde: "text-verde-700", rojo1: "text-rojo-600", rojo2: "text-rojo-600", rojo21: "text-rojo-600", rojo3: "text-rojo-700", rojo4: "text-rojo-800" };
+const COLOR_NUM: Record<string, string> = { neutro: "text-stone-900", apagado: "text-stone-300", verde: "text-verde-700", amarillo: "text-[#a07c0a]", naranja: "text-[#c2570c]", rojo3: "text-rojo-700", rojo4: "text-rojo-800" };
 
 function Tarjeta({ titulo, valor, tono, activa, ayuda, onClick, onQuitar }: { titulo: string; valor: number; tono: string; activa: boolean; ayuda: string; onClick: () => void; onQuitar?: () => void }) {
   return (
@@ -128,9 +128,9 @@ export function Tablero({ clientes, sucursales }: { clientes: FilaCliente[]; suc
         <Tarjeta titulo={vista === "clientes" ? "Clientes activos" : "Sucursales activas"} valor={resumen.activos} tono="neutro" activa={filtro === "todos"} ayuda={AYUDA.todos} onClick={() => elegir("todos")} />
         <Tarjeta titulo="Con pedido en curso" valor={resumen.curso} tono={resumen.curso > 0 ? "neutro" : "apagado"} activa={filtro === "curso"} ayuda={AYUDA.curso} onClick={() => elegir("curso")} onQuitar={() => elegir("todos")} />
         <Tarjeta titulo="Recibieron en los últimos 7 días" valor={resumen.d7} tono={resumen.d7 > 0 ? "verde" : "apagado"} activa={filtro === "d7"} ayuda={AYUDA.d7} onClick={() => elegir("d7")} onQuitar={() => elegir("todos")} />
-        <Tarjeta titulo="Sin entrega hace 7 días" valor={resumen.s7} tono={resumen.s7 > 0 ? "rojo1" : "apagado"} activa={filtro === "s7"} ayuda={AYUDA.s7} onClick={() => elegir("s7")} onQuitar={() => elegir("todos")} />
-        <Tarjeta titulo="Sin entrega hace 15 días" valor={resumen.s15} tono={resumen.s15 > 0 ? "rojo2" : "apagado"} activa={filtro === "s15"} ayuda={AYUDA.s15} onClick={() => elegir("s15")} onQuitar={() => elegir("todos")} />
-        <Tarjeta titulo="Sin entrega hace 21 días" valor={resumen.s21} tono={resumen.s21 > 0 ? "rojo21" : "apagado"} activa={filtro === "s21"} ayuda={AYUDA.s21} onClick={() => elegir("s21")} onQuitar={() => elegir("todos")} />
+        <Tarjeta titulo="Sin entrega hace 7 días" valor={resumen.s7} tono={resumen.s7 > 0 ? "amarillo" : "apagado"} activa={filtro === "s7"} ayuda={AYUDA.s7} onClick={() => elegir("s7")} onQuitar={() => elegir("todos")} />
+        <Tarjeta titulo="Sin entrega hace 15 días" valor={resumen.s15} tono={resumen.s15 > 0 ? "naranja" : "apagado"} activa={filtro === "s15"} ayuda={AYUDA.s15} onClick={() => elegir("s15")} onQuitar={() => elegir("todos")} />
+        <Tarjeta titulo="Sin entrega hace 21 días" valor={resumen.s21} tono={resumen.s21 > 0 ? "naranja" : "apagado"} activa={filtro === "s21"} ayuda={AYUDA.s21} onClick={() => elegir("s21")} onQuitar={() => elegir("todos")} />
         <Tarjeta titulo="Sin entrega hace 30 días" valor={resumen.s30} tono={resumen.s30 > 0 ? "rojo3" : "apagado"} activa={filtro === "s30"} ayuda={AYUDA.s30} onClick={() => elegir("s30")} onQuitar={() => elegir("todos")} />
         <Tarjeta titulo="Sin entrega hace 45 días" valor={resumen.s45} tono={resumen.s45 > 0 ? "rojo4" : "apagado"} activa={filtro === "s45"} ayuda={AYUDA.s45} onClick={() => elegir("s45")} onQuitar={() => elegir("todos")} />
         <Tarjeta titulo="Nunca recibieron" valor={resumen.inactivos} tono={resumen.inactivos > 0 ? "neutro" : "apagado"} activa={filtro === "inactivos"} ayuda={AYUDA.inactivos} onClick={() => elegir("inactivos")} onQuitar={() => elegir("todos")} />
@@ -189,7 +189,7 @@ export function Tablero({ clientes, sucursales }: { clientes: FilaCliente[]; suc
                     {f.sinEntrega !== null && <span className="text-[10.5px] text-stone-400">última hace {f.sinEntrega} d</span>}
                   </span>
                   : f.sinEntrega === null ? <span className="rounded-full bg-crema-100 px-2.5 py-0.5 text-[12px] font-semibold text-stone-500" title="Todavía no se le entregó ningún pedido">Sin entregas</span>
-                  : <span className={`inline-block min-w-[44px] rounded-full px-2.5 py-0.5 text-[14px] font-bold tabular-nums ${f.sinEntrega > 30 ? "bg-rojo-50 text-rojo-700" : f.sinEntrega > 7 ? "bg-[#fdf8e3] text-[#8a6a05]" : "bg-verde-50 text-verde-800"}`}>{f.sinEntrega === 0 ? "Hoy" : f.sinEntrega}</span>}
+                  : <span className={`inline-block min-w-[44px] rounded-full px-2.5 py-0.5 text-[14px] font-bold tabular-nums ${f.sinEntrega > 30 ? "bg-rojo-50 text-rojo-700" : f.sinEntrega > 15 ? "bg-[#fdeedd] text-[#b4530a]" : f.sinEntrega > 7 ? "bg-[#fdf8e3] text-[#8a6a05]" : "bg-verde-50 text-verde-800"}`}>{f.sinEntrega === 0 ? "Hoy" : f.sinEntrega}</span>}
               </span>
               <span className="tabular-nums text-stone-600" title={f.dif === null ? "" : f.dif < 0 ? `Tiene un pedido más nuevo (${fechaCorta(f.ultimo)}) que todavía no se entregó` : `Entre el último pedido y la última entrega pasaron ${f.dif} días`}>
                 {f.dif === null ? <span className="text-stone-300">—</span> : f.dif === 0 ? "Mismo día" : f.dif < 0 ? <span className="text-[#8a6a05]">−{Math.abs(f.dif)} {Math.abs(f.dif) === 1 ? "día" : "días"}</span> : `${f.dif} ${f.dif === 1 ? "día" : "días"}`}

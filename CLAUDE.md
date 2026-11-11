@@ -567,3 +567,4 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Comercial → Clientes: tarjeta "Sin entrega hace 21 días" (pedido del dueño)
 - Se sumó una tarjeta: los grupos por días sin ENTREGA quedan **7 (más de 7 y hasta 15) · 15 (más de 15 y hasta 21) · 21 (más de 21 y hasta 30) · 30 (más de 30 y hasta 45) · 45 (más de 45)**, cada cliente/sucursal en uno solo. Las demás tarjetas (activas, en curso, recibieron en 7 días, nunca recibieron) no cambian. Reemplaza los tramos de la sección "lo que cuenta es la ENTREGA".
+- **Colores de los días sin entrega** (pedido del dueño; en la columna SIN ENTREGA y en el número de cada tarjeta): **verde hasta 7 días, amarillo de 8 a 15, naranja de 16 a 30, rojo desde 31** (el dueño dijo "hasta 21 naranja" y "desde 30 rojo": los días 22 a 30 los puse naranja; se cambia en `Tablero.tsx`). Reemplaza los umbrales anteriores (verde ≤7, amarillo ≤30, rojo >30).
