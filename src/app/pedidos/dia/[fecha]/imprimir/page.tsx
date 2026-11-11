@@ -4,7 +4,7 @@ import { estadoDelDia } from "@/lib/dias";
 import { db } from "@/lib/db";
 import { aFecha, deFecha, diaMes, esFechaValida, nombreDia } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
-import { bultosDe, focacciasPorTipo, num, otrosProductos, porReparto, totalUnidades, UNIDADES_POR_PAQUETE, unidadesPorSabor } from "@/lib/ruta";
+import { focacciasPorTipo, napolitanasPorSabor, num, otrasPizzasDe, otrosProductos, porReparto, UNIDADES_POR_PAQUETE } from "@/lib/ruta";
 import { exigirOficina } from "@/lib/session";
 import { titulo } from "@/lib/mayusculas";
 import { BarraImpresion } from "../../../remito/BarraImpresion";
@@ -62,9 +62,11 @@ export default async function ImprimirHojaDeRuta({ params, searchParams }: { par
         <div className="space-y-6 py-6 print:space-y-0 print:py-0">
           {salidas.filter((sa) => salida || pedidos.some((p) => p.salidaId === sa.id)).map((sa) => {
             const grupo = filas.filter((x) => pedidos.find((p) => p.id === x.id)?.salidaId === sa.id);
-            const paquetes = pedidos.filter((p) => p.salidaId === sa.id).reduce((s, p) => s + bultosDe(p.items), 0);
             const focaccias = pedidos.filter((p) => p.salidaId === sa.id).reduce((t, p) => { const x = focacciasPorTipo(p.items); return { oliva: t.oliva + x.oliva, cherry: t.cherry + x.cherry }; }, { oliva: 0, cherry: 0 });
-            const sabores = pedidos.filter((p) => p.salidaId === sa.id).reduce((t, p) => { const x = unidadesPorSabor(p.items); return { tomate: t.tomate + x.tomate, cebolla: t.cebolla + x.cebolla, pizzas: t.pizzas + x.pizzas }; }, { tomate: 0, cebolla: 0, pizzas: 0 });
+            // Solo las prepizzas napolitanas van en paquetes; las pizzas de 19 cm y las demás pizzas salen aparte, por unidad (pedido del dueño).
+            const sabores = pedidos.filter((p) => p.salidaId === sa.id).reduce((t, p) => { const x = napolitanasPorSabor(p.items); return { tomate: t.tomate + x.tomate, cebolla: t.cebolla + x.cebolla }; }, { tomate: 0, cebolla: 0 });
+            const paquetes = (sabores.tomate + sabores.cebolla) / UNIDADES_POR_PAQUETE;
+            const otrasPizzas = pedidos.filter((p) => p.salidaId === sa.id).reduce((t, p) => t + otrasPizzasDe(p.items), 0);
             const otros = otrosProductos(pedidos.filter((p) => p.salidaId === sa.id).flatMap((p) => p.items));
             return (
               <section key={sa.id} className="mx-auto w-[277mm] bg-white p-[8mm] font-[Helvetica,Arial,sans-serif] text-neutral-900 shadow print:w-full print:p-0 print:shadow-none [&:not(:last-child)]:break-after-page">
@@ -81,7 +83,7 @@ export default async function ImprimirHojaDeRuta({ params, searchParams }: { par
                       </div>
                       <div>
                         <dt className="text-[9px] font-semibold uppercase tracking-[0.2em] text-neutral-500">Unidades</dt>
-                        <dd className="mt-1 text-[24px] font-bold leading-none tabular-nums">{totalUnidades(sabores)}</dd>
+                        <dd className="mt-1 text-[24px] font-bold leading-none tabular-nums">{sabores.tomate + sabores.cebolla}</dd>
                       </div>
                       <div>
                         <dt className="text-[9px] font-semibold uppercase tracking-[0.2em] text-neutral-500">Tomate (paq.)</dt>
@@ -91,10 +93,10 @@ export default async function ImprimirHojaDeRuta({ params, searchParams }: { par
                         <dt className="text-[9px] font-semibold uppercase tracking-[0.2em] text-neutral-500">Cebolla (paq.)</dt>
                         <dd className="mt-1 text-[24px] font-bold leading-none tabular-nums">{num(sabores.cebolla / UNIDADES_POR_PAQUETE)}</dd>
                       </div>
-                      {sabores.pizzas > 0 && (
+                      {otrasPizzas > 0 && (
                         <div>
-                          <dt className="text-[9px] font-semibold uppercase tracking-[0.2em] text-neutral-500">Pizzas</dt>
-                          <dd className="mt-1 text-[24px] font-bold leading-none tabular-nums">{sabores.pizzas}</dd>
+                          <dt className="text-[9px] font-semibold uppercase tracking-[0.2em] text-neutral-500">Otras pizzas (unid.)</dt>
+                          <dd className="mt-1 text-[24px] font-bold leading-none tabular-nums">{otrasPizzas}</dd>
                         </div>
                       )}
                       {focaccias.oliva > 0 && (

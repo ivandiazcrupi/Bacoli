@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { aFecha } from "@/lib/fechas";
-import { focacciasPorTipo, TOPE_COSTO_POR_PIZZA, unidadesPorSabor } from "@/lib/ruta";
+import { TOPE_COSTO_POR_PIZZA, unidadesParaCosto } from "@/lib/ruta";
 
 /** Costo logístico GENERAL de un día: lo que cuestan las camionetas con pedidos ÷ las unidades que llevan (pizzas, prepizzas y focaccias). */
 export async function costoLogisticoDelDia(fecha: string) {
@@ -15,7 +15,7 @@ export async function costoLogisticoDelDia(fecha: string) {
   const conPedidos = salidas.filter((sa) => pedidos.some((p) => p.salidaId === sa.id));
   const faltan = conPedidos.filter((sa) => sa.costoLogistica === null).length;
   const costo = conPedidos.reduce((t, sa) => t + Number(sa.costoLogistica ?? 0), 0);
-  const unidades = pedidos.reduce((t, p) => { const a = unidadesPorSabor(p.items); const x = focacciasPorTipo(p.items); return t + a.tomate + a.cebolla + a.pizzas + x.oliva + x.cherry; }, 0);
+  const unidades = pedidos.reduce((t, p) => t + unidadesParaCosto(p.items), 0);
   const porUnidad = faltan === 0 && unidades > 0 ? costo / unidades : null;
   const sePasa = porUnidad !== null && porUnidad > tope;
   // La aprobación solo vale si el costo y las unidades siguen siendo los que se aprobaron.

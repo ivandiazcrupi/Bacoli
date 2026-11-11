@@ -1,7 +1,7 @@
 import { webPagado, textoPagoWeb } from "@/lib/webpago";
 import type { Prisma } from "@prisma/client";
 import { importeVigente } from "@/lib/cuenta";
-import { bultosDe, focacciasPorTipo, unidadesPorSabor } from "@/lib/ruta";
+import { bultosDe, focacciasPorTipo, unidadesParaCosto, unidadesPorSabor } from "@/lib/ruta";
 import { db } from "@/lib/db";
 import { oracion, titulo } from "@/lib/mayusculas";
 import { formatoRemito } from "@/lib/remito";
@@ -85,6 +85,7 @@ export function aFila(p: PedidoCompleto, debe: Set<string>): Fila {
     salidaId: p.salidaId,
     bultos: bultosDe(p.items),
     sabores: unidadesPorSabor(p.items),
+    unidCosto: unidadesParaCosto(p.items),
     focOliva: focacciasPorTipo(p.items).oliva,
     focCherry: focacciasPorTipo(p.items).cherry,
     webOrden: p.webOrden,

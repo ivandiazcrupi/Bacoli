@@ -45,6 +45,7 @@ export type Fila = {
   salidaId: string | null;
   bultos: number;
   sabores: { tomate: number; cebolla: number; pizzas: number };
+  unidCosto: number; // unidades que cuentan para el costo logístico (napolitanas + otras pizzas + focaccias)
   focOliva: number;
   focCherry: number;
   webOrden: string | null; // pedido de la tienda online: sin cuenta corriente ni remito
@@ -548,8 +549,8 @@ const CELDA_PIE = "flex min-h-[104px] min-w-0 flex-col items-center justify-cent
 function ResumenVuelta({ grupo, capacidad, salida, tope, cerrado }: { grupo: Fila[]; capacidad: number | null; salida: SalidaInfo; tope: number; cerrado: boolean }) {
   const paquetes = grupo.reduce((t, f) => t + f.bultos, 0);
   const unidadesPizza = grupo.reduce((t, f) => t + f.sabores.tomate + f.sabores.cebolla + f.sabores.pizzas, 0);
-  // Para el costo cuentan pizzas, prepizzas y focaccias; los demás productos de la tienda no.
-  const unidadesCosto = unidadesPizza + grupo.reduce((t, f) => t + f.focOliva + f.focCherry, 0);
+  // Para el costo cuentan prepizzas napolitanas, otras pizzas (19 cm, muzzarella…) y focaccias; los demás productos de la tienda no.
+  const unidadesCosto = grupo.reduce((t, f) => t + f.unidCosto, 0);
   const total = grupo.filter((f) => !f.cobranza).reduce((t, f) => t + f.monto, 0); // las cobranzas no son facturación
   const pedidos = grupo.filter((f) => !f.cobranza).length;
   return (

@@ -5,7 +5,7 @@ import { importeVigente } from "@/lib/cuenta";
 import { db } from "@/lib/db";
 import { aFecha, deFecha, diaMes, esFechaValida, diasDeSemana, finDeSemana, hoy, inicioSemana, nombreDia, sumarDias, semanaDeTrabajo } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
-import { bultosDe, focacciasPorTipo, num, TOPE_COSTO_POR_PIZZA, totalUnidades, unidadesPorSabor } from "@/lib/ruta";
+import { bultosDe, num, TOPE_COSTO_POR_PIZZA, totalUnidades, unidadesParaCosto, unidadesPorSabor } from "@/lib/ruta";
 import { exigirOficina } from "@/lib/session";
 import { vendedoresDesbloqueado } from "@/lib/claveVendedores";
 import { DesbloquearTotales, OcultarTotales } from "./TotalFacturacion";
@@ -28,7 +28,7 @@ export default async function Semana({ searchParams }: { searchParams: Promise<{
   ]);
   const tope = Number(empresa?.costoLogisticoUnidad ?? TOPE_COSTO_POR_PIZZA);
   // Costo logístico por unidad: lo que cuestan las camionetas con pedidos ÷ las unidades que llevan (pizzas, prepizzas y focaccias). Null si falta cargar algún costo o no hay camionetas.
-  const unidadesCosto = (ps: typeof pedidos) => ps.reduce((t, p) => { const a = unidadesPorSabor(p.items); const x = focacciasPorTipo(p.items); return t + a.tomate + a.cebolla + a.pizzas + x.oliva + x.cherry; }, 0);
+  const unidadesCosto = (ps: typeof pedidos) => ps.reduce((t, p) => t + unidadesParaCosto(p.items), 0);
   const costoDe = (fs: string[]) => {
     const sas = salidas.filter((sa) => fs.includes(deFecha(sa.fecha)) && pedidos.some((p) => p.salidaId === sa.id));
     const u = unidadesCosto(pedidos.filter((p) => p.salidaId && p.fechaEntrega && fs.includes(deFecha(p.fechaEntrega))));

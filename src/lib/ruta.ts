@@ -75,6 +75,42 @@ export function focacciasDe(items: RenglonRuta[]) {
   return f.oliva + f.cherry;
 }
 
+/** Pizzas de 19 cm (pedido del dueño: se cuentan siempre por UNIDAD, nunca como paquetes). */
+const es19cm = (nombre = "") => /\b19\s*CM\b/.test(sinTildes(nombre.toUpperCase()));
+
+/** Solo las prepizzas NAPOLITANAS (tomate, cebolla y los combos), en unidades (paquete = 2); las de 19 cm no entran. Para la hoja de ruta impresa y el costo. */
+export function napolitanasPorSabor(items: RenglonRuta[]) {
+  const r = { tomate: 0, cebolla: 0 };
+  for (const i of items) {
+    if (es19cm(i.nombre)) continue;
+    const c = claseDe(i.nombre);
+    if (c === "tomate" || c === "cebolla") r[c] += pizzasDe(i);
+  }
+  return r;
+}
+
+/**
+ * "Otras pizzas" por UNIDAD: las de 19 cm (cualquier sabor) y las demás pizzas que no son la prepizza napolitana
+ * (PIZZA MUZZARELLA, JAMÓN, FUGAZZETA…). No incluye focaccias, combos ni envío.
+ */
+export function otrasPizzasDe(items: RenglonRuta[]) {
+  let total = 0;
+  for (const i of items) {
+    const n = sinTildes((i.nombre ?? "").toUpperCase());
+    if (n.includes("FOCACCIA") || n.includes("COMBO")) continue;
+    const c = claseDe(i.nombre);
+    const cuenta = es19cm(i.nombre) || c === "pizzas" || (c === null && n.includes("PIZZA"));
+    if (cuenta) total += (i.cantidad + (i.sinCargo ?? 0)) * (i.paquetesPor ?? 1);
+  }
+  return total;
+}
+
+/** Unidades que cuentan para el costo logístico: prepizzas napolitanas + otras pizzas (19 cm, muzzarella…) + focaccias. */
+export function unidadesParaCosto(items: RenglonRuta[]) {
+  const n = napolitanasPorSabor(items);
+  return n.tomate + n.cebolla + otrasPizzasDe(items) + focacciasDe(items);
+}
+
 export const totalUnidades = (x: { tomate: number; cebolla: number; pizzas: number }) => x.tomate + x.cebolla + x.pizzas;
 
 /** Paquetes de pizza = unidades ÷ 2 (una pizza por unidad es medio paquete): así Paquetes × 2 = Unidades siempre. */
@@ -104,7 +140,7 @@ export function otrosProductos(items: RenglonRuta[]) {
     const nombre = (i.nombre ?? "").trim();
     const n = sinTildes(nombre.toUpperCase());
     if (!nombre || i.paquetesPor === 0 || n.startsWith("ENVIO")) continue; // el envío no es un producto
-    if (claseDe(nombre) || n.includes("COMBO NAPOLITANO")) continue; // pizzas y prepizzas
+    if (claseDe(nombre) || n.includes("COMBO NAPOLITANO") || otrasPizzasDe([i]) > 0) continue; // pizzas y prepizzas (incluidas las de 19 cm, que salen en "Otras pizzas")
     if (focacciasPorTipo([i]).oliva + focacciasPorTipo([i]).cherry > 0) continue; // focaccias
     total.set(nombre.toUpperCase(), (total.get(nombre.toUpperCase()) ?? 0) + i.cantidad + (i.sinCargo ?? 0));
   }
