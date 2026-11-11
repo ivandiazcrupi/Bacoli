@@ -556,3 +556,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Observación del pago REEMPLAZA a la anterior (pedido del dueño)
 - Al registrar un pago en Cuenta corriente (Facturas, Remitos y cuenta del cliente) con una observación (ej. "OP 5151"), esa observación **reemplaza** a la que había (antes se sumaba: "CARGADA EN SISTEMA DE FACTURACIÓN · OP 5151"). Si no se escribe nada al pagar, la observación anterior se conserva (`registrarPagosArca`, `registrarPagos`).
+
+## Comercial → Clientes: MONTO del último pedido (pedido del dueño)
+- La columna **"Paquetes último pedido"** pasó a ser **"Monto último pedido"** (`montoUltimo`): lo que valió **en pesos** el último pedido que se cargó (el más nuevo por fecha de carga, entregado o en curso; cancelados y no entregados no cuentan), mostrado sin centavos ($150.000). Es el **importe final** del pedido (`importeVigente`: con IVA si lleva factura; lo entregado si ya se entregó). Filtro numérico con signo (`>100000`) y orden al tocar el título. Reemplaza lo dicho en la sección anterior sobre paquetes.

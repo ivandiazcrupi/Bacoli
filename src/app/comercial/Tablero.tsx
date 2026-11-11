@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { num } from "@/lib/ruta";
+// Pesos sin centavos ($150.000), como se lee de un vistazo.
+const formatoPesos = (n: number) => new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
 import { coincideNumero } from "@/lib/filtroNumero";
 import { FiltroLista, SEP } from "../cuentas/FiltroLista";
 export type FilaCliente = {
   id: string; clienteId: string; nombre: string; barrios: string;
   ultimo: string | null; entrega: string | null; sinEntrega: number | null; dif: number | null; enCurso: string | null;
-  paqUltimo: number | null; total: number; telefono: string | null; wa: string | null;
+  montoUltimo: number | null; total: number; telefono: string | null; wa: string | null;
 };
 
 const fechaCorta = (s: string | null) => (s ? `${s.slice(8)}/${s.slice(5, 7)}/${s.slice(2, 4)}` : "—");
@@ -36,7 +37,7 @@ const dentro = (f: FilaCliente, k: Filtro) => k === "todos" || grupoDe(f) === k;
 const estadoContacto = (f: FilaCliente) => (f.wa ? "Con WhatsApp" : f.telefono ? "Teléfono no válido" : "Sin teléfono");
 const entradaFiltro = "h-7 w-full min-w-0 rounded border border-stone-300 bg-white px-1.5 text-center text-[12px] font-normal normal-case tracking-normal text-stone-800 placeholder:text-stone-300 focus:border-verde-700 focus:outline-none";
 
-type Col = "nombre" | "ultimo" | "entrega" | "sinEntrega" | "dif" | "paqUltimo";
+type Col = "nombre" | "ultimo" | "entrega" | "sinEntrega" | "dif" | "montoUltimo";
 
 // Tarjetas minimalistas: blancas, con el número en color (verde = pidieron, rojo = hay clientes sin pedir). La elegida se pinta en gris oscuro.
 const COLOR_NUM: Record<string, string> = { neutro: "text-stone-900", apagado: "text-stone-300", verde: "text-verde-700", rojo1: "text-rojo-600", rojo2: "text-rojo-600", rojo3: "text-rojo-700", rojo4: "text-rojo-800" };
@@ -84,7 +85,7 @@ export function Tablero({ clientes, sucursales }: { clientes: FilaCliente[]; suc
       if (fCliente && !fCliente.split(SEP).includes(f.nombre)) return false;
       if (fUltimo.trim() && !fechaCorta(f.ultimo).includes(fUltimo.trim())) return false;
       if (fEntrega.trim() && !fechaCorta(f.entrega).includes(fEntrega.trim())) return false;
-      if (!coincideNumero(f.sinEntrega, fSin) || !coincideNumero(f.dif, fDif) || !coincideNumero(f.paqUltimo, fPaq)) return false;
+      if (!coincideNumero(f.sinEntrega, fSin) || !coincideNumero(f.dif, fDif) || !coincideNumero(f.montoUltimo, fPaq)) return false;
       if (fContacto && !fContacto.split(SEP).includes(estadoContacto(f))) return false;
       return true;
     });
@@ -158,7 +159,7 @@ export function Tablero({ clientes, sucursales }: { clientes: FilaCliente[]; suc
             <Titulo col="entrega" ayuda="Fecha de la última vez que se le entregó.">Última entrega</Titulo>
             <Titulo col="sinEntrega" ayuda="Días que pasaron desde su última ENTREGA. Es el que cuenta: verde hasta 7 días, amarillo hasta 30 y rojo más de 30.">Sin entrega (días)</Titulo>
             <Titulo col="dif" ayuda="Días entre el último pedido y la última entrega. Si tiene un signo menos, hay un pedido más nuevo que todavía no se entregó.">Diferencia</Titulo>
-            <Titulo col="paqUltimo" ayuda="Paquetes de prepizza (tomate y cebolla) del último pedido que hicieron, esté entregado o todavía en curso.">Paquetes último pedido</Titulo>
+            <Titulo col="montoUltimo" ayuda="Monto en pesos del último pedido que se cargó (importe final, con IVA si lleva factura), esté entregado o todavía en curso.">Monto último pedido</Titulo>
             <span>Contactar</span>
           </div>
             <div className={`grid items-center gap-x-3 px-4 pb-2.5 pt-1.5 ${GRILLA}`}>
@@ -167,7 +168,7 @@ export function Tablero({ clientes, sucursales }: { clientes: FilaCliente[]; suc
               <input aria-label="Filtrar última entrega" value={fEntrega} onChange={(e) => setFEntrega(e.target.value)} placeholder="Ej: 03/10" className={entradaFiltro} />
               <input aria-label="Filtrar días sin entrega" value={fSin} onChange={(e) => setFSin(e.target.value)} placeholder="Ej: >15" title="Número exacto o con signo: 15, >15, >=15, <7" className={entradaFiltro} />
               <input aria-label="Filtrar diferencia entre pedido y entrega" value={fDif} onChange={(e) => setFDif(e.target.value)} placeholder="Ej: >7" title="Número exacto o con signo: 7, >7, <0" className={entradaFiltro} />
-              <input aria-label="Filtrar paquetes del último pedido" value={fPaq} onChange={(e) => setFPaq(e.target.value)} placeholder="Ej: >=50" title="Número exacto o con signo: 50, >50, <10" className={entradaFiltro} />
+              <input aria-label="Filtrar monto del último pedido" value={fPaq} onChange={(e) => setFPaq(e.target.value)} placeholder="Ej: >100000" title="Número exacto o con signo: 100000, >100000, <50000" className={entradaFiltro} />
               <FiltroLista varios titulo="Contactar" opciones={["Con WhatsApp", "Sin teléfono", "Teléfono no válido"]} valor={fContacto} onCambio={setFContacto} />
             </div>
           </div>
@@ -191,7 +192,7 @@ export function Tablero({ clientes, sucursales }: { clientes: FilaCliente[]; suc
               <span className="tabular-nums text-stone-600" title={f.dif === null ? "" : f.dif < 0 ? `Tiene un pedido más nuevo (${fechaCorta(f.ultimo)}) que todavía no se entregó` : `Entre el último pedido y la última entrega pasaron ${f.dif} días`}>
                 {f.dif === null ? <span className="text-stone-300">—</span> : f.dif === 0 ? "Mismo día" : f.dif < 0 ? <span className="text-[#8a6a05]">−{Math.abs(f.dif)} {Math.abs(f.dif) === 1 ? "día" : "días"}</span> : `${f.dif} ${f.dif === 1 ? "día" : "días"}`}
               </span>
-              <span className="tabular-nums" title="Paquetes de prepizza del último pedido">{f.paqUltimo === null ? <span className="text-stone-300">—</span> : num(f.paqUltimo)}</span>
+              <span className="tabular-nums" title="Monto del último pedido">{f.montoUltimo === null ? <span className="text-stone-300">—</span> : formatoPesos(f.montoUltimo)}</span>
               <span>
                 {f.wa ? <a href={f.wa} target="_blank" rel="noreferrer" title={`Escribirle por WhatsApp${f.telefono ? ` · ${f.telefono}` : ""}`} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-verde-700 bg-white px-3 text-[12.5px] font-semibold text-verde-800 hover:bg-verde-700 hover:text-white">
                   <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-current" aria-hidden><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.2-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.8s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 1.9c.1.2.1.4 0 .6l-.4.6c-.1.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.4.1.6-.1l.8-1c.2-.3.4-.2.6-.1l1.8.9c.3.1.5.2.5.3.1.2.1.8-.1 1.4Z" /></svg>
