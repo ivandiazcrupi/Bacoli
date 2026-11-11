@@ -65,7 +65,6 @@ export default async function ImprimirHojaDeRuta({ params, searchParams }: { par
             const focaccias = pedidos.filter((p) => p.salidaId === sa.id).reduce((t, p) => { const x = focacciasPorTipo(p.items); return { oliva: t.oliva + x.oliva, cherry: t.cherry + x.cherry }; }, { oliva: 0, cherry: 0 });
             // Solo las prepizzas napolitanas van en paquetes; las pizzas de 19 cm y las demás pizzas salen aparte, por unidad (pedido del dueño).
             const sabores = pedidos.filter((p) => p.salidaId === sa.id).reduce((t, p) => { const x = napolitanasPorSabor(p.items); return { tomate: t.tomate + x.tomate, cebolla: t.cebolla + x.cebolla }; }, { tomate: 0, cebolla: 0 });
-            const paquetes = (sabores.tomate + sabores.cebolla) / UNIDADES_POR_PAQUETE;
             const otrasPizzas = pedidos.filter((p) => p.salidaId === sa.id).reduce((t, p) => t + otrasPizzasDe(p.items), 0);
             const otros = otrosProductos(pedidos.filter((p) => p.salidaId === sa.id).flatMap((p) => p.items));
             return (
@@ -78,11 +77,7 @@ export default async function ImprimirHojaDeRuta({ params, searchParams }: { par
                   <div className="flex items-end gap-10">
                     <dl className="flex gap-7 text-right">
                       <div>
-                        <dt className="text-[9px] font-semibold uppercase tracking-[0.2em] text-neutral-500">Paquetes</dt>
-                        <dd className="mt-1 text-[24px] font-bold leading-none tabular-nums">{num(paquetes)}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-[9px] font-semibold uppercase tracking-[0.2em] text-neutral-500">Unidades</dt>
+                        <dt className="text-[9px] font-semibold uppercase tracking-[0.2em] text-neutral-500">Unidades prepizza</dt>
                         <dd className="mt-1 text-[24px] font-bold leading-none tabular-nums">{sabores.tomate + sabores.cebolla}</dd>
                       </div>
                       <div>
