@@ -19,7 +19,8 @@ const FILTROS = [
   ["curso", "Con pedido en curso", "Ya pidieron y el pedido todavía no se entregó (tiene día de entrega o espera día): no hace falta llamarlos."],
   ["d7", "Recibieron en los últimos 7 días", "Se les entregó hace 7 días o menos."],
   ["s7", "Sin entrega hace 7 días", "Su última entrega fue hace más de 7 y hasta 15 días."],
-  ["s15", "Sin entrega hace 15 días", "Su última entrega fue hace más de 15 y hasta 30 días."],
+  ["s15", "Sin entrega hace 15 días", "Su última entrega fue hace más de 15 y hasta 21 días."],
+  ["s21", "Sin entrega hace 21 días", "Su última entrega fue hace más de 21 y hasta 30 días."],
   ["s30", "Sin entrega hace 30 días", "Su última entrega fue hace más de 30 y hasta 45 días."],
   ["s45", "Sin entrega hace 45 días", "Su última entrega fue hace más de 45 días."],
   ["inactivos", "Nunca recibieron", "Figuran como cliente, pero todavía no se les entregó ningún pedido."],
@@ -31,7 +32,7 @@ const grupoDe = (f: FilaCliente): Exclude<Filtro, "todos"> => {
   const d = f.sinEntrega;
   if (f.enCurso !== null) return "curso";
   if (d === null) return "inactivos"; // todavía no se les entregó nada
-  return d <= 7 ? "d7" : d <= 15 ? "s7" : d <= 30 ? "s15" : d <= 45 ? "s30" : "s45";
+  return d <= 7 ? "d7" : d <= 15 ? "s7" : d <= 21 ? "s15" : d <= 30 ? "s21" : d <= 45 ? "s30" : "s45";
 };
 const dentro = (f: FilaCliente, k: Filtro) => k === "todos" || grupoDe(f) === k;
 const estadoContacto = (f: FilaCliente) => (f.wa ? "Con WhatsApp" : f.telefono ? "Teléfono no válido" : "Sin teléfono");
@@ -40,7 +41,7 @@ const entradaFiltro = "h-7 w-full min-w-0 rounded border border-stone-300 bg-whi
 type Col = "nombre" | "ultimo" | "entrega" | "sinEntrega" | "dif" | "montoUltimo";
 
 // Tarjetas minimalistas: blancas, con el número en color (verde = pidieron, rojo = hay clientes sin pedir). La elegida se pinta en gris oscuro.
-const COLOR_NUM: Record<string, string> = { neutro: "text-stone-900", apagado: "text-stone-300", verde: "text-verde-700", rojo1: "text-rojo-600", rojo2: "text-rojo-600", rojo3: "text-rojo-700", rojo4: "text-rojo-800" };
+const COLOR_NUM: Record<string, string> = { neutro: "text-stone-900", apagado: "text-stone-300", verde: "text-verde-700", rojo1: "text-rojo-600", rojo2: "text-rojo-600", rojo21: "text-rojo-600", rojo3: "text-rojo-700", rojo4: "text-rojo-800" };
 
 function Tarjeta({ titulo, valor, tono, activa, ayuda, onClick, onQuitar }: { titulo: string; valor: number; tono: string; activa: boolean; ayuda: string; onClick: () => void; onQuitar?: () => void }) {
   return (
@@ -92,7 +93,7 @@ export function Tablero({ clientes, sucursales }: { clientes: FilaCliente[]; suc
   }, [filas, q, fCliente, fUltimo, fEntrega, fSin, fDif, fPaq, fContacto]);
 
   const resumen = useMemo(() => {
-    const r = { activos: base.length, curso: 0, d7: 0, s7: 0, s15: 0, s30: 0, s45: 0, inactivos: 0 };
+    const r = { activos: base.length, curso: 0, d7: 0, s7: 0, s15: 0, s21: 0, s30: 0, s45: 0, inactivos: 0 };
     for (const f of base) r[grupoDe(f)]++;
     return r;
   }, [base]);
@@ -123,12 +124,13 @@ export function Tablero({ clientes, sucursales }: { clientes: FilaCliente[]; suc
   return (
     <div className="space-y-4">
       {/* Tarjetas: cada una filtra la tabla de abajo (la pantalla no se mueve) */}
-      <section aria-label="Resumen" className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
+      <section aria-label="Resumen" className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-9">
         <Tarjeta titulo={vista === "clientes" ? "Clientes activos" : "Sucursales activas"} valor={resumen.activos} tono="neutro" activa={filtro === "todos"} ayuda={AYUDA.todos} onClick={() => elegir("todos")} />
         <Tarjeta titulo="Con pedido en curso" valor={resumen.curso} tono={resumen.curso > 0 ? "neutro" : "apagado"} activa={filtro === "curso"} ayuda={AYUDA.curso} onClick={() => elegir("curso")} onQuitar={() => elegir("todos")} />
         <Tarjeta titulo="Recibieron en los últimos 7 días" valor={resumen.d7} tono={resumen.d7 > 0 ? "verde" : "apagado"} activa={filtro === "d7"} ayuda={AYUDA.d7} onClick={() => elegir("d7")} onQuitar={() => elegir("todos")} />
         <Tarjeta titulo="Sin entrega hace 7 días" valor={resumen.s7} tono={resumen.s7 > 0 ? "rojo1" : "apagado"} activa={filtro === "s7"} ayuda={AYUDA.s7} onClick={() => elegir("s7")} onQuitar={() => elegir("todos")} />
         <Tarjeta titulo="Sin entrega hace 15 días" valor={resumen.s15} tono={resumen.s15 > 0 ? "rojo2" : "apagado"} activa={filtro === "s15"} ayuda={AYUDA.s15} onClick={() => elegir("s15")} onQuitar={() => elegir("todos")} />
+        <Tarjeta titulo="Sin entrega hace 21 días" valor={resumen.s21} tono={resumen.s21 > 0 ? "rojo21" : "apagado"} activa={filtro === "s21"} ayuda={AYUDA.s21} onClick={() => elegir("s21")} onQuitar={() => elegir("todos")} />
         <Tarjeta titulo="Sin entrega hace 30 días" valor={resumen.s30} tono={resumen.s30 > 0 ? "rojo3" : "apagado"} activa={filtro === "s30"} ayuda={AYUDA.s30} onClick={() => elegir("s30")} onQuitar={() => elegir("todos")} />
         <Tarjeta titulo="Sin entrega hace 45 días" valor={resumen.s45} tono={resumen.s45 > 0 ? "rojo4" : "apagado"} activa={filtro === "s45"} ayuda={AYUDA.s45} onClick={() => elegir("s45")} onQuitar={() => elegir("todos")} />
         <Tarjeta titulo="Nunca recibieron" valor={resumen.inactivos} tono={resumen.inactivos > 0 ? "neutro" : "apagado"} activa={filtro === "inactivos"} ayuda={AYUDA.inactivos} onClick={() => elegir("inactivos")} onQuitar={() => elegir("todos")} />
