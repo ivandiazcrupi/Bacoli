@@ -189,7 +189,7 @@ export function Tablero({ clientes, sucursales }: { clientes: FilaCliente[]; suc
                     {f.sinEntrega !== null && <span className="text-[10.5px] text-stone-400">última hace {f.sinEntrega} d</span>}
                   </span>
                   : f.sinEntrega === null ? <span className="rounded-full bg-crema-100 px-2.5 py-0.5 text-[12px] font-semibold text-stone-500" title="Todavía no se le entregó ningún pedido">Sin entregas</span>
-                  : <span className={`inline-block min-w-[44px] rounded-full px-2.5 py-0.5 text-[14px] font-bold tabular-nums ${f.sinEntrega > 30 ? "bg-rojo-50 text-rojo-700" : f.sinEntrega > 15 ? "bg-[#fdeedd] text-[#b4530a]" : f.sinEntrega > 7 ? "bg-[#fdf8e3] text-[#8a6a05]" : "bg-verde-50 text-verde-800"}`}>{f.sinEntrega === 0 ? "Hoy" : f.sinEntrega}</span>}
+                  : <span className={`inline-block min-w-[44px] rounded-full px-2.5 py-0.5 text-[14px] font-bold tabular-nums ${f.sinEntrega >= 30 ? "bg-rojo-50 text-rojo-700" : f.sinEntrega > 15 ? "bg-[#fdeedd] text-[#b4530a]" : f.sinEntrega > 7 ? "bg-[#fdf8e3] text-[#8a6a05]" : "bg-verde-50 text-verde-800"}`}>{f.sinEntrega === 0 ? "Hoy" : f.sinEntrega}</span>}
               </span>
               <span className="tabular-nums text-stone-600" title={f.dif === null ? "" : f.dif < 0 ? `Tiene un pedido más nuevo (${fechaCorta(f.ultimo)}) que todavía no se entregó` : `Entre el último pedido y la última entrega pasaron ${f.dif} días`}>
                 {f.dif === null ? <span className="text-stone-300">—</span> : f.dif === 0 ? "Mismo día" : f.dif < 0 ? <span className="text-[#8a6a05]">−{Math.abs(f.dif)} {Math.abs(f.dif) === 1 ? "día" : "días"}</span> : `${f.dif} ${f.dif === 1 ? "día" : "días"}`}
