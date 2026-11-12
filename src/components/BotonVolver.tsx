@@ -38,7 +38,7 @@ export function RegistroDeRecorrido() {
         const y = leerAlturas()[actual] ?? 0;
         if (y > 0) {
           const intentar = () => window.scrollTo(0, y);
-          temporizadores = [0, 80, 250, 600, 1200].map((ms) => window.setTimeout(intentar, ms));
+          temporizadores = [0, 80, 250, 600, 1200, 2000].map((ms) => window.setTimeout(intentar, ms));
         }
       }
     } catch { /* sin almacenamiento: se queda arriba */ }

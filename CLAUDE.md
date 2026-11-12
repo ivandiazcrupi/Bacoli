@@ -584,3 +584,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ## Estado de cuenta: nombre del PDF y centrado (pedido del dueño)
 - El nombre con el que se propone guardar el PDF es **NOMBRE-CC-DDMMAAAA** (ej. `BACOLI-CC-12112026`; si se filtró por razón social, esa). Reemplaza lo dicho de "Cuenta corriente - NOMBRE - fecha". La hoja se adapta al ancho de la pantalla (`w-full max-w-[210mm]`) para que quede centrada aunque la ventana sea angosta.
 - El título también se fija desde el navegador al abrir y justo antes de imprimir (`NombreDelPdf.tsx`), porque el título que manda el servidor no siempre lo toma el diálogo de "Guardar como PDF".
+
+## Volver deja la Cuenta corriente como estaba (pedido del dueño)
+- Al volver (botón "← Volver") a Facturas, Remitos o la cuenta de un cliente, la hoja queda con **los mismos filtros, orden, vista y cantidad de filas cargadas** (`usarEstadoPersistente`, incluida `cuantas`) y a **la misma altura**; la altura se reintenta hasta ~2 s porque la lista tarda en aparecer (`RegistroDeRecorrido`, `BotonVolver.tsx`).

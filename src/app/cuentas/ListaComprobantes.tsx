@@ -200,7 +200,7 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
   const [orden, setOrden] = usarEstadoPersistente<{ col: ColId | null; asc: boolean }>("orden", { col: null, asc: true });
   const [ocultas, setOcultas] = useState<Set<ColId>>(new Set());
   const [verColumnas, setVerColumnas] = useState(false);
-  const [cuantas, setCuantas] = useState(POR_VEZ);
+  const [cuantas, setCuantas] = usarEstadoPersistente("cuantas", POR_VEZ);
   const claveCols = `cc-columnas-v4-${tipo}`; // v2: se reinician las columnas que el navegador había guardado antes de unificar las hojas
 
   useEffect(() => {
