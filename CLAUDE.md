@@ -577,3 +577,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Al refrescar se conservan los filtros (pedido del dueño)
 - Los filtros, el orden y los buscadores de las hojas (Facturas/Remitos/cuenta del cliente, Comercial → Clientes, Leads, Pedidos del cliente y pedidos del vendedor) se recuerdan **en la pestaña** (`usarEstadoPersistente`, `src/lib/usarEstadoPersistente.ts`, sessionStorage por pantalla): al refrescar con F5 quedan como estaban. Al cerrar la pestaña se pierden. Clientes y Pedidos ya guardaban sus filtros en la dirección (URL). Para una hoja nueva con filtros, usar este hook en vez de `useState`.
+
+## Estado de cuenta: "Fecha de factura" (pedido del dueño)
+- En el PDF del estado de cuenta (`/cuentas/[id]/estado`) la columna **PEDIDO** pasó a llamarse **FECHA DE FACTURA** y muestra la fecha de la factura de ARCA (los remitos, que no tienen factura, muestran cuándo se cargó el pedido). Se ordena por esa fecha.

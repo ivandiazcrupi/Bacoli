@@ -23,6 +23,9 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
 
 // Estado de cuenta para pasarle al cliente: una hoja A4 limpia (sin datos internos) que se imprime o se guarda como PDF.
 // Por defecto muestra lo que debe; ?ver=todas suma también lo pagado.
+// Facturas: la fecha de la factura (ARCA). Remitos: no tienen fecha de factura, se muestra cuándo se cargó el pedido.
+const fechaComprobante = (f: { tipo: string; fecha: string; cargado: string }) => (f.tipo === "FACTURA" ? f.fecha : f.cargado);
+
 export default async function EstadoDeCuenta({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ ver?: string; razon?: string }> }) {
   await exigirOficina();
   const { id } = await params;
@@ -42,7 +45,7 @@ export default async function EstadoDeCuenta({ params, searchParams }: { params:
   const filas = [...filasArca, ...pedidos.map((p) => filaDeRemito(p, cliente, hoyStr))]
     .filter((f) => !razon || (f.razon ?? "") === razon)
     .filter((f) => !f.anulado && !f.cubierta && (f.esNc ? (f.saldo ?? 0) > 0.01 : todas || !f.pagada))
-    .sort((a, b) => a.cargado.localeCompare(b.cargado) || (a.numero ?? "").localeCompare(b.numero ?? ""));
+    .sort((a, b) => fechaComprobante(a).localeCompare(fechaComprobante(b)) || (a.numero ?? "").localeCompare(b.numero ?? ""));
   const debe = filas.filter((f) => !f.esNc && !f.pagada && f.entregado).reduce((s, f) => s + f.monto, 0);
   const porEntregar = filas.filter((f) => !f.esNc && !f.pagada && !f.entregado).reduce((s, f) => s + f.monto, 0);
   const aFavor = filas.filter((f) => f.esNc).reduce((s, f) => s + (f.saldo ?? 0), 0);
@@ -73,7 +76,7 @@ export default async function EstadoDeCuenta({ params, searchParams }: { params:
           <table className="mt-5 w-full text-[12.5px]">
             <thead>
               <tr className="border-b border-neutral-900 text-left text-[10px] font-semibold uppercase tracking-[0.12em] text-neutral-500">
-                <th className="py-2">Comprobante</th><th>Sucursal</th><th>Pedido</th><th>Entrega</th><th className="text-right">Monto</th><th className="pl-4">Estado</th>
+                <th className="py-2">Comprobante</th><th>Sucursal</th><th>Fecha de factura</th><th>Entrega</th><th className="text-right">Monto</th><th className="pl-4">Estado</th>
               </tr>
             </thead>
             <tbody>
@@ -81,7 +84,7 @@ export default async function EstadoDeCuenta({ params, searchParams }: { params:
                 <tr key={`${f.tipo}-${f.id}`} className="border-b border-neutral-200 [break-inside:avoid]">
                   <td className="py-2 font-semibold tabular-nums">{f.numero ?? "—"}</td>
                   <td>{f.sucursal ?? ""}</td>
-                  <td className="tabular-nums">{corta(f.cargado)}</td>
+                  <td className="tabular-nums">{corta(fechaComprobante(f))}</td>
                   <td className="tabular-nums">{corta(f.entrega)}</td>
                   <td className="text-right font-semibold tabular-nums">{f.esNc ? "−" : ""}{formatoPesos(f.esNc ? (f.saldo ?? 0) : f.pagada ? f.bruto : f.monto)}</td>
                   <td className="pl-4">{f.esNc ? "Nota de crédito a favor" : f.pagada ? "Pagada" : f.entregado ? "Pendiente" : "Por entregar"}</td>
