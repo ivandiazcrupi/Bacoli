@@ -1,5 +1,6 @@
 "use client";
 
+import { usarEstadoPersistente } from "@/lib/usarEstadoPersistente";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { formatoPesos } from "@/lib/numeros";
@@ -39,16 +40,16 @@ const textoSucursal = (f: FilaPedido) => (f.barrio || f.direccion ? `${f.barrio}
 const entradaFiltro = "h-7 w-full min-w-0 rounded border border-stone-300 bg-white px-1.5 text-center text-[12px] font-normal normal-case tracking-normal text-stone-800 placeholder:text-stone-300 focus:border-verde-700 focus:outline-none";
 
 export function TablaPedidos({ filas }: { filas: FilaPedido[] }) {
-  const [orden, setOrden] = useState<{ col: Col; asc: boolean }>({ col: "cargado", asc: false });
+  const [orden, setOrden] = usarEstadoPersistente<{ col: Col; asc: boolean }>("orden", { col: "cargado", asc: false });
   // Filtros arriba de cada columna (como en Cuenta corriente): los de lista permiten elegir varios.
-  const [fCargado, setFCargado] = useState("");
-  const [fEntrega, setFEntrega] = useState("");
-  const [fSucursal, setFSucursal] = useState("");
-  const [fPedido, setFPedido] = useState("");
-  const [fMonto, setFMonto] = useState("");
-  const [fComprobante, setFComprobante] = useState("");
-  const [fEstado, setFEstado] = useState("");
-  const [fPago, setFPago] = useState("");
+  const [fCargado, setFCargado] = usarEstadoPersistente("fCargado", "");
+  const [fEntrega, setFEntrega] = usarEstadoPersistente("fEntrega", "");
+  const [fSucursal, setFSucursal] = usarEstadoPersistente("fSucursal", "");
+  const [fPedido, setFPedido] = usarEstadoPersistente("fPedido", "");
+  const [fMonto, setFMonto] = usarEstadoPersistente("fMonto", "");
+  const [fComprobante, setFComprobante] = usarEstadoPersistente("fComprobante", "");
+  const [fEstado, setFEstado] = usarEstadoPersistente("fEstado", "");
+  const [fPago, setFPago] = usarEstadoPersistente("fPago", "");
   const hayFiltros = !!(fCargado.trim() || fEntrega.trim() || fSucursal || fPedido.trim() || fMonto.trim() || fComprobante.trim() || fEstado || fPago);
   const quitar = () => { setFCargado(""); setFEntrega(""); setFSucursal(""); setFPedido(""); setFMonto(""); setFComprobante(""); setFEstado(""); setFPago(""); };
   const sucursales = useMemo(() => [...new Set(filas.map(textoSucursal))].sort((a, b) => a.localeCompare(b, "es")), [filas]);

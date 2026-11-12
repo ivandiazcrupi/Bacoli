@@ -1,5 +1,6 @@
 "use client";
 
+import { usarEstadoPersistente } from "@/lib/usarEstadoPersistente";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 // Pesos sin centavos ($150.000), como se lee de un vistazo.
@@ -59,21 +60,21 @@ function Tarjeta({ titulo, valor, tono, activa, ayuda, onClick, onQuitar }: { ti
 export function Tablero({ clientes, sucursales }: { clientes: FilaCliente[]; sucursales: FilaCliente[] }) {
   // Se puede mirar por cliente (todas sus sucursales juntas) o por sucursal; se acuerda de lo último que se eligió.
   // Siempre arranca "Por sucursal" (pedido del dueño); se puede pasar a "Por cliente" mientras se está en la pantalla, pero al volver a entrar vuelve a sucursales.
-  const [vista, setVista] = useState<"clientes" | "sucursales">("sucursales");
+  const [vista, setVista] = usarEstadoPersistente<"clientes" | "sucursales">("vista", "sucursales");
   const cambiarVista = (v: "clientes" | "sucursales") => setVista(v);
   const filas = vista === "clientes" ? clientes : sucursales;
   const unidad = vista === "clientes" ? ["cliente", "clientes"] : ["sucursal", "sucursales"];
-  const [q, setQ] = useState("");
-  const [filtro, setFiltro] = useState<Filtro>("todos");
-  const [orden, setOrden] = useState<{ col: Col; asc: boolean }>({ col: "sinEntrega", asc: false });
+  const [q, setQ] = usarEstadoPersistente("q", "");
+  const [filtro, setFiltro] = usarEstadoPersistente<Filtro>("filtro", "todos");
+  const [orden, setOrden] = usarEstadoPersistente<{ col: Col; asc: boolean }>("orden", { col: "sinEntrega", asc: false });
   // Filtros de la tabla (como los de Cuenta corriente): arriba de cada columna.
-  const [fCliente, setFCliente] = useState("");   // varios clientes (unidos con SEP)
-  const [fUltimo, setFUltimo] = useState("");   // fecha del último pedido
-  const [fEntrega, setFEntrega] = useState("");  // fecha de la última entrega
-  const [fSin, setFSin] = useState("");           // días sin entrega, número: ej. 15, >15, <=7
-  const [fDif, setFDif] = useState("");           // días entre pedido y entrega
-  const [fPaq, setFPaq] = useState("");
-  const [fContacto, setFContacto] = useState(""); // varios (unidos con SEP)
+  const [fCliente, setFCliente] = usarEstadoPersistente("fCliente", "");   // varios clientes (unidos con SEP)
+  const [fUltimo, setFUltimo] = usarEstadoPersistente("fUltimo", "");   // fecha del último pedido
+  const [fEntrega, setFEntrega] = usarEstadoPersistente("fEntrega", "");  // fecha de la última entrega
+  const [fSin, setFSin] = usarEstadoPersistente("fSin", "");           // días sin entrega, número: ej. 15, >15, <=7
+  const [fDif, setFDif] = usarEstadoPersistente("fDif", "");           // días entre pedido y entrega
+  const [fPaq, setFPaq] = usarEstadoPersistente("fPaq", "");
+  const [fContacto, setFContacto] = usarEstadoPersistente("fContacto", ""); // varios (unidos con SEP)
   const hayFiltros = !!(fCliente || fUltimo.trim() || fEntrega.trim() || fSin.trim() || fDif.trim() || fPaq.trim() || fContacto);
   const quitarFiltros = () => { setFCliente(""); setFUltimo(""); setFEntrega(""); setFSin(""); setFDif(""); setFPaq(""); setFContacto(""); };
   const elegir = (k: Filtro) => setFiltro(k); // al tocar una tarjeta solo cambia la tabla: la pantalla no se mueve

@@ -1,5 +1,6 @@
 "use client";
 
+import { usarEstadoPersistente } from "@/lib/usarEstadoPersistente";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
@@ -24,7 +25,7 @@ const entrada = "h-7 w-full rounded border border-stone-400 bg-white px-1.5 text
 export function ListaLeads({ filas, hoy }: { filas: FilaLead[]; hoy: string }) {
   const router = useRouter();
   const [pendiente, empezar] = useTransition();
-  const [filtros, setFiltros] = useState<Partial<Record<Col, string>>>({});
+  const [filtros, setFiltros] = usarEstadoPersistente<Partial<Record<Col, string>>>("filtros", {});
   const [cambiados, setCambiados] = useState<Record<string, string>>({});
   const estadoDe = (f: FilaLead) => cambiados[f.id] ?? f.estado;
   const abierto = (f: FilaLead) => ABIERTOS.includes(estadoDe(f) as never);

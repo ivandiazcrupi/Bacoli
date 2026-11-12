@@ -1,5 +1,6 @@
 "use client";
 
+import { usarEstadoPersistente } from "@/lib/usarEstadoPersistente";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useMemo, useState, useTransition } from "react";
@@ -194,9 +195,9 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
   const [buscaNc, setBuscaNc] = useState(""); // buscador de la factura a la que se aplica una NC
   const [manualTipo, setManualTipo] = useState<"FACTURA" | "ND">("FACTURA");
   const [manualTexto, setManualTexto] = useState("");
-  const [vista, setVista] = useState(vistaInicial);
-  const [filtros, setFiltros] = useState<Partial<Record<ColId, string>>>({});
-  const [orden, setOrden] = useState<{ col: ColId | null; asc: boolean }>({ col: null, asc: true });
+  const [vista, setVista] = usarEstadoPersistente("vista", vistaInicial);
+  const [filtros, setFiltros] = usarEstadoPersistente<Partial<Record<ColId, string>>>("filtros", {});
+  const [orden, setOrden] = usarEstadoPersistente<{ col: ColId | null; asc: boolean }>("orden", { col: null, asc: true });
   const [ocultas, setOcultas] = useState<Set<ColId>>(new Set());
   const [verColumnas, setVerColumnas] = useState(false);
   const [cuantas, setCuantas] = useState(POR_VEZ);

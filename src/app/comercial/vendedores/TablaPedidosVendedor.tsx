@@ -1,5 +1,6 @@
 "use client";
 
+import { usarEstadoPersistente } from "@/lib/usarEstadoPersistente";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
@@ -26,10 +27,10 @@ type Col = "cargado" | "entregado" | "cliente" | "pedido" | "comprobante" | "mon
 export function TablaPedidosVendedor({ filas, pct, comision = true, modo, editables = [] }: { filas: FilaVendedor[]; pct: number; comision?: boolean; modo: "oficina" | "vendedor"; editables?: string[] }) {
   const router = useRouter();
   const [pendiente, empezar] = useTransition();
-  const [filtros, setFiltros] = useState<Partial<Record<Col, string>>>({});
-  const [orden, setOrden] = useState<{ col: Col; dir: 1 | -1 }>({ col: "cargado", dir: -1 });
+  const [filtros, setFiltros] = usarEstadoPersistente<Partial<Record<Col, string>>>("filtros", {});
+  const [orden, setOrden] = usarEstadoPersistente<{ col: Col; dir: 1 | -1 }>("orden", { col: "cargado", dir: -1 });
   const [error, setError] = useState("");
-  const [buscar, setBuscar] = useState(""); // buscador del celular (cliente, barrio o producto)
+  const [buscar, setBuscar] = usarEstadoPersistente("buscar", ""); // buscador del celular (cliente, barrio o producto)
 
   const com = (x: FilaVendedor) => (x.estado === "ENTREGADO" ? (x.neto * pct) / 100 : null);
   const valor = (x: FilaVendedor, c: Col): string | number => {

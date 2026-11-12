@@ -574,3 +574,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Ficha del cliente: abrir una sola sucursal (pedido del dueño)
 - En la lista de Clientes, el nombre y "Editar" de cada línea abren la ficha con `?punto=ID` y la ficha muestra **solo esa sucursal** (sin la fila de agregar), con el enlace "Ver las N sucursales ›". Sin `?punto` se ven todas, como siempre. Las demás pantallas que abren la ficha no cambiaron.
+
+## Al refrescar se conservan los filtros (pedido del dueño)
+- Los filtros, el orden y los buscadores de las hojas (Facturas/Remitos/cuenta del cliente, Comercial → Clientes, Leads, Pedidos del cliente y pedidos del vendedor) se recuerdan **en la pestaña** (`usarEstadoPersistente`, `src/lib/usarEstadoPersistente.ts`, sessionStorage por pantalla): al refrescar con F5 quedan como estaban. Al cerrar la pestaña se pierden. Clientes y Pedidos ya guardaban sus filtros en la dirección (URL). Para una hoja nueva con filtros, usar este hook en vez de `useState`.
