@@ -11,14 +11,14 @@ import { filaDeArca, filaDeRemito } from "../../filas";
 
 const corta = (s: string | null | undefined) => (s ? `${s.slice(8)}/${s.slice(5, 7)}/${s.slice(0, 4)}` : "—");
 
-// El título es el nombre con el que el navegador propone guardar el PDF: cliente y fecha.
+// El título es el nombre con el que el navegador propone guardar el PDF: NOMBRE-CC-DDMMAAAA (ej. BACOLI-CC-12112026).
 export async function generateMetadata({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ razon?: string }> }) {
   const { id } = await params;
   const { razon } = await searchParams;
   const c = await db.cliente.findUnique({ where: { id }, select: { nombre: true } });
   const limpio = (t: string) => t.replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim();
   const [a, m, d] = hoy().split("-");
-  return { title: `Cuenta corriente - ${limpio(razon || c?.nombre || "Cliente")} - ${d}-${m}-${a}` };
+  return { title: `${limpio(razon || c?.nombre || "Cliente")}-CC-${d}${m}${a}` };
 }
 
 // Estado de cuenta para pasarle al cliente: una hoja A4 limpia (sin datos internos) que se imprime o se guarda como PDF.
@@ -60,7 +60,7 @@ export default async function EstadoDeCuenta({ params, searchParams }: { params:
         <span className="py-1.5 text-stone-500">Para guardar en PDF: Imprimir → destino “Guardar como PDF”.</span>
       </div>
       <div className="py-4 print:py-0">
-        <section className="mx-auto min-h-[270mm] w-[210mm] bg-white p-[12mm] font-[Helvetica,Arial,sans-serif] text-neutral-900 shadow print:min-h-0 print:w-full print:p-0 print:shadow-none">
+        <section className="mx-auto min-h-[270mm] w-full max-w-[210mm] bg-white p-[12mm] font-[Helvetica,Arial,sans-serif] text-neutral-900 shadow print:min-h-0 print:max-w-none print:w-full print:p-0 print:shadow-none">
           <header className="flex items-end justify-between border-b border-neutral-900 pb-3">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-500">{empresa?.nombreComercial || "BACOLI"}</p>

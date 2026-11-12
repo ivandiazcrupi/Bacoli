@@ -580,3 +580,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Estado de cuenta: "Fecha de factura" (pedido del dueño)
 - En el PDF del estado de cuenta (`/cuentas/[id]/estado`) la columna **PEDIDO** pasó a llamarse **FECHA DE FACTURA** y muestra la fecha de la factura de ARCA (los remitos, que no tienen factura, muestran cuándo se cargó el pedido). Se ordena por esa fecha.
+
+## Estado de cuenta: nombre del PDF y centrado (pedido del dueño)
+- El nombre con el que se propone guardar el PDF es **NOMBRE-CC-DDMMAAAA** (ej. `BACOLI-CC-12112026`; si se filtró por razón social, esa). Reemplaza lo dicho de "Cuenta corriente - NOMBRE - fecha". La hoja se adapta al ancho de la pantalla (`w-full max-w-[210mm]`) para que quede centrada aunque la ventana sea angosta.
