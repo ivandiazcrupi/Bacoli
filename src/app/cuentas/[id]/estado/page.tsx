@@ -6,6 +6,7 @@ import { cargarFacturas } from "@/lib/facturas";
 import { hoy } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
 import { exigirOficina } from "@/lib/session";
+import { NombreDelPdf } from "./NombreDelPdf";
 import { BarraImpresion } from "../../../pedidos/remito/BarraImpresion";
 import { filaDeArca, filaDeRemito } from "../../filas";
 
@@ -50,8 +51,12 @@ export default async function EstadoDeCuenta({ params, searchParams }: { params:
   const porEntregar = filas.filter((f) => !f.esNc && !f.pagada && !f.entregado).reduce((s, f) => s + f.monto, 0);
   const aFavor = filas.filter((f) => f.esNc).reduce((s, f) => s + (f.saldo ?? 0), 0);
 
+  const [anio, mes, dia] = hoyStr.split("-");
+  const nombrePdf = `${(razon || cliente.nombre).replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim()}-CC-${dia}${mes}${anio}`;
+
   return (
     <div className="bg-stone-200 print:bg-white">
+      <NombreDelPdf nombre={nombrePdf} />
       <style>{"@page { size: A4; margin: 14mm } @media print { html { font-size: 13px !important } body { background: #fff !important; padding-bottom: 0 !important } }"}</style>
       <BarraImpresion volver={`/cuentas/${id}`} />
       <div className="mx-auto mt-3 flex max-w-[210mm] justify-end gap-2 px-2 text-sm print:hidden">
