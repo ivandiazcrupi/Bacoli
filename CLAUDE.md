@@ -571,3 +571,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Filtros tipo Excel en todo el sistema (pedido del dueño)
 - `FiltroLista` (`src/app/cuentas/FiltroLista.tsx`, lo usan TODAS las hojas con filtros por columna) se rehízo como el filtro de Excel/Google Sheets: arriba **"Seleccionar todo N · Borrar"** y **"Mostrando N"**, buscador con lupa, lista con casillas y abajo **Cancelar** (borde verde) / **Aceptar** (verde lleno). **En los de varias opciones la selección es un borrador: recién se aplica al tocar Aceptar** (o Enter); Cancelar, Esc o tocar afuera la descartan. "Seleccionar todo" tilda lo que aparece con la búsqueda escrita. Los de una sola opción (buscador de cliente de Cuenta corriente) mantienen el toque directo pero con el mismo aspecto. Reemplaza el "Elegir los N que aparecen" / "Listo". No hay entrada "(Vacío)" (hace falta que cada hoja sepa filtrar vacíos; se agrega si el dueño lo pide).
+
+## Ficha del cliente: abrir una sola sucursal (pedido del dueño)
+- En la lista de Clientes, el nombre y "Editar" de cada línea abren la ficha con `?punto=ID` y la ficha muestra **solo esa sucursal** (sin la fila de agregar), con el enlace "Ver las N sucursales ›". Sin `?punto` se ven todas, como siempre. Las demás pantallas que abren la ficha no cambiaron.
