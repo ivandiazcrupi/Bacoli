@@ -593,3 +593,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## TAREAS: pasar una tarea a otra persona arrastrándola (pedido del dueño)
 - En `/tareas` todas las listas comparten un solo arrastre (`TableroTareas` en `Controles.tsx`): con el asa ⋮⋮ de una tarea pendiente se la suelta sobre la lista de otra persona (o entre sus tareas, para elegir el lugar) y pasa a ser de ella (`moverTarea`, `actions.ts`). **Pueden moverla el gerente (cualquiera) y, los demás, las que cargaron o les asignaron** (lo exige el servidor); las hechas no se mueven. Ordenar dentro de una misma lista sigue siendo solo del gerente.
+
+## Filtro de Observación como lista, en cascada (pedido del dueño)
+- En Facturas, Remitos y la cuenta del cliente, el filtro de **Observación** ya no es de texto: es una lista tipo Excel de VARIAS opciones (las observaciones distintas, más "(Sin observación)" para las filas vacías). **Las opciones salen de las filas que dejan pasar los demás filtros**: si se filtra por un cliente, solo aparecen las observaciones de ese cliente (`cumple(f, omitir)` en `ListaComprobantes.tsx`). Lo mismo vale ahora para los filtros de Razón social, Cliente y Sucursal (cada uno ofrece solo lo que queda con los otros filtros; el propio no se descuenta).

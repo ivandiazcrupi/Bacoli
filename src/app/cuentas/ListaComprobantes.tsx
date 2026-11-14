@@ -64,6 +64,8 @@ const POR_VEZ = 250;
 type ColId = "numero" | "cliente" | "razon" | "sucursal" | "fecha" | "entrega" | "monto" | "estado" | "pedido" | "nc" | "obs";
 type Columna = { id: ColId; titulo: string; ancho: string; solo?: "arca" | "remito"; ordena?: boolean; filtro?: "texto" | "estado" | "pedido" | "lista" };
 
+const SIN_OBS = "(Sin observación)"; // opción del filtro de Observación para las filas que no tienen
+
 const COLUMNAS: Columna[] = [
   { id: "numero", titulo: "Número", ancho: "80px", ordena: true, filtro: "texto" },
   { id: "razon", titulo: "Razón social", ancho: "minmax(262px,1.4fr)", filtro: "lista" },
@@ -75,7 +77,7 @@ const COLUMNAS: Columna[] = [
   { id: "estado", titulo: "Estado", ancho: "176px", ordena: true, filtro: "estado" },
   { id: "pedido", titulo: "Ubicar", ancho: "72px", filtro: "pedido" },
   { id: "nc", titulo: "NC", ancho: "84px", filtro: "texto" },
-  { id: "obs", titulo: "Observación", ancho: "minmax(150px,1fr)", filtro: "texto" },
+  { id: "obs", titulo: "Observación", ancho: "minmax(150px,1fr)", filtro: "lista" },
 ];
 
 function estadoDe(f: FilaComprobante): string {
@@ -218,26 +220,31 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
   const grilla = `28px ${visibles.map((c) => c.ancho).join(" ")}`;
   const hayFiltro = vista !== "todas" || Object.values(filtros).some((v) => v && v.trim());
 
-  const filtradas = useMemo(() => {
-    let r = filas.filter((f) => {
-      if (f.hueco) return !hayFiltro;
-      if (vista === "sin-pagar" && (f.esNc || f.pagada || f.cubierta || f.anulado)) return false;
-      if (vista === "pagadas" && (f.esNc || !(f.pagada || f.cubierta))) return false;
-      for (const c of visibles) {
-        const v = (filtros[c.id] ?? "").trim();
-        if (!v) continue;
-        const t = textoDe(f, c.id);
-        if (c.filtro === "estado" || c.filtro === "pedido" || c.filtro === "lista") {
-          const elegidas = v.split(SEP);
-          const aviso = c.id === "estado" && estadoDe(f) === "Pendiente" ? etiquetaAviso(f) : null; // un pendiente con aviso también aparece al elegir "Diego avisó pago"
-          if (!elegidas.includes(t) && !(aviso && elegidas.includes(aviso))) return false;
-          continue;
-        }
-        if (c.id === "monto" || c.id === "numero") { if (!digitos(t).includes(digitos(v)) && !t.toLowerCase().includes(v.toLowerCase())) return false; continue; }
-        if (!t.toLowerCase().includes(v.toLowerCase())) return false;
+  // ¿La fila pasa la vista y los filtros? `omitir` deja afuera el filtro de una columna: sirve para armar las opciones de esa columna
+  // como en Excel (las opciones de Observación son solo las de las filas que dejan pasar los demás filtros, p. ej. el cliente elegido).
+  const cumple = (f: FilaComprobante, omitir?: ColId) => {
+    if (f.hueco) return !hayFiltro;
+    if (vista === "sin-pagar" && (f.esNc || f.pagada || f.cubierta || f.anulado)) return false;
+    if (vista === "pagadas" && (f.esNc || !(f.pagada || f.cubierta))) return false;
+    for (const c of visibles) {
+      if (c.id === omitir) continue;
+      const v = (filtros[c.id] ?? "").trim();
+      if (!v) continue;
+      const t = c.id === "obs" ? textoDe(f, c.id) || SIN_OBS : textoDe(f, c.id);
+      if (c.filtro === "estado" || c.filtro === "pedido" || c.filtro === "lista") {
+        const elegidas = v.split(SEP);
+        const aviso = c.id === "estado" && estadoDe(f) === "Pendiente" ? etiquetaAviso(f) : null; // un pendiente con aviso también aparece al elegir "Diego avisó pago"
+        if (!elegidas.includes(t) && !(aviso && elegidas.includes(aviso))) return false;
+        continue;
       }
-      return true;
-    });
+      if (c.id === "monto" || c.id === "numero") { if (!digitos(t).includes(digitos(v)) && !t.toLowerCase().includes(v.toLowerCase())) return false; continue; }
+      if (!t.toLowerCase().includes(v.toLowerCase())) return false;
+    }
+    return true;
+  };
+
+  const filtradas = useMemo(() => {
+    let r = filas.filter((f) => cumple(f));
     if (orden.col) {
       const col = orden.col;
       const clave = (f: FilaComprobante): string | number => col === "numero" ? Number(digitos(f.numero)) || 0 : col === "monto" ? montoDe(f) : col === "fecha" ? f.cargado : col === "entrega" ? f.entrega ?? "" : textoDe(f, col).toLowerCase();
@@ -247,9 +254,21 @@ export function ListaComprobantes({ filas, tipo, acciones, vistaInicial = "todas
   }, [filas, vista, filtros, orden, visibles, hayFiltro]);
 
   const opcionesLista = useMemo(() => {
-    const dist = (id: ColId) => [...new Set(filas.filter((f) => !f.hueco).map((f) => textoDe(f, id)).filter(Boolean))].sort((a, b) => a.localeCompare(b, "es"));
-    return { cliente: dist("cliente"), razon: dist("razon"), sucursal: dist("sucursal") } as Partial<Record<ColId, string[]>>;
-  }, [filas]);
+    // Como en Excel: las opciones de cada columna salen de las filas que dejan pasar los demás filtros (la propia columna no se descuenta).
+    const dist = (id: ColId) => {
+      const textos = new Set<string>();
+      let hayVacias = false;
+      for (const f of filas) {
+        if (f.hueco || !cumple(f, id)) continue;
+        const t = textoDe(f, id);
+        if (t) textos.add(t); else hayVacias = true;
+      }
+      const lista = [...textos].sort((a, b) => a.localeCompare(b, "es"));
+      return id === "obs" && hayVacias ? [SIN_OBS, ...lista] : lista;
+    };
+    return { cliente: dist("cliente"), razon: dist("razon"), sucursal: dist("sucursal"), obs: dist("obs") } as Partial<Record<ColId, string[]>>;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filas, vista, filtros, visibles, hayFiltro]);
   const pagables = filtradas.filter((f) => !f.hueco && !f.esNc && f.entregado && !f.pagada && !f.cubierta && !f.anulado);
   const mostradas = filtradas.slice(0, cuantas);
   const suma = filas.filter((f) => elegidas.has(f.id) && !f.hueco).reduce((s, f) => s + f.monto, 0);
