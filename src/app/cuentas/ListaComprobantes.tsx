@@ -138,21 +138,26 @@ function ObsCelda({ f }: { f: FilaComprobante }) {
   const guardar = async () => {
     if (valor.trim() !== guardado.trim()) {
       const r = f.arca ? await guardarDatosArca(f.id, null, valor) : await guardarObservacion(f.id, valor);
-      if (r.ok) { setGuardado(valor); setEstado("ok"); setTimeout(() => setEstado(""), 1500); } else { setEstado("error"); return; }
+      if (r.ok) { setGuardado(valor); setEstado("ok"); setTimeout(() => setEstado(""), 2200); } else { setEstado("error"); return; }
     }
     setEditando(false);
   };
   if (cerrada && !editando) {
     return (
       <span className="flex min-w-0 items-center justify-center gap-1.5" title={guardado ? `${guardado}\n(Pagada: tocá el lápiz para modificarla)` : "Pagada: tocá el lápiz para agregar una leyenda"}>
-        <span className="min-w-0 truncate text-[13px] font-medium text-stone-500">{guardado || <span className="text-stone-300">—</span>}</span>
+        <span className={`min-w-0 truncate text-[13px] font-medium transition-colors duration-300 ${estado === "ok" ? "text-verde-700" : "text-stone-500"}`}>{guardado || <span className="text-stone-300">—</span>}</span>
+        {estado === "ok" && <span aria-live="polite" title="Guardado" className="shrink-0 text-[13px] font-bold text-verde-700">✓</span>}
         <button type="button" aria-label="Editar la observación" onClick={() => setEditando(true)} className="shrink-0 text-[13px] text-stone-400 hover:text-stone-800">✎</button>
       </span>
     );
   }
   return (
+    <span className="relative block w-full min-w-0">
     <input aria-label="Observación" autoFocus={cerrada} value={valor} maxLength={200} placeholder="—" onChange={(e) => setValor(e.target.value)} onBlur={guardar} onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); if (e.key === "Escape" && cerrada) { setValor(guardado); setEditando(false); } }}
-      className={`h-7 w-full min-w-0 rounded border bg-transparent px-2 text-center text-[13.5px] placeholder:text-stone-300 hover:border-stone-300 focus:border-verde-700 focus:bg-white focus:outline-none ${estado === "ok" ? "border-verde-600" : estado === "error" ? "border-rojo-600" : "border-transparent"}`} />
+      className={`h-7 w-full min-w-0 rounded border bg-transparent pl-2 pr-6 transition-colors duration-300 text-center text-[13.5px] placeholder:text-stone-300 hover:border-stone-300 focus:border-verde-700 focus:bg-white focus:outline-none ${estado === "ok" ? "border-verde-600 bg-verde-50" : estado === "error" ? "border-rojo-600" : "border-transparent"}`} />
+    {estado === "ok" && <span aria-live="polite" title="Guardado" className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[13px] font-bold text-verde-700">✓</span>}
+    {estado === "error" && <span title="No se pudo guardar: tocá de nuevo" className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[13px] font-bold text-rojo-700">!</span>}
+    </span>
   );
 }
 
