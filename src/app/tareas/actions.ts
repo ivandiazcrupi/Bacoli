@@ -76,3 +76,22 @@ export async function ordenarTareas(asignadaId: string, ids: string[]): Promise<
   revalidatePath("/", "layout");
   return {};
 }
+
+// Pasar una tarea pendiente a otra persona (arrastrándola). `ids` = cómo queda la lista de pendientes de la persona que la recibe (con la tarea movida adentro).
+// Pueden moverla el gerente, quien la cargó o a quien se le asignó (igual que editarla); el servidor lo vuelve a exigir.
+export async function moverTarea(id: string, haciaId: string, ids: string[]): Promise<Resultado> {
+  const yo = await exigirOficina();
+  const t = await db.tarea.findUnique({ where: { id } });
+  if (!t) return { error: "La tarea ya no existe." };
+  if (t.hecha) return { error: "Una tarea hecha no se mueve." };
+  if (!puedeGestionarUsuarios(yo.rol) && t.creadaPorId !== yo.id && t.asignadaId !== yo.id) return { error: "Solo la puede mover quien la cargó, a quien se la asignaron o el gerente." };
+  const persona = await db.usuario.findUnique({ where: { id: haciaId }, select: { activo: true, rol: true } });
+  if (!persona || !persona.activo || !esPersonalDeOficina(persona.rol)) return { error: "Esa persona no puede tener tareas." };
+  if (!Array.isArray(ids) || !ids.includes(id) || ids.some((i) => typeof i !== "string") || new Set(ids).size !== ids.length) return { error: "Orden no válido." };
+  const otras = ids.filter((i) => i !== id);
+  const propias = await db.tarea.count({ where: { asignadaId: haciaId, hecha: false, id: { in: otras } } });
+  if (propias !== otras.length) return { error: "La lista cambió, probá de nuevo." };
+  await db.$transaction(ids.map((tid, i) => db.tarea.update({ where: { id: tid }, data: tid === id ? { asignadaId: haciaId, orden: i + 1 } : { orden: i + 1 } })));
+  revalidatePath("/", "layout");
+  return {};
+}

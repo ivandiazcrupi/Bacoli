@@ -1,4 +1,5 @@
 "use client";
+import { oracion } from "@/lib/mayusculas";
 import { Barrio } from "@/components/Barrio";
 
 import Link from "next/link";
@@ -329,7 +330,7 @@ function FilaSilueta({ x }: { x: Silueta }) {
       <span>{x.direccion}</span>
       <span className="text-xs">{x.items.map((i) => `${i.cantidad} ${i.nombre}`).join(" · ")}</span>
       <span className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1">
-        <span className="font-semibold text-rojo-700/80">No se entregó · {x.motivo}</span>
+        <span className="font-semibold text-rojo-700/80">No se entregó · {oracion(x.motivo)}</span>
         <span className="text-xs">{x.destino}</span>
         <Link href={`/pedidos/${x.pedidoId}`} className="text-xs font-semibold text-verde-800 underline">Abrir ›</Link>
       </span>
@@ -358,7 +359,7 @@ function FilaSiluetaTabla({ x, n }: { x: Silueta; n: number }) {
       <div role="cell"><span className="inline-flex h-7 min-w-7 items-center justify-center rounded bg-stone-400 px-1 text-sm font-bold text-white">{n}</span></div>
       <div role="cell" className="text-xs font-bold uppercase leading-tight"><Barrio v={x.barrio} /></div>
       <div role="cell" className="font-bold uppercase leading-snug text-stone-600">{x.cliente}</div>
-      <div role="cell" className="leading-snug">{x.direccion}<span className="block text-xs font-semibold text-rojo-700/80">No se entregó · {x.motivo}</span></div>
+      <div role="cell" className="leading-snug">{x.direccion}<span className="block text-xs font-semibold text-rojo-700/80">No se entregó · {oracion(x.motivo)}</span></div>
       <div role="cell">—</div>
       <div role="cell" className="grid w-[17rem] max-w-full justify-self-center gap-x-2 text-left [grid-template-columns:1.75rem_1fr]">
         {x.items.map((i, k) => <span key={k} className="contents"><span className="text-right font-semibold tabular-nums">{i.cantidad}</span><span className="leading-snug">{i.nombre}</span></span>)}
@@ -377,7 +378,7 @@ function FilaSiluetaTarjeta({ x, n }: { x: Silueta; n: number }) {
       <p className="flex items-center gap-2 font-bold uppercase"><span className="inline-flex h-6 min-w-6 items-center justify-center rounded bg-stone-400 px-1 text-white">{n}</span><Barrio v={x.barrio} /> · {x.cliente}</p>
       <p>{x.direccion}</p>
       <p className="text-xs">{x.items.map((i) => `${i.cantidad} ${i.nombre}`).join(" · ")}</p>
-      <p className="font-semibold text-rojo-700/80">No se entregó · {x.motivo}</p>
+      <p className="font-semibold text-rojo-700/80">No se entregó · {oracion(x.motivo)}</p>
       <p className="flex justify-between text-xs"><span>{x.destino}</span><Link href={`/pedidos/${x.pedidoId}`} className="font-semibold text-verde-800 underline">Abrir ›</Link></p>
     </div>
   );

@@ -1,3 +1,4 @@
+import { oracion } from "@/lib/mayusculas";
 import type { EstadoPedido } from "@prisma/client";
 import Link from "next/link";
 import { Cabecera } from "@/components/Cabecera";
@@ -36,7 +37,7 @@ export default async function Pedidos({ searchParams }: { searchParams: Promise<
   // El último intento de entrega que falló de cada pedido: "No se entregó el 1/10 · motivo".
   const intentos = await db.intentoEntrega.findMany({ where: { pedidoId: { in: pedidos.map((p) => p.id) } }, orderBy: { creadoEn: "desc" } });
   const avisosIntento = new Map<string, string>();
-  for (const i of intentos) if (!avisosIntento.has(i.pedidoId)) avisosIntento.set(i.pedidoId, `No se entregó el ${diaMes(deFecha(i.fecha))} · ${i.motivo}`);
+  for (const i of intentos) if (!avisosIntento.has(i.pedidoId)) avisosIntento.set(i.pedidoId, `No se entregó el ${diaMes(deFecha(i.fecha))} · ${oracion(i.motivo)}`);
 
   const enlace = (extra: Record<string, string>) => {
     const v: Record<string, string> = { ...(esWeb ? { lista: "web" } : esCobranza ? { lista: "cobranza" } : {}), ...(semana ? { semana } : {}), ...extra };

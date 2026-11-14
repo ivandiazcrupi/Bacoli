@@ -3,13 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { mayus, titulo } from "@/lib/mayusculas";
+import { mayus, oracion, titulo } from "@/lib/mayusculas";
 import { leerMonto } from "@/lib/numeros";
 import { exigirOficina } from "@/lib/session";
 import { esquemaCliente, esquemaSucursal, valoresDe, type EstadoForm } from "./validacion";
 
 type DatosSucursal = ReturnType<typeof esquemaSucursal.parse>;
-const sucursalEnMayuscula = (d: DatosSucursal) => ({ ...d, alias: mayus(d.alias), direccion: titulo(d.direccion), barrio: mayus(d.barrio), comentario: d.comentario ? mayus(d.comentario) : d.comentario, razonSocial: d.razonSocial ? mayus(d.razonSocial) : null, cuit: d.cuit ? d.cuit.replace(/\D/g, "") : null });
+const sucursalEnMayuscula = (d: DatosSucursal) => ({ ...d, alias: mayus(d.alias), direccion: titulo(d.direccion), barrio: mayus(d.barrio), comentario: d.comentario ? oracion(d.comentario) : d.comentario, razonSocial: d.razonSocial ? mayus(d.razonSocial) : null, cuit: d.cuit ? d.cuit.replace(/\D/g, "") : null });
 
 function datosCliente(d: ReturnType<typeof esquemaCliente.parse>) {
   return {

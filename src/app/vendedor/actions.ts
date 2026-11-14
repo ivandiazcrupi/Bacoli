@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { mayus, titulo } from "@/lib/mayusculas";
+import { mayus, oracion, titulo } from "@/lib/mayusculas";
 import { cuitValido } from "@/lib/numeros";
 import { exigirVendedor, vendedorDeUsuario } from "@/lib/session";
 
@@ -68,7 +68,7 @@ export async function crearClienteVendedor(_: EstadoCliente, f: FormData): Promi
   const repetido = await db.puntoEntrega.findFirst({ where: { direccion: { equals: direccion, mode: "insensitive" }, cliente: { nombre: { equals: nombre, mode: "insensitive" } } } });
   if (repetido) return { error: "Ese cliente ya está cargado con esa dirección. Buscalo en tus clientes o consultá con la oficina." };
   const telefono = String(f.get("telefono") ?? "").trim() || null;
-  const comentario = mayus(String(f.get("comentario") ?? "").trim()) || null;
+  const comentario = oracion(String(f.get("comentario") ?? "")) || null;
   const creado = await db.cliente.create({
     data: {
       nombre, tipo: "MAYORISTA", razonSocial: mayus(String(f.get("razonSocial") ?? "").trim()) || null,
@@ -96,7 +96,7 @@ export async function guardarClienteVendedor(clienteId: string, _: EstadoCliente
   if (cuitTxt && !cuitValido(cuitTxt)) return { error: "El CUIT no es válido (son 11 números)." };
   const puntos = cliente.puntos.map((p) => {
     const g = (k: string) => String(f.get(`${k}_${p.id}`) ?? "").trim();
-    return { id: p.id, barrio: mayus(g("barrio")), direccion: titulo(g("direccion")), telefono: g("telefono") || null, comentario: mayus(g("comentario")) || null };
+    return { id: p.id, barrio: mayus(g("barrio")), direccion: titulo(g("direccion")), telefono: g("telefono") || null, comentario: oracion(g("comentario")) || null };
   });
   if (puntos.some((p) => !p.barrio || !p.direccion)) return { error: "Cada sucursal necesita barrio y dirección." };
   await db.$transaction([

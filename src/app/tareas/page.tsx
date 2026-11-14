@@ -2,7 +2,7 @@ import { Cabecera } from "@/components/Cabecera";
 import { db } from "@/lib/db";
 import { puedeGestionarUsuarios } from "@/lib/roles";
 import { exigirOficina } from "@/lib/session";
-import { BorrarHechas, ListaTareas, NuevaTarea } from "./Controles";
+import { BorrarHechas, ListaTareas, NuevaTarea, TableroTareas } from "./Controles";
 
 const primerNombre = (n: string) => n.trim().split(/\s+/)[0] || n;
 
@@ -20,11 +20,16 @@ export default async function Tareas() {
   const mias = personas.find((p) => p.id === yo.id);
   const otras = personas.filter((p) => p.id !== yo.id);
 
+  // Lo que puede arrastrar cada uno: el gerente cualquiera; los demás las que cargaron o las que les asignaron.
+  const datos = (p: (typeof personas)[number]) => p.tareas.map((t) => ({ id: t.id, titulo: t.titulo, hecha: t.hecha, borrable: t.creadaPorId === yo.id, movible: !t.hecha && (gerente || t.creadaPorId === yo.id || p.id === yo.id) }));
+  const inicial = Object.fromEntries(personas.map((p) => [p.id, datos(p).filter((t) => !t.hecha)]));
+  const firma = personas.map((p) => p.tareas.map((t) => `${t.id}${t.hecha ? 1 : 0}`).join()).join("|");
+
   const Lista = ({ p, propia }: { p: (typeof personas)[number]; propia: boolean }) => {
     const hechas = p.tareas.filter((t) => t.hecha).length;
     return (
       <>
-        <ListaTareas key={p.tareas.map((t) => `${t.id}${t.hecha ? 1 : 0}`).join()} asignadaId={p.id} tareas={p.tareas.map((t) => ({ id: t.id, titulo: t.titulo, hecha: t.hecha, borrable: t.creadaPorId === yo.id }))} puedeTildar={propia || gerente} puedeBorrar={gerente} puedeOrdenar={gerente} />
+        <ListaTareas asignadaId={p.id} tareas={datos(p)} puedeTildar={propia || gerente} puedeBorrar={gerente} />
         {p.tareas.length === 0 && <p className="py-2 text-[13px] text-stone-400">{propia ? "No tenés tareas por ahora." : "Sin tareas."}</p>}
         <NuevaTarea asignadaId={p.id} />
         {gerente && hechas > 0 && <p className="mt-2 text-right"><BorrarHechas asignadaId={p.id} cuantas={hechas} /></p>}
@@ -41,6 +46,7 @@ export default async function Tareas() {
       <Cabecera usuario={yo} />
       <main className="mx-auto w-full max-w-[1100px] space-y-8 px-4 py-6 sm:px-8">
         <h1 className="text-2xl font-bold tracking-tight">Tareas</h1>
+        <TableroTareas key={firma} inicial={inicial} gerente={gerente}>
 
         {mias && (
           <section aria-label="Mis tareas" className="rounded-xl border border-stone-300 bg-white p-5">
@@ -69,7 +75,9 @@ export default async function Tareas() {
           </section>
         )}
 
-        <p className="text-[12px] text-stone-400">{gerente ? "Todos cargan tareas (campo “Agregar una tarea”). Vos, como gerente, podés tildar, borrar y ordenar cualquiera." : "Podés cargarle tareas a cualquiera y borrar las que cargaste vos. Cada uno tilda las suyas."}</p>
+        </TableroTareas>
+
+        <p className="text-[12px] text-stone-400">{gerente ? "Todos cargan tareas (campo “Agregar una tarea”). Vos, como gerente, podés tildar, borrar, ordenar y pasar de una persona a otra (arrastrando con ⋮⋮) cualquiera." : "Podés cargarle tareas a cualquiera y borrar las que cargaste vos. Podés pasar a otra persona (arrastrando con ⋮⋮) las que cargaste o te asignaron. Cada uno tilda las suyas."}</p>
       </main>
     </>
   );
