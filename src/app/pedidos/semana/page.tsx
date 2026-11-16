@@ -108,16 +108,17 @@ export default async function Semana({ searchParams }: { searchParams: Promise<{
               </Link>
             );
           })}
-          <Link href="/pedidos" className={`grid items-center gap-x-4 gap-y-1 border-y-2 border-l-[6px] border-y-[#e3c04a] border-l-[#d9a406] bg-[#fdf3c4] px-5 py-5 text-center text-[16px] font-semibold text-[#5c4300] hover:bg-[#fcecaa] ${COLUMNAS}`} title="Pedidos cargados que todavía no tienen día asignado (esperan en la hoja PEDIDOS)">
-            <span className="text-base font-extrabold uppercase tracking-wide">Sin día <span className="font-semibold normal-case tracking-normal">· en Pedidos</span></span>
-            <span className="font-bold tabular-nums"><span className="text-xs font-medium lg:hidden">Pedidos: </span>{esperando.pedidos}</span>
-            <span className="font-bold tabular-nums"><span className="text-xs font-medium lg:hidden">Paquetes: </span>{num(esperando.paquetes)}</span>
-            <span className="font-bold tabular-nums"><span className="text-xs font-medium lg:hidden">Unidades: </span>{esperando.unidades}</span>
-            <span className="font-bold tabular-nums"><span className="text-xs font-medium lg:hidden">Facturación: </span>{esperando.pedidos === 0 ? "—" : formatoPesos(esperando.monto)}</span>
-            <span className="text-[#c9a53a]">—</span>
-            <span className="text-sm font-bold uppercase tracking-wide text-[#8a6a05]">falta ubicar</span>
-            <span className="text-[#c9a53a]">—</span>
-            <span className="text-sm font-bold text-[#5c4300]">Abrir ›</span>
+          <Link href="/pedidos" className={`relative grid items-center gap-x-4 gap-y-1 border-t border-stone-300 bg-[#fdf8e3] px-5 py-5 text-center text-[15px] hover:bg-[#fbf1c6] ${COLUMNAS}`} title="Pedidos cargados que todavía no tienen día asignado (esperan en la hoja PEDIDOS)">
+            <span aria-hidden className="absolute inset-y-0 left-0 w-1 bg-[#d9a406]" />
+            <span className="text-base font-bold">Sin día <span className="font-medium text-[#8a6a05]">· en Pedidos</span></span>
+            <span className="tabular-nums"><span className="text-xs text-stone-500 lg:hidden">Pedidos: </span>{esperando.pedidos}</span>
+            <span className="tabular-nums"><span className="text-xs text-stone-500 lg:hidden">Paquetes: </span>{num(esperando.paquetes)}</span>
+            <span className="tabular-nums"><span className="text-xs text-stone-500 lg:hidden">Unidades: </span>{esperando.unidades}</span>
+            <span className="font-semibold tabular-nums"><span className="text-xs font-normal text-stone-500 lg:hidden">Facturación: </span>{esperando.pedidos === 0 ? "—" : formatoPesos(esperando.monto)}</span>
+            <span className="text-stone-300">—</span>
+            <span className="text-sm font-semibold text-[#8a6a05]">Falta ubicar</span>
+            <span className="text-stone-400">—</span>
+            <span className="flex items-center justify-center text-sm font-semibold text-verde-800">Abrir ›</span>
           </Link>
           <div className={`grid items-center gap-x-4 gap-y-1 border-t-2 border-stone-400 bg-crema-100 px-5 py-5 text-center text-[15px] ${COLUMNAS}`}>
             <span className="text-base font-bold uppercase tracking-wide">Total semana</span>
