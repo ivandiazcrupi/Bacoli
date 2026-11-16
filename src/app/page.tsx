@@ -40,7 +40,7 @@ export default async function Inicio() {
   // Tus tareas (solo oficina): pendientes primero; si no tenés ninguna cargada, no se muestra nada.
   const tareas = oficina ? await db.tarea.findMany({ where: { asignadaId: usuario.id }, orderBy: [{ hecha: "asc" }, { orden: "asc" }, { creadoEn: "asc" }], select: { id: true, titulo: true, hecha: true } }) : [];
   const pendientes = tareas.filter((t) => !t.hecha).length;
-  const visibles = tareas.slice(0, 7);
+  const visibles = tareas; // todas: si son muchas, la lista se desliza dentro del cuadro
 
   return (
     <>
@@ -73,10 +73,10 @@ export default async function Inicio() {
               <h2 className="text-[13px] font-bold uppercase tracking-[0.12em] text-stone-600">Tus tareas</h2>
               <span className="text-[12.5px] text-stone-500">{pendientes === 0 ? "todo al día ✓" : `${pendientes} pendiente${pendientes === 1 ? "" : "s"}`}</span>
             </header>
-            <ul className="divide-y divide-stone-100">
+            <ul className="max-h-[48vh] divide-y divide-stone-100 overflow-y-auto overscroll-contain pr-1">
               {visibles.map((t) => <FilaTarea key={t.id} id={t.id} titulo={t.titulo} hecha={t.hecha} puedeTildar puedeBorrar={false} />)}
             </ul>
-            <p className="mt-2 text-right"><Link href="/tareas" className="text-[12.5px] font-semibold text-stone-600 underline-offset-2 hover:underline">{tareas.length > visibles.length ? `Ver las ${tareas.length} y las del equipo ›` : "Ver las del equipo ›"}</Link></p>
+            <p className="mt-2 text-right"><Link href="/tareas" className="text-[12.5px] font-semibold text-stone-600 underline-offset-2 hover:underline">Ver las del equipo ›</Link></p>
           </section>
         )}
       </main>
