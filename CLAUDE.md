@@ -600,3 +600,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Inicio: todas las tareas, con scroll (pedido del dueño)
 - El cuadro "Tus tareas" del inicio muestra **todas** (ya no solo 7) y, si son muchas, la lista se desliza dentro del cuadro (alto máximo ~48 % de la pantalla); el enlace de abajo es "Ver las del equipo ›".
+
+## SEMANA: fila "Sin día · en Pedidos" (pedido del dueño: ver cómo viene lo que falta ubicar)
+- En `/pedidos/semana`, después del último día y antes de TOTAL SEMANA, una fila punteada **"Sin día · en Pedidos"** con **Pedidos · Paquetes · Unidades · Facturación** de todo lo que está esperando día (PENDIENTE y sin fecha, mayoristas y tienda; las cobranzas no; **de cualquier semana**, no solo la que se mira). Se abre en la hoja PEDIDOS. **No suma en TOTAL SEMANA** (ese total sigue siendo solo de los días de la semana).

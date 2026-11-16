@@ -20,12 +20,20 @@ export default async function Semana({ searchParams }: { searchParams: Promise<{
   const esta = semanaDeTrabajo();
   const verTotales = await vendedoresDesbloqueado();
 
-  const [pedidos, salidas, cerrados, empresa] = await Promise.all([
+  const [pedidos, salidas, cerrados, empresa, sinDia] = await Promise.all([
     db.pedido.findMany({ where: { estado: { not: "CANCELADO" }, origen: { not: "COBRANZA" }, fechaEntrega: { gte: aFecha(inicio), lte: aFecha(fin) } }, include: { items: true } }),
     db.salida.findMany({ where: { fecha: { gte: aFecha(inicio), lte: aFecha(fin) } }, include: { vehiculo: true }, orderBy: { orden: "asc" } }),
     db.diaCerrado.findMany({ where: { fecha: { gte: aFecha(inicio), lte: aFecha(fin) } } }),
     db.empresa.findUnique({ where: { id: "principal" }, select: { costoLogisticoUnidad: true } }),
+    // Lo que todavía espera día en la hoja PEDIDOS (cualquier semana): para ver cómo viene lo que falta ubicar.
+    db.pedido.findMany({ where: { estado: "PENDIENTE", fechaEntrega: null, origen: { not: "COBRANZA" } }, include: { items: true } }),
   ]);
+  const esperando = {
+    pedidos: sinDia.length,
+    paquetes: sinDia.reduce((s, p) => s + bultosDe(p.items), 0),
+    unidades: sinDia.reduce((s, p) => s + totalUnidades(unidadesPorSabor(p.items)), 0),
+    monto: sinDia.reduce((s, p) => s + importeVigente(p.items, Number(p.ivaPct), "PENDIENTE", p.webTotal), 0),
+  };
   const tope = Number(empresa?.costoLogisticoUnidad ?? TOPE_COSTO_POR_PIZZA);
   // Costo logístico por unidad: lo que cuestan las camionetas con pedidos ÷ las unidades que llevan (pizzas, prepizzas y focaccias). Null si falta cargar algún costo o no hay camionetas.
   const unidadesCosto = (ps: typeof pedidos) => ps.reduce((t, p) => t + unidadesParaCosto(p.items), 0);
@@ -100,6 +108,17 @@ export default async function Semana({ searchParams }: { searchParams: Promise<{
               </Link>
             );
           })}
+          <Link href="/pedidos" className={`grid items-center gap-x-4 gap-y-1 border-t border-dashed border-stone-400 bg-stone-50 px-5 py-4 text-center text-[14px] text-stone-700 hover:bg-crema-100 ${COLUMNAS}`} title="Pedidos cargados que todavía no tienen día asignado (esperan en la hoja PEDIDOS)">
+            <span className="font-bold">Sin día <span className="font-medium text-stone-500">· en Pedidos</span></span>
+            <span className="tabular-nums"><span className="text-xs text-stone-500 lg:hidden">Pedidos: </span>{esperando.pedidos}</span>
+            <span className="tabular-nums"><span className="text-xs text-stone-500 lg:hidden">Paquetes: </span>{num(esperando.paquetes)}</span>
+            <span className="tabular-nums"><span className="text-xs text-stone-500 lg:hidden">Unidades: </span>{esperando.unidades}</span>
+            <span className="font-semibold tabular-nums"><span className="text-xs font-normal text-stone-500 lg:hidden">Facturación: </span>{esperando.pedidos === 0 ? "—" : formatoPesos(esperando.monto)}</span>
+            <span className="text-stone-300">—</span>
+            <span className="text-stone-400">esperando día</span>
+            <span className="text-stone-300">—</span>
+            <span className="text-sm font-semibold text-verde-800">Abrir ›</span>
+          </Link>
           <div className={`grid items-center gap-x-4 gap-y-1 border-t-2 border-stone-400 bg-crema-100 px-5 py-5 text-center text-[15px] ${COLUMNAS}`}>
             <span className="text-base font-bold uppercase tracking-wide">Total semana</span>
             {verTotales ? (
