@@ -1,5 +1,6 @@
 "use client";
 
+import { num } from "@/lib/ruta";
 import { usarEstadoPersistente } from "@/lib/usarEstadoPersistente";
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -14,6 +15,7 @@ export type FilaPedido = {
   entrega: string | null; // AAAA-MM-DD
   barrio: string;
   direccion: string;
+  paquetes: number;
   items: { cantidad: number; nombre: string; sinCargo: number }[];
   monto: number;
   comprobante: string; // "F-4818", "R-0001" o ""
@@ -100,7 +102,6 @@ export function TablaPedidos({ filas }: { filas: FilaPedido[] }) {
           {visibles.length === 0 && <p className="p-8 text-center text-sm text-stone-500">No hay pedidos con esos filtros.</p>}
           {visibles.map((f) => {
             const cancelado = f.estado === "CANCELADO";
-            const vistos = f.items; // el pedido completo, un producto por línea
             return (
               <div key={f.id} className={`grid h-14 items-center gap-x-3 overflow-hidden border-b border-stone-200 px-4 text-center text-[13.5px] text-stone-800 hover:bg-crema-50 ${COLUMNAS} ${cancelado ? "text-stone-400" : ""}`}>
                 <span className="tabular-nums text-stone-700">{fecha(f.cargado)}</span>
@@ -111,10 +112,8 @@ export function TablaPedidos({ filas }: { filas: FilaPedido[] }) {
                     <span className="block truncate text-[12.5px] text-stone-600">{f.direccion}</span>
                   </> : <span className="text-stone-300">—</span>}
                 </span>
-                <span className={`min-w-0 text-left leading-[13px] ${f.items.length > 4 ? "grid grid-cols-2 gap-x-3" : ""}`} title={f.items.map((i) => `${i.cantidad} ${i.nombre}${i.sinCargo ? ` (${i.sinCargo} sin cargo)` : ""}`).join("\n")}>
-                  {vistos.map((i, k) => (
-                    <span key={k} className="flex items-baseline gap-1.5 text-[11.5px]"><b className="min-w-[1.6rem] text-right tabular-nums text-stone-900">{i.cantidad}</b><span className="truncate">{i.nombre}{i.sinCargo > 0 && <span className="text-stone-400"> (+{i.sinCargo} sin cargo)</span>}</span></span>
-                  ))}
+                <span className="font-bold tabular-nums text-stone-900" title={f.items.map((i) => `${i.cantidad} ${i.nombre}${i.sinCargo ? ` (${i.sinCargo} sin cargo)` : ""}`).join("\n")}>
+                  {f.paquetes > 0 ? <>{num(f.paquetes)} <span className="text-[12.5px] font-normal text-stone-600">{f.paquetes === 1 ? "paquete" : "paquetes"}</span></> : <span className="text-stone-300">—</span>}
                 </span>
                 <span className={`font-bold tabular-nums ${cancelado ? "line-through" : ""}`}>{formatoPesos(f.monto)}</span>
                 <span className="font-semibold tabular-nums">{f.comprobante || <span className="text-xs font-normal text-stone-400">{f.comprobanteFalta}</span>}</span>
