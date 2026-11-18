@@ -102,7 +102,7 @@ export function TablaPedidos({ filas }: { filas: FilaPedido[] }) {
             const cancelado = f.estado === "CANCELADO";
             const vistos = f.items; // el pedido completo, un producto por línea
             return (
-              <div key={f.id} className={`grid min-h-14 items-center gap-x-3 border-b border-stone-200 px-4 py-2 text-center text-[13.5px] text-stone-800 hover:bg-crema-50 ${COLUMNAS} ${cancelado ? "text-stone-400" : ""}`}>
+              <div key={f.id} className={`grid h-14 items-center gap-x-3 overflow-hidden border-b border-stone-200 px-4 text-center text-[13.5px] text-stone-800 hover:bg-crema-50 ${COLUMNAS} ${cancelado ? "text-stone-400" : ""}`}>
                 <span className="tabular-nums text-stone-700">{fecha(f.cargado)}</span>
                 <span className="tabular-nums text-stone-700">{f.entrega ? fecha(f.entrega) : <span className="text-stone-400">Sin día</span>}</span>
                 <span className="min-w-0 text-left leading-tight" title={`${f.barrio} · ${f.direccion}`}>
@@ -111,9 +111,9 @@ export function TablaPedidos({ filas }: { filas: FilaPedido[] }) {
                     <span className="block truncate text-[12.5px] text-stone-600">{f.direccion}</span>
                   </> : <span className="text-stone-300">—</span>}
                 </span>
-                <span className="min-w-0 text-left leading-tight" title={f.items.map((i) => `${i.cantidad} ${i.nombre}${i.sinCargo ? ` (${i.sinCargo} sin cargo)` : ""}`).join("\n")}>
+                <span className={`min-w-0 text-left leading-[13px] ${f.items.length > 4 ? "grid grid-cols-2 gap-x-3" : ""}`} title={f.items.map((i) => `${i.cantidad} ${i.nombre}${i.sinCargo ? ` (${i.sinCargo} sin cargo)` : ""}`).join("\n")}>
                   {vistos.map((i, k) => (
-                    <span key={k} className="flex items-baseline gap-2"><b className="min-w-[2.2rem] text-right tabular-nums text-stone-900">{i.cantidad}</b><span className="text-[12.5px]">{i.nombre}{i.sinCargo > 0 && <span className="text-stone-400"> (+{i.sinCargo} sin cargo)</span>}</span></span>
+                    <span key={k} className="flex items-baseline gap-1.5 text-[11.5px]"><b className="min-w-[1.6rem] text-right tabular-nums text-stone-900">{i.cantidad}</b><span className="truncate">{i.nombre}{i.sinCargo > 0 && <span className="text-stone-400"> (+{i.sinCargo} sin cargo)</span>}</span></span>
                   ))}
                 </span>
                 <span className={`font-bold tabular-nums ${cancelado ? "line-through" : ""}`}>{formatoPesos(f.monto)}</span>
