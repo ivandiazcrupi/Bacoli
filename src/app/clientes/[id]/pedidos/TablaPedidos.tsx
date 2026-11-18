@@ -100,9 +100,9 @@ export function TablaPedidos({ filas }: { filas: FilaPedido[] }) {
           {visibles.length === 0 && <p className="p-8 text-center text-sm text-stone-500">No hay pedidos con esos filtros.</p>}
           {visibles.map((f) => {
             const cancelado = f.estado === "CANCELADO";
-            const vistos = f.items.length > 2 ? f.items.slice(0, 1) : f.items; // con 3 o más renglones: el primero y "+N más"
+            const vistos = f.items; // el pedido completo, un producto por línea
             return (
-              <div key={f.id} className={`grid h-14 items-center gap-x-3 overflow-hidden border-b border-stone-200 px-4 text-center text-[13.5px] text-stone-800 hover:bg-crema-50 ${COLUMNAS} ${cancelado ? "text-stone-400" : ""}`}>
+              <div key={f.id} className={`grid min-h-14 items-center gap-x-3 border-b border-stone-200 px-4 py-2 text-center text-[13.5px] text-stone-800 hover:bg-crema-50 ${COLUMNAS} ${cancelado ? "text-stone-400" : ""}`}>
                 <span className="tabular-nums text-stone-700">{fecha(f.cargado)}</span>
                 <span className="tabular-nums text-stone-700">{f.entrega ? fecha(f.entrega) : <span className="text-stone-400">Sin día</span>}</span>
                 <span className="min-w-0 text-left leading-tight" title={`${f.barrio} · ${f.direccion}`}>
@@ -113,9 +113,8 @@ export function TablaPedidos({ filas }: { filas: FilaPedido[] }) {
                 </span>
                 <span className="min-w-0 text-left leading-tight" title={f.items.map((i) => `${i.cantidad} ${i.nombre}${i.sinCargo ? ` (${i.sinCargo} sin cargo)` : ""}`).join("\n")}>
                   {vistos.map((i, k) => (
-                    <span key={k} className="flex items-baseline gap-2 truncate"><b className="min-w-[2.2rem] text-right tabular-nums text-stone-900">{i.cantidad}</b><span className="truncate text-[12.5px]">{i.nombre}{i.sinCargo > 0 && <span className="text-stone-400"> (+{i.sinCargo} sin cargo)</span>}</span></span>
+                    <span key={k} className="flex items-baseline gap-2"><b className="min-w-[2.2rem] text-right tabular-nums text-stone-900">{i.cantidad}</b><span className="text-[12.5px]">{i.nombre}{i.sinCargo > 0 && <span className="text-stone-400"> (+{i.sinCargo} sin cargo)</span>}</span></span>
                   ))}
-                  {f.items.length > 2 && <span className="block pl-[2.7rem] text-[12px] font-semibold text-stone-500">+ {f.items.length - 1} productos más</span>}
                 </span>
                 <span className={`font-bold tabular-nums ${cancelado ? "line-through" : ""}`}>{formatoPesos(f.monto)}</span>
                 <span className="font-semibold tabular-nums">{f.comprobante || <span className="text-xs font-normal text-stone-400">{f.comprobanteFalta}</span>}</span>
