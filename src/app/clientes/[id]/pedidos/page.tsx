@@ -5,7 +5,7 @@ import { importeVigente } from "@/lib/cuenta";
 import { db } from "@/lib/db";
 import { deFecha } from "@/lib/fechas";
 import { titulo } from "@/lib/mayusculas";
-import { bultosDe } from "@/lib/ruta";
+import { paquetesYPizzas } from "@/lib/ruta";
 import { formatoRemito } from "@/lib/remito";
 import { exigirOficina } from "@/lib/session";
 import { BotonVolver } from "@/components/BotonVolver";
@@ -59,7 +59,7 @@ export default async function PedidosDelCliente({ params }: { params: Promise<{ 
               entrega: p.fechaEntrega ? deFecha(p.fechaEntrega) : null,
               barrio: p.punto?.barrio ?? "",
               direccion: p.punto ? titulo(p.punto.direccion) : "",
-              paquetes: bultosDe(p.items), // paquetes: los de unidad cuentan ÷ 2 (como la hoja de ruta)
+              ...paquetesYPizzas(p.items), // paquetes y pizzas tal como se pidieron, sin dividir
               items: p.items.map((i) => ({ cantidad: i.cantidad, nombre: i.nombre, sinCargo: i.sinCargo })),
               monto: importeVigente(p.items, Number(p.ivaPct), "PENDIENTE"), // lo pedido, con IVA si lleva factura
               comprobante: p.conFactura ? (p.numeroFactura ?? "") : p.remitoNumero ? formatoRemito(p.remitoNumero) : "",

@@ -16,6 +16,7 @@ export type FilaPedido = {
   barrio: string;
   direccion: string;
   paquetes: number;
+  pizzas: number;
   items: { cantidad: number; nombre: string; sinCargo: number }[];
   monto: number;
   comprobante: string; // "F-4818", "R-0001" o ""
@@ -113,7 +114,10 @@ export function TablaPedidos({ filas }: { filas: FilaPedido[] }) {
                   </> : <span className="text-stone-300">—</span>}
                 </span>
                 <span className="font-bold tabular-nums text-stone-900" title={f.items.map((i) => `${i.cantidad} ${i.nombre}${i.sinCargo ? ` (${i.sinCargo} sin cargo)` : ""}`).join("\n")}>
-                  {f.paquetes > 0 ? <>{num(f.paquetes)} <span className="text-[12.5px] font-normal text-stone-600">{f.paquetes === 1 ? "paquete" : "paquetes"}</span></> : <span className="text-stone-300">—</span>}
+                  {f.paquetes > 0 || f.pizzas > 0 ? <span className="flex flex-col leading-tight">
+                    {f.paquetes > 0 && <span>{num(f.paquetes)} <span className="text-[12.5px] font-normal text-stone-600">{f.paquetes === 1 ? "paquete" : "paquetes"}</span></span>}
+                    {f.pizzas > 0 && <span>{num(f.pizzas)} <span className="text-[12.5px] font-normal text-stone-600">{f.pizzas === 1 ? "pizza" : "pizzas"}</span></span>}
+                  </span> : <span className="text-stone-300">—</span>}
                 </span>
                 <span className={`font-bold tabular-nums ${cancelado ? "line-through" : ""}`}>{formatoPesos(f.monto)}</span>
                 <span className="font-semibold tabular-nums">{f.comprobante || <span className="text-xs font-normal text-stone-400">{f.comprobanteFalta}</span>}</span>

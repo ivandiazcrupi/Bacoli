@@ -44,6 +44,20 @@ export function unidadesPorSabor(items: RenglonRuta[]) {
 }
 
 /**
+ * Lo pedido "como se pidió", sin dividir: paquetes (prepizzas y combos pedidos por paquete) y pizzas (lo pedido por unidad:
+ * muzzarella, jamón, fugazzetta o una prepizza escrita por unidad). Pizzeta, focaccia y envío no cuentan.
+ */
+export function paquetesYPizzas(items: RenglonRuta[]) {
+  let paquetes = 0, pizzas = 0;
+  for (const i of items) {
+    if (!claseDe(i.nombre)) continue;
+    const cant = i.cantidad + (i.sinCargo ?? 0);
+    if (i.unidad === "unidad") pizzas += cant; else paquetes += cant * (i.paquetesPor ?? 1);
+  }
+  return { paquetes, pizzas };
+}
+
+/**
  * Focaccias para producción, separadas por sabor. Cuentan: FOCACCIA (oliva) y FOCACCIA CHERRY, 2 de oliva por cada "COMBO NAPOLITANO + 2 FOCACCIA"
  * (el combo común no trae). Un nombre que termina en "X2" trae 2 unidades por cada una comprada ("FOCACCIA CHERRY Y ROMERO X2" = 2 cherry);
  * "OLIVA + CHERRY … X2" es un pack mixto: una de oliva y una de cherry (X2 = el total del pack, mitad y mitad).
