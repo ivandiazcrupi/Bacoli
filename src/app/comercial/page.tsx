@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { deFecha, hoy, sumarDias } from "@/lib/fechas";
 import { titulo } from "@/lib/mayusculas";
 import { importeVigente } from "@/lib/cuenta";
+import { paquetesYPizzas } from "@/lib/ruta";
 import { exigirOficina } from "@/lib/session";
 import { enlaceWhatsApp } from "@/lib/telefonos";
 import { CONTENEDOR_PEDIDOS } from "../pedidos/Encabezado";
@@ -22,10 +23,10 @@ export default async function Comercial() {
 
   const [clientes, pedidos] = await Promise.all([
     db.cliente.findMany({ where: { activo: true }, include: { puntos: { where: { activo: true }, select: { id: true, barrio: true, direccion: true, telefono: true } } }, orderBy: { nombre: "asc" } }),
-    db.pedido.findMany({ where: { clienteId: { not: null }, estado: { not: "CANCELADO" }, origen: "MAYORISTA" }, select: { clienteId: true, puntoId: true, estado: true, creadoEn: true, fechaEntrega: true, ivaPct: true, webTotal: true, items: { select: { cantidad: true, cantidadEntregada: true, precioUnitario: true, descuentoPct: true, ivaPct: true } } }, orderBy: { creadoEn: "asc" } }),
+    db.pedido.findMany({ where: { clienteId: { not: null }, estado: { not: "CANCELADO" }, origen: "MAYORISTA" }, select: { clienteId: true, puntoId: true, estado: true, creadoEn: true, fechaEntrega: true, ivaPct: true, webTotal: true, items: { select: { nombre: true, unidad: true, paquetesPor: true, sinCargo: true, cantidad: true, cantidadEntregada: true, precioUnitario: true, descuentoPct: true, ivaPct: true } } }, orderBy: { creadoEn: "asc" } }),
   ]);
 
-  type Acum = { fechas: string[]; entregas: string[]; abiertos: (string | null)[]; montoUltimo: number };
+  type Acum = { fechas: string[]; entregas: string[]; abiertos: (string | null)[]; montoUltimo: number; paqUltimo: number; pizzasUltimo: number };
   type PedidoFila = (typeof pedidos)[number];
   // Junta los pedidos por la clave que se elija: el cliente (todas sus sucursales juntas) o cada sucursal por separado.
   const acumular = (clave: (p: PedidoFila) => string | null) => {
@@ -35,9 +36,11 @@ export default async function Comercial() {
       const k = clave(p);
       if (!k) continue;
       const f = fechaAR(p.creadoEn);
-      const a = m.get(k) ?? { fechas: [], entregas: [], abiertos: [], montoUltimo: 0 };
+      const a = m.get(k) ?? { fechas: [], entregas: [], abiertos: [], montoUltimo: 0, paqUltimo: 0, pizzasUltimo: 0 };
       a.fechas.push(f);
       a.montoUltimo = importeVigente(p.items, Number(p.ivaPct), p.estado === "ENTREGADO" ? "ENTREGADO" : "PENDIENTE", p.webTotal); // monto de este pedido (importe final); los pedidos van del más viejo al más nuevo, así que queda el del último
+      const py = paquetesYPizzas(p.items); // lo que pidió en este pedido, tal como lo pidió (queda el del último)
+      a.paqUltimo = py.paquetes; a.pizzasUltimo = py.pizzas;
       if (p.estado === "PENDIENTE") a.abiertos.push(p.fechaEntrega ? deFecha(p.fechaEntrega) : null); // pedido en curso: con su día de entrega, o esperando día
       if (p.estado === "ENTREGADO") { // día en que se entregó (los comprobantes cargados a mano no tienen día: valen el de carga)
         const e = p.fechaEntrega ? deFecha(p.fechaEntrega) : f;
@@ -67,10 +70,9 @@ export default async function Comercial() {
     const entregas = [...(a?.entregas ?? [])].sort();
     const entrega = entregas.length ? entregas[entregas.length - 1] : null; // última entrega
     const sinEntrega = entrega ? dias(hoyStr, entrega) : null; // días desde su última entrega (null = todavía no se le entregó nada)
-    const dif = entrega && ultimo ? dias(entrega, ultimo) : null; // días entre el último pedido y la última entrega (negativo = hay un pedido más nuevo sin entregar)
     return {
-      id, clienteId, nombre, barrios, ultimo, entrega, sinEntrega, dif, enCurso: enCursoDe(a?.abiertos ?? []),
-      montoUltimo: a ? a.montoUltimo : null, total: fechas.length,
+      id, clienteId, nombre, barrios, ultimo, entrega, sinEntrega, enCurso: enCursoDe(a?.abiertos ?? []),
+      montoUltimo: a ? a.montoUltimo : null, paq: a ? a.paqUltimo : null, pizzas: a ? a.pizzasUltimo : null, total: fechas.length,
       telefono: tel?.telefono ?? null, wa: tel ? enlaceWhatsApp(tel.telefono) : null,
     };
   };

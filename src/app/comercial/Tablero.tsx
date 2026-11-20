@@ -5,12 +5,13 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 // Pesos sin centavos ($150.000), como se lee de un vistazo.
 const formatoPesos = (n: number) => new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
+import { num } from "@/lib/ruta";
 import { coincideNumero } from "@/lib/filtroNumero";
 import { FiltroLista, SEP } from "../cuentas/FiltroLista";
 export type FilaCliente = {
   id: string; clienteId: string; nombre: string; barrios: string;
-  ultimo: string | null; entrega: string | null; sinEntrega: number | null; dif: number | null; enCurso: string | null;
-  montoUltimo: number | null; total: number; telefono: string | null; wa: string | null;
+  ultimo: string | null; entrega: string | null; sinEntrega: number | null; enCurso: string | null;
+  montoUltimo: number | null; paq: number | null; pizzas: number | null; total: number; telefono: string | null; wa: string | null;
 };
 
 const fechaCorta = (s: string | null) => (s ? `${s.slice(8)}/${s.slice(5, 7)}/${s.slice(2, 4)}` : "—");
@@ -36,10 +37,12 @@ const grupoDe = (f: FilaCliente): Exclude<Filtro, "todos"> => {
   return d <= 7 ? "d7" : d <= 15 ? "s7" : d <= 21 ? "s15" : d <= 30 ? "s21" : d <= 45 ? "s30" : "s45";
 };
 const dentro = (f: FilaCliente, k: Filtro) => k === "todos" || grupoDe(f) === k;
+// Lo que pidió en su último pedido, tal como lo pidió: "25 paquetes" y "10 pizzas" (cada uno solo si hay).
+const textoPidio = (f: FilaCliente) => [f.paq ? `${num(f.paq)} ${f.paq === 1 ? "paquete" : "paquetes"}` : "", f.pizzas ? `${num(f.pizzas)} ${f.pizzas === 1 ? "pizza" : "pizzas"}` : ""].filter(Boolean).join(" ");
 const estadoContacto = (f: FilaCliente) => (f.wa ? "Con WhatsApp" : f.telefono ? "Teléfono no válido" : "Sin teléfono");
 const entradaFiltro = "h-7 w-full min-w-0 rounded border border-stone-300 bg-white px-1.5 text-center text-[12px] font-normal normal-case tracking-normal text-stone-800 placeholder:text-stone-300 focus:border-verde-700 focus:outline-none";
 
-type Col = "nombre" | "ultimo" | "entrega" | "sinEntrega" | "dif" | "montoUltimo";
+type Col = "nombre" | "ultimo" | "entrega" | "sinEntrega" | "pidio" | "montoUltimo";
 
 // Tarjetas minimalistas: blancas, con el número en color (verde = pidieron, rojo = hay clientes sin pedir). La elegida se pinta en gris oscuro.
 const COLOR_NUM: Record<string, string> = { neutro: "text-stone-900", apagado: "text-stone-300", verde: "text-verde-700", amarillo: "text-[#a07c0a]", naranja: "text-[#c2570c]", rojo3: "text-rojo-700", rojo4: "text-rojo-800" };
@@ -72,11 +75,11 @@ export function Tablero({ clientes, sucursales }: { clientes: FilaCliente[]; suc
   const [fUltimo, setFUltimo] = usarEstadoPersistente("fUltimo", "");   // fecha del último pedido
   const [fEntrega, setFEntrega] = usarEstadoPersistente("fEntrega", "");  // fecha de la última entrega
   const [fSin, setFSin] = usarEstadoPersistente("fSin", "");           // días sin entrega, número: ej. 15, >15, <=7
-  const [fDif, setFDif] = usarEstadoPersistente("fDif", "");           // días entre pedido y entrega
+  const [fPidio, setFPidio] = usarEstadoPersistente("fPidio", "");       // qué pidió: texto, ej. "pizzas" o "25"
   const [fPaq, setFPaq] = usarEstadoPersistente("fPaq", "");
   const [fContacto, setFContacto] = usarEstadoPersistente("fContacto", ""); // varios (unidos con SEP)
-  const hayFiltros = !!(fCliente || fUltimo.trim() || fEntrega.trim() || fSin.trim() || fDif.trim() || fPaq.trim() || fContacto);
-  const quitarFiltros = () => { setFCliente(""); setFUltimo(""); setFEntrega(""); setFSin(""); setFDif(""); setFPaq(""); setFContacto(""); };
+  const hayFiltros = !!(fCliente || fUltimo.trim() || fEntrega.trim() || fSin.trim() || fPidio.trim() || fPaq.trim() || fContacto);
+  const quitarFiltros = () => { setFCliente(""); setFUltimo(""); setFEntrega(""); setFSin(""); setFPidio(""); setFPaq(""); setFContacto(""); };
   const elegir = (k: Filtro) => setFiltro(k); // al tocar una tarjeta solo cambia la tabla: la pantalla no se mueve
 
   // Lo que dicen el buscador y los filtros de las columnas, sin mirar la tarjeta elegida: de acá salen los números de las tarjetas.
@@ -87,11 +90,11 @@ export function Tablero({ clientes, sucursales }: { clientes: FilaCliente[]; suc
       if (fCliente && !fCliente.split(SEP).includes(f.nombre)) return false;
       if (fUltimo.trim() && !fechaCorta(f.ultimo).includes(fUltimo.trim())) return false;
       if (fEntrega.trim() && !fechaCorta(f.entrega).includes(fEntrega.trim())) return false;
-      if (!coincideNumero(f.sinEntrega, fSin) || !coincideNumero(f.dif, fDif) || !coincideNumero(f.montoUltimo, fPaq)) return false;
+      if (!coincideNumero(f.sinEntrega, fSin) || !textoPidio(f).includes(fPidio.trim().toLowerCase()) || !coincideNumero(f.montoUltimo, fPaq)) return false;
       if (fContacto && !fContacto.split(SEP).includes(estadoContacto(f))) return false;
       return true;
     });
-  }, [filas, q, fCliente, fUltimo, fEntrega, fSin, fDif, fPaq, fContacto]);
+  }, [filas, q, fCliente, fUltimo, fEntrega, fSin, fPidio, fPaq, fContacto]);
 
   const resumen = useMemo(() => {
     const r = { activos: base.length, curso: 0, d7: 0, s7: 0, s15: 0, s21: 0, s30: 0, s45: 0, inactivos: 0 };
@@ -106,6 +109,7 @@ export function Tablero({ clientes, sucursales }: { clientes: FilaCliente[]; suc
       if (orden.col === "ultimo") return f.ultimo ?? "";
       if (orden.col === "entrega") return f.entrega ?? "";
       if (orden.col === "sinEntrega" && f.enCurso !== null) return -1; // con pedido en curso van al final: los primeros son los que hay que llamar
+      if (orden.col === "pidio") return f.paq === null ? -Infinity : (f.paq ?? 0) * 2 + (f.pizzas ?? 0); // paquetes (×2) + pizzas: más pidió, más arriba
       const v = f[orden.col];
       return v === null ? -Infinity : v; // los que nunca recibieron van al final al ordenar por días sin entrega
     };
@@ -161,7 +165,7 @@ export function Tablero({ clientes, sucursales }: { clientes: FilaCliente[]; suc
             <Titulo col="ultimo" ayuda="Fecha del último pedido cargado.">Último pedido</Titulo>
             <Titulo col="entrega" ayuda="Fecha de la última vez que se le entregó.">Última entrega</Titulo>
             <Titulo col="sinEntrega" ayuda="Días que pasaron desde su última ENTREGA. Es el que cuenta: verde hasta 7 días, amarillo hasta 30 y rojo más de 30.">Sin entrega (días)</Titulo>
-            <Titulo col="dif" ayuda="Días entre el último pedido y la última entrega. Si tiene un signo menos, hay un pedido más nuevo que todavía no se entregó.">Diferencia</Titulo>
+            <Titulo col="pidio" ayuda="Lo que pidió en su último pedido, tal como lo pidió: paquetes (prepizzas y combos) y pizzas (por unidad).">Qué pidió</Titulo>
             <Titulo col="montoUltimo" ayuda="Monto en pesos del último pedido que se cargó (importe final, con IVA si lleva factura), esté entregado o todavía en curso.">Monto último pedido</Titulo>
             <span>Contactar</span>
           </div>
@@ -170,7 +174,7 @@ export function Tablero({ clientes, sucursales }: { clientes: FilaCliente[]; suc
               <input aria-label="Filtrar último pedido" value={fUltimo} onChange={(e) => setFUltimo(e.target.value)} placeholder="Ej: 03/10" className={entradaFiltro} />
               <input aria-label="Filtrar última entrega" value={fEntrega} onChange={(e) => setFEntrega(e.target.value)} placeholder="Ej: 03/10" className={entradaFiltro} />
               <input aria-label="Filtrar días sin entrega" value={fSin} onChange={(e) => setFSin(e.target.value)} placeholder="Ej: >15" title="Número exacto o con signo: 15, >15, >=15, <7" className={entradaFiltro} />
-              <input aria-label="Filtrar diferencia entre pedido y entrega" value={fDif} onChange={(e) => setFDif(e.target.value)} placeholder="Ej: >7" title="Número exacto o con signo: 7, >7, <0" className={entradaFiltro} />
+              <input aria-label="Filtrar lo que pidió" value={fPidio} onChange={(e) => setFPidio(e.target.value)} placeholder="Ej: pizzas" title="Escribí parte del texto: pizzas, paquetes, 25…" className={entradaFiltro} />
               <input aria-label="Filtrar monto del último pedido" value={fPaq} onChange={(e) => setFPaq(e.target.value)} placeholder="Ej: >100000" title="Número exacto o con signo: 100000, >100000, <50000" className={entradaFiltro} />
               <FiltroLista varios titulo="Contactar" opciones={["Con WhatsApp", "Sin teléfono", "Teléfono no válido"]} valor={fContacto} onCambio={setFContacto} />
             </div>
@@ -185,15 +189,15 @@ export function Tablero({ clientes, sucursales }: { clientes: FilaCliente[]; suc
               <span className="tabular-nums text-stone-600">{fechaCorta(f.ultimo)}</span>
               <span className="tabular-nums text-stone-600">{fechaCorta(f.entrega)}</span>
               <span>
-                {f.enCurso !== null ? <span className="flex flex-col items-center leading-tight" title={`Ya tiene un pedido en curso: no hace falta llamarlo.${f.sinEntrega !== null ? ` Su última entrega fue hace ${f.sinEntrega} días.` : ""}`}>
-                    <span className="rounded-full border border-stone-300 bg-stone-100 px-2.5 py-0.5 text-[12px] font-semibold text-stone-700">{f.enCurso}</span>
-                    {f.sinEntrega !== null && <span className="text-[10.5px] text-stone-400">última hace {f.sinEntrega} d</span>}
-                  </span>
+                {f.enCurso !== null ? <span className={`text-[12.5px] font-medium ${f.enCurso.startsWith("Sin marcar") ? "text-[#8a6a05]" : "text-stone-500"}`} title={`Ya tiene un pedido en curso: no hace falta llamarlo.${f.sinEntrega !== null ? ` Su última entrega fue hace ${f.sinEntrega} días.` : ""}`}>{f.enCurso}</span>
                   : f.sinEntrega === null ? <span className="rounded-full bg-crema-100 px-2.5 py-0.5 text-[12px] font-semibold text-stone-500" title="Todavía no se le entregó ningún pedido">Sin entregas</span>
                   : <span className={`inline-block min-w-[44px] rounded-full px-2.5 py-0.5 text-[14px] font-bold tabular-nums ${f.sinEntrega >= 30 ? "bg-rojo-50 text-rojo-700" : f.sinEntrega > 15 ? "bg-[#fdeedd] text-[#b4530a]" : f.sinEntrega > 7 ? "bg-[#fdf8e3] text-[#8a6a05]" : "bg-verde-50 text-verde-800"}`}>{f.sinEntrega === 0 ? "Hoy" : f.sinEntrega}</span>}
               </span>
-              <span className="tabular-nums text-stone-600" title={f.dif === null ? "" : f.dif < 0 ? `Tiene un pedido más nuevo (${fechaCorta(f.ultimo)}) que todavía no se entregó` : `Entre el último pedido y la última entrega pasaron ${f.dif} días`}>
-                {f.dif === null ? <span className="text-stone-300">—</span> : f.dif === 0 ? "Mismo día" : f.dif < 0 ? <span className="text-[#8a6a05]">−{Math.abs(f.dif)} {Math.abs(f.dif) === 1 ? "día" : "días"}</span> : `${f.dif} ${f.dif === 1 ? "día" : "días"}`}
+              <span className="flex flex-col items-center leading-tight text-[12.5px]" title="Lo que pidió en su último pedido">
+                {f.paq === null ? <span className="text-stone-300">—</span> : !f.paq && !f.pizzas ? <span className="text-stone-300">—</span> : <>
+                  {!!f.paq && <span><b className="tabular-nums">{num(f.paq)}</b> {f.paq === 1 ? "paquete" : "paquetes"}</span>}
+                  {!!f.pizzas && <span><b className="tabular-nums">{num(f.pizzas)}</b> {f.pizzas === 1 ? "pizza" : "pizzas"}</span>}
+                </>}
               </span>
               <span className="tabular-nums" title="Monto del último pedido">{f.montoUltimo === null ? <span className="text-stone-300">—</span> : formatoPesos(f.montoUltimo)}</span>
               <span>
