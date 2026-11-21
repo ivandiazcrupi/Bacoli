@@ -10,7 +10,7 @@ import { num } from "@/lib/ruta";
 import { CONTENEDOR_PEDIDOS } from "../../pedidos/Encabezado";
 import { EncabezadoComercial } from "../EncabezadoComercial";
 import { PantallaBloqueada } from "./Bloqueo";
-import { BotonImportar, BotonSalir, CambiarClave } from "./Formularios";
+import { BotonImportar } from "./Formularios";
 
 const nav = "flex h-9 items-center rounded-md border border-stone-300 bg-white px-3 text-sm font-semibold hover:border-stone-600";
 
@@ -139,7 +139,6 @@ export default async function Vendedores({ searchParams }: { searchParams: Promi
           </section>
         )}
 
-        <div className="flex flex-wrap items-center justify-end gap-6 border-t border-stone-200 pt-4"><CambiarClave /><BotonSalir /></div>
       </main>
     </>
   );

@@ -2,7 +2,7 @@
 
 import { useActionState, useMemo, useRef, useState, useTransition } from "react";
 import { estiloCampo } from "@/components/campos";
-import { cambiarActivoVendedor, eliminarVendedor, entrarVendedores, guardarClaveVendedores, guardarClientesDeVendedor, guardarVendedor, importarComisionista, salirVendedores, unirVendedores } from "./actions";
+import { cambiarActivoVendedor, eliminarVendedor, guardarClientesDeVendedor, guardarVendedor, importarComisionista, unirVendedores } from "./actions";
 
 type Opc = { id: string; nombre: string };
 const hoyAR = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }).format(new Date());
@@ -16,57 +16,6 @@ const Mensaje = ({ e }: { e: { ok?: string; error?: string } | undefined }) => (
   </>
 );
 
-// ── Contraseña del apartado ──
-export function FormClave({ hayClave, esDueno, volver = "/comercial/vendedores" }: { hayClave: boolean; esDueno: boolean; volver?: string }) {
-  const [entrar, accionEntrar, entrando] = useActionState(entrarVendedores, undefined);
-  const [crear, accionCrear, creando] = useActionState(guardarClaveVendedores, undefined);
-  const [olvide, setOlvide] = useState(false);
-  const nueva = !hayClave || olvide;
-  if (nueva && !esDueno) return <p className="text-center text-sm text-stone-600">Todavía no hay contraseña. Pedile a un dueño que la cree.</p>;
-  return (
-    <div className="mx-auto w-full max-w-sm space-y-4">
-      {nueva ? (
-        <form action={accionCrear} className="space-y-4">
-          <input type="hidden" name="volver" value={volver} />
-          <label className={etiqueta}>{hayClave ? "Nueva contraseña" : "Elegí una contraseña para este apartado"}
-            <input name="nueva" type="password" autoFocus autoComplete="new-password" className={`${estiloCampo} mt-1`} />
-          </label>
-          <button disabled={creando} className={`${primario} w-full`}>{creando ? "…" : "Guardar y entrar"}</button>
-          <Mensaje e={crear} />
-          {olvide && <button type="button" onClick={() => setOlvide(false)} className="block w-full text-center text-sm text-stone-500 hover:underline">Volver</button>}
-        </form>
-      ) : (
-        <form action={accionEntrar} className="space-y-4">
-          <input type="hidden" name="volver" value={volver} />
-          <label className={etiqueta}>Contraseña
-            <input name="clave" type="password" autoFocus autoComplete="current-password" className={`${estiloCampo} mt-1`} />
-          </label>
-          <button disabled={entrando} className={`${primario} w-full`}>{entrando ? "…" : "Entrar"}</button>
-          <Mensaje e={entrar} />
-          {esDueno && <button type="button" onClick={() => setOlvide(true)} className="block w-full text-center text-sm text-stone-500 hover:underline">Me olvidé la contraseña</button>}
-        </form>
-      )}
-    </div>
-  );
-}
-
-export function CambiarClave() {
-  const [abierto, setAbierto] = useState(false);
-  const [estado, enviar, cargando] = useActionState(guardarClaveVendedores, undefined);
-  if (!abierto) return <button type="button" onClick={() => setAbierto(true)} className="text-sm text-stone-500 hover:text-stone-900 hover:underline">Cambiar contraseña</button>;
-  return (
-    <form action={enviar} className="flex flex-wrap items-center gap-2">
-      <input name="nueva" type="password" placeholder="Nueva contraseña" autoComplete="new-password" className="h-9 w-48 rounded-md border border-stone-300 px-3 text-sm" />
-      <button disabled={cargando} className="h-9 rounded-md bg-stone-900 px-4 text-sm font-semibold text-white disabled:opacity-60">Guardar</button>
-      <button type="button" onClick={() => setAbierto(false)} className="text-sm text-stone-500 hover:underline">Cancelar</button>
-      <Mensaje e={estado} />
-    </form>
-  );
-}
-
-export function BotonSalir() {
-  return <form action={salirVendedores}><button className="text-sm text-stone-500 hover:text-stone-900 hover:underline">Bloquear</button></form>;
-}
 
 // ── Vendedor: ficha como la de un cliente (nombre, %, usuario) ──
 export function FormVendedor({ vendedor, usuarios }: { vendedor?: { id: string; nombre: string; pct: string; usuarioId: string }; usuarios: Opc[] }) {

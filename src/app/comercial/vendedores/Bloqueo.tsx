@@ -1,24 +1,20 @@
+import Link from "next/link";
 import { Cabecera } from "@/components/Cabecera";
 import type { Usuario } from "@prisma/client";
-import { hayClaveVendedores } from "@/lib/claveVendedores";
 import { CONTENEDOR_PEDIDOS } from "../../pedidos/Encabezado";
-import { EncabezadoComercial, type PestañaComercial } from "../EncabezadoComercial";
-import { FormClave } from "./Formularios";
+import type { PestañaComercial } from "../EncabezadoComercial";
 
-// Pantalla de la contraseña: se ve cuando todavía no se entró al apartado Vendedores.
-export async function PantallaBloqueada({ usuario, activa = "vendedores", titulo = "Vendedores", volver = "/comercial/vendedores" }: { usuario: Usuario; activa?: PestañaComercial; titulo?: string; volver?: string }) {
-  const hay = await hayClaveVendedores();
+// Se ve cuando alguien que no es gerente abre este apartado (por ejemplo desde un enlace guardado).
+export async function PantallaBloqueada({ usuario, titulo = "Vendedores" }: { usuario: Usuario; activa?: PestañaComercial; titulo?: string; volver?: string }) {
   return (
     <>
       <Cabecera usuario={usuario} />
       <main className={CONTENEDOR_PEDIDOS}>
-        <EncabezadoComercial activa={activa} />
-        <div className="mx-auto mt-16 w-full max-w-md space-y-6 rounded-2xl border border-stone-200 bg-white px-8 py-10 text-center">
-          <div>
-            <h1 className="!border-0 text-xl font-semibold">{titulo}</h1>
-            <p className="mt-1 text-sm text-stone-500">{hay ? "Ingresá la contraseña para ver este apartado (es la misma para Vendedores y Estadísticas)." : "Este apartado se abre con una contraseña."}</p>
-          </div>
-          <FormClave hayClave={hay} esDueno={usuario.rol === "DUENO"} volver={volver} />
+        <h1 className="text-2xl font-bold tracking-tight">Comercial</h1>
+        <div className="mx-auto mt-16 w-full max-w-md space-y-3 rounded-2xl border border-stone-200 bg-white px-8 py-10 text-center">
+          <h1 className="!border-0 text-xl font-semibold">{titulo}</h1>
+          <p className="text-sm text-stone-500">Este apartado lo ven solamente los gerentes.</p>
+          <Link href="/comercial" className="inline-block text-sm font-semibold text-verde-800 underline">Volver a Comercial</Link>
         </div>
       </main>
     </>

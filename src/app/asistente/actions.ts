@@ -1,13 +1,12 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { desbloquearVendedores, hayClaveVendedores, vendedoresDesbloqueado } from "@/lib/claveVendedores";
+import { vendedoresDesbloqueado } from "@/lib/claveVendedores";
 import { asistenteDisponible, responder, type Mensaje, type Respuesta } from "@/lib/asistente/asistente";
 import { db } from "@/lib/db";
 import { esPersonalDeOficina } from "@/lib/roles";
 import { leerSesion } from "@/lib/session";
 
-// Solo oficina (gerentes y administración). Sin la contraseña de Estadísticas, el asistente no da montos en pesos.
+// Solo oficina (gerentes y administración). Los montos en pesos solo se los da a los gerentes.
 async function usuarioDeOficina() {
   const sesion = await leerSesion();
   if (!sesion) return null;
@@ -38,22 +37,4 @@ export async function preguntarAlAsistente(historial: Mensaje[]): Promise<Respue
   usos.set(u.id, { dia, n: n + 1 });
 
   return responder(limpio, { nombre: u.nombre.split(" ")[0], bloqueado: !(await vendedoresDesbloqueado()) });
-}
-
-const intentos = new Map<string, { n: number; hasta: number }>(); // 5 errores = 15 min sin poder probar (igual que el resto del sistema)
-
-/** Desbloquea los montos con la misma contraseña de Estadísticas / Vendedores. */
-export async function desbloquearDesdeAsistente(clave: string): Promise<{ ok: boolean; error?: string }> {
-  const u = await usuarioDeOficina();
-  if (!u) return { ok: false, error: "Entrá de nuevo al sistema." };
-  if (!(await hayClaveVendedores())) return { ok: false, error: "Todavía no hay contraseña: un gerente la crea en Comercial → Vendedores." };
-  const t = intentos.get(u.id);
-  if (t && t.hasta > Date.now() && t.n >= 5) return { ok: false, error: "Demasiados intentos. Probá en 15 minutos." };
-  if (!(await desbloquearVendedores(String(clave ?? "")))) {
-    intentos.set(u.id, { n: (t && t.hasta > Date.now() ? t.n : 0) + 1, hasta: Date.now() + 15 * 60_000 });
-    return { ok: false, error: "Contraseña incorrecta." };
-  }
-  intentos.delete(u.id);
-  revalidatePath("/", "layout");
-  return { ok: true };
 }

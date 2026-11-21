@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { desbloquearDesdeAsistente, preguntarAlAsistente } from "@/app/asistente/actions";
+import { preguntarAlAsistente } from "@/app/asistente/actions";
 import type { Consulta, Mensaje } from "@/lib/asistente/asistente";
 
 // Botón flotante "Preguntar" (abajo a la izquierda) que abre un mini chat: se le pregunta cualquier cosa de los datos y responde con la IA.
@@ -19,10 +19,7 @@ export function Asistente({ bloqueadoInicial }: { bloqueadoInicial: boolean }) {
   const [items, setItems] = useState<Item[]>([]);
   const [texto, setTexto] = useState("");
   const [pensando, setPensando] = useState(false);
-  const [bloqueado, setBloqueado] = useState(bloqueadoInicial);
-  const [pidiendoClave, setPidiendoClave] = useState(false);
-  const [clave, setClave] = useState("");
-  const [errorClave, setErrorClave] = useState("");
+  const bloqueado = bloqueadoInicial; // los montos en pesos solo los ven los gerentes
   const fin = useRef<HTMLDivElement>(null);
 
   useEffect(() => { fin.current?.scrollIntoView({ block: "end" }); }, [items, pensando, abierto]);
@@ -44,12 +41,6 @@ export function Asistente({ bloqueadoInicial }: { bloqueadoInicial: boolean }) {
     }
   };
 
-  const desbloquear = async () => {
-    setErrorClave("");
-    const r = await desbloquearDesdeAsistente(clave);
-    if (r.ok) { setBloqueado(false); setPidiendoClave(false); setClave(""); } else setErrorClave(r.error ?? "No se pudo.");
-  };
-
   if (!abierto) {
     return (
       <button type="button" onClick={() => setAbierto(true)} className="fixed bottom-10 left-4 z-40 inline-flex items-center gap-1.5 rounded-full border border-verde-700 bg-verde-700 px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-verde-800 print:hidden">
@@ -69,18 +60,7 @@ export function Asistente({ bloqueadoInicial }: { bloqueadoInicial: boolean }) {
       </div>
 
       {bloqueado ? (
-        <div className="border-b border-stone-200 bg-crema-50 px-3 py-1.5 text-xs text-stone-600">
-          {pidiendoClave ? (
-            <form onSubmit={(e) => { e.preventDefault(); void desbloquear(); }} className="flex items-center gap-1.5">
-              <input type="password" autoFocus value={clave} onChange={(e) => setClave(e.target.value)} placeholder="Contraseña de Estadísticas" className="h-7 min-w-0 flex-1 rounded border border-stone-300 px-2 text-xs" />
-              <button type="submit" className="h-7 rounded bg-stone-800 px-2 text-xs font-semibold text-white">Entrar</button>
-              <button type="button" onClick={() => { setPidiendoClave(false); setErrorClave(""); }} className="text-stone-500">✕</button>
-            </form>
-          ) : (
-            <span>🔒 Los montos en pesos están bloqueados. <button type="button" onClick={() => setPidiendoClave(true)} className="font-semibold text-verde-800 underline">Desbloquear</button></span>
-          )}
-          {errorClave && <p className="mt-1 text-rojo-700">{errorClave}</p>}
-        </div>
+        <div className="border-b border-stone-200 bg-crema-50 px-3 py-1.5 text-xs text-stone-600">🔒 Los montos en pesos solo los ven los gerentes.</div>
       ) : null}
 
       <div className="flex-1 space-y-3 overflow-y-auto px-3 py-3 text-[13.5px]">

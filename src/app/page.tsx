@@ -73,8 +73,8 @@ export default async function Inicio() {
               <h2 className="text-[13px] font-bold uppercase tracking-[0.12em] text-stone-600">Tus tareas</h2>
               <span className="text-[12.5px] text-stone-500">{pendientes === 0 ? "todo al día ✓" : `${pendientes} pendiente${pendientes === 1 ? "" : "s"}`}</span>
             </header>
-            <ul className="max-h-[48vh] divide-y divide-stone-100 overflow-y-auto overscroll-contain pr-1">
-              {visibles.map((t) => <FilaTarea key={t.id} id={t.id} titulo={t.titulo} hecha={t.hecha} puedeTildar puedeBorrar={false} />)}
+            <ul className="max-h-[48vh] overflow-y-auto overscroll-contain pr-1">
+              {visibles.map((t) => <FilaTarea key={t.id} id={t.id} titulo={t.titulo} hecha={t.hecha} />)}
             </ul>
             <p className="mt-2 text-right"><Link href="/tareas" className="text-[12.5px] font-semibold text-stone-600 underline-offset-2 hover:underline">Ver las del equipo ›</Link></p>
           </section>
