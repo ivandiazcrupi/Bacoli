@@ -8,6 +8,7 @@ import { formatoPesos } from "@/lib/numeros";
 import { bultosDe, num, TOPE_COSTO_POR_PIZZA, totalUnidades, unidadesParaCosto, unidadesPorSabor } from "@/lib/ruta";
 import { exigirOficina } from "@/lib/session";
 import { vendedoresDesbloqueado } from "@/lib/claveVendedores";
+import { DesbloquearTotales, OcultarTotales } from "./TotalFacturacion";
 import { CONTENEDOR_PEDIDOS, EncabezadoPedidos } from "../Encabezado";
 
 // SEMANA: cada día con lo que tiene asignado. Al entrar a un día se arma su hoja de ruta (qué vehículos salen y qué lleva cada uno).
@@ -119,9 +120,9 @@ export default async function Semana({ searchParams }: { searchParams: Promise<{
             <span className="text-stone-400">—</span>
             <span className="flex items-center justify-center text-sm font-semibold text-verde-800">Abrir ›</span>
           </Link>
-          {verTotales && (
-            <div className={`grid items-center gap-x-4 gap-y-1 border-t-2 border-stone-400 bg-crema-100 px-5 py-5 text-center text-[15px] ${COLUMNAS}`}>
+          <div className={`grid items-center gap-x-4 gap-y-1 border-t-2 border-stone-400 bg-crema-100 px-5 py-5 text-center text-[15px] ${COLUMNAS}`}>
             <span className="text-base font-bold uppercase tracking-wide">Total semana</span>
+            {verTotales ? (
               <>
                 <span className="font-bold tabular-nums"><span className="text-xs font-normal text-stone-500 lg:hidden">Pedidos: </span>{total.pedidos}</span>
                 <span className="font-bold tabular-nums"><span className="text-xs font-normal text-stone-500 lg:hidden">Paquetes: </span>{num(total.paquetes)}</span>
@@ -130,10 +131,12 @@ export default async function Semana({ searchParams }: { searchParams: Promise<{
                 <span className={`font-bold tabular-nums ${costoSemana.porUnidad === null ? "text-stone-400" : costoSemana.porUnidad > tope ? "text-rojo-700" : "text-verde-700"}`}><span className="text-xs font-normal text-stone-500 lg:hidden">Costo logístico: </span>{costoSemana.porUnidad === null ? "—" : <>{formatoPesos(costoSemana.porUnidad)}<span className="ml-1 text-[11px] font-normal text-stone-500">/ un.</span></>}</span>
                 <span className="font-bold tabular-nums"><span className="text-xs font-normal text-stone-500 lg:hidden">Entregas: </span>{total.pedidos === 0 ? "—" : `${total.entregados} de ${total.pedidos}`}</span>
                 <span className="font-bold tabular-nums"><span className="text-xs font-normal text-stone-500 lg:hidden">Vehículos: </span>{total.vehiculos}</span>
-                <span />
+                <OcultarTotales />
               </>
+            ) : (
+              <span className="lg:col-span-8"><DesbloquearTotales /></span>
+            )}
           </div>
-          )}
         </div>
       </main>
     </>

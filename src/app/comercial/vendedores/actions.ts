@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { vendedoresDesbloqueado } from "@/lib/claveVendedores";
+import { bloquearVendedores, desbloquearVendedores, hayClaveVendedores, MIN_CLAVE_VENDEDORES, ponerClaveVendedores, vendedoresDesbloqueado } from "@/lib/claveVendedores";
 import { db } from "@/lib/db";
 import { esFechaValida, hoy } from "@/lib/fechas";
 import { titulo } from "@/lib/mayusculas";
@@ -11,13 +11,50 @@ import { exigirOficina } from "@/lib/session";
 
 export type EstadoVend = { ok?: string; error?: string } | undefined;
 
-/** Todo el apartado Vendedores es solo para gerentes. */
+/** Todo el apartado Vendedores (oficina) pide haber entrado con la contraseña; con ella, todos pueden hacer todo. */
 async function exigirAcceso() {
   const u = await exigirOficina();
-  if (!(await vendedoresDesbloqueado())) throw new Error("Este apartado es solo para gerentes.");
+  if (!(await vendedoresDesbloqueado())) throw new Error("Ingresá la contraseña de Vendedores.");
   return u;
 }
 const refrescar = (extra?: string) => { revalidatePath("/comercial/vendedores"); if (extra) revalidatePath(extra); };
+
+/** A dónde volver tras entrar: solo pantallas de Comercial (el campo viene del formulario, así que se revisa). */
+const destino = (f: FormData) => { const v = String(f.get("volver") ?? ""); return /^\/comercial(\/[a-z0-9-]*)*$/.test(v) ? v : "/comercial/vendedores"; };
+
+// ── Contraseña del apartado ──────────────────────────────────────────────────────────────────────
+const intentos = new Map<string, { n: number; hasta: number }>(); // bloqueo de 15 min tras 5 errores (en memoria, como el login)
+
+export async function entrarVendedores(_: EstadoVend, f: FormData): Promise<EstadoVend> {
+  const u = await exigirOficina();
+  const t = intentos.get(u.id);
+  if (t && t.hasta > Date.now() && t.n >= 5) return { error: "Demasiados intentos. Probá de nuevo en 15 minutos." };
+  if (!(await desbloquearVendedores(String(f.get("clave") ?? "")))) {
+    const n = (t && t.hasta > Date.now() ? t.n : 0) + 1;
+    intentos.set(u.id, { n, hasta: Date.now() + 15 * 60_000 });
+    return { error: "Contraseña incorrecta." };
+  }
+  intentos.delete(u.id);
+  redirect(destino(f));
+}
+
+/** Primera vez (la crea un gerente), o cambiarla: la puede cambiar quien ya entró y, si se olvidó, un gerente. */
+export async function guardarClaveVendedores(_: EstadoVend, f: FormData): Promise<EstadoVend> {
+  const u = await exigirOficina();
+  const hay = await hayClaveVendedores();
+  const puede = u.rol === "DUENO" || (hay && (await vendedoresDesbloqueado()));
+  if (!puede) return { error: "Solo un gerente puede crear la contraseña." };
+  const nueva = String(f.get("nueva") ?? "");
+  if (nueva.length < MIN_CLAVE_VENDEDORES) return { error: `Tiene que tener al menos ${MIN_CLAVE_VENDEDORES} caracteres.` };
+  await ponerClaveVendedores(nueva);
+  redirect(destino(f));
+}
+
+export async function salirVendedores() {
+  await exigirOficina();
+  await bloquearVendedores();
+  redirect("/comercial");
+}
 
 // ── Vendedores ───────────────────────────────────────────────────────────────────────────────────
 const leerPct = (txt: string): { pct: number | null } | { error: string } => {
