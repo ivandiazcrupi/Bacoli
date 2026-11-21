@@ -89,7 +89,7 @@ export default async function Comercial() {
     <>
       <Cabecera usuario={usuario} />
       <main className={CONTENEDOR_PEDIDOS}>
-        <EncabezadoComercial activa="clientes" />
+        <EncabezadoComercial activa="clientes" derecha={<Link href="/comercial/asignacion" className="rounded-md border border-stone-300 bg-white px-3.5 py-2 text-sm font-semibold text-stone-800 hover:border-stone-600">Asignación de clientes ›</Link>} />
         <Tablero clientes={filas} sucursales={sucursales} />
       </main>
     </>
