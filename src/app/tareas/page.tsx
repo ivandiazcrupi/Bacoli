@@ -1,7 +1,8 @@
 import { Cabecera } from "@/components/Cabecera";
 import { db } from "@/lib/db";
 import { exigirOficina } from "@/lib/session";
-import { ListaTareas, NuevaTarea, TableroTareas } from "./Controles";
+import { GENERALES } from "@/lib/tareas";
+import { CargaRapida, ListaTareas, NuevaTarea, TableroTareas } from "./Controles";
 
 const primerNombre = (n: string) => n.trim().split(/\s+/)[0] || n;
 
@@ -14,12 +15,14 @@ export default async function Tareas() {
     orderBy: { creadoEn: "asc" },
     select: { id: true, nombre: true, tareas: { orderBy: [{ hecha: "asc" }, { orden: "asc" }, { creadoEn: "asc" }], select: { id: true, titulo: true, hecha: true } } },
   });
+  const generales = await db.tarea.findMany({ where: { asignadaId: null }, orderBy: [{ hecha: "asc" }, { orden: "asc" }, { creadoEn: "asc" }], select: { id: true, titulo: true, hecha: true } });
   const mias = personas.find((p) => p.id === yo.id);
   const otras = personas.filter((p) => p.id !== yo.id);
 
-  const inicial = Object.fromEntries(personas.map((p) => [p.id, p.tareas.filter((t) => !t.hecha)]));
-  const firma = personas.map((p) => p.tareas.map((t) => `${t.id}${t.hecha ? 1 : 0}`).join()).join("|");
-  const pendientesEquipo = personas.reduce((n, p) => n + p.tareas.filter((t) => !t.hecha).length, 0);
+  const inicial: Record<string, { id: string; titulo: string; hecha: boolean }[]> = { [GENERALES]: generales.filter((t) => !t.hecha), ...Object.fromEntries(personas.map((p) => [p.id, p.tareas.filter((t) => !t.hecha)])) };
+  const firma = [generales, ...personas.map((p) => p.tareas)].map((l) => l.map((t) => `${t.id}${t.hecha ? 1 : 0}`).join()).join("|");
+  const pendientesEquipo = personas.reduce((n, p) => n + p.tareas.filter((t) => !t.hecha).length, 0) + generales.filter((t) => !t.hecha).length;
+  const sinDueno = generales.filter((t) => !t.hecha).length;
 
   const Tarjeta = ({ p, propia }: { p: (typeof personas)[number]; propia: boolean }) => {
     const hechas = p.tareas.filter((t) => t.hecha).length;
@@ -41,6 +44,21 @@ export default async function Tareas() {
     );
   };
 
+  const TarjetaGenerales = () => {
+    return (
+      <section aria-label="Tareas generales" className="rounded-2xl border border-dashed border-stone-400 bg-white p-5">
+        <header className="mb-3 flex items-center gap-3">
+          <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#fdf8e3] text-[15px] font-bold text-[#8a6a05]">G</span>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-[16px] font-bold leading-tight">Generales</h2>
+            <p className="text-[12.5px] text-stone-500">{sinDueno === 0 ? "Nada sin dueño ✓" : `${sinDueno} sin dueño · tocá “Me la quedo” o arrastrala a alguien`}</p>
+          </div>
+        </header>
+        <ListaTareas asignadaId={GENERALES} tareas={generales} generales vacio="Acá caen las tareas que todavía no son de nadie." />
+      </section>
+    );
+  };
+
   return (
     <>
       <Cabecera usuario={yo} />
@@ -51,11 +69,13 @@ export default async function Tareas() {
         </div>
         <TableroTareas key={firma} inicial={inicial}>
           <div className="space-y-5">
+            <CargaRapida personas={personas.map((p) => ({ id: p.id, nombre: p.nombre }))} miId={yo.id} />
+            <TarjetaGenerales />
             {mias && <Tarjeta p={mias} propia />}
             {otras.length > 0 && <div className="grid items-start gap-5 md:grid-cols-2">{otras.map((p) => <Tarjeta key={p.id} p={p} propia={false} />)}</div>}
           </div>
         </TableroTareas>
-        <p className="text-[12px] text-stone-400">Todos pueden cargar, tildar, editar y borrar tareas. Arrastrá con ⋮⋮ para cambiar la prioridad o pasar una tarea a otra persona.</p>
+        <p className="text-[12px] text-stone-400">Todos pueden cargar, tildar, editar y borrar tareas. Lo que no tiene dueño queda en Generales. Arrastrá con ⋮⋮ para cambiar la prioridad o pasar una tarea a otra persona (o a Generales).</p>
       </main>
     </>
   );

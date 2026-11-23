@@ -613,8 +613,8 @@ model Produccion {
 model Tarea {
   id          String    @id @default(cuid())
   titulo      String
-  asignadaId  String
-  asignada    Usuario   @relation("TareaAsignada", fields: [asignadaId], references: [id])
+  asignadaId  String? // null = "Generales": todavía sin dueño (alguien se la queda o se la pasan)
+  asignada    Usuario?  @relation("TareaAsignada", fields: [asignadaId], references: [id])
   creadaPorId String? // quién la cargó (sin relación: solo para saber el nombre)
   hecha       Boolean   @default(false)
   hechaEn     DateTime?

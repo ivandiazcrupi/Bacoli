@@ -4,13 +4,14 @@ import { DndContext, MouseSensor, TouchSensor, closestCenter, useDroppable, useS
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { createContext, useContext, useRef, useState, useTransition, type ReactNode } from "react";
-import { alternarTarea, borrarHechas, borrarTarea, crearTarea, editarTarea, moverTarea, ordenarTareas } from "./actions";
+import { GENERALES } from "@/lib/tareas";
+import { alternarTarea, borrarHechas, borrarTarea, crearTarea, editarTarea, moverTarea, ordenarTareas, tomarTarea } from "./actions";
 
 // Todos los de oficina pueden hacer todo con cualquier tarea: tildarla, editarla, borrarla, ordenarla y pasarla a otra persona.
 // Los íconos de editar y borrar aparecen al pasar el mouse (en el celular se ven siempre).
 const ICONO = "shrink-0 rounded px-1.5 py-0.5 text-[13px] text-stone-400 transition hover:bg-stone-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100";
 
-export function FilaTarea({ id, titulo, hecha, sangria = false }: { id: string; titulo: string; hecha: boolean; sangria?: boolean }) {
+export function FilaTarea({ id, titulo, hecha, sangria = false, tomable = false }: { id: string; titulo: string; hecha: boolean; sangria?: boolean; tomable?: boolean }) {
   const [pendiente, empezar] = useTransition();
   const [error, setError] = useState("");
   const [editando, setEditando] = useState(false);
@@ -47,6 +48,7 @@ export function FilaTarea({ id, titulo, hecha, sangria = false }: { id: string; 
       ) : (
         <span className={`min-w-0 flex-1 text-[14.5px] leading-snug ${hecha ? "text-stone-400 line-through" : "text-stone-900"}`}>{titulo}{error && <span className="ml-2 text-[12px] text-rojo-700 no-underline">{error}</span>}</span>
       )}
+      {tomable && !editando && <button type="button" disabled={pendiente} onClick={() => empezar(async () => { const r = await tomarTarea(id); setError(r.error ?? ""); })} title="Pasa a tu lista" className="shrink-0 rounded-md border border-stone-300 bg-white px-2 py-0.5 text-[12px] font-semibold text-stone-700 hover:border-verde-700 hover:text-verde-800 disabled:opacity-50">Me la quedo</button>}
       {!editando && <button type="button" aria-label="Editar tarea" title="Editar" disabled={pendiente} onClick={() => { cancelado.current = false; setTexto(titulo); setError(""); setEditando(true); }} className={`${ICONO} hover:text-stone-800`}>✎</button>}
       <button type="button" aria-label="Borrar tarea" title="Borrar" disabled={pendiente} onClick={() => window.confirm(`¿Borrar la tarea "${titulo}"?`) && empezar(async () => { await borrarTarea(id); })} className={`${ICONO} hover:text-rojo-700`}>✕</button>
     </li>
@@ -133,7 +135,7 @@ export function TableroTareas({ inicial, children }: { inicial: Pendientes; chil
 }
 
 // Una fila pendiente que se puede arrastrar: el asa ⋮⋮ de la izquierda (aparece al pasar el mouse).
-function FilaOrdenable({ t }: { t: DatosTarea }) {
+function FilaOrdenable({ t, tomable }: { t: DatosTarea; tomable: boolean }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: t.id });
   return (
     <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={`group/fila relative rounded-lg bg-white ${isDragging ? "z-10 opacity-90 outline outline-2 outline-stone-400" : ""}`}>
@@ -146,13 +148,13 @@ function FilaOrdenable({ t }: { t: DatosTarea }) {
         aria-label={`Arrastrar "${t.titulo}" para cambiar la prioridad o pasarla a otra persona`}
         className="absolute left-0 top-1/2 z-10 h-6 w-5 -translate-y-1/2 cursor-grab touch-none select-none rounded text-[15px] leading-none text-stone-300 hover:bg-stone-100 hover:text-stone-700 active:cursor-grabbing sm:opacity-0 sm:group-hover/fila:opacity-100 sm:focus-visible:opacity-100"
       >⋮⋮</button>
-      <ul><FilaTarea id={t.id} titulo={t.titulo} hecha={false} sangria /></ul>
+      <ul><FilaTarea id={t.id} titulo={t.titulo} hecha={false} sangria tomable={tomable} /></ul>
     </div>
   );
 }
 
 // Lista de tareas de una persona: las pendientes arriba (en orden de prioridad) y las hechas recogidas abajo en "Hechas (N)".
-export function ListaTareas({ asignadaId, tareas, vacio }: { asignadaId: string; tareas: DatosTarea[]; vacio: string }) {
+export function ListaTareas({ asignadaId, tareas, vacio, generales = false }: { asignadaId: string; tareas: DatosTarea[]; vacio: string; generales?: boolean }) {
   const compartido = useContext(Contexto);
   const pendientes = compartido?.[asignadaId] ?? tareas.filter((t) => !t.hecha);
   const hechas = tareas.filter((t) => t.hecha);
@@ -161,10 +163,10 @@ export function ListaTareas({ asignadaId, tareas, vacio }: { asignadaId: string;
   return (
     <div ref={setNodeRef} className={`min-h-[44px] rounded-lg transition-colors ${isOver ? "bg-stone-100 outline outline-1 outline-dashed outline-stone-400" : ""}`}>
       <SortableContext items={pendientes.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-        <div>{pendientes.map((t) => <FilaOrdenable key={t.id} t={t} />)}</div>
+        <div>{pendientes.map((t) => <FilaOrdenable key={t.id} t={t} tomable={generales} />)}</div>
       </SortableContext>
       {pendientes.length === 0 && hechas.length === 0 && <p className="px-1 py-2 text-[13.5px] text-stone-400">{vacio}</p>}
-      {pendientes.length === 0 && hechas.length > 0 && <p className="px-1 py-2 text-[13.5px] font-medium text-verde-800">Todo al día ✓</p>}
+      {pendientes.length === 0 && hechas.length > 0 && !generales && <p className="px-1 py-2 text-[13.5px] font-medium text-verde-800">Todo al día ✓</p>}
       {hechas.length > 0 && (
         <details className="mt-1">
           <summary className="cursor-pointer select-none px-1 py-1 text-[12.5px] font-semibold text-stone-500 hover:text-stone-800">Hechas ({hechas.length})</summary>
@@ -173,5 +175,35 @@ export function ListaTareas({ asignadaId, tareas, vacio }: { asignadaId: string;
         </details>
       )}
     </div>
+  );
+}
+
+// Carga rápida: se escribe la tarea y Enter. Por defecto cae en "Generales" (sin dueño): no hace falta pensar a quién asignársela.
+// Si ya se sabe quién la hace, se cambia "Para".
+export function CargaRapida({ personas, miId, compacta = false }: { personas: { id: string; nombre: string }[]; miId: string; compacta?: boolean }) {
+  const [pendiente, empezar] = useTransition();
+  const [error, setError] = useState("");
+  const [para, setPara] = useState(GENERALES);
+  const ref = useRef<HTMLFormElement>(null);
+  const primer = (n: string) => n.trim().split(/\s+/)[0] || n;
+  return (
+    <form
+      ref={ref}
+      action={(fd) => empezar(async () => { const r = await crearTarea(para, fd); setError(r.error ?? ""); if (!r.error) ref.current?.reset(); })}
+      className={compacta ? "mt-2" : ""}
+    >
+      <div className={`flex flex-wrap items-center gap-2 rounded-xl border border-stone-300 bg-white px-3 focus-within:border-verde-700 ${compacta ? "py-1" : "py-1.5"}`}>
+        <span aria-hidden className="text-xl leading-none text-verde-700">+</span>
+        <input name="titulo" placeholder="¿Qué hay que hacer?" aria-label="Nueva tarea" maxLength={200} autoComplete="off" disabled={pendiente} className={`min-w-[12rem] flex-1 bg-transparent placeholder:text-stone-400 focus:outline-none ${compacta ? "h-9 text-[14px]" : "h-11 text-[15px]"}`} />
+        <label className="flex items-center gap-1.5 text-[12.5px] text-stone-500">Para
+          <select value={para} onChange={(e) => setPara(e.target.value)} disabled={pendiente} aria-label="Para quién" className="h-8 rounded-md border border-stone-300 bg-white px-1.5 text-[13px] font-semibold text-stone-800">
+            <option value={GENERALES}>Generales</option>
+            {personas.map((p) => <option key={p.id} value={p.id}>{p.id === miId ? "Yo" : primer(p.nombre)}</option>)}
+          </select>
+        </label>
+        <button type="submit" disabled={pendiente} className="h-8 rounded-md bg-verde-700 px-3 text-[13px] font-semibold text-white hover:bg-verde-800 disabled:opacity-50">Agregar</button>
+      </div>
+      {error && <p className="mt-1 text-[12px] text-rojo-700">{error}</p>}
+    </form>
   );
 }

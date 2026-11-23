@@ -4,7 +4,7 @@ import { Cabecera } from "@/components/Cabecera";
 import { esPersonalDeOficina, esProduccion, esVendedor, produccionActiva } from "@/lib/roles";
 import { db } from "@/lib/db";
 import { exigirUsuario } from "@/lib/session";
-import { FilaTarea } from "./tareas/Controles";
+import { CargaRapida, FilaTarea } from "./tareas/Controles";
 
 // Mensajes de bienvenida: uno al azar cada vez que se entra, según la hora de Argentina.
 // Los "picantes" (pedido del dueño): cortos, simpáticos y con un guiño al trabajo; los de "Hola" valen a cualquier hora.
@@ -39,6 +39,8 @@ export default async function Inicio() {
   const oficina = esPersonalDeOficina(usuario.rol);
   // Tus tareas (solo oficina): pendientes primero; si no tenés ninguna cargada, no se muestra nada.
   const tareas = oficina ? await db.tarea.findMany({ where: { asignadaId: usuario.id }, orderBy: [{ hecha: "asc" }, { orden: "asc" }, { creadoEn: "asc" }], select: { id: true, titulo: true, hecha: true } }) : [];
+  const sinDueno = oficina ? await db.tarea.count({ where: { asignadaId: null, hecha: false } }) : 0; // tareas "Generales" todavía sin dueño
+  const personas = oficina ? await db.usuario.findMany({ where: { activo: true, rol: { in: ["DUENO", "ADMINISTRACION"] } }, orderBy: { creadoEn: "asc" }, select: { id: true, nombre: true } }) : [];
   const pendientes = tareas.filter((t) => !t.hecha).length;
   const visibles = tareas; // todas: si son muchas, la lista se desliza dentro del cuadro
 
@@ -67,16 +69,22 @@ export default async function Inicio() {
           <p className="text-stone-600">Tu ruta del día va a aparecer acá.</p>
         )}
 
-        {tareas.length > 0 && (
-          <section aria-label="Tus tareas" className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-5 py-4 text-left">
+        {oficina && (
+          <section aria-label="Tareas" className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-5 py-4 text-left">
             <header className="mb-1 flex items-baseline justify-between gap-3">
               <h2 className="text-[13px] font-bold uppercase tracking-[0.12em] text-stone-600">Tus tareas</h2>
-              <span className="text-[12.5px] text-stone-500">{pendientes === 0 ? "todo al día ✓" : `${pendientes} pendiente${pendientes === 1 ? "" : "s"}`}</span>
+              <span className="text-[12.5px] text-stone-500">{tareas.length === 0 ? "sin tareas" : pendientes === 0 ? "todo al día ✓" : `${pendientes} pendiente${pendientes === 1 ? "" : "s"}`}</span>
             </header>
-            <ul className="max-h-[48vh] overflow-y-auto overscroll-contain pr-1">
-              {visibles.map((t) => <FilaTarea key={t.id} id={t.id} titulo={t.titulo} hecha={t.hecha} />)}
-            </ul>
-            <p className="mt-2 text-right"><Link href="/tareas" className="text-[12.5px] font-semibold text-stone-600 underline-offset-2 hover:underline">Ver las del equipo ›</Link></p>
+            {tareas.length > 0 && (
+              <ul className="max-h-[40vh] overflow-y-auto overscroll-contain pr-1">
+                {visibles.map((t) => <FilaTarea key={t.id} id={t.id} titulo={t.titulo} hecha={t.hecha} />)}
+              </ul>
+            )}
+            <CargaRapida personas={personas} miId={usuario.id} compacta />
+            <p className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[12.5px]">
+              {sinDueno > 0 ? <Link href="/tareas" className="font-semibold text-[#8a6a05] underline-offset-2 hover:underline">{sinDueno} sin dueño en Generales ›</Link> : <span className="text-stone-400">Lo que no tiene dueño queda en Generales</span>}
+              <Link href="/tareas" className="font-semibold text-stone-600 underline-offset-2 hover:underline">Ver las del equipo ›</Link>
+            </p>
           </section>
         )}
       </main>
