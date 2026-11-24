@@ -36,7 +36,11 @@ export default async function PedidosDelCliente({ params }: { params: Promise<{ 
         <div className="flex flex-wrap items-end justify-between gap-3">
           <h1 className="text-2xl font-bold">Pedidos de {cliente.nombre}</h1>
           <div className="flex flex-wrap items-center gap-2">
-            <Link href={`/cuentas/${id}`} className="rounded-md border border-stone-400 bg-white px-3.5 py-2 text-sm font-semibold text-stone-800 shadow-sm hover:bg-crema-100">Cuenta corriente</Link>
+            <nav aria-label="Ir a" className="flex overflow-hidden rounded-md border border-stone-300 bg-white text-sm font-semibold">
+              <span aria-current="page" className="bg-stone-800 px-3.5 py-2 text-white">Pedidos</span>
+              <Link href={`/cuentas/${id}`} className="border-l border-stone-300 px-3.5 py-2 text-stone-800 hover:bg-crema-100">Cuenta corriente</Link>
+              <Link href={`/clientes/${id}`} className="border-l border-stone-300 px-3.5 py-2 text-stone-800 hover:bg-crema-100">Cliente</Link>
+            </nav>
             <BotonVolver fallback={`/clientes/${id}`} />
           </div>
         </div>

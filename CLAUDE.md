@@ -635,3 +635,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Ficha del cliente: abre SIEMPRE con todas las sucursales (pedido del dueño; reemplaza "abrir una sola sucursal")
 - En la lista de Clientes, el nombre y "Editar" de cada línea abren la ficha **con todas las sucursales del cliente** (ya no se manda `?punto=`; la ficha ignora ese dato). Si el cliente tiene **más de 3 sucursales**, arriba de la tabla hay un campo **"Filtrar sucursales por barrio o dirección…"** (`FiltroSucursales.tsx`, solo esconde filas en pantalla; no cambia nada guardado).
+
+## Pedidos del cliente: tres botones arriba (pedido del dueño)
+- En `/clientes/[id]/pedidos`, arriba a la derecha hay tres botones juntos: **Pedidos** (donde se está, oscuro) · **Cuenta corriente** (`/cuentas/[id]`) · **Cliente** (lleva a la ficha `/clientes/[id]`).
