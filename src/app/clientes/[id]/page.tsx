@@ -1,3 +1,4 @@
+import { FiltroSucursales } from "../FiltroSucursales";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Cabecera } from "@/components/Cabecera";
@@ -17,7 +18,7 @@ const MOSTRAR_PRECIOS_PROPIOS = Boolean(process.env.MOSTRAR_PRECIOS_PROPIOS);
 export default async function FichaCliente({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ punto?: string }> }) {
   const usuario = await exigirOficina();
   const { id } = await params;
-  const { punto: puntoElegido } = await searchParams;
+  await searchParams;
   const cliente = await db.cliente.findUnique({
     where: { id },
     include: {
@@ -72,8 +73,7 @@ export default async function FichaCliente({ params, searchParams }: { params: P
     observacion: cliente.observacion ?? "",
   };
 
-  const soloUna = Boolean(puntoElegido) && cliente.puntos.some((p) => p.id === puntoElegido);
-  const puntosVisibles = soloUna ? cliente.puntos.filter((p) => p.id === puntoElegido) : cliente.puntos;
+  const puntosVisibles = cliente.puntos; // la ficha abre SIEMPRE con todas las sucursales; el filtro de arriba las esconde en pantalla
 
   return (
     <>
@@ -125,19 +125,20 @@ export default async function FichaCliente({ params, searchParams }: { params: P
 
         <section className="space-y-3">
           <h2 className="pt-4 text-center text-3xl font-bold tracking-tight">Sucursales <span className="text-verde-700">({puntosVisibles.length})</span></h2>
-          {soloUna && <p className="text-center text-sm text-stone-600">Mostrando solo esta sucursal. <Link href={`/clientes/${cliente.id}`} className="font-semibold text-verde-700 hover:underline">Ver las {cliente.puntos.length} sucursales ›</Link></p>}
-          <div className="overflow-hidden rounded-xl border-2 border-stone-300 bg-white shadow-sm">
+          {puntosVisibles.length > 3 && <FiltroSucursales contenedor="lista-sucursales" />}
+          <div id="lista-sucursales" className="overflow-hidden rounded-xl border-2 border-stone-300 bg-white shadow-sm">
             <EncabezadoSucursales />
             {puntosVisibles.map((p) => (
+              <div key={p.id} data-sucursal={`${p.barrio} ${p.direccion} ${p.alias ?? ""} ${p.razonSocial ?? ""}`}>
               <FilaSucursal
-                key={p.id}
                 clienteId={cliente.id}
                 zonas={zonas}
                 barrios={listaBarrios}
                 sucursal={{ id: p.id, alias: p.alias ?? "", direccion: p.direccion, barrio: p.barrio, zonaId: p.zonaId, telefono: p.telefono ?? "", comentario: p.comentario ?? "", cuit: p.cuit ?? "", razonSocial: p.razonSocial ?? "", activo: p.activo }}
               />
+              </div>
             ))}
-            {!soloUna && <FilaSucursal clienteId={cliente.id} zonas={zonas} barrios={listaBarrios} />}
+            <FilaSucursal clienteId={cliente.id} zonas={zonas} barrios={listaBarrios} />
           </div>
         </section>
       </main>

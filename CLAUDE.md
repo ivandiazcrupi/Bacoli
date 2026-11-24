@@ -632,3 +632,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ## TAREAS: distribución más ordenada (pedido del dueño: "el diseño ok, pero no me gusta la distribución")
 - **Inicio** (`CajaInicio.tsx`): el cuadro de tareas va de arriba para abajo: **título + "Ver las del equipo ›"**, **el campo para cargar (arriba de todo)**, **dos solapas "Mis tareas N | Generales N"** (la de Generales con numerito amarillo si hay) y recién abajo la lista. **Generales ya no es solo un enlace**: se ven ahí mismo, cada una con **"Me la quedo"**. Si no tenés tareas pendientes y hay Generales, abre directo en Generales.
 - **`/tareas`**: el campo para cargar queda arriba de todo y **Generales y "Tus tareas" van lado a lado** (dos columnas); abajo, las tarjetas del resto del equipo.
+
+## Ficha del cliente: abre SIEMPRE con todas las sucursales (pedido del dueño; reemplaza "abrir una sola sucursal")
+- En la lista de Clientes, el nombre y "Editar" de cada línea abren la ficha **con todas las sucursales del cliente** (ya no se manda `?punto=`; la ficha ignora ese dato). Si el cliente tiene **más de 3 sucursales**, arriba de la tabla hay un campo **"Filtrar sucursales por barrio o dirección…"** (`FiltroSucursales.tsx`, solo esconde filas en pantalla; no cambia nada guardado).

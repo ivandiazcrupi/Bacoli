@@ -48,12 +48,12 @@ function FilaCliente({ c, modo }: { c: Cliente; modo: Modo }) {
     <div className="flex flex-wrap items-center gap-2 lg:justify-end">
       <Link href={`/cuentas/${c.id}`} className={acceso}>Cuenta corriente</Link>
       <Link href={`/clientes/${c.id}/pedidos`} className={acceso}>Pedidos</Link>
-      <Link href={pid ? `/clientes/${c.id}?punto=${pid}` : `/clientes/${c.id}`} className={accesoEditar}>Editar</Link>
+      <Link href={`/clientes/${c.id}`} className={accesoEditar}>Editar</Link>
     </div>
   ) : (
     <div className="flex lg:justify-end"><Link href={`/vendedor/clientes/${c.id}/editar`} className={accesoEditar}>Editar</Link></div>
   );
-  const nombre = (clase: string, pid?: string) => (modo === "oficina" ? <Link href={pid ? `/clientes/${c.id}?punto=${pid}` : `/clientes/${c.id}`} className={`${clase} hover:text-verde-800 hover:underline`}>{c.nombre}</Link> : <span className={clase}>{c.nombre}</span>);
+  const nombre = (clase: string, pid?: string) => (modo === "oficina" ? <Link href={`/clientes/${c.id}`} className={`${clase} hover:text-verde-800 hover:underline`}>{c.nombre}</Link> : <span className={clase}>{c.nombre}</span>);
 
   return (
     <div className={`divide-y divide-stone-200 rounded-xl border border-stone-300 bg-white shadow-sm ${c.activo ? "" : "opacity-60"}`}>
