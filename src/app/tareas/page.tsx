@@ -70,8 +70,10 @@ export default async function Tareas() {
         <TableroTareas key={firma} inicial={inicial}>
           <div className="space-y-5">
             <CargaRapida personas={personas.map((p) => ({ id: p.id, nombre: p.nombre }))} miId={yo.id} />
-            <TarjetaGenerales />
-            {mias && <Tarjeta p={mias} propia />}
+            <div className="grid items-start gap-5 md:grid-cols-2">
+              <TarjetaGenerales />
+              {mias && <Tarjeta p={mias} propia />}
+            </div>
             {otras.length > 0 && <div className="grid items-start gap-5 md:grid-cols-2">{otras.map((p) => <Tarjeta key={p.id} p={p} propia={false} />)}</div>}
           </div>
         </TableroTareas>
