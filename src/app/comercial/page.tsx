@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Cabecera } from "@/components/Cabecera";
 import { db } from "@/lib/db";
-import { deFecha, hoy, sumarDias } from "@/lib/fechas";
+import { deFecha, finDeSemana, hoy, inicioSemana, sumarDias } from "@/lib/fechas";
 import { titulo } from "@/lib/mayusculas";
 import { importeVigente } from "@/lib/cuenta";
 import { paquetesYPizzas } from "@/lib/ruta";
@@ -20,13 +20,15 @@ const fechaAR = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: "America/
 export default async function Comercial() {
   const usuario = await exigirOficina();
   const hoyStr = hoy();
+  const semIni = inicioSemana(hoyStr); // semana de BACOLI: martes a lunes
+  const semFin = finDeSemana(semIni);
 
   const [clientes, pedidos] = await Promise.all([
     db.cliente.findMany({ where: { activo: true }, include: { puntos: { where: { activo: true }, select: { id: true, barrio: true, direccion: true, telefono: true } } }, orderBy: { nombre: "asc" } }),
     db.pedido.findMany({ where: { clienteId: { not: null }, estado: { not: "CANCELADO" }, origen: "MAYORISTA" }, select: { clienteId: true, puntoId: true, estado: true, creadoEn: true, fechaEntrega: true, ivaPct: true, webTotal: true, items: { select: { nombre: true, unidad: true, paquetesPor: true, sinCargo: true, cantidad: true, cantidadEntregada: true, precioUnitario: true, descuentoPct: true, ivaPct: true } } }, orderBy: { creadoEn: "asc" } }),
   ]);
 
-  type Acum = { fechas: string[]; entregas: string[]; abiertos: (string | null)[]; montoUltimo: number; paqUltimo: number; pizzasUltimo: number };
+  type Acum = { fechas: string[]; entregas: string[]; abiertos: (string | null)[]; semana: boolean; montoUltimo: number; paqUltimo: number; pizzasUltimo: number };
   type PedidoFila = (typeof pedidos)[number];
   // Junta los pedidos por la clave que se elija: el cliente (todas sus sucursales juntas) o cada sucursal por separado.
   const acumular = (clave: (p: PedidoFila) => string | null) => {
@@ -36,8 +38,10 @@ export default async function Comercial() {
       const k = clave(p);
       if (!k) continue;
       const f = fechaAR(p.creadoEn);
-      const a = m.get(k) ?? { fechas: [], entregas: [], abiertos: [], montoUltimo: 0, paqUltimo: 0, pizzasUltimo: 0 };
+      const a = m.get(k) ?? { fechas: [], entregas: [], abiertos: [], semana: false, montoUltimo: 0, paqUltimo: 0, pizzasUltimo: 0 };
       a.fechas.push(f);
+      const dia = p.fechaEntrega ? deFecha(p.fechaEntrega) : null;
+      if ((dia && dia >= semIni && dia <= semFin) || f >= semIni) a.semana = true; // pidió esta semana: tiene entrega en la semana o lo cargó desde el martes
       a.montoUltimo = importeVigente(p.items, Number(p.ivaPct), p.estado === "ENTREGADO" ? "ENTREGADO" : "PENDIENTE", p.webTotal); // monto de este pedido (importe final); los pedidos van del más viejo al más nuevo, así que queda el del último
       const py = paquetesYPizzas(p.items); // lo que pidió en este pedido, tal como lo pidió (queda el del último)
       a.paqUltimo = py.paquetes; a.pizzasUltimo = py.pizzas;
@@ -71,7 +75,7 @@ export default async function Comercial() {
     const entrega = entregas.length ? entregas[entregas.length - 1] : null; // última entrega
     const sinEntrega = entrega ? dias(hoyStr, entrega) : null; // días desde su última entrega (null = todavía no se le entregó nada)
     return {
-      id, clienteId, nombre, barrios, ultimo, entrega, sinEntrega, enCurso: enCursoDe(a?.abiertos ?? []),
+      id, clienteId, nombre, barrios, ultimo, entrega, sinEntrega, enCurso: enCursoDe(a?.abiertos ?? []), pidioSemana: a?.semana ?? false,
       montoUltimo: a ? a.montoUltimo : null, paq: a ? a.paqUltimo : null, pizzas: a ? a.pizzasUltimo : null, total: fechas.length,
       telefono: tel?.telefono ?? null, wa: tel ? enlaceWhatsApp(tel.telefono) : null,
     };

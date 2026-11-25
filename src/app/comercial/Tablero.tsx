@@ -10,7 +10,7 @@ import { coincideNumero } from "@/lib/filtroNumero";
 import { FiltroLista, SEP } from "../cuentas/FiltroLista";
 export type FilaCliente = {
   id: string; clienteId: string; nombre: string; barrios: string;
-  ultimo: string | null; entrega: string | null; sinEntrega: number | null; enCurso: string | null;
+  ultimo: string | null; entrega: string | null; sinEntrega: number | null; enCurso: string | null; pidioSemana: boolean;
   montoUltimo: number | null; paq: number | null; pizzas: number | null; total: number; telefono: string | null; wa: string | null;
 };
 
@@ -77,6 +77,7 @@ export function Tablero({ clientes, sucursales }: { clientes: FilaCliente[]; suc
   const [fSin, setFSin] = usarEstadoPersistente("fSin", "");           // días sin entrega, número: ej. 15, >15, <=7
   const [fPidio, setFPidio] = usarEstadoPersistente("fPidio", "");       // qué pidió: texto, ej. "pizzas" o "25"
   const [fPaq, setFPaq] = usarEstadoPersistente("fPaq", "");
+  const [sinSemana, setSinSemana] = usarEstadoPersistente("sinSemana", false); // solo los que todavía no pidieron esta semana
   const [fContacto, setFContacto] = usarEstadoPersistente("fContacto", ""); // varios (unidos con SEP)
   const hayFiltros = !!(fCliente || fUltimo.trim() || fEntrega.trim() || fSin.trim() || fPidio.trim() || fPaq.trim() || fContacto);
   const quitarFiltros = () => { setFCliente(""); setFUltimo(""); setFEntrega(""); setFSin(""); setFPidio(""); setFPaq(""); setFContacto(""); };
@@ -92,9 +93,10 @@ export function Tablero({ clientes, sucursales }: { clientes: FilaCliente[]; suc
       if (fEntrega.trim() && !fechaCorta(f.entrega).includes(fEntrega.trim())) return false;
       if (!coincideNumero(f.sinEntrega, fSin) || !textoPidio(f).includes(fPidio.trim().toLowerCase()) || !coincideNumero(f.montoUltimo, fPaq)) return false;
       if (fContacto && !fContacto.split(SEP).includes(estadoContacto(f))) return false;
+      if (sinSemana && f.pidioSemana) return false;
       return true;
     });
-  }, [filas, q, fCliente, fUltimo, fEntrega, fSin, fPidio, fPaq, fContacto]);
+  }, [filas, q, sinSemana, fCliente, fUltimo, fEntrega, fSin, fPidio, fPaq, fContacto]);
 
   const resumen = useMemo(() => {
     const r = { activos: base.length, curso: 0, d7: 0, s7: 0, s15: 0, s21: 0, s30: 0, s45: 0, inactivos: 0 };
@@ -148,6 +150,7 @@ export function Tablero({ clientes, sucursales }: { clientes: FilaCliente[]; suc
             <button key={v} type="button" onClick={() => cambiarVista(v)} aria-pressed={vista === v} className={`h-10 px-4 ${vista === v ? "bg-stone-800 text-white" : "text-stone-600 hover:bg-crema-100"}`}>{v === "clientes" ? "Por cliente" : "Por sucursal"}</button>
           ))}
         </div>
+        <button type="button" onClick={() => setSinSemana(!sinSemana)} aria-pressed={sinSemana} title="Muestra solo los que todavía no tienen ningún pedido cargado ni entrega para esta semana (martes a lunes)" className={`h-10 rounded-md border px-4 text-[13px] font-semibold ${sinSemana ? "border-stone-800 bg-stone-800 text-white" : "border-stone-300 bg-white text-stone-700 hover:border-stone-500"}`}>Sin pedido esta semana{sinSemana ? " ✕" : ""}</button>
         <input value={q} onChange={(e) => { setQ(e.target.value); if (e.target.value.trim()) setFiltro("todos"); }} title="Al buscar se muestran todos los que coinciden, de cualquier grupo" placeholder="Buscar cliente o barrio…" aria-label="Buscar cliente" className="h-10 w-full max-w-xs rounded-md border border-stone-300 bg-white px-3 text-sm focus:border-verde-700 focus:outline-none" />
         <p className="text-[14px] text-stone-700">
           Mostrando: <b>{FILTROS.find((f) => f[0] === filtro)![1]}</b> · {lista.length} {lista.length === 1 ? unidad[0] : unidad[1]}

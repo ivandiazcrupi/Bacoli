@@ -638,3 +638,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Pedidos del cliente: tres botones arriba (pedido del dueño)
 - En `/clientes/[id]/pedidos`, arriba a la derecha hay tres botones juntos: **Pedidos** (donde se está, oscuro) · **Cuenta corriente** (`/cuentas/[id]`) · **Cliente** (lleva a la ficha `/clientes/[id]`).
+
+## Comercial → Clientes: botón "Sin pedido esta semana" (pedido del dueño)
+- Junto al buscador hay un botón **"Sin pedido esta semana"** (se prende y apaga; `sinSemana` en `Tablero.tsx`): deja solo los clientes/sucursales que **todavía no tienen ningún pedido** (no cancelado ni "no entregado") **con entrega dentro de la semana (martes a lunes) ni cargado desde el martes** (`pidioSemana`, `page.tsx`). Se combina con las tarjetas, el buscador y los filtros; las tarjetas recalculan sus números con ese filtro (p. ej. "sin pedido esta semana" + tarjeta "Sin entrega hace 15 días"). Funciona en las dos vistas (por sucursal / por cliente).
