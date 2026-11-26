@@ -3,6 +3,7 @@ import { Cabecera } from "@/components/Cabecera";
 import { vendedoresDesbloqueado } from "@/lib/claveVendedores";
 import { db } from "@/lib/db";
 import { esFechaValida, hoy, nombreDia, sumarDias } from "@/lib/fechas";
+import { enlaceUbicar } from "@/lib/ruta";
 import { exigirOficina } from "@/lib/session";
 import { CONTENEDOR_PEDIDOS } from "../../pedidos/Encabezado";
 import { EncabezadoComercial } from "../EncabezadoComercial";
@@ -47,7 +48,7 @@ export default async function Tienda({ searchParams }: { searchParams: Promise<{
   // Pedidos del día elegido (como la lista de Empretienda): del más nuevo al más viejo, con los cancelados tachados.
   const delDiaFilas = await db.pedido.findMany({
     where: { origen: "WEB", creadoEn: { gte: iniDia, lt: finDia } },
-    select: { id: true, webOrden: true, webNombre: true, webApellido: true, webEmail: true, webTelefono: true, creadoEn: true, webTotal: true, webPago: true, estado: true },
+    select: { id: true, webOrden: true, webNombre: true, webApellido: true, webEmail: true, webTelefono: true, creadoEn: true, webTotal: true, webPago: true, estado: true, fechaEntrega: true },
     orderBy: { creadoEn: "desc" },
   });
   const filasDia: FilaDia[] = delDiaFilas.map((p) => ({
@@ -56,6 +57,8 @@ export default async function Tienda({ searchParams }: { searchParams: Promise<{
     monto: Number(p.webTotal ?? 0), cancelado: p.estado === "CANCELADO", entregado: p.estado === "ENTREGADO",
     pago: p.webPago === "SIN_COSTO" ? "sincargo" : p.webPago === "PAGO_MP" || p.webPago === "PAGO_TRANSFERENCIA" ? "pagado" : "pendiente",
     medio: p.webPago === "PAGO_MP" ? "Mercado Pago" : "Transferencia",
+    // A dónde está el pedido: la hoja de ruta de su día o, si espera día, la lista de Minoristas (web) de Pedidos.
+    ubicar: enlaceUbicar(p)?.replace("/pedidos?ver=", "/pedidos?lista=web&ver=") ?? null,
   }));
   // Mismo cliente en más de un pedido del día: mismo nombre (o uno contenido en el otro, con 2 palabras o más), mismo email o mismo teléfono. Los cancelados no cuentan.
   {

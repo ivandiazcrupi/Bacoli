@@ -7,6 +7,7 @@ import { cancelarDesdeTienda, pagoDesdeTienda } from "./actions";
 export type FilaDia = {
   id: string; orden: string; nombre: string; fechaHora: string; monto: number;
   pago: "pagado" | "pendiente" | "sincargo"; medio: string; cancelado: boolean; entregado: boolean;
+  ubicar?: string | null; // a dónde llevar el botón "Ubicar pedido"
   grupo?: number; veces?: number; // mismo cliente con más de un pedido en el día
 };
 // Un tono por cada cliente repetido, para ver de un vistazo cuáles van juntos.
@@ -62,7 +63,7 @@ export function PedidosDelDia({ filas }: { filas: FilaDia[] }) {
   const celda = "px-3 py-2 text-center tabular-nums";
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[640px] border-collapse text-[13px]">
+      <table className="w-full min-w-[720px] border-collapse text-[13px]">
         <thead>
           <tr className="border-b border-stone-300 bg-crema-100 text-[11.5px] uppercase tracking-wide text-stone-600">
             <th className={celda}>Orden</th>
@@ -70,6 +71,7 @@ export function PedidosDelDia({ filas }: { filas: FilaDia[] }) {
             <th className={celda}>Fecha y hora</th>
             <th className={celda}>Pago</th>
             <th className={celda}>Monto</th>
+            <th className={celda}>Ubicar</th>
             <th className="w-12 px-2 py-2" aria-label="Acciones" />
           </tr>
         </thead>
@@ -90,6 +92,9 @@ export function PedidosDelDia({ filas }: { filas: FilaDia[] }) {
                   : <span className="rounded-full bg-rojo-50 px-2.5 py-0.5 text-[12px] font-bold text-rojo-700">Pendiente · {f.medio}</span>}
               </td>
               <td className={`${celda} font-semibold`}>{pesos(f.monto)}</td>
+              <td className={`${celda} no-underline`}>
+                {f.ubicar ? <Link href={f.ubicar} title="Te lleva a donde está este pedido (hoja de ruta de su día o lista de Pedidos) y lo marca" className="rounded border border-stone-300 bg-white px-2.5 py-1 text-[12px] font-semibold text-stone-700 no-underline hover:border-stone-600">Ubicar ›</Link> : <span className="text-stone-300">—</span>}
+              </td>
               <td className="px-2 py-1 text-center">{!f.cancelado && <Menu f={f} />}</td>
             </tr>
           ))}

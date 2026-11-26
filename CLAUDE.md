@@ -654,3 +654,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Tienda online → Pedidos del día: marca de clientes repetidos (pedido del dueño: "muchos clientes hacen 2 pedidos")
 - En "Pedidos del día", los pedidos del **mismo cliente** se marcan con **el mismo color de fondo + una franja a la izquierda + una etiqueta "N pedidos"** junto al nombre (cada cliente repetido lleva un color distinto, hasta 5 y después se repiten). Se considera el mismo cliente si coincide el **nombre** (o uno está contenido en el otro, con 2 palabras o más, sin mirar tildes ni mayúsculas), el **email** o el **teléfono** (últimos 8 dígitos). Solo dentro del día que se mira; los cancelados no cuentan. Lógica en `page.tsx` (bloque "Mismo cliente"), dibujo en `PedidosDelDia.tsx`.
+
+## Tienda online → Pedidos del día: botón "Ubicar ›" (pedido del dueño)
+- Cada fila de "Pedidos del día" tiene una columna **UBICAR** con el botón **"Ubicar ›"**, igual que en Cuenta corriente (`enlaceUbicar`, `UbicarPedido.tsx`): te lleva a donde está el pedido —la **hoja de ruta de su día** si ya tiene día, o la lista **Pedidos → Minoristas (web)** si espera día— baja hasta él y lo resalta unos segundos. Cancelados y entregados sin día: sin botón ("—").
