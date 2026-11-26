@@ -93,19 +93,22 @@ export function Tablero({ clientes, sucursales }: { clientes: FilaCliente[]; suc
       if (fEntrega.trim() && !fechaCorta(f.entrega).includes(fEntrega.trim())) return false;
       if (!coincideNumero(f.sinEntrega, fSin) || !textoPidio(f).includes(fPidio.trim().toLowerCase()) || !coincideNumero(f.montoUltimo, fPaq)) return false;
       if (fContacto && !fContacto.split(SEP).includes(estadoContacto(f))) return false;
-      if (sinSemana && f.pidioSemana) return false;
       return true;
     });
-  }, [filas, q, sinSemana, fCliente, fUltimo, fEntrega, fSin, fPidio, fPaq, fContacto]);
+  }, [filas, q, fCliente, fUltimo, fEntrega, fSin, fPidio, fPaq, fContacto]);
+
+  // "Clientes que no pidieron esta semana": va aparte de los grupos de abajo; al prenderlo, tarjetas y tabla trabajan solo con esos.
+  const sinPedirSemana = useMemo(() => base.filter((f) => !f.pidioSemana).length, [base]);
+  const baseVista = useMemo(() => (sinSemana ? base.filter((f) => !f.pidioSemana) : base), [base, sinSemana]);
 
   const resumen = useMemo(() => {
-    const r = { activos: base.length, curso: 0, d7: 0, s7: 0, s15: 0, s21: 0, s30: 0, s45: 0, inactivos: 0 };
-    for (const f of base) r[grupoDe(f)]++;
+    const r = { activos: baseVista.length, curso: 0, d7: 0, s7: 0, s15: 0, s21: 0, s30: 0, s45: 0, inactivos: 0 };
+    for (const f of baseVista) r[grupoDe(f)]++;
     return r;
-  }, [base]);
+  }, [baseVista]);
 
   const lista = useMemo(() => {
-    let r = base.filter((f) => dentro(f, filtro));
+    let r = baseVista.filter((f) => dentro(f, filtro));
     const clave = (f: FilaCliente): string | number => {
       if (orden.col === "nombre") return f.nombre.toLowerCase();
       if (orden.col === "ultimo") return f.ultimo ?? "";
@@ -117,7 +120,7 @@ export function Tablero({ clientes, sucursales }: { clientes: FilaCliente[]; suc
     };
     r = [...r].sort((a, b) => { const x = clave(a), y = clave(b); const principal = x < y ? -1 : x > y ? 1 : 0; return principal * (orden.asc ? 1 : -1) || a.nombre.localeCompare(b.nombre, "es") || a.barrios.localeCompare(b.barrios, "es"); }); // los empates siempre quedan de la A a la Z
     return r;
-  }, [base, filtro, orden]);
+  }, [baseVista, filtro, orden]);
 
   const ordenarPor = (col: Col) => setOrden((o) => (o.col === col ? { col, asc: !o.asc } : { col, asc: col === "nombre" }));
   const Titulo = ({ col, children, ancho, ayuda }: { col: Col; children: React.ReactNode; ancho?: string; ayuda?: string }) => (
@@ -130,6 +133,18 @@ export function Tablero({ clientes, sucursales }: { clientes: FilaCliente[]; suc
 
   return (
     <div className="space-y-4">
+      {/* Aparte de los grupos: los que todavía no pidieron esta semana (martes a lunes) */}
+      <section aria-label="Clientes que no pidieron esta semana" className="flex items-stretch">
+        <div className="relative w-full sm:w-72">
+          <button type="button" onClick={() => setSinSemana(!sinSemana)} aria-pressed={sinSemana} title="Clientes que todavía no tienen ningún pedido para esta semana (martes a lunes): ni con entrega en la semana ni cargado desde el martes. Tocá para ver solo esos."
+            className={`flex h-[92px] w-full flex-col items-center justify-between rounded-lg border-2 border-dashed px-6 pb-2 pt-2 text-center transition ${sinSemana ? "border-stone-800 bg-stone-800" : "border-stone-400 bg-white hover:border-stone-700"}`}>
+            <span className={`flex h-8 w-full items-center justify-center text-[11px] font-semibold uppercase leading-tight tracking-wide ${sinSemana ? "text-stone-300" : "text-stone-500"}`}>{vista === "clientes" ? "Clientes" : "Sucursales"} que no pidieron esta semana</span>
+            <span className={`flex flex-1 items-center text-3xl font-bold tabular-nums leading-none ${sinSemana ? "text-white" : sinPedirSemana > 0 ? "text-rojo-700" : "text-stone-300"}`}>{sinPedirSemana}</span>
+          </button>
+          {sinSemana && <button type="button" onClick={() => setSinSemana(false)} aria-label="Salir de este filtro" title="Salir de este filtro" className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded text-[15px] font-bold leading-none text-stone-300 hover:bg-stone-600 hover:text-white">✕</button>}
+        </div>
+      </section>
+
       {/* Tarjetas: cada una filtra la tabla de abajo (la pantalla no se mueve) */}
       <section aria-label="Resumen" className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-9">
         <Tarjeta titulo={vista === "clientes" ? "Clientes activos" : "Sucursales activas"} valor={resumen.activos} tono="neutro" activa={filtro === "todos"} ayuda={AYUDA.todos} onClick={() => elegir("todos")} />
@@ -150,7 +165,6 @@ export function Tablero({ clientes, sucursales }: { clientes: FilaCliente[]; suc
             <button key={v} type="button" onClick={() => cambiarVista(v)} aria-pressed={vista === v} className={`h-10 px-4 ${vista === v ? "bg-stone-800 text-white" : "text-stone-600 hover:bg-crema-100"}`}>{v === "clientes" ? "Por cliente" : "Por sucursal"}</button>
           ))}
         </div>
-        <button type="button" onClick={() => setSinSemana(!sinSemana)} aria-pressed={sinSemana} title="Muestra solo los que todavía no tienen ningún pedido cargado ni entrega para esta semana (martes a lunes)" className={`h-10 rounded-md border px-4 text-[13px] font-semibold ${sinSemana ? "border-stone-800 bg-stone-800 text-white" : "border-stone-300 bg-white text-stone-700 hover:border-stone-500"}`}>Sin pedido esta semana{sinSemana ? " ✕" : ""}</button>
         <input value={q} onChange={(e) => { setQ(e.target.value); if (e.target.value.trim()) setFiltro("todos"); }} title="Al buscar se muestran todos los que coinciden, de cualquier grupo" placeholder="Buscar cliente o barrio…" aria-label="Buscar cliente" className="h-10 w-full max-w-xs rounded-md border border-stone-300 bg-white px-3 text-sm focus:border-verde-700 focus:outline-none" />
         <p className="text-[14px] text-stone-700">
           Mostrando: <b>{FILTROS.find((f) => f[0] === filtro)![1]}</b> · {lista.length} {lista.length === 1 ? unidad[0] : unidad[1]}
