@@ -25,11 +25,11 @@ const suma = (l: P[]) => ({ pedidos: l.length, total: l.reduce((t, p) => t + p.m
 
 // TIENDA ONLINE: cómo viene la venta minorista. Cada pedido cuenta el día en que se HIZO (no importa cuándo se entregue ni si ya pagó).
 // La facturación es el total de todos los pedidos que entraron; los CANCELADOS no cuentan (si se cancela uno, se resta).
-export default async function Tienda({ searchParams }: { searchParams: Promise<{ mes?: string; dia?: string; combos?: string; todos?: string }> }) {
+export default async function Tienda({ searchParams }: { searchParams: Promise<{ mes?: string; dia?: string; combos?: string; todos?: string; abrir?: string }> }) {
   const usuario = await exigirOficina();
   if (!(await vendedoresDesbloqueado())) return <PantallaBloqueada usuario={usuario} activa="tienda" titulo="Tienda online" volver="/comercial/tienda" />;
 
-  const { mes: mesParam, dia: diaParam, combos: combosParam, todos: todosParam } = await searchParams;
+  const { mes: mesParam, dia: diaParam, combos: combosParam, todos: todosParam, abrir: abrirParam } = await searchParams;
   const desarmados = combosParam === "desarmados"; // cómo se cuentan los combos: "como se venden" (una línea por combo) o "desarmados" (lo que llevan adentro)
   const verTodos = todosParam === "1";
   const fechaHoy = hoy();
@@ -73,10 +73,12 @@ export default async function Tienda({ searchParams }: { searchParams: Promise<{
   const tot = suma(delMes);
 
   // PRODUCTOS QUE MÁS SE VENDIERON en el mes (mismos pedidos que arriba: los de la tienda, por día de pedido, sin cancelados).
-  const items = await db.pedidoItem.findMany({
-    where: { paquetesPor: { gt: 0 }, pedido: { origen: "WEB", estado: { not: "CANCELADO" }, creadoEn: { gte: iniMes, lt: finMes } } }, // paquetesPor 0 = el envío: no es un producto
-    select: { pedidoId: true, nombre: true, cantidad: true, unidad: true },
+  const iniAnt = inicioDia(`${mesAnterior(mes)}-01`);
+  const traerItems = (desde: Date, hasta: Date) => db.pedidoItem.findMany({
+    where: { paquetesPor: { gt: 0 }, pedido: { origen: "WEB", estado: { not: "CANCELADO" }, creadoEn: { gte: desde, lt: hasta } } }, // paquetesPor 0 = el envío: no es un producto
+    select: { pedidoId: true, nombre: true, cantidad: true, unidad: true, pedido: { select: { creadoEn: true } } },
   });
+  const [items, itemsAnt] = await Promise.all([traerItems(iniMes, finMes), traerItems(iniAnt, iniMes)]);
   const sinTildes = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
   const etiquetaUnidad = (u: string) => (u === "paquete" ? "paquetes" : u === "combo" ? "combos" : "unidades");
   // Un mismo producto escrito distinto (la tienda y el catálogo) se junta: las focaccias de oliva y las de cherry.
@@ -86,31 +88,46 @@ export default async function Tienda({ searchParams }: { searchParams: Promise<{
     if (!t.includes("COMBO") && t.includes("FOCACCIA")) return t.includes("CHERRY") ? "FOCACCIA CHERRY Y ROMERO" : t.includes("OLIVA") ? "FOCACCIA OLIVA" : base;
     return base;
   };
-  type Fila = { nombre: string; unidad: string; cantidad: number; pedidos: Set<string> };
-  const porProducto = new Map<string, Fila>();
-  const sumarProducto = (nombre: string, unidad: string, cantidad: number, pedidoId: string) => {
-    const f = porProducto.get(nombre) ?? { nombre, unidad, cantidad: 0, pedidos: new Set<string>() };
-    f.cantidad += cantidad; f.pedidos.add(pedidoId);
-    porProducto.set(nombre, f);
+  type Fila = { nombre: string; unidad: string; cantidad: number; pedidos: Set<string>; ultima: Date | null };
+  const agregar = (lista: typeof items) => {
+    const m = new Map<string, Fila>();
+    const sumar = (nombre: string, unidad: string, cantidad: number, pedidoId: string, en: Date) => {
+      const f = m.get(nombre) ?? { nombre, unidad, cantidad: 0, pedidos: new Set<string>(), ultima: null };
+      f.cantidad += cantidad; f.pedidos.add(pedidoId);
+      if (!f.ultima || en > f.ultima) f.ultima = en;
+      m.set(nombre, f);
+    };
+    for (const it of lista) {
+      const nombre = nombreLimpio(it.nombre);
+      const t = sinTildes(nombre);
+      const en = it.pedido.creadoEn;
+      if (desarmados && t.includes("COMBO")) {
+        // Combo desarmado = lo que lleva adentro: 2 paquetes de prepizza tomate; el toscano suma además 1 focaccia de oliva y 1 de cherry; el "+ 2 FOCACCIA" suma 2 de oliva.
+        sumar("PREPIZZA TOMATE", "paquete", 2 * it.cantidad, it.pedidoId, en);
+        if (t.includes("TOSCANO")) { sumar("FOCACCIA OLIVA", "unidad", it.cantidad, it.pedidoId, en); sumar("FOCACCIA CHERRY Y ROMERO", "unidad", it.cantidad, it.pedidoId, en); }
+        else if (t.includes("FOCACCIA")) sumar("FOCACCIA OLIVA", "unidad", 2 * it.cantidad, it.pedidoId, en);
+      } else sumar(nombre, it.unidad, it.cantidad, it.pedidoId, en);
+    }
+    return m;
   };
-  for (const it of items) {
-    const nombre = nombreLimpio(it.nombre);
-    const t = sinTildes(nombre);
-    if (desarmados && t.includes("COMBO")) {
-      // Combo desarmado = lo que lleva adentro: 2 paquetes de prepizza tomate; el toscano suma además 1 focaccia de oliva y 1 de cherry; el "+ 2 FOCACCIA" suma 2 de oliva.
-      sumarProducto("PREPIZZA TOMATE", "paquete", 2 * it.cantidad, it.pedidoId);
-      if (t.includes("TOSCANO")) { sumarProducto("FOCACCIA OLIVA", "unidad", it.cantidad, it.pedidoId); sumarProducto("FOCACCIA CHERRY Y ROMERO", "unidad", it.cantidad, it.pedidoId); }
-      else if (t.includes("FOCACCIA")) sumarProducto("FOCACCIA OLIVA", "unidad", 2 * it.cantidad, it.pedidoId);
-    } else sumarProducto(nombre, it.unidad, it.cantidad, it.pedidoId);
-  }
+  const porProducto = agregar(items);
+  const anterior = agregar(itemsAnt);
   const ranking = [...porProducto.values()].sort((x, y) => y.cantidad - x.cantidad || x.nombre.localeCompare(y.nombre, "es"));
   const visibles = verTodos ? ranking : ranking.slice(0, 15);
+  const sumaUnidad = (u: string) => ranking.filter((f) => f.unidad === u).reduce((t, f) => t + f.cantidad, 0);
+  const abrirProductos = desarmados || verTodos || abrirParam === "1"; // la sección queda abierta si se vino de adentro de ella
+  const variacion = (f: Fila): { texto: string; tono: string } => {
+    const antes = anterior.get(f.nombre);
+    if (!antes || antes.cantidad === 0) return { texto: "nuevo", tono: "text-stone-400" };
+    const pct = Math.round(((f.cantidad - antes.cantidad) / antes.cantidad) * 100);
+    return pct === 0 ? { texto: "= igual", tono: "text-stone-500" } : { texto: `${pct > 0 ? "▲" : "▼"} ${Math.abs(pct)}%`, tono: pct > 0 ? "text-verde-700" : "text-rojo-700" };
+  };
   const diasConVenta = dias.filter((d) => d.pedidos > 0).length;
   const nav = "flex h-9 items-center rounded-md border border-stone-300 bg-white px-3 text-sm font-semibold hover:border-stone-600";
   const navOff = "flex h-9 items-center rounded-md border border-stone-200 bg-stone-100 px-3 text-sm font-semibold text-stone-300";
   const celda = "px-3 py-1.5 text-center tabular-nums";
   const href = (d: string, m?: string) => `/comercial/tienda?dia=${d}${m ? `&mes=${m}` : ""}`;
-  const hrefProd = (c: boolean, todos: boolean) => `/comercial/tienda?dia=${dia}&mes=${mes}${c ? "&combos=desarmados" : ""}${todos ? "&todos=1" : ""}`;
+  const hrefProd = (c: boolean, todos: boolean) => `/comercial/tienda?dia=${dia}&mes=${mes}${c ? "&combos=desarmados" : ""}${todos ? "&todos=1" : ""}&abrir=1`;
 
   return (
     <>
@@ -199,53 +216,93 @@ export default async function Tienda({ searchParams }: { searchParams: Promise<{
           )}
         </Panel>
 
-        <Panel titulo="Productos que más se vendieron" nota={`${nombreMes(mes)} · ordenados por unidades vendidas`}>
-          {ranking.length === 0 ? <SinDatos /> : (
-            <>
-              <div className="mb-3 flex flex-wrap items-center gap-2 text-[13px]">
-                <span className="text-stone-500">Los combos se cuentan:</span>
-                <Link href={hrefProd(false, verTodos)} className={`rounded-md border px-3 py-1 font-semibold ${!desarmados ? "border-stone-800 bg-stone-800 text-white" : "border-stone-300 bg-white hover:border-stone-600"}`}>Como se venden</Link>
-                <Link href={hrefProd(true, verTodos)} className={`rounded-md border px-3 py-1 font-semibold ${desarmados ? "border-stone-800 bg-stone-800 text-white" : "border-stone-300 bg-white hover:border-stone-600"}`}>Desarmados</Link>
-              </div>
-              <p className="mb-3 text-[12px] text-stone-500">
-                {desarmados
-                  ? "Cada combo se abre y suma lo que lleva adentro: 2 paquetes de prepizza tomate (el toscano suma además 1 focaccia de oliva y 1 de cherry; el combo con focaccias, 2 de oliva). Sirve para saber cuánto hay que fabricar."
-                  : "Cada producto tal cual lo compra el cliente: los combos van en su propia línea y no se mezclan con las prepizzas. Los paquetes y las unidades no se suman entre sí."}
-              </p>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[480px] border-collapse text-[13px]">
-                  <thead>
-                    <tr className="border-b border-stone-300 bg-crema-100 text-[11.5px] uppercase tracking-wide text-stone-600">
-                      <th className={`${celda} w-12`}>#</th>
-                      <th className={`${celda} !text-left`}>Producto</th>
-                      <th className={celda}>Vendidos</th>
-                      <th className={celda}>En cuántos pedidos</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {visibles.map((f, i) => (
-                      <tr key={f.nombre} className="border-b border-stone-200">
-                        <td className={`${celda} text-stone-400`}>{i + 1}</td>
-                        <td className={`${celda} !text-left font-medium`}>{f.nombre}</td>
-                        <td className={`${celda} font-bold`}>{f.cantidad.toLocaleString("es-AR")} <span className="text-[11.5px] font-normal text-stone-500">{etiquetaUnidad(f.unidad)}</span></td>
-                        <td className={celda}>{f.pedidos.size}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {ranking.length > 15 && (
-                <p className="mt-3 text-center">
-                  <Link href={hrefProd(desarmados, !verTodos)} className="text-[13px] font-semibold text-stone-700 underline-offset-2 hover:underline">{verTodos ? "Mostrar solo los 15 primeros ▴" : `Ver los ${ranking.length} productos ▾`}</Link>
-                </p>
-              )}
-            </>
-          )}
-        </Panel>
-
         <Panel titulo="Pedidos del día" nota={`${fechaLarga(dia)} · ${filasDia.filter((f) => !f.cancelado).length} pedidos`}>
           {filasDia.length === 0 ? <SinDatos /> : <PedidosDelDia filas={filasDia} />}
         </Panel>
+
+        {/* Apartado aparte, cerrado de entrada: se abre con un toque */}
+        <details open={abrirProductos} className="group rounded-xl border border-stone-300 bg-white">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 hover:bg-crema-50">
+            <span className="flex items-center gap-3">
+              <span className="text-stone-500 transition group-open:rotate-90" aria-hidden>▶</span>
+              <span className="text-[12px] font-bold uppercase tracking-[0.12em] text-stone-700">Productos que más se vendieron</span>
+            </span>
+            <span className="text-[11.5px] text-stone-400">{nombreMes(mes)} · {ranking.length} productos · tocá para {abrirProductos ? "cerrar" : "abrir"}</span>
+          </summary>
+          <div className="border-t border-stone-200 p-4">
+            {ranking.length === 0 ? <SinDatos /> : (
+              <>
+                <div className="mb-4 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-stone-300 bg-stone-300 sm:grid-cols-3 lg:grid-cols-6">
+                  {[
+                    { t: "Pedidos del mes", v: tot.pedidos.toLocaleString("es-AR") },
+                    { t: "Productos distintos", v: ranking.length.toLocaleString("es-AR") },
+                    { t: "Paquetes vendidos", v: sumaUnidad("paquete").toLocaleString("es-AR") },
+                    { t: "Unidades vendidas", v: sumaUnidad("unidad").toLocaleString("es-AR") },
+                    { t: "Combos vendidos", v: sumaUnidad("combo").toLocaleString("es-AR") },
+                    { t: "Productos por pedido", v: tot.pedidos ? (items.length / tot.pedidos).toLocaleString("es-AR", { maximumFractionDigits: 1 }) : "—" },
+                  ].map((x) => (
+                    <div key={x.t} className="bg-crema-50 px-3 py-3 text-center">
+                      <p className="text-[10.5px] font-semibold uppercase tracking-wide text-stone-500">{x.t}</p>
+                      <p className="mt-0.5 text-[18px] font-bold tabular-nums text-stone-900">{x.v}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="mb-3 flex flex-wrap items-center gap-2 text-[13px]">
+                  <span className="text-stone-500">Los combos se cuentan:</span>
+                  <Link href={hrefProd(false, verTodos)} className={`rounded-md border px-3 py-1 font-semibold ${!desarmados ? "border-stone-800 bg-stone-800 text-white" : "border-stone-300 bg-white hover:border-stone-600"}`}>Como se venden</Link>
+                  <Link href={hrefProd(true, verTodos)} className={`rounded-md border px-3 py-1 font-semibold ${desarmados ? "border-stone-800 bg-stone-800 text-white" : "border-stone-300 bg-white hover:border-stone-600"}`}>Desarmados</Link>
+                </div>
+                <p className="mb-3 text-[12px] text-stone-500">
+                  {desarmados
+                    ? "Cada combo se abre y suma lo que lleva adentro: 2 paquetes de prepizza tomate (el toscano suma además 1 focaccia de oliva y 1 de cherry; el combo con focaccias, 2 de oliva). Sirve para saber cuánto hay que fabricar."
+                    : "Cada producto tal cual lo compra el cliente: los combos van en su propia línea y no se mezclan con las prepizzas. Los paquetes y las unidades no se suman entre sí."}
+                </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[720px] border-collapse text-[13px]">
+                    <thead>
+                      <tr className="border-b border-stone-300 bg-crema-100 text-[11.5px] uppercase tracking-wide text-stone-600">
+                        <th className={`${celda} w-12`}>#</th>
+                        <th className={`${celda} !text-left`}>Producto</th>
+                        <th className={celda}>Vendidos</th>
+                        <th className={celda} title="En cuántos pedidos del mes aparece">En cuántos pedidos</th>
+                        <th className={celda} title="De todos los pedidos del mes, cuántos lo llevan">% de los pedidos</th>
+                        <th className={celda} title="Cuánto compra cada cliente cuando lo lleva">Promedio por pedido</th>
+                        <th className={celda} title="Comparado con el mes anterior (la misma forma de contar los combos)">vs mes anterior</th>
+                        <th className={celda}>Última venta</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visibles.map((f, i) => {
+                        const v = variacion(f);
+                        const pct = tot.pedidos ? (f.pedidos.size / tot.pedidos) * 100 : 0;
+                        return (
+                          <tr key={f.nombre} className="border-b border-stone-200">
+                            <td className={`${celda} text-stone-400`}>{i + 1}</td>
+                            <td className={`${celda} !text-left font-medium`}>{f.nombre}</td>
+                            <td className={`${celda} font-bold`}>{f.cantidad.toLocaleString("es-AR")} <span className="text-[11.5px] font-normal text-stone-500">{etiquetaUnidad(f.unidad)}</span></td>
+                            <td className={celda}>{f.pedidos.size}</td>
+                            <td className={celda}>
+                              <span className="font-semibold">{pct.toLocaleString("es-AR", { maximumFractionDigits: 1 })}%</span>
+                              <span className="mx-auto mt-1 block h-1 w-20 overflow-hidden rounded bg-stone-200"><span className="block h-full bg-stone-600" style={{ width: `${Math.min(100, pct)}%` }} /></span>
+                            </td>
+                            <td className={celda}>{(f.cantidad / f.pedidos.size).toLocaleString("es-AR", { maximumFractionDigits: 1 })}</td>
+                            <td className={`${celda} font-semibold ${v.tono}`}>{v.texto}</td>
+                            <td className={`${celda} text-stone-600`}>{f.ultima ? fechaAR(f.ultima).slice(8) + "/" + fechaAR(f.ultima).slice(5, 7) : "—"}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                {ranking.length > 15 && (
+                  <p className="mt-3 text-center">
+                    <Link href={hrefProd(desarmados, !verTodos)} className="text-[13px] font-semibold text-stone-700 underline-offset-2 hover:underline">{verTodos ? "Mostrar solo los 15 primeros ▴" : `Ver los ${ranking.length} productos ▾`}</Link>
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        </details>
       </main>
     </>
   );

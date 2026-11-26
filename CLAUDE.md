@@ -647,3 +647,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Comercial → Clientes: cuadrado "no pidieron esta semana", aparte (pedido del dueño; reemplaza el botón)
 - El botón "Sin pedido esta semana" se cambió por **un cuadrado aparte** (borde punteado, arriba de las tarjetas de grupos y separado de ellas): **"Clientes/Sucursales que no pidieron esta semana"** con el número en rojo (misma regla: sin pedido con entrega en la semana martes–lunes ni cargado desde el martes). **Tocarlo filtra** la tabla y recalcula las tarjetas de abajo con solo esos (se pone gris oscuro con ✕ para salir). El número del cuadrado sigue el buscador y los filtros de columna, pero no las tarjetas de grupos.
+
+## Tienda online: "Productos que más se vendieron" pasa a un apartado plegable, al final (pedido del dueño)
+- El ranking de productos ya no va en el medio: está **al pie de `/comercial/tienda`, debajo de "Pedidos del día", en un apartado que arranca CERRADO** (`<details>`; se abre tocando el título; queda abierto si se vino de adentro, p. ej. al elegir "Desarmados" o "Ver los N productos"; parámetro `abrir=1`).
+- **Más información**: arriba una franja con **Pedidos del mes · Productos distintos · Paquetes · Unidades · Combos vendidos · Productos por pedido**; y la tabla suma, además de Vendidos y En cuántos pedidos: **% de los pedidos** (con barrita), **Promedio por pedido**, **vs mes anterior** (▲ verde / ▼ rojo, "nuevo" si antes no se vendía; con la misma forma de contar los combos) y **Última venta** (dd/mm).
