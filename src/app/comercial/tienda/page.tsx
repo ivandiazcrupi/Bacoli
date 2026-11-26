@@ -47,7 +47,7 @@ export default async function Tienda({ searchParams }: { searchParams: Promise<{
   // Pedidos del día elegido (como la lista de Empretienda): del más nuevo al más viejo, con los cancelados tachados.
   const delDiaFilas = await db.pedido.findMany({
     where: { origen: "WEB", creadoEn: { gte: iniDia, lt: finDia } },
-    select: { id: true, webOrden: true, webNombre: true, webApellido: true, creadoEn: true, webTotal: true, webPago: true, estado: true },
+    select: { id: true, webOrden: true, webNombre: true, webApellido: true, webEmail: true, webTelefono: true, creadoEn: true, webTotal: true, webPago: true, estado: true },
     orderBy: { creadoEn: "desc" },
   });
   const filasDia: FilaDia[] = delDiaFilas.map((p) => ({
@@ -57,6 +57,30 @@ export default async function Tienda({ searchParams }: { searchParams: Promise<{
     pago: p.webPago === "SIN_COSTO" ? "sincargo" : p.webPago === "PAGO_MP" || p.webPago === "PAGO_TRANSFERENCIA" ? "pagado" : "pendiente",
     medio: p.webPago === "PAGO_MP" ? "Mercado Pago" : "Transferencia",
   }));
+  // Mismo cliente en más de un pedido del día: mismo nombre (o uno contenido en el otro, con 2 palabras o más), mismo email o mismo teléfono. Los cancelados no cuentan.
+  {
+    const vivos = filasDia.map((f, i) => ({ f, i, p: delDiaFilas[i] })).filter((x) => !x.f.cancelado);
+    const limpio = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z\s]/g, " ").split(/\s+/).filter(Boolean);
+    const datos = vivos.map((x) => ({ pal: limpio(x.f.nombre), mail: (x.p.webEmail ?? "").trim().toLowerCase(), tel: (x.p.webTelefono ?? "").replace(/\D/g, "").slice(-8) }));
+    const padre = vivos.map((_, k) => k);
+    const raiz = (k: number): number => (padre[k] === k ? k : (padre[k] = raiz(padre[k])));
+    const misma = (a: (typeof datos)[number], b: (typeof datos)[number]) => {
+      if (a.mail && a.mail === b.mail) return true;
+      if (a.tel.length === 8 && a.tel === b.tel) return true;
+      const [c, l] = a.pal.length <= b.pal.length ? [a.pal, b.pal] : [b.pal, a.pal];
+      return c.length >= 2 && c.every((w) => l.includes(w));
+    };
+    for (let a = 0; a < datos.length; a++) for (let b = a + 1; b < datos.length; b++) if (misma(datos[a], datos[b])) padre[raiz(b)] = raiz(a);
+    const tam = new Map<number, number>();
+    vivos.forEach((_, k) => tam.set(raiz(k), (tam.get(raiz(k)) ?? 0) + 1));
+    const numero = new Map<number, number>();
+    vivos.forEach((x, k) => {
+      const r = raiz(k), n = tam.get(r) ?? 1;
+      if (n < 2) return;
+      if (!numero.has(r)) numero.set(r, numero.size);
+      filasDia[x.i].grupo = numero.get(r)!; filasDia[x.i].veces = n;
+    });
+  }
   const todos: P[] = filas.map((p) => ({ f: fechaAR(p.creadoEn), en: p.creadoEn, monto: Number(p.webTotal ?? 0) }));
 
   // DÍA ELEGIDO: solo los valores (sin comparaciones).

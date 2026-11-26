@@ -7,7 +7,16 @@ import { cancelarDesdeTienda, pagoDesdeTienda } from "./actions";
 export type FilaDia = {
   id: string; orden: string; nombre: string; fechaHora: string; monto: number;
   pago: "pagado" | "pendiente" | "sincargo"; medio: string; cancelado: boolean; entregado: boolean;
+  grupo?: number; veces?: number; // mismo cliente con más de un pedido en el día
 };
+// Un tono por cada cliente repetido, para ver de un vistazo cuáles van juntos.
+const TONOS = [
+  { barra: "#d9a406", fondo: "#fdf8e3", texto: "#8a6a05" },
+  { barra: "#3b82c4", fondo: "#eaf3fb", texto: "#1d5a94" },
+  { barra: "#9b59b6", fondo: "#f4ecf8", texto: "#6c3483" },
+  { barra: "#2e9e6b", fondo: "#e9f6ef", texto: "#1d6b47" },
+  { barra: "#d9622b", fondo: "#fcefe8", texto: "#a0431a" },
+];
 const pesos = (n: number) => n.toLocaleString("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 2 });
 
 function Menu({ f }: { f: FilaDia }) {
@@ -66,9 +75,13 @@ export function PedidosDelDia({ filas }: { filas: FilaDia[] }) {
         </thead>
         <tbody>
           {filas.map((f) => (
-            <tr key={f.id} className={`border-b border-stone-200 ${f.cancelado ? "text-stone-400 line-through" : ""}`}>
+            <tr key={f.id} className={`border-b border-stone-200 ${f.cancelado ? "text-stone-400 line-through" : ""}`}
+              style={f.grupo === undefined ? undefined : { background: TONOS[f.grupo % TONOS.length].fondo, boxShadow: `inset 4px 0 0 ${TONOS[f.grupo % TONOS.length].barra}` }}>
               <td className={`${celda} font-semibold`}><Link href={`/pedidos/${f.id}`} className="text-[#1d3fbf] underline-offset-2 hover:underline">#{f.orden}</Link></td>
-              <td className={`${celda} !text-left font-medium`}>{f.nombre}</td>
+              <td className={`${celda} !text-left font-medium`}>
+                {f.nombre}
+                {f.grupo !== undefined && <span title={`Este cliente hizo ${f.veces} pedidos hoy (mismo nombre, email o teléfono)`} className="ml-2 rounded px-1.5 py-0.5 align-middle text-[10.5px] font-bold uppercase no-underline" style={{ color: TONOS[f.grupo % TONOS.length].texto, border: `1px solid ${TONOS[f.grupo % TONOS.length].barra}` }}>{f.veces} pedidos</span>}
+              </td>
               <td className={celda}>{f.fechaHora}</td>
               <td className={`${celda} no-underline`}>
                 {f.cancelado ? <span className="text-[12px] font-bold uppercase">Cancelado</span>
