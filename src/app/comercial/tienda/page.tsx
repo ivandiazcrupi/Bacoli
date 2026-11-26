@@ -8,6 +8,7 @@ import { CONTENEDOR_PEDIDOS } from "../../pedidos/Encabezado";
 import { EncabezadoComercial } from "../EncabezadoComercial";
 import { Panel, SinDatos } from "../estadisticas/Graficos";
 import { PantallaBloqueada } from "../vendedores/Bloqueo";
+import { PedidosDelDia, type FilaDia } from "./PedidosDelDia";
 
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 const nombreMes = (m: string) => `${MESES[Number(m.slice(5)) - 1]} ${m.slice(0, 4)}`;
@@ -43,6 +44,19 @@ export default async function Tienda({ searchParams }: { searchParams: Promise<{
     where: { origen: "WEB", estado: { not: "CANCELADO" }, OR: [{ creadoEn: { gte: iniMes, lt: finMes } }, { creadoEn: { gte: iniDia, lt: finDia } }] },
     select: { creadoEn: true, webTotal: true },
   });
+  // Pedidos del día elegido (como la lista de Empretienda): del más nuevo al más viejo, con los cancelados tachados.
+  const delDiaFilas = await db.pedido.findMany({
+    where: { origen: "WEB", creadoEn: { gte: iniDia, lt: finDia } },
+    select: { id: true, webOrden: true, webNombre: true, webApellido: true, creadoEn: true, webTotal: true, webPago: true, estado: true },
+    orderBy: { creadoEn: "desc" },
+  });
+  const filasDia: FilaDia[] = delDiaFilas.map((p) => ({
+    id: p.id, orden: p.webOrden ?? "—", nombre: [p.webNombre, p.webApellido].filter(Boolean).join(" ") || "Sin nombre",
+    fechaHora: `${p.creadoEn.toLocaleDateString("es-AR", { timeZone: "America/Argentina/Buenos_Aires", day: "2-digit", month: "2-digit", year: "2-digit" })} ${p.creadoEn.toLocaleTimeString("es-AR", { timeZone: "America/Argentina/Buenos_Aires", hour: "numeric", minute: "2-digit", hourCycle: "h23" })} hs`,
+    monto: Number(p.webTotal ?? 0), cancelado: p.estado === "CANCELADO", entregado: p.estado === "ENTREGADO",
+    pago: p.webPago === "SIN_COSTO" ? "sincargo" : p.webPago === "PAGO_MP" || p.webPago === "PAGO_TRANSFERENCIA" ? "pagado" : "pendiente",
+    medio: p.webPago === "PAGO_MP" ? "Mercado Pago" : "Transferencia",
+  }));
   const todos: P[] = filas.map((p) => ({ f: fechaAR(p.creadoEn), en: p.creadoEn, monto: Number(p.webTotal ?? 0) }));
 
   // DÍA ELEGIDO: solo los valores (sin comparaciones).
@@ -227,6 +241,10 @@ export default async function Tienda({ searchParams }: { searchParams: Promise<{
               )}
             </>
           )}
+        </Panel>
+
+        <Panel titulo="Pedidos del día" nota={`${fechaLarga(dia)} · ${filasDia.filter((f) => !f.cancelado).length} pedidos`}>
+          {filasDia.length === 0 ? <SinDatos /> : <PedidosDelDia filas={filasDia} />}
         </Panel>
       </main>
     </>
