@@ -657,3 +657,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Tienda online → Pedidos del día: botón "Ubicar ›" (pedido del dueño)
 - Cada fila de "Pedidos del día" tiene una columna **UBICAR** con el botón **"Ubicar ›"**, igual que en Cuenta corriente (`enlaceUbicar`, `UbicarPedido.tsx`): te lleva a donde está el pedido —la **hoja de ruta de su día** si ya tiene día, o la lista **Pedidos → Minoristas (web)** si espera día— baja hasta él y lo resalta unos segundos. Cancelados y entregados sin día: sin botón ("—").
+
+## TAREAS: lista "Encargado" (pedido del dueño: "para darle tareas")
+- Además de las personas de oficina y de Generales, en `/tareas` hay una tarjeta **"Encargado"** (inicial "E"). **No es un usuario ni entra al sistema** (decisión del dueño: "una lista más, que maneja la oficina"): cualquiera de oficina le carga, tilda, edita, borra, ordena y le pasa tareas (también arrastrando entre tarjetas), igual que con el resto. En la carga rápida (inicio y `/tareas`) aparece "Encargado" en el desplegable "Para:". **No cuenta en Generales ni en los numeritos del menú** (no es de nadie de oficina).
+- En la base: columna nueva `Tarea.paraEncargado` (migración `tareas_encargado`, solo agrega; no toca nada existente). Una tarea del Encargado tiene `asignadaId` vacío y `paraEncargado = true`; Generales = `asignadaId` vacío y `paraEncargado = false`. Ayudas en `src/lib/tareas.ts` (`ENCARGADO`, `datosDueno`, `filtroDueno`). Si algún día el encargado debe entrar a ver sus tareas, hay que darle acceso (toca permisos: pedir OK).

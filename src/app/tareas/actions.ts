@@ -3,13 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { esPersonalDeOficina } from "@/lib/roles";
-import { GENERALES } from "@/lib/tareas";
+import { datosDueno, ENCARGADO, filtroDueno, GENERALES } from "@/lib/tareas";
 import { exigirOficina } from "@/lib/session";
 
 export type Resultado = { error?: string };
 
-/** "generales" = sin dueño (null en la base); si no, el id de la persona. */
-const dueno = (id: string) => (id === GENERALES ? null : id);
+/** Las listas que no son una persona del sistema: Generales (sin dueño) y Encargado. */
+const esListaEspecial = (id: string) => id === GENERALES || id === ENCARGADO;
 
 // Todos los de oficina (gerente y administración) pueden hacer todo con cualquier tarea: cargar, tildar, editar, borrar, ordenar y pasar a otra persona.
 export async function crearTarea(asignadaId: string, formData: FormData): Promise<Resultado> {
@@ -17,12 +17,12 @@ export async function crearTarea(asignadaId: string, formData: FormData): Promis
   const titulo = String(formData.get("titulo") ?? "").trim().replace(/\s+/g, " ");
   if (titulo.length < 2) return { error: "Escribí la tarea." };
   if (titulo.length > 200) return { error: "Es muy larga (máximo 200 letras)." };
-  if (asignadaId !== GENERALES) {
+  if (!esListaEspecial(asignadaId)) {
     const persona = await db.usuario.findUnique({ where: { id: asignadaId }, select: { activo: true, rol: true } });
     if (!persona || !persona.activo || !esPersonalDeOficina(persona.rol)) return { error: "Esa persona no puede tener tareas." };
   }
-  const ultima = await db.tarea.aggregate({ where: { asignadaId: dueno(asignadaId) }, _max: { orden: true } });
-  await db.tarea.create({ data: { titulo, asignadaId: dueno(asignadaId), creadaPorId: yo.id, orden: (ultima._max.orden ?? 0) + 1 } }); // la nueva va al final de la lista
+  const ultima = await db.tarea.aggregate({ where: filtroDueno(asignadaId), _max: { orden: true } });
+  await db.tarea.create({ data: { titulo, ...datosDueno(asignadaId), creadaPorId: yo.id, orden: (ultima._max.orden ?? 0) + 1 } }); // la nueva va al final de la lista
   revalidatePath("/", "layout"); // se actualizan el inicio, la lista y el numerito del menú
   return {};
 }
@@ -60,7 +60,7 @@ export async function borrarTarea(id: string): Promise<Resultado> {
 /** Limpia de una vez las tareas ya hechas de una persona. */
 export async function borrarHechas(asignadaId: string): Promise<Resultado> {
   await exigirOficina();
-  await db.tarea.deleteMany({ where: { asignadaId: dueno(asignadaId), hecha: true } });
+  await db.tarea.deleteMany({ where: { ...filtroDueno(asignadaId), hecha: true } });
   revalidatePath("/", "layout"); // se actualizan el inicio, la lista y el numerito del menú
   return {};
 }
@@ -69,7 +69,7 @@ export async function borrarHechas(asignadaId: string): Promise<Resultado> {
 export async function ordenarTareas(asignadaId: string, ids: string[]): Promise<Resultado> {
   await exigirOficina();
   if (!Array.isArray(ids) || ids.length === 0 || ids.some((i) => typeof i !== "string") || new Set(ids).size !== ids.length) return { error: "Orden no válido." };
-  const propias = await db.tarea.count({ where: { asignadaId: dueno(asignadaId), id: { in: ids } } });
+  const propias = await db.tarea.count({ where: { ...filtroDueno(asignadaId), id: { in: ids } } });
   if (propias !== ids.length) return { error: "Esas tareas no son de esa persona." };
   await db.$transaction(ids.map((id, i) => db.tarea.update({ where: { id }, data: { orden: i + 1 } })));
   revalidatePath("/", "layout");
@@ -83,15 +83,15 @@ export async function moverTarea(id: string, haciaId: string, ids: string[]): Pr
   const t = await db.tarea.findUnique({ where: { id } });
   if (!t) return { error: "La tarea ya no existe." };
   if (t.hecha) return { error: "Una tarea hecha no se mueve." };
-  if (haciaId !== GENERALES) {
+  if (!esListaEspecial(haciaId)) {
     const persona = await db.usuario.findUnique({ where: { id: haciaId }, select: { activo: true, rol: true } });
     if (!persona || !persona.activo || !esPersonalDeOficina(persona.rol)) return { error: "Esa persona no puede tener tareas." };
   }
   if (!Array.isArray(ids) || !ids.includes(id) || ids.some((i) => typeof i !== "string") || new Set(ids).size !== ids.length) return { error: "Orden no válido." };
   const otras = ids.filter((i) => i !== id);
-  const propias = await db.tarea.count({ where: { asignadaId: dueno(haciaId), hecha: false, id: { in: otras } } });
+  const propias = await db.tarea.count({ where: { ...filtroDueno(haciaId), hecha: false, id: { in: otras } } });
   if (propias !== otras.length) return { error: "La lista cambió, probá de nuevo." };
-  await db.$transaction(ids.map((tid, i) => db.tarea.update({ where: { id: tid }, data: tid === id ? { asignadaId: dueno(haciaId), orden: i + 1 } : { orden: i + 1 } })));
+  await db.$transaction(ids.map((tid, i) => db.tarea.update({ where: { id: tid }, data: tid === id ? { ...datosDueno(haciaId), orden: i + 1 } : { orden: i + 1 } })));
   revalidatePath("/", "layout");
   return {};
 }
@@ -99,8 +99,9 @@ export async function moverTarea(id: string, haciaId: string, ids: string[]): Pr
 /** "Me la quedo": una tarea de Generales pasa a la lista de quien la toca (al final de la suya). */
 export async function tomarTarea(id: string): Promise<Resultado> {
   const yo = await exigirOficina();
-  const t = await db.tarea.findUnique({ where: { id }, select: { asignadaId: true } });
+  const t = await db.tarea.findUnique({ where: { id }, select: { asignadaId: true, paraEncargado: true } });
   if (!t) return { error: "Esa tarea ya no existe." };
+  if (t.paraEncargado) return { error: "Esa tarea es del Encargado: para pasarla a alguien, arrastrala." };
   if (t.asignadaId) return { error: "Esa tarea ya tiene dueño." };
   const ultima = await db.tarea.aggregate({ where: { asignadaId: yo.id }, _max: { orden: true } });
   await db.tarea.update({ where: { id }, data: { asignadaId: yo.id, orden: (ultima._max.orden ?? 0) + 1 } });

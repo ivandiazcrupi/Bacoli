@@ -18,7 +18,7 @@ export async function Cabecera({ usuario }: { usuario: Usuario }) {
   }
   // Tareas pendientes de la persona (puntito con el número en TAREAS del menú).
   const tareasPendientes = oficina ? await db.tarea.count({ where: { asignadaId: usuario.id, hecha: false } }) : 0;
-  const tareasGenerales = oficina ? await db.tarea.count({ where: { asignadaId: null, hecha: false } }) : 0; // sin dueño todavía
+  const tareasGenerales = oficina ? await db.tarea.count({ where: { asignadaId: null, paraEncargado: false, hecha: false } }) : 0; // sin dueño todavía
   const principal = "shrink-0 rounded-lg px-2 py-2 text-base font-bold uppercase tracking-wide";
   const secundario = "shrink-0 rounded-lg px-1.5 py-2 text-xs font-medium uppercase tracking-wide text-stone-500 hover:text-stone-900";
   const botonCargar = "rounded-lg px-3 py-2 text-center text-xs font-bold uppercase tracking-wide";

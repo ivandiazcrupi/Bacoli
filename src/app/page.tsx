@@ -39,7 +39,7 @@ export default async function Inicio() {
   const oficina = esPersonalDeOficina(usuario.rol);
   // Tus tareas (solo oficina): pendientes primero; si no tenés ninguna cargada, no se muestra nada.
   const tareas = oficina ? await db.tarea.findMany({ where: { asignadaId: usuario.id }, orderBy: [{ hecha: "asc" }, { orden: "asc" }, { creadoEn: "asc" }], select: { id: true, titulo: true, hecha: true } }) : [];
-  const generales = oficina ? await db.tarea.findMany({ where: { asignadaId: null, hecha: false }, orderBy: [{ orden: "asc" }, { creadoEn: "asc" }], select: { id: true, titulo: true, hecha: true } }) : []; // tareas "Generales": todavía sin dueño
+  const generales = oficina ? await db.tarea.findMany({ where: { asignadaId: null, paraEncargado: false, hecha: false }, orderBy: [{ orden: "asc" }, { creadoEn: "asc" }], select: { id: true, titulo: true, hecha: true } }) : []; // tareas "Generales": todavía sin dueño
   const personas = oficina ? await db.usuario.findMany({ where: { activo: true, rol: { in: ["DUENO", "ADMINISTRACION"] } }, orderBy: { creadoEn: "asc" }, select: { id: true, nombre: true } }) : [];
 
   return (

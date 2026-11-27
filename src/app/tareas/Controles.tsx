@@ -4,7 +4,7 @@ import { DndContext, MouseSensor, TouchSensor, closestCenter, useDroppable, useS
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { createContext, useContext, useRef, useState, useTransition, type ReactNode } from "react";
-import { GENERALES } from "@/lib/tareas";
+import { ENCARGADO, GENERALES } from "@/lib/tareas";
 import { alternarTarea, borrarHechas, borrarTarea, crearTarea, editarTarea, moverTarea, ordenarTareas, tomarTarea } from "./actions";
 
 // Todos los de oficina pueden hacer todo con cualquier tarea: tildarla, editarla, borrarla, ordenarla y pasarla a otra persona.
@@ -199,6 +199,7 @@ export function CargaRapida({ personas, miId, compacta = false }: { personas: { 
           <select value={para} onChange={(e) => setPara(e.target.value)} disabled={pendiente} aria-label="Para quién" className="h-8 rounded-md border border-stone-300 bg-white px-1.5 text-[13px] font-semibold text-stone-800">
             <option value={GENERALES}>Generales</option>
             {personas.map((p) => <option key={p.id} value={p.id}>{p.id === miId ? "Yo" : primer(p.nombre)}</option>)}
+            <option value={ENCARGADO}>Encargado</option>
           </select>
         </label>
         <button type="submit" disabled={pendiente} className="h-8 rounded-md bg-verde-700 px-3 text-[13px] font-semibold text-white hover:bg-verde-800 disabled:opacity-50">Agregar</button>

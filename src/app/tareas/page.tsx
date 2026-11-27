@@ -1,7 +1,7 @@
 import { Cabecera } from "@/components/Cabecera";
 import { db } from "@/lib/db";
 import { exigirOficina } from "@/lib/session";
-import { GENERALES } from "@/lib/tareas";
+import { ENCARGADO, GENERALES } from "@/lib/tareas";
 import { CargaRapida, ListaTareas, NuevaTarea, TableroTareas } from "./Controles";
 
 const primerNombre = (n: string) => n.trim().split(/\s+/)[0] || n;
@@ -15,13 +15,14 @@ export default async function Tareas() {
     orderBy: { creadoEn: "asc" },
     select: { id: true, nombre: true, tareas: { orderBy: [{ hecha: "asc" }, { orden: "asc" }, { creadoEn: "asc" }], select: { id: true, titulo: true, hecha: true } } },
   });
-  const generales = await db.tarea.findMany({ where: { asignadaId: null }, orderBy: [{ hecha: "asc" }, { orden: "asc" }, { creadoEn: "asc" }], select: { id: true, titulo: true, hecha: true } });
+  const generales = await db.tarea.findMany({ where: { asignadaId: null, paraEncargado: false }, orderBy: [{ hecha: "asc" }, { orden: "asc" }, { creadoEn: "asc" }], select: { id: true, titulo: true, hecha: true } });
+  const encargado = await db.tarea.findMany({ where: { asignadaId: null, paraEncargado: true }, orderBy: [{ hecha: "asc" }, { orden: "asc" }, { creadoEn: "asc" }], select: { id: true, titulo: true, hecha: true } });
   const mias = personas.find((p) => p.id === yo.id);
   const otras = personas.filter((p) => p.id !== yo.id);
 
-  const inicial: Record<string, { id: string; titulo: string; hecha: boolean }[]> = { [GENERALES]: generales.filter((t) => !t.hecha), ...Object.fromEntries(personas.map((p) => [p.id, p.tareas.filter((t) => !t.hecha)])) };
-  const firma = [generales, ...personas.map((p) => p.tareas)].map((l) => l.map((t) => `${t.id}${t.hecha ? 1 : 0}`).join()).join("|");
-  const pendientesEquipo = personas.reduce((n, p) => n + p.tareas.filter((t) => !t.hecha).length, 0) + generales.filter((t) => !t.hecha).length;
+  const inicial: Record<string, { id: string; titulo: string; hecha: boolean }[]> = { [GENERALES]: generales.filter((t) => !t.hecha), [ENCARGADO]: encargado.filter((t) => !t.hecha), ...Object.fromEntries(personas.map((p) => [p.id, p.tareas.filter((t) => !t.hecha)])) };
+  const firma = [generales, encargado, ...personas.map((p) => p.tareas)].map((l) => l.map((t) => `${t.id}${t.hecha ? 1 : 0}`).join()).join("|");
+  const pendientesEquipo = personas.reduce((n, p) => n + p.tareas.filter((t) => !t.hecha).length, 0) + encargado.filter((t) => !t.hecha).length + generales.filter((t) => !t.hecha).length;
   const sinDueno = generales.filter((t) => !t.hecha).length;
 
   const Tarjeta = ({ p, propia }: { p: (typeof personas)[number]; propia: boolean }) => {
@@ -40,6 +41,27 @@ export default async function Tareas() {
         {total > 0 && <div className="mb-3 h-1.5 overflow-hidden rounded-full bg-stone-100" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}><div className="h-full rounded-full bg-verde-700 transition-all" style={{ width: `${pct}%` }} /></div>}
         <ListaTareas asignadaId={p.id} tareas={p.tareas} vacio={propia ? "No tenés tareas por ahora." : "Sin tareas por ahora."} />
         <NuevaTarea asignadaId={p.id} />
+      </section>
+    );
+  };
+
+  // El Encargado no entra al sistema: la oficina le carga las tareas y las tilda por él.
+  const TarjetaEncargado = () => {
+    const hechas = encargado.filter((t) => t.hecha).length;
+    const total = encargado.length;
+    const pct = total === 0 ? 0 : Math.round((hechas / total) * 100);
+    return (
+      <section aria-label="Tareas del Encargado" className="rounded-2xl border border-stone-300 bg-white p-5">
+        <header className="mb-3 flex items-center gap-3">
+          <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-stone-200 text-[15px] font-bold text-stone-700">E</span>
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-[16px] font-bold leading-tight">Encargado</h2>
+            <p className="text-[12.5px] text-stone-500">{total === 0 ? "Sin tareas" : `${hechas} de ${total} hechas`} · las maneja la oficina</p>
+          </div>
+        </header>
+        {total > 0 && <div className="mb-3 h-1.5 overflow-hidden rounded-full bg-stone-100" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}><div className="h-full rounded-full bg-verde-700 transition-all" style={{ width: `${pct}%` }} /></div>}
+        <ListaTareas asignadaId={ENCARGADO} tareas={encargado} vacio="Sin tareas por ahora." />
+        <NuevaTarea asignadaId={ENCARGADO} />
       </section>
     );
   };
@@ -74,7 +96,7 @@ export default async function Tareas() {
               <TarjetaGenerales />
               {mias && <Tarjeta p={mias} propia />}
             </div>
-            {otras.length > 0 && <div className="grid items-start gap-5 md:grid-cols-2">{otras.map((p) => <Tarjeta key={p.id} p={p} propia={false} />)}</div>}
+            <div className="grid items-start gap-5 md:grid-cols-2">{otras.map((p) => <Tarjeta key={p.id} p={p} propia={false} />)}<TarjetaEncargado /></div>
           </div>
         </TableroTareas>
         <p className="text-[12px] text-stone-400">Todos pueden cargar, tildar, editar y borrar tareas. Lo que no tiene dueño queda en Generales. Arrastrá con ⋮⋮ para cambiar la prioridad o pasar una tarea a otra persona (o a Generales).</p>
